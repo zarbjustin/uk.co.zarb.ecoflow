@@ -1,0 +1,9 @@
+{
+  "id": "grid_power_changed",
+  "title": { "en": "Grid power changed" },
+  "titleFormatted": { "en": "Grid power changed" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "tokens": [
+    { "name": "power", "type": "number", "title": { "en": "Grid power" }, "example": -800 }
+  ]
+}

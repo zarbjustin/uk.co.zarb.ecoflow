@@ -1,0 +1,18 @@
+{
+  "id": "battery_level_crossed",
+  "title": { "en": "Battery level crossed" },
+  "titleFormatted": { "en": "Battery level goes [[direction]] [[level]]%" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "values": [
+        { "id": "above", "title": { "en": "above" } },
+        { "id": "below", "title": { "en": "below" } }
+      ]
+    },
+    { "type": "number", "name": "level", "min": 0, "max": 100, "step": 1, "placeholder": { "en": "%" } }
+  ],
+  "tokens": [{ "name": "battery", "type": "number", "title": { "en": "Battery" }, "example": 20 }]
+}

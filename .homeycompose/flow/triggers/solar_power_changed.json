@@ -1,0 +1,7 @@
+{
+  "id": "solar_power_changed",
+  "title": { "en": "Solar power changed" },
+  "titleFormatted": { "en": "Solar power changed" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Solar power" }, "example": 450 }]
+}

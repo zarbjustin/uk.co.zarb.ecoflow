@@ -1,0 +1,16 @@
+{
+  "id": "set_feed_in",
+  "title": { "en": "Set grid feed-in" },
+  "titleFormatted": { "en": "Turn grid feed-in [[state]]" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "dropdown",
+      "name": "state",
+      "values": [
+        { "id": "on", "title": { "en": "on" } },
+        { "id": "off", "title": { "en": "off" } }
+      ]
+    }
+  ]
+}

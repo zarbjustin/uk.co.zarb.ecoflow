@@ -28,6 +28,337 @@
     "name": "Justin Zarb",
     "email": "justin.zarb@zarb.co.uk"
   },
+  "flow": {
+    "triggers": [
+      {
+        "id": "battery_level_crossed",
+        "title": {
+          "en": "Battery level crossed"
+        },
+        "titleFormatted": {
+          "en": "Battery level goes [[direction]] [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "battery",
+            "type": "number",
+            "title": {
+              "en": "Battery"
+            },
+            "example": 20
+          }
+        ]
+      },
+      {
+        "id": "grid_power_changed",
+        "title": {
+          "en": "Grid power changed"
+        },
+        "titleFormatted": {
+          "en": "Grid power changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid power"
+            },
+            "example": -800
+          }
+        ]
+      },
+      {
+        "id": "solar_power_changed",
+        "title": {
+          "en": "Solar power changed"
+        },
+        "titleFormatted": {
+          "en": "Solar power changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Solar power"
+            },
+            "example": 450
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "feed_in_enabled",
+        "title": {
+          "en": "Grid feed-in !{{is|is not}} enabled"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "operating_mode_is",
+        "title": {
+          "en": "Operating mode !{{is|is not}}"
+        },
+        "titleFormatted": {
+          "en": "Operating mode !{{is|is not}} [[mode]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "values": [
+              {
+                "id": "self_powered",
+                "title": {
+                  "en": "Self-powered"
+                }
+              },
+              {
+                "id": "ai",
+                "title": {
+                  "en": "AI / Smart scheduling"
+                }
+              },
+              {
+                "id": "scheduled",
+                "title": {
+                  "en": "Scheduled"
+                }
+              },
+              {
+                "id": "tou",
+                "title": {
+                  "en": "Time-of-use"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "set_ac_output",
+        "title": {
+          "en": "Set AC output"
+        },
+        "titleFormatted": {
+          "en": "Turn AC output [[output]] [[state]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "output",
+            "values": [
+              {
+                "id": "ac1",
+                "title": {
+                  "en": "1"
+                }
+              },
+              {
+                "id": "ac2",
+                "title": {
+                  "en": "2"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "state",
+            "values": [
+              {
+                "id": "on",
+                "title": {
+                  "en": "on"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "off"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "set_backup_reserve",
+        "title": {
+          "en": "Set backup reserve level"
+        },
+        "titleFormatted": {
+          "en": "Set backup reserve to [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "min": 3,
+            "max": 95,
+            "step": 1,
+            "placeholder": {
+              "en": "%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "set_feed_in",
+        "title": {
+          "en": "Set grid feed-in"
+        },
+        "titleFormatted": {
+          "en": "Turn grid feed-in [[state]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "state",
+            "values": [
+              {
+                "id": "on",
+                "title": {
+                  "en": "on"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "off"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "set_operating_mode",
+        "title": {
+          "en": "Set operating mode"
+        },
+        "titleFormatted": {
+          "en": "Set operating mode to [[mode]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "values": [
+              {
+                "id": "self_powered",
+                "title": {
+                  "en": "Self-powered"
+                }
+              },
+              {
+                "id": "ai",
+                "title": {
+                  "en": "AI / Smart scheduling"
+                }
+              },
+              {
+                "id": "scheduled",
+                "title": {
+                  "en": "Scheduled"
+                }
+              },
+              {
+                "id": "tou",
+                "title": {
+                  "en": "Time-of-use"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "drivers": [
     {
       "name": {

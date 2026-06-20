@@ -1,0 +1,24 @@
+{
+  "id": "set_ac_output",
+  "title": { "en": "Set AC output" },
+  "titleFormatted": { "en": "Turn AC output [[output]] [[state]]" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "dropdown",
+      "name": "output",
+      "values": [
+        { "id": "ac1", "title": { "en": "1" } },
+        { "id": "ac2", "title": { "en": "2" } }
+      ]
+    },
+    {
+      "type": "dropdown",
+      "name": "state",
+      "values": [
+        { "id": "on", "title": { "en": "on" } },
+        { "id": "off", "title": { "en": "off" } }
+      ]
+    }
+  ]
+}

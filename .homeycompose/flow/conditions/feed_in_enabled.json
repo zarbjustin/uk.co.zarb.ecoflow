@@ -1,0 +1,5 @@
+{
+  "id": "feed_in_enabled",
+  "title": { "en": "Grid feed-in !{{is|is not}} enabled" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

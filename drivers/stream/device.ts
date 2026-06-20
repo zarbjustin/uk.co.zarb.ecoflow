@@ -12,6 +12,9 @@ module.exports = class StreamDevice extends Homey.Device {
   private pollTimer: NodeJS.Timeout | null = null;
   private sn = '';
   private mainSn = '';
+  private prevSoc: number | undefined;
+  private prevPv: number | undefined;
+  private prevGrid: number | undefined;
 
   async onInit(): Promise<void> {
     this.sn = this.getData().sn;
@@ -75,6 +78,53 @@ module.exports = class StreamDevice extends Homey.Device {
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
+    this.fireTriggers(values);
+  }
+
+  private fireTriggers(values: Record<string, number | boolean | string>): void {
+    const flow = this.homey.flow;
+    const pv = values['measure_power.pv'];
+    if (typeof pv === 'number' && pv !== this.prevPv) {
+      flow.getDeviceTriggerCard('solar_power_changed').trigger(this, { power: pv }).catch(() => {});
+      this.prevPv = pv;
+    }
+    const grid = values['measure_power.grid'];
+    if (typeof grid === 'number' && grid !== this.prevGrid) {
+      flow.getDeviceTriggerCard('grid_power_changed').trigger(this, { power: grid }).catch(() => {});
+      this.prevGrid = grid;
+    }
+    const soc = values['measure_battery'];
+    if (typeof soc === 'number') {
+      if (this.prevSoc !== undefined && soc !== this.prevSoc) {
+        flow
+          .getDeviceTriggerCard('battery_level_crossed')
+          .trigger(this, { battery: soc }, { soc, prevSoc: this.prevSoc })
+          .catch(() => {});
+      }
+      this.prevSoc = soc;
+    }
+  }
+
+  // ----- Flow action helpers ----------------------------------------------
+
+  async flowSetOperatingMode(mode: OperatingMode): Promise<void> {
+    await this.send(StreamCmd.operatingMode(this.mainSn, mode));
+    await this.setCapabilityValue('operating_mode', mode).catch(() => {});
+  }
+
+  async flowSetBackupReserve(level: number): Promise<void> {
+    await this.send(StreamCmd.backupReserve(this.mainSn, level));
+    await this.setCapabilityValue('backup_reserve_soc', level).catch(() => {});
+  }
+
+  async flowSetFeedIn(on: boolean): Promise<void> {
+    await this.send(StreamCmd.feedIn(this.mainSn, on));
+    await this.setCapabilityValue('feed_in_control', on).catch(() => {});
+  }
+
+  async flowSetAc(which: 'ac1' | 'ac2', on: boolean): Promise<void> {
+    await this.send(which === 'ac2' ? StreamCmd.ac2(this.mainSn, on) : StreamCmd.ac1(this.mainSn, on));
+    await this.setCapabilityValue(which === 'ac2' ? 'onoff.ac2' : 'onoff.ac1', on).catch(() => {});
   }
 
   async onDeleted(): Promise<void> {

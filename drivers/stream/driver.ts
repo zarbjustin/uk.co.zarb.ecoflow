@@ -10,7 +10,41 @@ function isStreamSerial(sn: string): boolean {
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
+    this.registerFlowCards();
     this.log('STREAM driver initialised');
+  }
+
+  private registerFlowCards(): void {
+    const flow = this.homey.flow;
+
+    // Conditions
+    flow.getConditionCard('operating_mode_is').registerRunListener(
+      (args: any) => args.device.getCapabilityValue('operating_mode') === args.mode,
+    );
+    flow.getConditionCard('feed_in_enabled').registerRunListener(
+      (args: any) => args.device.getCapabilityValue('feed_in_control') === true,
+    );
+
+    // Actions
+    flow.getActionCard('set_operating_mode').registerRunListener(
+      (args: any) => args.device.flowSetOperatingMode(args.mode),
+    );
+    flow.getActionCard('set_backup_reserve').registerRunListener(
+      (args: any) => args.device.flowSetBackupReserve(args.level),
+    );
+    flow.getActionCard('set_feed_in').registerRunListener(
+      (args: any) => args.device.flowSetFeedIn(args.state === 'on'),
+    );
+    flow.getActionCard('set_ac_output').registerRunListener(
+      (args: any) => args.device.flowSetAc(args.output, args.state === 'on'),
+    );
+
+    // Trigger arg-matching for the battery threshold card
+    flow.getDeviceTriggerCard('battery_level_crossed').registerRunListener((args: any, state: any) => {
+      const up = state.prevSoc < args.level && state.soc >= args.level;
+      const down = state.prevSoc > args.level && state.soc <= args.level;
+      return (args.direction === 'above' && up) || (args.direction === 'below' && down);
+    });
   }
 
   async onPair(session: any): Promise<void> {

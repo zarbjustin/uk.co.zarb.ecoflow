@@ -1,0 +1,9 @@
+{
+  "id": "set_backup_reserve",
+  "title": { "en": "Set backup reserve level" },
+  "titleFormatted": { "en": "Set backup reserve to [[level]]%" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    { "type": "number", "name": "level", "min": 3, "max": 95, "step": 1, "placeholder": { "en": "%" } }
+  ]
+}
