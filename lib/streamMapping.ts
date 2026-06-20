@@ -18,6 +18,16 @@ function bool(q: Quota, key: string): boolean | undefined {
   return undefined;
 }
 
+/** Per-PV watts for input i (1-4), handling both firmware variants. */
+function perPv(q: Quota, i: number): number | undefined {
+  const legacy = num(q, [i === 1 ? 'powGetPv' : `powGetPv${i}`]);
+  if (legacy !== undefined && legacy !== 0) return legacy;
+  const amp = num(q, [i === 1 ? 'plugInInfoPvAmp' : `plugInInfoPv${i}Amp`]);
+  const vol = num(q, [i === 1 ? 'plugInInfoPvVol' : `plugInInfoPv${i}Vol`]);
+  if (amp !== undefined && vol !== undefined) return amp * vol;
+  return legacy;
+}
+
 /** Sum of available per-PV watts, preferring the firmware-specific keys. */
 function pvSum(q: Quota): number | undefined {
   const direct = num(q, ['powGetPvSum']);
@@ -25,14 +35,10 @@ function pvSum(q: Quota): number | undefined {
   let total = 0;
   let any = false;
   for (let i = 1; i <= 4; i += 1) {
-    const legacy = num(q, [i === 1 ? 'powGetPv' : `powGetPv${i}`]);
-    if (legacy !== undefined) {
-      total += legacy; any = true; continue;
-    }
-    const amp = num(q, [i === 1 ? 'plugInInfoPvAmp' : `plugInInfoPv${i}Amp`]);
-    const vol = num(q, [i === 1 ? 'plugInInfoPvVol' : `plugInInfoPv${i}Vol`]);
-    if (amp !== undefined && vol !== undefined) {
-      total += amp * vol; any = true;
+    const v = perPv(q, i);
+    if (v !== undefined) {
+      total += v;
+      any = true;
     }
   }
   return any ? total : undefined;
@@ -89,6 +95,17 @@ export function mapStreamQuota(q: Quota): Record<string, number | boolean | stri
   const feed = num(q, ['feedGridMode']);
   if (feed !== undefined) set('feed_in_control', feed === 2);
   set('operating_mode', operatingMode(q));
+
+  // Extended telemetry (Sprint 9)
+  for (let i = 1; i <= 4; i += 1) set(`measure_power.pv${i}`, perPv(q, i));
+  set('measure_power.schuko1', num(q, ['powGetSchuko1']));
+  set('measure_power.schuko2', num(q, ['powGetSchuko2']));
+  set('measure_power.from_pv', num(q, ['powGetSysLoadFromPv']));
+  set('measure_power.from_battery', num(q, ['powGetSysLoadFromBp']));
+  set('measure_power.from_grid', num(q, ['powGetSysLoadFromGrid']));
+  set('charge_remaining', num(q, ['bmsChgRemTime', 'cmsChgRemTime', 'chgRemainTime']));
+  set('discharge_remaining', num(q, ['bmsDsgRemTime', 'cmsDsgRemTime', 'dsgRemainTime']));
+  set('battery_cycles', num(q, ['cycles']));
 
   return out;
 }

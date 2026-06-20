@@ -519,7 +519,19 @@
         "energy_grid_export_today",
         "energy_savings_today",
         "co2_today",
-        "energy_independence"
+        "energy_independence",
+        "measure_power.pv1",
+        "measure_power.pv2",
+        "measure_power.pv3",
+        "measure_power.pv4",
+        "measure_power.schuko1",
+        "measure_power.schuko2",
+        "measure_power.from_pv",
+        "measure_power.from_battery",
+        "measure_power.from_grid",
+        "charge_remaining",
+        "discharge_remaining",
+        "battery_cycles"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -550,6 +562,51 @@
         "meter_power.discharged": {
           "title": {
             "en": "Energy discharged"
+          }
+        },
+        "measure_power.pv1": {
+          "title": {
+            "en": "Solar PV1"
+          }
+        },
+        "measure_power.pv2": {
+          "title": {
+            "en": "Solar PV2"
+          }
+        },
+        "measure_power.pv3": {
+          "title": {
+            "en": "Solar PV3"
+          }
+        },
+        "measure_power.pv4": {
+          "title": {
+            "en": "Solar PV4"
+          }
+        },
+        "measure_power.schuko1": {
+          "title": {
+            "en": "Socket 1"
+          }
+        },
+        "measure_power.schuko2": {
+          "title": {
+            "en": "Socket 2"
+          }
+        },
+        "measure_power.from_pv": {
+          "title": {
+            "en": "Load from solar"
+          }
+        },
+        "measure_power.from_battery": {
+          "title": {
+            "en": "Load from battery"
+          }
+        },
+        "measure_power.from_grid": {
+          "title": {
+            "en": "Load from grid"
           }
         },
         "onoff.ac1": {
@@ -659,6 +716,17 @@
       "uiComponent": "slider",
       "insights": true
     },
+    "battery_cycles": {
+      "type": "number",
+      "title": {
+        "en": "Battery cycles"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
     "battery_soh": {
       "type": "number",
       "title": {
@@ -687,6 +755,20 @@
       "uiComponent": "sensor",
       "insights": true
     },
+    "charge_remaining": {
+      "type": "number",
+      "title": {
+        "en": "Charge time remaining"
+      },
+      "units": {
+        "en": "min"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
     "co2_today": {
       "type": "number",
       "title": {
@@ -708,6 +790,20 @@
       },
       "units": {
         "en": "%"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "discharge_remaining": {
+      "type": "number",
+      "title": {
+        "en": "Discharge time remaining"
+      },
+      "units": {
+        "en": "min"
       },
       "decimals": 0,
       "getable": true,
