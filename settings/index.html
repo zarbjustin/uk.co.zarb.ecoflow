@@ -33,6 +33,11 @@
     <option value="https://api-e.ecoflow.com">Europe (api-e.ecoflow.com)</option>
   </select>
 
+  <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+    <input id="mqtt" type="checkbox" style="width:auto;" checked />
+    Realtime updates (MQTT)
+  </label>
+
   <button id="save" type="button">Save</button>
   <div class="saved" id="saved"></div>
 
@@ -42,13 +47,16 @@
       Homey.get('accessKey', function (err, v) { if (!err && v) document.getElementById('accessKey').value = v; });
       Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
+      Homey.get('mqtt_enabled', function (err, v) { if (!err && v === false) document.getElementById('mqtt').checked = false; });
 
       document.getElementById('save').addEventListener('click', function () {
         var a = document.getElementById('accessKey').value.trim();
         var s = document.getElementById('secretKey').value.trim();
         var h = document.getElementById('host').value;
+        var m = document.getElementById('mqtt').checked;
         Homey.set('accessKey', a, function () {});
         Homey.set('secretKey', s, function () {});
+        Homey.set('mqtt_enabled', m, function () {});
         Homey.set('host', h, function () {
           document.getElementById('saved').textContent = 'Saved. Restart paired devices to apply.';
         });

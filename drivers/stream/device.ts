@@ -251,6 +251,28 @@ module.exports = class StreamDevice extends Homey.Device {
     await this.setCapabilityValue(which === 'ac2' ? 'onoff.ac2' : 'onoff.ac1', on).catch(() => {});
   }
 
+  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.includes('poll_interval')) {
+      if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+      const interval = ((Number(newSettings.poll_interval) || 30) * 1000) || DEFAULT_POLL_MS;
+      this.pollTimer = this.homey.setInterval(() => {
+        this.poll().catch((e) => this.error('poll failed', e));
+      }, interval);
+    }
+    if (changedKeys.includes('enable_history')) {
+      if (this.historyTimer) {
+        this.homey.clearInterval(this.historyTimer);
+        this.historyTimer = null;
+      }
+      if (newSettings.enable_history !== false) {
+        this.refreshHistory().catch((e) => this.error('history', e));
+        this.historyTimer = this.homey.setInterval(() => {
+          this.refreshHistory().catch((e) => this.error('history', e));
+        }, HISTORY_INTERVAL_MS);
+      }
+    }
+  }
+
   async onDeleted(): Promise<void> {
     (this.homey.app as any).unsubscribeRealtime?.(this.sn);
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);

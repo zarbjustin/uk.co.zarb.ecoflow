@@ -22,6 +22,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   async getMqtt(): Promise<EcoFlowMqtt | null> {
     const { accessKey, secretKey, host } = this.getCredentials();
     if (!accessKey || !secretKey) return null;
+    if (this.homey.settings.get('mqtt_enabled') === false) return null;
     if (!this.mqtt) {
       this.mqtt = new EcoFlowMqtt({
         accessKey, secretKey, host, log: (...a) => this.log('[mqtt]', ...a),
