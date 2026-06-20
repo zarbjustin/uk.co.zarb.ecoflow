@@ -1,0 +1,9 @@
+{
+  "type": "number",
+  "title": { "en": "Power factor" },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true
+}

@@ -1,0 +1,48 @@
+{
+  "name": { "en": "Smart Meter" },
+  "class": "sensor",
+  "connectivity": ["cloud"],
+  "capabilities": [
+    "measure_power",
+    "measure_power.l1",
+    "measure_power.l2",
+    "measure_power.l3",
+    "measure_voltage.l1",
+    "measure_voltage.l2",
+    "measure_voltage.l3",
+    "measure_current.l1",
+    "measure_current.l2",
+    "measure_current.l3",
+    "meter_power",
+    "meter_power.today",
+    "power_factor"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": { "title": { "en": "Grid power" } },
+    "measure_power.l1": { "title": { "en": "Power L1" } },
+    "measure_power.l2": { "title": { "en": "Power L2" } },
+    "measure_power.l3": { "title": { "en": "Power L3" } },
+    "measure_voltage.l1": { "title": { "en": "Voltage L1" } },
+    "measure_voltage.l2": { "title": { "en": "Voltage L2" } },
+    "measure_voltage.l3": { "title": { "en": "Voltage L3" } },
+    "measure_current.l1": { "title": { "en": "Current L1" } },
+    "measure_current.l2": { "title": { "en": "Current L2" } },
+    "measure_current.l3": { "title": { "en": "Current L3" } },
+    "meter_power": { "title": { "en": "Net energy" } },
+    "meter_power.today": { "title": { "en": "Energy today" } }
+  },
+  "energy": {
+    "cumulative": true,
+    "cumulativeImportedCapability": "meter_power"
+  },
+  "images": {
+    "small": "/drivers/smartmeter/assets/images/small.png",
+    "large": "/drivers/smartmeter/assets/images/large.png",
+    "xlarge": "/drivers/smartmeter/assets/images/xlarge.png"
+  },
+  "pair": [
+    { "id": "credentials" },
+    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
+    { "id": "add_devices", "template": "add_devices" }
+  ]
+}
