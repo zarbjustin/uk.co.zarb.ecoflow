@@ -1,0 +1,13 @@
+{
+  "type": "enum",
+  "title": { "en": "Operating mode" },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker",
+  "values": [
+    { "id": "self_powered", "title": { "en": "Self-powered" } },
+    { "id": "ai", "title": { "en": "AI / Smart scheduling" } },
+    { "id": "scheduled", "title": { "en": "Scheduled" } },
+    { "id": "tou", "title": { "en": "Time-of-use" } }
+  ]
+}

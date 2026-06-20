@@ -1,0 +1,10 @@
+{
+  "type": "number",
+  "title": { "en": "Charge limit" },
+  "units": { "en": "%" },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true
+}

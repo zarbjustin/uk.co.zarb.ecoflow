@@ -1,0 +1,55 @@
+{
+  "name": { "en": "STREAM" },
+  "class": "battery",
+  "connectivity": ["cloud"],
+  "capabilities": [
+    "measure_battery",
+    "measure_power",
+    "measure_power.pv",
+    "measure_power.grid",
+    "measure_power.load",
+    "meter_power.charged",
+    "meter_power.discharged",
+    "measure_temperature",
+    "measure_voltage",
+    "battery_soh",
+    "charge_limit",
+    "discharge_limit",
+    "onoff.ac1",
+    "onoff.ac2",
+    "backup_reserve_soc",
+    "operating_mode",
+    "feed_in_control"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": { "title": { "en": "Battery power" } },
+    "measure_power.pv": { "title": { "en": "Solar power" } },
+    "measure_power.grid": { "title": { "en": "Grid power" } },
+    "measure_power.load": { "title": { "en": "Home load" } },
+    "meter_power.charged": { "title": { "en": "Energy charged" } },
+    "meter_power.discharged": { "title": { "en": "Energy discharged" } },
+    "onoff.ac1": {
+      "title": { "en": "AC output 1" },
+      "insightsTitleTrue": { "en": "AC1 turned on" },
+      "insightsTitleFalse": { "en": "AC1 turned off" }
+    },
+    "onoff.ac2": {
+      "title": { "en": "AC output 2" },
+      "insightsTitleTrue": { "en": "AC2 turned on" },
+      "insightsTitleFalse": { "en": "AC2 turned off" }
+    }
+  },
+  "images": {
+    "small": "/drivers/stream/assets/images/small.png",
+    "large": "/drivers/stream/assets/images/large.png",
+    "xlarge": "/drivers/stream/assets/images/xlarge.png"
+  },
+  "energy": {
+    "batteries": ["INTERNAL"]
+  },
+  "pair": [
+    { "id": "credentials" },
+    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
+    { "id": "add_devices", "template": "add_devices" }
+  ]
+}

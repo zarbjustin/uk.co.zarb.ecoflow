@@ -17,6 +17,7 @@
   "category": [
     "energy"
   ],
+  "brandColor": "#1AA3E8",
   "permissions": [],
   "images": {
     "small": "/assets/images/small.png",
@@ -26,5 +27,228 @@
   "author": {
     "name": "Justin Zarb",
     "email": "justin.zarb@zarb.co.uk"
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "STREAM"
+      },
+      "class": "battery",
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_battery",
+        "measure_power",
+        "measure_power.pv",
+        "measure_power.grid",
+        "measure_power.load",
+        "meter_power.charged",
+        "meter_power.discharged",
+        "measure_temperature",
+        "measure_voltage",
+        "battery_soh",
+        "charge_limit",
+        "discharge_limit",
+        "onoff.ac1",
+        "onoff.ac2",
+        "backup_reserve_soc",
+        "operating_mode",
+        "feed_in_control"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Battery power"
+          }
+        },
+        "measure_power.pv": {
+          "title": {
+            "en": "Solar power"
+          }
+        },
+        "measure_power.grid": {
+          "title": {
+            "en": "Grid power"
+          }
+        },
+        "measure_power.load": {
+          "title": {
+            "en": "Home load"
+          }
+        },
+        "meter_power.charged": {
+          "title": {
+            "en": "Energy charged"
+          }
+        },
+        "meter_power.discharged": {
+          "title": {
+            "en": "Energy discharged"
+          }
+        },
+        "onoff.ac1": {
+          "title": {
+            "en": "AC output 1"
+          },
+          "insightsTitleTrue": {
+            "en": "AC1 turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "AC1 turned off"
+          }
+        },
+        "onoff.ac2": {
+          "title": {
+            "en": "AC output 2"
+          },
+          "insightsTitleTrue": {
+            "en": "AC2 turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "AC2 turned off"
+          }
+        }
+      },
+      "images": {
+        "small": "/drivers/stream/assets/images/small.png",
+        "large": "/drivers/stream/assets/images/large.png",
+        "xlarge": "/drivers/stream/assets/images/xlarge.png"
+      },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
+      "pair": [
+        {
+          "id": "credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "stream"
+    }
+  ],
+  "capabilities": {
+    "backup_reserve_soc": {
+      "type": "number",
+      "title": {
+        "en": "Backup reserve"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 3,
+      "max": 95,
+      "step": 1,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "insights": true
+    },
+    "battery_soh": {
+      "type": "number",
+      "title": {
+        "en": "Battery health"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "charge_limit": {
+      "type": "number",
+      "title": {
+        "en": "Charge limit"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "discharge_limit": {
+      "type": "number",
+      "title": {
+        "en": "Discharge limit"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "feed_in_control": {
+      "type": "boolean",
+      "title": {
+        "en": "Grid feed-in"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Feed-in enabled"
+      },
+      "insightsTitleFalse": {
+        "en": "Feed-in disabled"
+      }
+    },
+    "operating_mode": {
+      "type": "enum",
+      "title": {
+        "en": "Operating mode"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "self_powered",
+          "title": {
+            "en": "Self-powered"
+          }
+        },
+        {
+          "id": "ai",
+          "title": {
+            "en": "AI / Smart scheduling"
+          }
+        },
+        {
+          "id": "scheduled",
+          "title": {
+            "en": "Scheduled"
+          }
+        },
+        {
+          "id": "tou",
+          "title": {
+            "en": "Time-of-use"
+          }
+        }
+      ]
+    }
   }
 }

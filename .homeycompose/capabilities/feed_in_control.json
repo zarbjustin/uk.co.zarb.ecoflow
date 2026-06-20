@@ -1,0 +1,10 @@
+{
+  "type": "boolean",
+  "title": { "en": "Grid feed-in" },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "toggle",
+  "insights": true,
+  "insightsTitleTrue": { "en": "Feed-in enabled" },
+  "insightsTitleFalse": { "en": "Feed-in disabled" }
+}

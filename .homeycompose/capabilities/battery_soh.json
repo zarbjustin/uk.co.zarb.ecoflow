@@ -1,0 +1,10 @@
+{
+  "type": "number",
+  "title": { "en": "Battery health" },
+  "units": { "en": "%" },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true
+}
