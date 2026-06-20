@@ -512,7 +512,14 @@
         "onoff.ac2",
         "backup_reserve_soc",
         "operating_mode",
-        "feed_in_control"
+        "feed_in_control",
+        "energy_solar_today",
+        "energy_consumption_today",
+        "energy_grid_import_today",
+        "energy_grid_export_today",
+        "energy_savings_today",
+        "co2_today",
+        "energy_independence"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -591,6 +598,28 @@
           "hint": {
             "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
           }
+        },
+        {
+          "id": "enable_history",
+          "type": "checkbox",
+          "label": {
+            "en": "Daily energy statistics"
+          },
+          "value": true,
+          "hint": {
+            "en": "Fetch daily solar/grid/savings/CO₂ totals from EcoFlow's history API."
+          }
+        },
+        {
+          "id": "history_prefix",
+          "type": "text",
+          "label": {
+            "en": "History model code"
+          },
+          "value": "BK621",
+          "hint": {
+            "en": "EcoFlow history metric prefix for your STREAM model (default BK621). Change if daily stats stay empty."
+          }
         }
       ],
       "pair": [
@@ -658,6 +687,20 @@
       "uiComponent": "sensor",
       "insights": true
     },
+    "co2_today": {
+      "type": "number",
+      "title": {
+        "en": "CO₂ avoided today"
+      },
+      "units": {
+        "en": "kg"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
     "discharge_limit": {
       "type": "number",
       "title": {
@@ -667,6 +710,87 @@
         "en": "%"
       },
       "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "energy_consumption_today": {
+      "type": "number",
+      "title": {
+        "en": "Consumption today"
+      },
+      "units": {
+        "en": "kWh"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "energy_grid_export_today": {
+      "type": "number",
+      "title": {
+        "en": "Grid export today"
+      },
+      "units": {
+        "en": "kWh"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "energy_grid_import_today": {
+      "type": "number",
+      "title": {
+        "en": "Grid import today"
+      },
+      "units": {
+        "en": "kWh"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "energy_independence": {
+      "type": "number",
+      "title": {
+        "en": "Energy independence"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "energy_savings_today": {
+      "type": "number",
+      "title": {
+        "en": "Savings today"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "energy_solar_today": {
+      "type": "number",
+      "title": {
+        "en": "Solar today"
+      },
+      "units": {
+        "en": "kWh"
+      },
+      "decimals": 2,
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",

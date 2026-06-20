@@ -19,7 +19,14 @@
     "onoff.ac2",
     "backup_reserve_soc",
     "operating_mode",
-    "feed_in_control"
+    "feed_in_control",
+    "energy_solar_today",
+    "energy_consumption_today",
+    "energy_grid_import_today",
+    "energy_grid_export_today",
+    "energy_savings_today",
+    "co2_today",
+    "energy_independence"
   ],
   "capabilitiesOptions": {
     "measure_power": { "title": { "en": "Battery power" } },
@@ -56,6 +63,20 @@
       "min": 10,
       "max": 600,
       "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+    },
+    {
+      "id": "enable_history",
+      "type": "checkbox",
+      "label": { "en": "Daily energy statistics" },
+      "value": true,
+      "hint": { "en": "Fetch daily solar/grid/savings/CO₂ totals from EcoFlow's history API." }
+    },
+    {
+      "id": "history_prefix",
+      "type": "text",
+      "label": { "en": "History model code" },
+      "value": "BK621",
+      "hint": { "en": "EcoFlow history metric prefix for your STREAM model (default BK621). Change if daily stats stay empty." }
     }
   ],
   "pair": [

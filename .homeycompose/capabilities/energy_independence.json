@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Energy independence" }, "units": { "en": "%" }, "decimals": 0, "getable": true, "setable": false, "uiComponent": "sensor", "insights": true }

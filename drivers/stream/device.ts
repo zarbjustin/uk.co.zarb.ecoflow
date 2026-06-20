@@ -4,12 +4,15 @@ import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
+import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 
 const DEFAULT_POLL_MS = 30000;
+const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 
 module.exports = class StreamDevice extends Homey.Device {
   private client!: EcoFlowClient;
   private pollTimer: NodeJS.Timeout | null = null;
+  private historyTimer: NodeJS.Timeout | null = null;
   private sn = '';
   private mainSn = '';
   private prevSoc: number | undefined;
@@ -54,6 +57,37 @@ module.exports = class StreamDevice extends Homey.Device {
     }
 
     this.log(`STREAM device ${this.sn} (main ${this.mainSn}) initialised`);
+
+    // Daily energy statistics (history API)
+    if (this.getSetting('enable_history') !== false) {
+      this.refreshHistory().catch((e) => this.error('history', e));
+      this.historyTimer = this.homey.setInterval(() => {
+        this.refreshHistory().catch((e) => this.error('history', e));
+      }, HISTORY_INTERVAL_MS);
+    }
+  }
+
+  private async refreshHistory(): Promise<void> {
+    const prefix = (this.getSetting('history_prefix') as string) || 'BK621';
+    const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix);
+    await this.applyDailyEnergy(daily);
+  }
+
+  private async applyDailyEnergy(d: DailyEnergy): Promise<void> {
+    const kwh = (wh?: number) => (typeof wh === 'number' ? wh / 1000 : undefined);
+    const map: Record<string, number | undefined> = {
+      energy_solar_today: kwh(d.solarWh),
+      energy_consumption_today: kwh(d.consumptionWh),
+      energy_grid_import_today: kwh(d.gridImportWh),
+      energy_grid_export_today: kwh(d.gridExportWh),
+      energy_savings_today: d.savings,
+      co2_today: typeof d.co2g === 'number' ? d.co2g / 1000 : undefined,
+      energy_independence: d.independencePct,
+    };
+    for (const [cap, value] of Object.entries(map)) {
+      if (value === undefined || !this.hasCapability(cap)) continue;
+      await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
+    }
   }
 
   private registerControlListeners(): void {
@@ -141,5 +175,6 @@ module.exports = class StreamDevice extends Homey.Device {
   async onDeleted(): Promise<void> {
     (this.homey.app as any).unsubscribeRealtime?.(this.sn);
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+    if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
   }
 };

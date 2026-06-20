@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Solar today" }, "units": { "en": "kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "insights": true }
