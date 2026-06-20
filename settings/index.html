@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; max-width: 520px; margin: 0 auto; }
+    h1 { font-size: 20px; }
+    p.help { color: #888; font-size: 13px; }
+    label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: 13px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+    button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1AA3E8; color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
+    .saved { color: #1a7f37; font-size: 13px; margin-top: 12px; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <h1>EcoFlow account</h1>
+  <p class="help">
+    Credentials come from the EcoFlow developer portal (developer.ecoflow.com &rarr; IoT Background).
+    Changing them here updates all paired EcoFlow devices.
+  </p>
+
+  <label for="accessKey">Access Key</label>
+  <input id="accessKey" type="text" autocomplete="off" spellcheck="false" />
+
+  <label for="secretKey">Secret Key</label>
+  <input id="secretKey" type="password" autocomplete="off" spellcheck="false" />
+
+  <label for="host">Region</label>
+  <select id="host">
+    <option value="https://api.ecoflow.com">Global (api.ecoflow.com)</option>
+    <option value="https://api-e.ecoflow.com">Europe (api-e.ecoflow.com)</option>
+  </select>
+
+  <button id="save" type="button">Save</button>
+  <div class="saved" id="saved"></div>
+
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      Homey.ready();
+      Homey.get('accessKey', function (err, v) { if (!err && v) document.getElementById('accessKey').value = v; });
+      Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
+      Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
+
+      document.getElementById('save').addEventListener('click', function () {
+        var a = document.getElementById('accessKey').value.trim();
+        var s = document.getElementById('secretKey').value.trim();
+        var h = document.getElementById('host').value;
+        Homey.set('accessKey', a, function () {});
+        Homey.set('secretKey', s, function () {});
+        Homey.set('host', h, function () {
+          document.getElementById('saved').textContent = 'Saved. Restart paired devices to apply.';
+        });
+      });
+    }
+  </script>
+</body>
+</html>

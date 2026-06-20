@@ -12,9 +12,9 @@ function num(q: Quota, key: string): number | undefined {
 /** True if a quota payload looks like an EcoFlow Smart Meter. */
 export function looksLikeSmartMeter(q: Quota): boolean {
   return (
-    q['gridConnectionPowerL1'] !== undefined ||
-    q['gridConnectionVolL1'] !== undefined ||
-    q['gridConnectionDataRecord.totalActiveEnergy'] !== undefined
+    q['gridConnectionPowerL1'] !== undefined
+    || q['gridConnectionVolL1'] !== undefined
+    || q['gridConnectionDataRecord.totalActiveEnergy'] !== undefined
   );
 }
 

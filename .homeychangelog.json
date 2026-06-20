@@ -1,5 +1,5 @@
 {
   "1.0.0": {
-    "en": "First version!"
+    "en": "Initial release: EcoFlow STREAM monitoring & control (battery, solar, grid, AC outputs, backup reserve, operating mode, feed-in), Smart Meter (per-phase power/voltage/current + energy), Homey Energy integration, Flow cards and Insights, with realtime MQTT updates."
   }
 }

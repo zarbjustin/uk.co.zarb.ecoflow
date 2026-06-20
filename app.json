@@ -449,6 +449,21 @@
         "cumulative": true,
         "cumulativeImportedCapability": "meter_power"
       },
+      "settings": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval (seconds)"
+          },
+          "value": 30,
+          "min": 10,
+          "max": 600,
+          "hint": {
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+          }
+        }
+      ],
       "images": {
         "small": "/drivers/smartmeter/assets/images/small.png",
         "large": "/drivers/smartmeter/assets/images/large.png",
@@ -563,6 +578,21 @@
           "INTERNAL"
         ]
       },
+      "settings": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval (seconds)"
+          },
+          "value": 30,
+          "min": 10,
+          "max": 600,
+          "hint": {
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+          }
+        }
+      ],
       "pair": [
         {
           "id": "credentials"

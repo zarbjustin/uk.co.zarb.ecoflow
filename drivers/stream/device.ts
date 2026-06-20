@@ -28,19 +28,20 @@ module.exports = class StreamDevice extends Homey.Device {
       return;
     }
 
-    this.client = new EcoFlowClient({ accessKey, secretKey, host, log: (...a) => this.log(...a) });
+    this.client = new EcoFlowClient({
+      accessKey, secretKey, host, log: (...a) => this.log(...a),
+    });
     this.registerControlListeners();
 
     await this.poll();
-    const interval = (this.getSetting('poll_interval') as number) || DEFAULT_POLL_MS;
+    const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
     this.pollTimer = this.homey.setInterval(() => {
       this.poll().catch((e) => this.error('poll failed', e));
     }, interval);
 
     // Realtime updates via shared MQTT (falls back silently to polling).
     try {
-      const app: any = this.homey.app;
-      await app.subscribeRealtime?.(
+      await (this.homey.app as any).subscribeRealtime?.(
         this.sn,
         (q: Record<string, any>) => this.applyQuota(q).catch((e) => this.error('mqtt apply', e)),
         (online: boolean) => {
@@ -58,15 +59,9 @@ module.exports = class StreamDevice extends Homey.Device {
   private registerControlListeners(): void {
     this.registerCapabilityListener('onoff.ac1', async (v: boolean) => this.send(StreamCmd.ac1(this.mainSn, v)));
     this.registerCapabilityListener('onoff.ac2', async (v: boolean) => this.send(StreamCmd.ac2(this.mainSn, v)));
-    this.registerCapabilityListener('feed_in_control', async (v: boolean) =>
-      this.send(StreamCmd.feedIn(this.mainSn, v)),
-    );
-    this.registerCapabilityListener('backup_reserve_soc', async (v: number) =>
-      this.send(StreamCmd.backupReserve(this.mainSn, v)),
-    );
-    this.registerCapabilityListener('operating_mode', async (v: OperatingMode) =>
-      this.send(StreamCmd.operatingMode(this.mainSn, v)),
-    );
+    this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
+    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.send(StreamCmd.backupReserve(this.mainSn, v)));
+    this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
   }
 
   /** Send a STREAM set command and refresh state shortly after. */
@@ -98,7 +93,7 @@ module.exports = class StreamDevice extends Homey.Device {
   }
 
   private fireTriggers(values: Record<string, number | boolean | string>): void {
-    const flow = this.homey.flow;
+    const { flow } = this.homey;
     const pv = values['measure_power.pv'];
     if (typeof pv === 'number' && pv !== this.prevPv) {
       flow.getDeviceTriggerCard('solar_power_changed').trigger(this, { power: pv }).catch(() => {});

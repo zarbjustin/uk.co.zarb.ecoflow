@@ -21,18 +21,17 @@ module.exports = class SmartMeterDevice extends Homey.Device {
       return;
     }
 
-    this.client = new EcoFlowClient({ accessKey, secretKey, host, log: (...a) => this.log(...a) });
+    this.client = new EcoFlowClient({
+      accessKey, secretKey, host, log: (...a) => this.log(...a),
+    });
     await this.poll();
-    const interval = (this.getSetting('poll_interval') as number) || DEFAULT_POLL_MS;
+    const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
     this.pollTimer = this.homey.setInterval(() => {
       this.poll().catch((e) => this.error('poll failed', e));
     }, interval);
 
     try {
-      const app: any = this.homey.app;
-      await app.subscribeRealtime?.(this.sn, (q: Record<string, any>) =>
-        this.applyQuota(q).catch((e) => this.error('mqtt apply', e)),
-      );
+      await (this.homey.app as any).subscribeRealtime?.(this.sn, (q: Record<string, any>) => this.applyQuota(q).catch((e) => this.error('mqtt apply', e)));
     } catch (e) {
       this.error('mqtt subscribe failed', e);
     }

@@ -26,10 +26,14 @@ function pvSum(q: Quota): number | undefined {
   let any = false;
   for (let i = 1; i <= 4; i += 1) {
     const legacy = num(q, [i === 1 ? 'powGetPv' : `powGetPv${i}`]);
-    if (legacy !== undefined) { total += legacy; any = true; continue; }
+    if (legacy !== undefined) {
+      total += legacy; any = true; continue;
+    }
     const amp = num(q, [i === 1 ? 'plugInInfoPvAmp' : `plugInInfoPv${i}Amp`]);
     const vol = num(q, [i === 1 ? 'plugInInfoPvVol' : `plugInInfoPv${i}Vol`]);
-    if (amp !== undefined && vol !== undefined) { total += amp * vol; any = true; }
+    if (amp !== undefined && vol !== undefined) {
+      total += amp * vol; any = true;
+    }
   }
   return any ? total : undefined;
 }

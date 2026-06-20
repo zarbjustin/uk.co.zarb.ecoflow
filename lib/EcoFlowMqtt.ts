@@ -32,7 +32,10 @@ export class EcoFlowMqtt {
 
   async connect(): Promise<void> {
     if (this.client?.connected) return;
-    if (this.connecting) return this.connecting;
+    if (this.connecting) {
+      await this.connecting;
+      return;
+    }
     this.connecting = (async () => {
       const api = new EcoFlowClient(this.opts);
       const cert = await api.getCertification();

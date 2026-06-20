@@ -15,7 +15,7 @@ module.exports = class StreamDriver extends Homey.Driver {
   }
 
   private registerFlowCards(): void {
-    const flow = this.homey.flow;
+    const { flow } = this.homey;
 
     // Conditions
     flow.getConditionCard('operating_mode_is').registerRunListener(
@@ -83,7 +83,7 @@ module.exports = class StreamDriver extends Homey.Driver {
         if (seen.has(mainSn)) continue;
         seen.add(mainSn);
         results.push({
-          name: d.deviceName || `EcoFlow STREAM`,
+          name: d.deviceName || 'EcoFlow STREAM',
           data: { sn: mainSn },
           store: { mainSn, memberSn: d.sn },
         });

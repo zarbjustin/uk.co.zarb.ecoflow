@@ -1,0 +1,6 @@
+.homeybuild/
+node_modules/
+test/
+drivers/*/pair/
+settings/
+assets/

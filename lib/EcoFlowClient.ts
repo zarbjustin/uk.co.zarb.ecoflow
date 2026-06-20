@@ -3,7 +3,9 @@
 import https from 'https';
 import { URL } from 'url';
 import { authHeaders } from './sign';
-import { AppCertification, EcoFlowDevice, HistoryPoint, Quota } from './types';
+import {
+  AppCertification, EcoFlowDevice, HistoryPoint, Quota,
+} from './types';
 
 export interface EcoFlowClientOptions {
   accessKey: string;
