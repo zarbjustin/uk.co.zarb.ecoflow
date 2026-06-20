@@ -27,6 +27,16 @@ module.exports = class SmartMeterDevice extends Homey.Device {
     this.pollTimer = this.homey.setInterval(() => {
       this.poll().catch((e) => this.error('poll failed', e));
     }, interval);
+
+    try {
+      const app: any = this.homey.app;
+      await app.subscribeRealtime?.(this.sn, (q: Record<string, any>) =>
+        this.applyQuota(q).catch((e) => this.error('mqtt apply', e)),
+      );
+    } catch (e) {
+      this.error('mqtt subscribe failed', e);
+    }
+
     this.log(`Smart Meter ${this.sn} initialised`);
   }
 
@@ -51,6 +61,7 @@ module.exports = class SmartMeterDevice extends Homey.Device {
   }
 
   async onDeleted(): Promise<void> {
+    (this.homey.app as any).unsubscribeRealtime?.(this.sn);
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
   }
 };
