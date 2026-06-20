@@ -12,7 +12,7 @@
     "en": "EcoFlow - Balcony Solar"
   },
   "description": {
-    "en": "Monitor and control EcoFlow PowerStream and STREAM energy systems."
+    "en": "Monitor and control EcoFlow STREAM, PowerStream and Smart Meter energy systems: battery, solar, grid and AC outputs, with Energy dashboard, Flows and Insights."
   },
   "category": [
     "energy"
@@ -599,6 +599,86 @@
   "drivers": [
     {
       "name": {
+        "en": "PowerStream"
+      },
+      "class": "solarpanel",
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_battery",
+        "measure_power",
+        "measure_power.pv",
+        "measure_power.battery",
+        "measure_temperature",
+        "output_target_power",
+        "supply_priority",
+        "led_brightness",
+        "ps_charge_limit",
+        "ps_discharge_limit"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Output power"
+          }
+        },
+        "measure_power.pv": {
+          "title": {
+            "en": "Solar power"
+          }
+        },
+        "measure_power.battery": {
+          "title": {
+            "en": "Battery power"
+          }
+        }
+      },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
+      "images": {
+        "small": "/drivers/powerstream/assets/images/small.png",
+        "large": "/drivers/powerstream/assets/images/large.png",
+        "xlarge": "/drivers/powerstream/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval (seconds)"
+          },
+          "value": 30,
+          "min": 10,
+          "max": 600,
+          "hint": {
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+          }
+        }
+      ],
+      "pair": [
+        {
+          "id": "credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "powerstream"
+    },
+    {
+      "name": {
         "en": "Smart Meter"
       },
       "class": "sensor",
@@ -1145,6 +1225,20 @@
         "en": "Feed-in disabled"
       }
     },
+    "led_brightness": {
+      "type": "number",
+      "title": {
+        "en": "LED brightness"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 1023,
+      "step": 1,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "insights": false
+    },
     "operating_mode": {
       "type": "enum",
       "title": {
@@ -1180,6 +1274,23 @@
         }
       ]
     },
+    "output_target_power": {
+      "type": "number",
+      "title": {
+        "en": "Output power"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 800,
+      "step": 1,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "insights": true
+    },
     "power_factor": {
       "type": "number",
       "title": {
@@ -1190,6 +1301,63 @@
       "setable": false,
       "uiComponent": "sensor",
       "insights": true
+    },
+    "ps_charge_limit": {
+      "type": "number",
+      "title": {
+        "en": "Charge limit"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 70,
+      "max": 100,
+      "step": 1,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "insights": true
+    },
+    "ps_discharge_limit": {
+      "type": "number",
+      "title": {
+        "en": "Discharge limit"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 1,
+      "max": 30,
+      "step": 1,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "insights": true
+    },
+    "supply_priority": {
+      "type": "enum",
+      "title": {
+        "en": "Supply priority"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "power_supply",
+          "title": {
+            "en": "Prioritise supply"
+          }
+        },
+        {
+          "id": "power_storage",
+          "title": {
+            "en": "Prioritise storage"
+          }
+        }
+      ]
     }
   }
 }

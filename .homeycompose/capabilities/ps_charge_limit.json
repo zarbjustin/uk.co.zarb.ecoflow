@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Charge limit" }, "units": { "en": "%" }, "decimals": 0, "min": 70, "max": 100, "step": 1, "getable": true, "setable": true, "uiComponent": "slider", "insights": true }
