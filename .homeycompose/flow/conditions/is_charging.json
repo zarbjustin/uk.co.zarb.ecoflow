@@ -1,0 +1,5 @@
+{
+  "id": "is_charging",
+  "title": { "en": "Battery !{{is|is not}} charging" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

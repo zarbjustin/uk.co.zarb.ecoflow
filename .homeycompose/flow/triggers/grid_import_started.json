@@ -1,0 +1,6 @@
+{
+  "id": "grid_import_started",
+  "title": { "en": "Started importing from grid" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Grid power" }, "example": 700 }]
+}

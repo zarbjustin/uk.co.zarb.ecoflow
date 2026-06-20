@@ -85,6 +85,155 @@
         ]
       },
       {
+        "id": "charging_started",
+        "title": {
+          "en": "Battery started charging"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power"
+            },
+            "example": 800
+          }
+        ]
+      },
+      {
+        "id": "device_came_online",
+        "title": {
+          "en": "Device came online"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "device_went_offline",
+        "title": {
+          "en": "Device went offline"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "discharging_started",
+        "title": {
+          "en": "Battery started discharging"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power"
+            },
+            "example": -600
+          }
+        ]
+      },
+      {
+        "id": "fault_raised",
+        "title": {
+          "en": "A fault was raised"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "source",
+            "type": "string",
+            "title": {
+              "en": "Source"
+            },
+            "example": "inverter"
+          },
+          {
+            "name": "code",
+            "type": "number",
+            "title": {
+              "en": "Code"
+            },
+            "example": 4096
+          }
+        ]
+      },
+      {
+        "id": "grid_export_started",
+        "title": {
+          "en": "Started exporting to grid"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid power"
+            },
+            "example": -500
+          }
+        ]
+      },
+      {
+        "id": "grid_import_started",
+        "title": {
+          "en": "Started importing from grid"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid power"
+            },
+            "example": 700
+          }
+        ]
+      },
+      {
         "id": "grid_power_changed",
         "title": {
           "en": "Grid power changed"
@@ -107,6 +256,29 @@
               "en": "Grid power"
             },
             "example": -800
+          }
+        ]
+      },
+      {
+        "id": "operating_mode_changed",
+        "title": {
+          "en": "Operating mode changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "mode",
+            "type": "string",
+            "title": {
+              "en": "Mode"
+            },
+            "example": "self_powered"
           }
         ]
       },
@@ -142,6 +314,32 @@
         "id": "feed_in_enabled",
         "title": {
           "en": "Grid feed-in !{{is|is not}} enabled"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "is_charging",
+        "title": {
+          "en": "Battery !{{is|is not}} charging"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "is_exporting",
+        "title": {
+          "en": "!{{Is|Is not}} exporting to grid"
         },
         "args": [
           {
@@ -196,9 +394,48 @@
             ]
           }
         ]
+      },
+      {
+        "id": "solar_power_above",
+        "title": {
+          "en": "Solar power !{{is|is not}} above"
+        },
+        "titleFormatted": {
+          "en": "Solar power !{{is|is not}} above [[watts]] W"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 10000,
+            "step": 10,
+            "placeholder": {
+              "en": "W"
+            }
+          }
+        ]
       }
     ],
     "actions": [
+      {
+        "id": "refresh_now",
+        "title": {
+          "en": "Refresh data now"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
       {
         "id": "set_ac_output",
         "title": {

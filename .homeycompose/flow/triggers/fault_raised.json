@@ -1,0 +1,9 @@
+{
+  "id": "fault_raised",
+  "title": { "en": "A fault was raised" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "tokens": [
+    { "name": "source", "type": "string", "title": { "en": "Source" }, "example": "inverter" },
+    { "name": "code", "type": "number", "title": { "en": "Code" }, "example": 4096 }
+  ]
+}

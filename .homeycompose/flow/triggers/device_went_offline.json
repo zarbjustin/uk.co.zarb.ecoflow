@@ -1,0 +1,5 @@
+{
+  "id": "device_went_offline",
+  "title": { "en": "Device went offline" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

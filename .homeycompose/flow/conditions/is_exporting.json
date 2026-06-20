@@ -1,0 +1,5 @@
+{
+  "id": "is_exporting",
+  "title": { "en": "!{{Is|Is not}} exporting to grid" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

@@ -24,8 +24,14 @@ module.exports = class StreamDriver extends Homey.Driver {
     flow.getConditionCard('feed_in_enabled').registerRunListener(
       (args: any) => args.device.getCapabilityValue('feed_in_control') === true,
     );
+    flow.getConditionCard('is_charging').registerRunListener((args: any) => args.device.isCharging());
+    flow.getConditionCard('is_exporting').registerRunListener((args: any) => args.device.isExporting());
+    flow.getConditionCard('solar_power_above').registerRunListener(
+      (args: any) => (args.device.getCapabilityValue('measure_power.pv') as number) > args.watts,
+    );
 
     // Actions
+    flow.getActionCard('refresh_now').registerRunListener((args: any) => args.device.flowRefresh());
     flow.getActionCard('set_operating_mode').registerRunListener(
       (args: any) => args.device.flowSetOperatingMode(args.mode),
     );

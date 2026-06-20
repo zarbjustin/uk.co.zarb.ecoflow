@@ -18,6 +18,11 @@ module.exports = class StreamDevice extends Homey.Device {
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
+  private prevMode: string | undefined;
+  private prevCharging: boolean | undefined;
+  private prevExporting: boolean | undefined;
+  private prevOnline: boolean | undefined;
+  private faulted = false;
 
   async onInit(): Promise<void> {
     this.sn = this.getData().sn;
@@ -47,10 +52,7 @@ module.exports = class StreamDevice extends Homey.Device {
       await (this.homey.app as any).subscribeRealtime?.(
         this.sn,
         (q: Record<string, any>) => this.applyQuota(q).catch((e) => this.error('mqtt apply', e)),
-        (online: boolean) => {
-          if (online) this.setAvailable().catch(() => {});
-          else this.setUnavailable('Device reported offline').catch(() => {});
-        },
+        (online: boolean) => this.setOnline(online),
       );
     } catch (e) {
       this.error('mqtt subscribe failed', e);
@@ -108,11 +110,25 @@ module.exports = class StreamDevice extends Homey.Device {
     try {
       const quota = await this.client.getQuotaAll(this.sn);
       await this.applyQuota(quota);
-      if (!this.getAvailable()) await this.setAvailable();
+      await this.setOnline(true);
     } catch (e: any) {
       this.error('quota poll error', e?.message || e);
-      await this.setUnavailable(e?.message || 'EcoFlow API error').catch(() => {});
+      await this.setOnline(false, e?.message || 'EcoFlow API error');
     }
+  }
+
+  /** Centralised availability + online/offline flow triggers. */
+  private async setOnline(online: boolean, message?: string): Promise<void> {
+    if (online) {
+      if (!this.getAvailable()) await this.setAvailable().catch(() => {});
+    } else {
+      await this.setUnavailable(message || 'Device offline').catch(() => {});
+    }
+    if (this.prevOnline !== undefined && online !== this.prevOnline) {
+      const card = online ? 'device_came_online' : 'device_went_offline';
+      this.homey.flow.getDeviceTriggerCard(card).trigger(this).catch(() => {});
+    }
+    this.prevOnline = online;
   }
 
   /** Apply a quota payload to capabilities (used by polling and MQTT). */
@@ -124,6 +140,7 @@ module.exports = class StreamDevice extends Homey.Device {
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
     this.fireTriggers(values);
+    this.checkFaults(quota);
   }
 
   private fireTriggers(values: Record<string, number | boolean | string>): void {
@@ -136,7 +153,33 @@ module.exports = class StreamDevice extends Homey.Device {
     const grid = values['measure_power.grid'];
     if (typeof grid === 'number' && grid !== this.prevGrid) {
       flow.getDeviceTriggerCard('grid_power_changed').trigger(this, { power: grid }).catch(() => {});
+      const exporting = grid < -5;
+      if (this.prevExporting !== undefined && exporting !== this.prevExporting) {
+        const card = exporting ? 'grid_export_started' : 'grid_import_started';
+        flow.getDeviceTriggerCard(card).trigger(this, { power: grid }).catch(() => {});
+      }
+      this.prevExporting = exporting;
       this.prevGrid = grid;
+    }
+    const battPower = values['measure_power'];
+    if (typeof battPower === 'number') {
+      const charging = battPower > 5;
+      const discharging = battPower < -5;
+      if (charging || discharging) {
+        const nowCharging = charging;
+        if (this.prevCharging !== undefined && nowCharging !== this.prevCharging) {
+          const card = nowCharging ? 'charging_started' : 'discharging_started';
+          flow.getDeviceTriggerCard(card).trigger(this, { power: battPower }).catch(() => {});
+        }
+        this.prevCharging = nowCharging;
+      }
+    }
+    const mode = values['operating_mode'];
+    if (typeof mode === 'string' && mode !== this.prevMode) {
+      if (this.prevMode !== undefined) {
+        flow.getDeviceTriggerCard('operating_mode_changed').trigger(this, { mode }).catch(() => {});
+      }
+      this.prevMode = mode;
     }
     const soc = values['measure_battery'];
     if (typeof soc === 'number') {
@@ -148,6 +191,42 @@ module.exports = class StreamDevice extends Homey.Device {
       }
       this.prevSoc = soc;
     }
+  }
+
+  private checkFaults(quota: Record<string, any>): void {
+    const codes: Array<[string, string]> = [
+      ['invErrCode', 'inverter'],
+      ['batErrCode', 'battery'],
+      ['llcErrCode', 'llc'],
+      ['pv1ErrCode', 'pv1'],
+      ['pv2ErrCode', 'pv2'],
+    ];
+    let active: { source: string; code: number } | null = null;
+    for (const [key, source] of codes) {
+      const v = Number(quota[key]);
+      if (Number.isFinite(v) && v !== 0) {
+        active = { source, code: v };
+        break;
+      }
+    }
+    if (active && !this.faulted) {
+      this.homey.flow.getDeviceTriggerCard('fault_raised').trigger(this, active).catch(() => {});
+    }
+    this.faulted = active !== null;
+  }
+
+  /** Condition + action helpers used by flow cards. */
+  isCharging(): boolean {
+    return (this.getCapabilityValue('measure_power') as number) > 5;
+  }
+
+  isExporting(): boolean {
+    return (this.getCapabilityValue('measure_power.grid') as number) < -5;
+  }
+
+  async flowRefresh(): Promise<void> {
+    await this.poll();
+    if (this.getSetting('enable_history') !== false) await this.refreshHistory().catch(() => {});
   }
 
   // ----- Flow action helpers ----------------------------------------------

@@ -1,0 +1,5 @@
+{
+  "id": "refresh_now",
+  "title": { "en": "Refresh data now" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

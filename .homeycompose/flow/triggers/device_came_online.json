@@ -1,0 +1,5 @@
+{
+  "id": "device_came_online",
+  "title": { "en": "Device came online" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

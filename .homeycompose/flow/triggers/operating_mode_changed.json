@@ -1,0 +1,6 @@
+{
+  "id": "operating_mode_changed",
+  "title": { "en": "Operating mode changed" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "tokens": [{ "name": "mode", "type": "string", "title": { "en": "Mode" }, "example": "self_powered" }]
+}

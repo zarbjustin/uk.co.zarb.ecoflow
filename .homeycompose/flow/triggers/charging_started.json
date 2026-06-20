@@ -1,0 +1,6 @@
+{
+  "id": "charging_started",
+  "title": { "en": "Battery started charging" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Battery power" }, "example": 800 }]
+}
