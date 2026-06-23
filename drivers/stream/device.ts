@@ -15,6 +15,8 @@ module.exports = class StreamDevice extends Homey.Device {
   private historyTimer: NodeJS.Timeout | null = null;
   private sn = '';
   private mainSn = '';
+  private quotaHandler?: (q: Record<string, any>) => void;
+  private statusHandler?: (online: boolean) => void;
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
@@ -49,11 +51,13 @@ module.exports = class StreamDevice extends Homey.Device {
 
     // Realtime updates via shared MQTT (falls back silently to polling).
     try {
-      await (this.homey.app as any).subscribeRealtime?.(
-        this.sn,
-        (q: Record<string, any>) => this.applyQuota(q).catch((e) => this.error('mqtt apply', e)),
-        (online: boolean) => this.setOnline(online),
-      );
+      this.quotaHandler = (q: Record<string, any>) => {
+        this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
+      };
+      this.statusHandler = (online: boolean) => {
+        this.setOnline(online).catch(() => {});
+      };
+      await (this.homey.app as any).subscribeRealtime?.(this.sn, this.quotaHandler, this.statusHandler);
     } catch (e) {
       this.error('mqtt subscribe failed', e);
     }
@@ -274,7 +278,7 @@ module.exports = class StreamDevice extends Homey.Device {
   }
 
   async onDeleted(): Promise<void> {
-    (this.homey.app as any).unsubscribeRealtime?.(this.sn);
+    (this.homey.app as any).unsubscribeRealtime?.(this.sn, this.quotaHandler, this.statusHandler);
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
   }

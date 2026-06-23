@@ -687,18 +687,8 @@
       ],
       "capabilities": [
         "measure_power",
-        "measure_power.l1",
-        "measure_power.l2",
-        "measure_power.l3",
-        "measure_voltage.l1",
-        "measure_voltage.l2",
-        "measure_voltage.l3",
-        "measure_current.l1",
-        "measure_current.l2",
-        "measure_current.l3",
-        "meter_power",
-        "meter_power.today",
-        "power_factor"
+        "meter_power.imported",
+        "meter_power.exported"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -706,65 +696,21 @@
             "en": "Grid power"
           }
         },
-        "measure_power.l1": {
+        "meter_power.imported": {
           "title": {
-            "en": "Power L1"
+            "en": "Imported"
           }
         },
-        "measure_power.l2": {
+        "meter_power.exported": {
           "title": {
-            "en": "Power L2"
-          }
-        },
-        "measure_power.l3": {
-          "title": {
-            "en": "Power L3"
-          }
-        },
-        "measure_voltage.l1": {
-          "title": {
-            "en": "Voltage L1"
-          }
-        },
-        "measure_voltage.l2": {
-          "title": {
-            "en": "Voltage L2"
-          }
-        },
-        "measure_voltage.l3": {
-          "title": {
-            "en": "Voltage L3"
-          }
-        },
-        "measure_current.l1": {
-          "title": {
-            "en": "Current L1"
-          }
-        },
-        "measure_current.l2": {
-          "title": {
-            "en": "Current L2"
-          }
-        },
-        "measure_current.l3": {
-          "title": {
-            "en": "Current L3"
-          }
-        },
-        "meter_power": {
-          "title": {
-            "en": "Net energy"
-          }
-        },
-        "meter_power.today": {
-          "title": {
-            "en": "Energy today"
+            "en": "Exported"
           }
         }
       },
       "energy": {
         "cumulative": true,
-        "cumulativeImportedCapability": "meter_power"
+        "cumulativeImportedCapability": "meter_power.imported",
+        "cumulativeExportedCapability": "meter_power.exported"
       },
       "settings": [
         {
@@ -1013,6 +959,86 @@
         }
       ],
       "id": "stream"
+    },
+    {
+      "name": {
+        "en": "STREAM Unit"
+      },
+      "class": "other",
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_power.grid",
+        "onoff.ac1",
+        "onoff.ac2"
+      ],
+      "capabilitiesOptions": {
+        "measure_power.grid": {
+          "title": {
+            "en": "Grid feed"
+          }
+        },
+        "onoff.ac1": {
+          "title": {
+            "en": "AC output 1"
+          },
+          "insightsTitleTrue": {
+            "en": "AC1 turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "AC1 turned off"
+          }
+        },
+        "onoff.ac2": {
+          "title": {
+            "en": "AC output 2"
+          },
+          "insightsTitleTrue": {
+            "en": "AC2 turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "AC2 turned off"
+          }
+        }
+      },
+      "images": {
+        "small": "/drivers/stream_unit/assets/images/small.png",
+        "large": "/drivers/stream_unit/assets/images/large.png",
+        "xlarge": "/drivers/stream_unit/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval (seconds)"
+          },
+          "value": 30,
+          "min": 10,
+          "max": 600,
+          "hint": {
+            "en": "How often to fetch this unit's data over REST. MQTT delivers realtime updates between polls."
+          }
+        }
+      ],
+      "pair": [
+        {
+          "id": "credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "stream_unit"
     }
   ],
   "capabilities": {

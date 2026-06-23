@@ -9,7 +9,13 @@ function num(q: Quota, key: string): number | undefined {
   return undefined;
 }
 
-/** True if a quota payload looks like an EcoFlow Smart Meter. */
+/**
+ * True if a quota payload looks like a standalone EcoFlow Smart Meter (it
+ * exposes its own per-phase grid telemetry). Note: when the meter is part of a
+ * STREAM system its own SN returns an empty quota and the whole-home reading
+ * lives on the STREAM main SN as `powGetSysGrid` — discovery handles that case
+ * via the device classifier, not this probe.
+ */
 export function looksLikeSmartMeter(q: Quota): boolean {
   return (
     q['gridConnectionPowerL1'] !== undefined
@@ -18,14 +24,23 @@ export function looksLikeSmartMeter(q: Quota): boolean {
   );
 }
 
-/** Map an EcoFlow Smart Meter quota object to Homey capability values. */
+/**
+ * Map an EcoFlow Smart Meter (or STREAM main) quota to instantaneous Homey
+ * capability values. `measure_power` is the whole-home grid power
+ * (positive = importing from grid, negative = exporting). Cumulative energy is
+ * derived by the device from this power, so no energy counters are mapped here.
+ * Per-phase values are only present for standalone meters.
+ */
 export function mapSmartMeterQuota(q: Quota): Record<string, number> {
   const out: Record<string, number> = {};
   const set = (cap: string, v: number | undefined) => {
     if (v !== undefined) out[cap] = v;
   };
 
-  set('measure_power', num(q, 'powGetSysGrid'));
+  // Whole-home grid power. `powGetSysGrid` is reported on the STREAM main SN;
+  // `gridConnectionPower` is the fallback for a standalone meter.
+  set('measure_power', num(q, 'powGetSysGrid') ?? num(q, 'gridConnectionPower'));
+
   set('measure_power.l1', num(q, 'gridConnectionPowerL1'));
   set('measure_power.l2', num(q, 'gridConnectionPowerL2'));
   set('measure_power.l3', num(q, 'gridConnectionPowerL3'));
@@ -38,9 +53,31 @@ export function mapSmartMeterQuota(q: Quota): Record<string, number> {
   set('measure_current.l2', num(q, 'gridConnectionAmpL2'));
   set('measure_current.l3', num(q, 'gridConnectionAmpL3'));
 
-  set('meter_power', num(q, 'gridConnectionDataRecord.totalActiveEnergy'));
-  set('meter_power.today', num(q, 'gridConnectionDataRecord.todayActive'));
   set('power_factor', num(q, 'gridConnectionPowerFactor'));
 
   return out;
+}
+
+/**
+ * Integrate instantaneous grid power into monotonic cumulative import/export
+ * energy. Returns updated Wh totals; the caller persists them so the meters
+ * never decrease (a Homey Energy requirement for cumulative meters).
+ *
+ * @param powerW  signed grid power in Watts (+import / -export)
+ * @param dtMs    elapsed time since the previous sample, in milliseconds
+ */
+export function accumulateEnergy(
+  prev: { importWh: number; exportWh: number },
+  powerW: number,
+  dtMs: number,
+): { importWh: number; exportWh: number } {
+  // Guard against clock jumps / long gaps that would corrupt the totals.
+  const MAX_GAP_MS = 60 * 60 * 1000; // 1 hour
+  if (!Number.isFinite(powerW) || !Number.isFinite(dtMs) || dtMs <= 0 || dtMs > MAX_GAP_MS) {
+    return { importWh: prev.importWh, exportWh: prev.exportWh };
+  }
+  const wh = (Math.abs(powerW) * dtMs) / 3_600_000; // W * h
+  return powerW >= 0
+    ? { importWh: prev.importWh + wh, exportWh: prev.exportWh }
+    : { importWh: prev.importWh, exportWh: prev.exportWh + wh };
 }

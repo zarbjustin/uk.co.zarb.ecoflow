@@ -22,8 +22,11 @@ export class EcoFlowMqtt {
   private client: MqttClient | null = null;
   private account = '';
   private connecting: Promise<void> | null = null;
-  private readonly quotaHandlers = new Map<string, QuotaHandler>();
-  private readonly statusHandlers = new Map<string, StatusHandler>();
+  // Multiple devices may share one SN (e.g. the STREAM system device, the main
+  // unit sub-device and the Smart Meter all read the main SN), so each SN keeps
+  // a set of handlers rather than a single one.
+  private readonly quotaHandlers = new Map<string, Set<QuotaHandler>>();
+  private readonly statusHandlers = new Map<string, Set<StatusHandler>>();
   private readonly log: (...args: any[]) => void;
 
   constructor(private readonly opts: EcoFlowMqttOptions) {
@@ -64,15 +67,41 @@ export class EcoFlowMqtt {
   }
 
   subscribe(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): void {
-    this.quotaHandlers.set(sn, onQuota);
-    if (onStatus) this.statusHandlers.set(sn, onStatus);
+    let qh = this.quotaHandlers.get(sn);
+    if (!qh) {
+      qh = new Set();
+      this.quotaHandlers.set(sn, qh);
+    }
+    qh.add(onQuota);
+    if (onStatus) {
+      let sh = this.statusHandlers.get(sn);
+      if (!sh) {
+        sh = new Set();
+        this.statusHandlers.set(sn, sh);
+      }
+      sh.add(onStatus);
+    }
     this.subscribeTopics(sn);
   }
 
-  unsubscribe(sn: string): void {
-    this.quotaHandlers.delete(sn);
-    this.statusHandlers.delete(sn);
-    if (this.client) {
+  /**
+   * Remove handlers for an SN. When specific handlers are passed only those are
+   * removed; the broker topics are only unsubscribed once no handlers remain.
+   */
+  unsubscribe(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void {
+    const qh = this.quotaHandlers.get(sn);
+    if (qh) {
+      if (onQuota) qh.delete(onQuota);
+      else qh.clear();
+      if (qh.size === 0) this.quotaHandlers.delete(sn);
+    }
+    const sh = this.statusHandlers.get(sn);
+    if (sh) {
+      if (onStatus) sh.delete(onStatus);
+      else if (!onQuota) sh.clear();
+      if (sh.size === 0) this.statusHandlers.delete(sn);
+    }
+    if (!this.quotaHandlers.has(sn) && !this.statusHandlers.has(sn) && this.client) {
       this.client.unsubscribe(this.topic(sn, 'quota'));
       this.client.unsubscribe(this.topic(sn, 'status'));
     }
@@ -99,10 +128,11 @@ export class EcoFlowMqtt {
     const sn = parts[3];
     const kind = parts[4];
     if (kind === 'quota') {
-      this.quotaHandlers.get(sn)?.(this.extractQuota(data));
+      const quota = this.extractQuota(data);
+      this.quotaHandlers.get(sn)?.forEach((h) => h(quota));
     } else if (kind === 'status') {
       const online = (data?.params?.status ?? data?.status) === 1;
-      this.statusHandlers.get(sn)?.(online);
+      this.statusHandlers.get(sn)?.forEach((h) => h(online));
     }
   }
 

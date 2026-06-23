@@ -58,8 +58,12 @@ function operatingMode(q: Quota): string | undefined {
 /**
  * Map an EcoFlow STREAM quota object to Homey capability values.
  * Only keys that are present are returned, so partial payloads are safe.
+ *
+ * @param scope 'system' (default) reports the whole-home grid power
+ *   (`powGetSysGrid`, only populated on the main SN); 'unit' reports the single
+ *   inverter's own grid feed (`gridConnectionPower`).
  */
-export function mapStreamQuota(q: Quota): Record<string, number | boolean | string> {
+export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): Record<string, number | boolean | string> {
   const out: Record<string, number | boolean | string> = {};
   const set = (cap: string, v: number | boolean | string | undefined) => {
     if (v !== undefined) out[cap] = v;
@@ -74,7 +78,9 @@ export function mapStreamQuota(q: Quota): Record<string, number | boolean | stri
   // Power flows (Watts)
   set('measure_power', num(q, ['powGetBpCms'])); // battery power: + charging / - discharging
   set('measure_power.pv', pvSum(q));
-  set('measure_power.grid', num(q, ['gridConnectionPower', 'powGetSysGrid', 'sysGridConnectionPower']));
+  set('measure_power.grid', scope === 'unit'
+    ? num(q, ['gridConnectionPower', 'powGetSysGrid', 'sysGridConnectionPower'])
+    : num(q, ['powGetSysGrid', 'sysGridConnectionPower', 'gridConnectionPower']));
   set('measure_power.load', num(q, ['powGetSysLoad']));
 
   // Cumulative energy (Wh -> kWh)

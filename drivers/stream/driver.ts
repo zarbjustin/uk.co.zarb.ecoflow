@@ -2,11 +2,8 @@
 
 import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
-
-/** STREAM/BKW serial numbers start with "BK". */
-function isStreamSerial(sn: string): boolean {
-  return /^BK/i.test(sn);
-}
+import { classifyDevice } from '../../lib/ecoflowDevices';
+import { EcoFlowDevice } from '../../lib/types';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -74,25 +71,47 @@ module.exports = class StreamDriver extends Homey.Driver {
       const client = new EcoFlowClient({ accessKey, secretKey, host });
 
       const devices = await client.getDeviceList();
-      const streams = devices.filter((d) => isStreamSerial(d.sn));
 
-      const seen = new Set<string>();
-      const results: any[] = [];
-      for (const d of streams) {
+      // Keep only controllable STREAM units (Ultra/Pro/AC/AC Pro/Max/Ultra X).
+      // The Smart Meter and Microinverter are handled by their own driver / are
+      // not controllable, so they must not represent a STREAM system. For any
+      // device the prefix/name can't classify, probe its quota to catch unknown
+      // STREAM model prefixes.
+      const units: EcoFlowDevice[] = [];
+      for (const d of devices) {
+        let role = classifyDevice(d);
+        if (role === 'other') {
+          try {
+            const quota = await client.getQuotaAll(d.sn);
+            role = classifyDevice(d, quota);
+          } catch (e) {
+            this.error('classify probe failed', d.sn, e);
+          }
+        }
+        if (role === 'stream_unit') units.push(d);
+      }
+
+      // A multi-unit STREAM installation is exposed by the API as one "system"
+      // addressed by its main SN. Group the units by main SN and surface a
+      // single system device per group, named after its main unit.
+      const groups = new Map<string, EcoFlowDevice[]>();
+      for (const d of units) {
         let mainSn = d.sn;
         try {
           mainSn = await client.getMainSn(d.sn);
         } catch (e) {
           this.error('getMainSn failed, using device SN', e);
         }
-        // Collapse a multi-device system into a single Homey device (the main SN).
-        if (seen.has(mainSn)) continue;
-        seen.add(mainSn);
-        results.push({
-          name: d.deviceName || 'EcoFlow STREAM',
-          data: { sn: mainSn },
-          store: { mainSn, memberSn: d.sn },
-        });
+        const g = groups.get(mainSn);
+        if (g) g.push(d);
+        else groups.set(mainSn, [d]);
+      }
+
+      const results: any[] = [];
+      for (const [mainSn, groupUnits] of groups) {
+        const mainDev = devices.find((x) => x.sn === mainSn);
+        const name = mainDev?.deviceName || groupUnits[0].deviceName || 'EcoFlow STREAM';
+        results.push({ name, data: { sn: mainSn }, store: { mainSn } });
       }
       return results;
     });

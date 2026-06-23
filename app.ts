@@ -45,7 +45,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     return true;
   }
 
-  unsubscribeRealtime(sn: string): void {
-    this.mqtt?.unsubscribe(sn);
+  unsubscribeRealtime(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void {
+    this.mqtt?.unsubscribe(sn, onQuota, onStatus);
   }
 };
