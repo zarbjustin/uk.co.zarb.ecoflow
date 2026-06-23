@@ -3,10 +3,17 @@
   "class": "other",
   "connectivity": ["cloud"],
   "capabilities": [
-    "measure_power.grid"
+    "measure_battery",
+    "measure_power.grid",
+    "measure_temperature",
+    "battery_soh",
+    "battery_cycles"
   ],
   "capabilitiesOptions": {
     "measure_power.grid": { "title": { "en": "Grid feed" } }
+  },
+  "energy": {
+    "batteries": ["INTERNAL"]
   },
   "images": {
     "small": "/drivers/stream_unit/assets/images/small.png",

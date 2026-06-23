@@ -42,3 +42,12 @@ test('unit grid falls back to powGetSysGrid when no own feed is present', () => 
   const v = mapStreamQuota({ powGetSysGrid: 100 }, 'unit');
   assert.strictEqual(v['measure_power.grid'], 100);
 });
+
+test('unit scope reads per-unit SoC and ignores system cmsBattSoc', () => {
+  // Member MQTT BMS: the unit's own SoC.
+  assert.strictEqual(mapStreamQuota({ f32ShowSoc: 28.2, soc: 28 }, 'unit')['measure_battery'], 28.2);
+  // Member REST snapshot: only the system cmsBattSoc (0 on members) -> unit reports nothing.
+  assert.strictEqual(mapStreamQuota({ cmsBattSoc: 0 }, 'unit')['measure_battery'], undefined);
+  // System scope still uses the aggregate cmsBattSoc.
+  assert.strictEqual(mapStreamQuota({ cmsBattSoc: 20 })['measure_battery'], 20);
+});

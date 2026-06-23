@@ -80,7 +80,9 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   };
 
   // Battery / energy
-  set('measure_battery', num(q, ['f32ShowSoc', 'soc', 'cmsBattSoc', 'bmsBattSoc']));
+  set('measure_battery', scope === 'unit'
+    ? num(q, ['f32ShowSoc', 'soc', 'actSoc']) // per-unit SoC (MQTT BMS); cmsBattSoc reads 0 on members
+    : num(q, ['f32ShowSoc', 'soc', 'cmsBattSoc', 'bmsBattSoc']));
   set('battery_soh', num(q, ['soh', 'realSoh', 'cmsBattSoh', 'bmsBattSoh']));
   set('charge_limit', num(q, ['cmsMaxChgSoc']));
   set('discharge_limit', num(q, ['cmsMinDsgSoc']));
