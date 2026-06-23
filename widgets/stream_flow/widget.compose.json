@@ -11,7 +11,7 @@
       "hint": { "en": "If you have more than one STREAM system, choose which one (1 = first)." }
     }
   ],
-  "height": 232,
+  "height": 254,
   "api": {
     "getFlow": { "method": "GET", "path": "/" }
   }

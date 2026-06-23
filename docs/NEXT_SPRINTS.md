@@ -5,6 +5,19 @@ Pro + Sonnet 4.6) of the app at v1.3.1. The high‑severity bugs the review foun
 already fixed in v1.3.1 (see CHANGELOG). This document lists the **next wave** of
 work, ordered by value.
 
+### Progress
+- ✅ **Sprint A** (v1.4.0) — `lib/BaseEcoFlowDevice.ts` + typed `lib/appApi.getApp` +
+  `lib/streamPairing` shared helper; all 6 drivers migrated.
+- ✅ **Sprint B** (v1.4.0) — self-managed MQTT reconnect with fresh certificate,
+  exponential backoff + jitter, in-place credential update preserving subscriptions.
+- ✅ **Sprint C** (v1.4.0) — tests for the shared pairing helper (29 total).
+- ✅ **Sprint D** (partial, v1.4.0) — widget shows today's solar. (Per-unit battery/
+  power alerts already work via Homey's built-in `measure_battery`/`measure_power`
+  flow cards; the widget device-picker upgrade remains — see below.)
+- ⏳ **Sprint E** — history model-code + capability gating (research-gated).
+- ⏳ **Sprint F** — store submission (app validates at `publish`; CI in place).
+
+
 ## Already fixed in v1.3.1 (for reference)
 - MQTT orphaned-client / duplicate-session race (`connect()` guard) + `onUninit` close + recreate on credential change.
 - Energy double-counting under concurrent poll+MQTT (synchronous timestamp anchoring) across battery/solar/meter.

@@ -1,4 +1,7 @@
 {
+  "1.4.0": {
+    "en": "Internal hardening: a shared device foundation reduces duplicated code, the realtime (MQTT) connection now recovers from certificate expiry with backoff and survives credential changes without losing updates, and the energy widget now shows today's solar. No changes to how your devices work."
+  },
   "1.3.1": {
     "en": "Reliability fixes from a multi-model code review: prevents duplicate MQTT sessions, stops energy meters double-counting under concurrent updates, keeps cumulative meters monotonic when switching the meter mode, fixes the 'charging started' flow trigger after idle, avoids offline/online flapping, and cleans up the MQTT connection on app shutdown."
   },

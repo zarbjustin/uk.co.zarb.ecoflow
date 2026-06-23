@@ -32,6 +32,7 @@ module.exports = {
       battery: num('measure_power'), // + charging / - discharging (W)
       soc: num('measure_battery'), // %
       state: d.getCapabilityValue('battery_charging_state') || null,
+      solarToday: num('energy_solar_today'), // kWh
     };
   },
 };
