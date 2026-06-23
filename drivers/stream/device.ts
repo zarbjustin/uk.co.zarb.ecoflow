@@ -1,24 +1,17 @@
 'use strict';
 
-import Homey from 'homey';
-import { EcoFlowClient } from '../../lib/EcoFlowClient';
+import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { integrateSignedPower, followResettableCounter } from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 
-const DEFAULT_POLL_MS = 30000;
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 
-module.exports = class StreamDevice extends Homey.Device {
-  private client!: EcoFlowClient;
-  private pollTimer: NodeJS.Timeout | null = null;
-  private historyTimer: NodeJS.Timeout | null = null;
-  private sn = '';
+module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
-  private quotaHandler?: (q: Record<string, any>) => void;
-  private statusHandler?: (online: boolean) => void;
+  private historyTimer: NodeJS.Timeout | null = null;
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
@@ -26,71 +19,44 @@ module.exports = class StreamDevice extends Homey.Device {
   private prevCharging: boolean | null | undefined;
   private prevExporting: boolean | undefined;
   private prevOnline: boolean | undefined;
-  private mqttOffline = false;
   private faulted = false;
-  // Locally-integrated cumulative battery energy (Wh). The STREAM REST API does
-  // not expose accuChgEnergy/accuDsgEnergy, so Homey Energy's charged/discharged
-  // meters are derived from the battery power and persisted monotonically. When
-  // MQTT delivers the device counters they are preferred (reset-protected).
+  // Locally-integrated cumulative battery energy (Wh). Prefer the device's own
+  // counters (accuChgEnergy/accuDsgEnergy via MQTT, reset-protected); fall back
+  // to integrating battery power when only the sparse REST snapshot is available.
   private chargedWh = 0;
   private dischargedWh = 0;
   private chargedRawWh: number | undefined;
   private dischargedRawWh: number | undefined;
   private lastEnergyTs = 0;
 
-  async onInit(): Promise<void> {
-    this.sn = this.getData().sn;
-    this.mainSn = (this.getStoreValue('mainSn') as string) || this.sn;
+  protected getReadSn(): string {
+    return this.getData().sn;
+  }
+
+  protected handlesStatus(): boolean {
+    return true;
+  }
+
+  protected async onReady(): Promise<void> {
+    this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     this.chargedWh = (this.getStoreValue('chargedWh') as number) || 0;
     this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
     this.chargedRawWh = this.getStoreValue('chargedRawWh') as number | undefined;
     this.dischargedRawWh = this.getStoreValue('dischargedRawWh') as number | undefined;
 
-    const accessKey = this.homey.settings.get('accessKey') as string;
-    const secretKey = this.homey.settings.get('secretKey') as string;
-    const host = this.homey.settings.get('host') as string | undefined;
-    if (!accessKey || !secretKey) {
-      await this.setUnavailable('EcoFlow credentials missing — re-add the device.');
-      return;
-    }
-
-    this.client = new EcoFlowClient({
-      accessKey, secretKey, host, log: (...a) => this.log(...a),
-    });
     this.registerControlListeners();
-    // Seed the cumulative meters so Homey Energy has a starting value.
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
 
-    await this.poll();
-    const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
-    this.pollTimer = this.homey.setInterval(() => {
-      this.poll().catch((e) => this.error('poll failed', e));
-    }, interval);
+    if (this.getSetting('enable_history') !== false) this.startHistory();
+  }
 
-    // Realtime updates via shared MQTT (falls back silently to polling).
-    try {
-      this.quotaHandler = (q: Record<string, any>) => {
-        this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
-      };
-      this.statusHandler = (online: boolean) => {
-        this.mqttOffline = !online;
-        this.setOnline(online).catch(() => {});
-      };
-      await (this.homey.app as any).subscribeRealtime?.(this.sn, this.quotaHandler, this.statusHandler);
-    } catch (e) {
-      this.error('mqtt subscribe failed', e);
-    }
-
-    this.log(`STREAM device ${this.sn} (main ${this.mainSn}) initialised`);
-
-    // Daily energy statistics (history API)
-    if (this.getSetting('enable_history') !== false) {
+  private startHistory(): void {
+    if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
+    this.refreshHistory().catch((e) => this.error('history', e));
+    this.historyTimer = this.homey.setInterval(() => {
       this.refreshHistory().catch((e) => this.error('history', e));
-      this.historyTimer = this.homey.setInterval(() => {
-        this.refreshHistory().catch((e) => this.error('history', e));
-      }, HISTORY_INTERVAL_MS);
-    }
+    }, HISTORY_INTERVAL_MS);
   }
 
   private async refreshHistory(): Promise<void> {
@@ -130,21 +96,8 @@ module.exports = class StreamDevice extends Homey.Device {
     this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
   }
 
-  private async poll(): Promise<void> {
-    try {
-      const quota = await this.client.getQuotaAll(this.sn);
-      await this.applyQuota(quota);
-      // The REST API can return a stale 200 for an offline device; trust the
-      // realtime MQTT offline status over a poll success to avoid flapping.
-      if (!this.mqttOffline) await this.setOnline(true);
-    } catch (e: any) {
-      this.error('quota poll error', e?.message || e);
-      await this.setOnline(false, e?.message || 'EcoFlow API error');
-    }
-  }
-
-  /** Centralised availability + online/offline flow triggers. */
-  private async setOnline(online: boolean, message?: string): Promise<void> {
+  /** Availability + online/offline flow triggers (overrides the base). */
+  protected async setOnlineState(online: boolean, message?: string): Promise<void> {
     if (online) {
       if (!this.getAvailable()) await this.setAvailable().catch(() => {});
     } else {
@@ -157,11 +110,10 @@ module.exports = class StreamDevice extends Homey.Device {
     this.prevOnline = online;
   }
 
-  /** Apply a quota payload to capabilities (used by polling and MQTT). */
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapStreamQuota(quota);
-    // Charged/discharged energy is integrated locally (see integrateBatteryEnergy),
-    // so drop any values mapped from absent device counters to avoid conflicts.
+    // Charged/discharged energy is maintained by updateBatteryEnergy, so drop any
+    // values mapped from absent device counters to avoid conflicts.
     delete values['meter_power.charged'];
     delete values['meter_power.discharged'];
     for (const [cap, value] of Object.entries(values)) {
@@ -174,12 +126,6 @@ module.exports = class StreamDevice extends Homey.Device {
     this.checkFaults(quota);
   }
 
-  /**
-   * Update the monotonic charged/discharged meters. Prefers the device's own
-   * cumulative counters (accuChgEnergy/accuDsgEnergy, delivered over MQTT) with
-   * firmware-reset protection; falls back to integrating the battery power when
-   * only the REST snapshot (which omits those counters) is available.
-   */
   private async updateBatteryEnergy(
     quota: Record<string, any>,
     batteryPowerW: number | boolean | string | undefined,
@@ -190,9 +136,7 @@ module.exports = class StreamDevice extends Homey.Device {
     const hasDsg = accuDsg !== undefined;
 
     // Capture the interval and re-anchor the timestamp SYNCHRONOUSLY (before any
-    // await) so a concurrent applyQuota (poll + MQTT) can't integrate the same
-    // interval twice. Re-anchoring also runs on the counter path so a later poll
-    // doesn't double-count over a stale timestamp.
+    // await) so a concurrent applyQuota (poll + MQTT) can't double-count.
     const now = Date.now();
     const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
     this.lastEnergyTs = now;
@@ -257,7 +201,7 @@ module.exports = class StreamDevice extends Homey.Device {
     }
     const battPower = values['measure_power'];
     if (typeof battPower === 'number') {
-      // Resolve the charge state including the idle band, so the edge is detected
+      // Resolve charge state including the idle band so the edge is detected
       // correctly across charging -> idle -> charging transitions.
       let nowCharging: boolean | null = null;
       if (battPower > 5) nowCharging = true;
@@ -269,7 +213,6 @@ module.exports = class StreamDevice extends Homey.Device {
         }
         this.prevCharging = nowCharging;
       } else {
-        // Idle: clear so the next active period is detected as a fresh edge.
         this.prevCharging = null;
       }
     }
@@ -334,8 +277,6 @@ module.exports = class StreamDevice extends Homey.Device {
     if (this.getSetting('enable_history') !== false) await this.refreshHistory().catch(() => {});
   }
 
-  // ----- Flow action helpers ----------------------------------------------
-
   async flowSetOperatingMode(mode: OperatingMode): Promise<void> {
     await this.send(StreamCmd.operatingMode(this.mainSn, mode));
     await this.setCapabilityValue('operating_mode', mode).catch(() => {});
@@ -361,31 +302,17 @@ module.exports = class StreamDevice extends Homey.Device {
     await this.setCapabilityValue('discharge_limit', level).catch(() => {});
   }
 
-  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
-    if (changedKeys.includes('poll_interval')) {
-      if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
-      const interval = ((Number(newSettings.poll_interval) || 30) * 1000) || DEFAULT_POLL_MS;
-      this.pollTimer = this.homey.setInterval(() => {
-        this.poll().catch((e) => this.error('poll failed', e));
-      }, interval);
-    }
+  protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {
     if (changedKeys.includes('enable_history')) {
       if (this.historyTimer) {
         this.homey.clearInterval(this.historyTimer);
         this.historyTimer = null;
       }
-      if (newSettings.enable_history !== false) {
-        this.refreshHistory().catch((e) => this.error('history', e));
-        this.historyTimer = this.homey.setInterval(() => {
-          this.refreshHistory().catch((e) => this.error('history', e));
-        }, HISTORY_INTERVAL_MS);
-      }
+      if (newSettings.enable_history !== false) this.startHistory();
     }
   }
 
-  async onDeleted(): Promise<void> {
-    (this.homey.app as any).unsubscribeRealtime?.(this.sn, this.quotaHandler, this.statusHandler);
-    if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+  protected async onTeardown(): Promise<void> {
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
   }
 };

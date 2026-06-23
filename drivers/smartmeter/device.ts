@@ -1,11 +1,8 @@
 'use strict';
 
-import Homey from 'homey';
-import { EcoFlowClient } from '../../lib/EcoFlowClient';
+import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapSmartMeterQuota, accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
 import { toFiniteNumber } from '../../lib/quota';
-
-const DEFAULT_POLL_MS = 30000;
 
 /** Default titles for per-phase capabilities added dynamically. */
 const DYNAMIC_TITLES: Record<string, string> = {
@@ -21,70 +18,26 @@ const DYNAMIC_TITLES: Record<string, string> = {
   power_factor: 'Power factor',
 };
 
-module.exports = class SmartMeterDevice extends Homey.Device {
-  private client!: EcoFlowClient;
-  private pollTimer: NodeJS.Timeout | null = null;
-  private sn = '';
-  private sourceSn = '';
+module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private meterSource: 'grid' | 'load' = 'grid';
   private importWh = 0;
   private exportWh = 0;
   private lastTs = 0;
-  private quotaHandler?: (q: Record<string, any>) => void;
   private pendingCaps = new Set<string>();
 
-  async onInit(): Promise<void> {
-    this.sn = this.getData().sn;
-    this.sourceSn = (this.getStoreValue('sourceSn') as string) || this.sn;
+  protected getReadSn(): string {
+    // When the meter is part of a STREAM system its own SN is empty, so read the
+    // resolved source SN (the system main) where powGetSysGrid/Load live.
+    return (this.getStoreValue('sourceSn') as string) || this.getData().sn;
+  }
+
+  protected async onReady(): Promise<void> {
     this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
     this.importWh = (this.getStoreValue('importWh') as number) || 0;
     this.exportWh = (this.getStoreValue('exportWh') as number) || 0;
-
-    const accessKey = this.homey.settings.get('accessKey') as string;
-    const secretKey = this.homey.settings.get('secretKey') as string;
-    const host = this.homey.settings.get('host') as string | undefined;
-    if (!accessKey || !secretKey) {
-      await this.setUnavailable('EcoFlow credentials missing — re-add the device.');
-      return;
-    }
-
-    this.client = new EcoFlowClient({
-      accessKey, secretKey, host, log: (...a) => this.log(...a),
-    });
-
-    // Make sure the cumulative meters always have a value so Homey Energy can
-    // start integrating immediately.
     await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
     await this.applyMeterSourceTitle();
-
-    await this.poll();
-    const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
-    this.pollTimer = this.homey.setInterval(() => {
-      this.poll().catch((e) => this.error('poll failed', e));
-    }, interval);
-
-    try {
-      this.quotaHandler = (q: Record<string, any>) => {
-        this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
-      };
-      await (this.homey.app as any).subscribeRealtime?.(this.sourceSn, this.quotaHandler);
-    } catch (e) {
-      this.error('mqtt subscribe failed', e);
-    }
-
-    this.log(`Smart Meter ${this.sn} initialised (source ${this.sourceSn})`);
-  }
-
-  private async poll(): Promise<void> {
-    try {
-      const quota = await this.client.getQuotaAll(this.sourceSn);
-      await this.applyQuota(quota);
-      if (!this.getAvailable()) await this.setAvailable();
-    } catch (e: any) {
-      this.error('quota poll error', e?.message || e);
-      await this.setUnavailable(e?.message || 'EcoFlow API error').catch(() => {});
-    }
   }
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
@@ -98,7 +51,6 @@ module.exports = class SmartMeterDevice extends Homey.Device {
     const power = this.meterSource === 'load' ? loadW : gridW;
     delete values['measure_power'];
 
-    // Always-positive grid import/export tiles, derived from the signed grid power.
     const split = splitGridPower(gridW);
     if (split) {
       if (this.getCapabilityValue('measure_power.grid_import') !== split.importW) {
@@ -113,9 +65,6 @@ module.exports = class SmartMeterDevice extends Homey.Device {
       await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
     }
 
-    // Integrate cumulative import/export from the signed grid power. Capture the
-    // interval and re-anchor the timestamp synchronously (before any await) to
-    // avoid a concurrent poll+MQTT double-count.
     if (typeof gridW === 'number') {
       const now = Date.now();
       const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
@@ -140,27 +89,17 @@ module.exports = class SmartMeterDevice extends Homey.Device {
     }
   }
 
-  /** Title the live power tile to match the selected source. */
-  private async applyMeterSourceTitle(): Promise<void> {
-    const title = this.meterSource === 'load' ? 'Home load' : 'Grid power';
-    await this.setCapabilityOptions('measure_power', { title: { en: title } }).catch(() => {});
-  }
-
-  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+  protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {
     if (changedKeys.includes('meter_source')) {
-      // Only the live tile changes; the cumulative meters always track grid, so
-      // no counter reset is needed (switching can't corrupt the energy totals).
       this.meterSource = (newSettings.meter_source as 'grid' | 'load') || 'grid';
       await this.applyMeterSourceTitle();
       this.poll().catch((e) => this.error('poll failed', e));
     }
-    if (changedKeys.includes('poll_interval')) {
-      if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
-      const interval = ((Number(newSettings.poll_interval) || 30) * 1000) || DEFAULT_POLL_MS;
-      this.pollTimer = this.homey.setInterval(() => {
-        this.poll().catch((e) => this.error('poll failed', e));
-      }, interval);
-    }
+  }
+
+  private async applyMeterSourceTitle(): Promise<void> {
+    const title = this.meterSource === 'load' ? 'Home load' : 'Grid power';
+    await this.setCapabilityOptions('measure_power', { title: { en: title } }).catch(() => {});
   }
 
   /** Add an optional (per-phase) capability the first time data for it arrives. */
@@ -176,10 +115,5 @@ module.exports = class SmartMeterDevice extends Homey.Device {
     } finally {
       this.pendingCaps.delete(cap);
     }
-  }
-
-  async onDeleted(): Promise<void> {
-    (this.homey.app as any).unsubscribeRealtime?.(this.sourceSn, this.quotaHandler);
-    if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
   }
 };

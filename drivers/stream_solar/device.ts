@@ -1,11 +1,8 @@
 'use strict';
 
-import Homey from 'homey';
-import { EcoFlowClient } from '../../lib/EcoFlowClient';
+import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { solarPowerWatts, perPvWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
-
-const DEFAULT_POLL_MS = 30000;
 
 /**
  * STREAM solar generation as a Homey `solarpanel` device. `measure_power` is the
@@ -13,59 +10,17 @@ const DEFAULT_POLL_MS = 30000;
  * (`meter_power`) is integrated locally since the REST API exposes no lifetime
  * solar counter.
  */
-module.exports = class StreamSolarDevice extends Homey.Device {
-  private client!: EcoFlowClient;
-  private pollTimer: NodeJS.Timeout | null = null;
-  private sn = '';
+module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   private generatedWh = 0;
   private lastTs = 0;
-  private quotaHandler?: (q: Record<string, any>) => void;
 
-  async onInit(): Promise<void> {
-    this.sn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
-    this.generatedWh = (this.getStoreValue('generatedWh') as number) || 0;
-
-    const accessKey = this.homey.settings.get('accessKey') as string;
-    const secretKey = this.homey.settings.get('secretKey') as string;
-    const host = this.homey.settings.get('host') as string | undefined;
-    if (!accessKey || !secretKey) {
-      await this.setUnavailable('EcoFlow credentials missing — re-add the device.');
-      return;
-    }
-
-    this.client = new EcoFlowClient({
-      accessKey, secretKey, host, log: (...a) => this.log(...a),
-    });
-
-    await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
-
-    await this.poll();
-    const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
-    this.pollTimer = this.homey.setInterval(() => {
-      this.poll().catch((e) => this.error('poll failed', e));
-    }, interval);
-
-    try {
-      this.quotaHandler = (q: Record<string, any>) => {
-        this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
-      };
-      await (this.homey.app as any).subscribeRealtime?.(this.sn, this.quotaHandler);
-    } catch (e) {
-      this.error('mqtt subscribe failed', e);
-    }
-
-    this.log(`STREAM solar ${this.sn} initialised`);
+  protected getReadSn(): string {
+    return (this.getStoreValue('mainSn') as string) || this.getData().sn;
   }
 
-  private async poll(): Promise<void> {
-    try {
-      const quota = await this.client.getQuotaAll(this.sn);
-      await this.applyQuota(quota);
-      if (!this.getAvailable()) await this.setAvailable();
-    } catch (e: any) {
-      this.error('quota poll error', e?.message || e);
-      await this.setUnavailable(e?.message || 'EcoFlow API error').catch(() => {});
-    }
+  protected async onReady(): Promise<void> {
+    this.generatedWh = (this.getStoreValue('generatedWh') as number) || 0;
+    await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
   }
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
@@ -98,20 +53,5 @@ module.exports = class StreamSolarDevice extends Homey.Device {
         await this.setCapabilityValue(cap, v).catch((e) => this.error(cap, e));
       }
     }
-  }
-
-  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
-    if (changedKeys.includes('poll_interval')) {
-      if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
-      const interval = ((Number(newSettings.poll_interval) || 30) * 1000) || DEFAULT_POLL_MS;
-      this.pollTimer = this.homey.setInterval(() => {
-        this.poll().catch((e) => this.error('poll failed', e));
-      }, interval);
-    }
-  }
-
-  async onDeleted(): Promise<void> {
-    (this.homey.app as any).unsubscribeRealtime?.(this.sn, this.quotaHandler);
-    if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
   }
 };
