@@ -22,5 +22,8 @@
   },
   "1.0.0": {
     "en": "Initial release: EcoFlow STREAM monitoring & control (battery, solar, grid, AC outputs, backup reserve, operating mode, feed-in), Smart Meter (per-phase power/voltage/current + energy), Homey Energy integration, Flow cards and Insights, with realtime MQTT updates."
+  },
+  "1.6.1": {
+    "en": "yyyyPolished for the Homey App Store: refreshed full-canvas app and device icons (each device now unique), lively new app artwork, clean white-background device images, and a tidier name and description. No changes to device behaviour."
   }
 }
