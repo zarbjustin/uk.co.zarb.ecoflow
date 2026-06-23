@@ -1,0 +1,81 @@
+# EcoFlow App → Homey: Feature Backlog (from app screenshots + live MQTT)
+
+Derived from the EcoFlow mobile app screens (system home, inverter statistics,
+per-unit detail, aggregated savings, microinverter) and **verified against live
+MQTT** on the account. Each item notes data availability:
+✅ confirmed in MQTT · 🟡 needs investigation (likely separate API) · ⚙️ derived.
+
+## Live-data facts that shape this
+- Per-unit MQTT carries far more than REST: per-string PV power
+  (`powGetPv`/`powGetPv2`/`powGetPv3`), `bmsChgRemTime`/`bmsDsgRemTime`,
+  `remainCap`/`fullCap`/`designCap`, `accuChgEnergy`/`accuDsgEnergy`,
+  `acTotalActivePower`, `chgDsgState`, per-unit `gridConnectionPower`.
+- The system main's `powGetPvSum` is the **whole-system** solar total
+  (= `powGetSysLoadFromPv`), so the dedicated Solar device is already correct.
+- System load breakdown is present on the main: `powGetSysLoadFromPv/Bp/Grid`.
+- Not found in quota (likely separate EcoFlow APIs): generation **efficiency %**,
+  **predicted/forecast** generation, **earnings (£)** / tariff rates.
+
+---
+
+## Sprint G — Per-unit richness ✅ (high value, low risk)
+Mirror the EcoFlow per-unit detail screen (Ultra X / AC Pro).
+- **Per-unit solar**: `measure_power.pv` (sum of the unit's own strings, NOT the
+  main's `powGetPvSum` which is the system total) + `measure_power.pv1..4`.
+- **Per-unit charge/discharge remaining time**: `charge_remaining` /
+  `discharge_remaining` from `bmsChgRemTime`/`bmsDsgRemTime`.
+- (Optional) per-unit **AC output power** (`acTotalActivePower`).
+- Implementation: add the capabilities to `stream_unit` compose; make
+  `mapStreamQuota('unit')` compute PV from the unit's own strings. The mapping
+  already yields charge/discharge time. **Compose-only + small mapping tweak.**
+- Acceptance: each STREAM Unit shows its own Solar (+PV1-4) and time-to-full/empty.
+
+## Sprint H — Battery stored energy & capacity ✅⚙️
+The app shows "36% / 3840 Wh" and capacity.
+- **Stored energy (Wh)** + **full/design capacity**: derive from
+  `remainCap`/`fullCap`/`designCap` (verify the unit — `fullCap=200000`,
+  `remainCap≈SoC×fullCap`) or `accuChgCap`/`accuDsgCap`. Add a `meter_power`-style
+  "stored energy" or a numeric Wh capability on the battery + per unit.
+- **System estimated charge/discharge time** on the STREAM Battery device.
+- Acceptance: battery shows kWh stored + capacity, matching the app.
+
+## Sprint I — Daily statistics & forecast 🟡
+The inverter "statistics" screen (Solar generation, efficiency, predicted today,
+impact).
+- **Fix the history `code` first** so `energy_*_today`, savings, CO₂ actually
+  populate (today they likely don't — the BK621 prefix is unverified).
+- **Generation efficiency %** — find the source field/endpoint.
+- **Predicted generation today** (forecast curve + kWh) — investigate EcoFlow's
+  forecast endpoint; expose as a capability/insight.
+- **CO₂ impact / trees** — `co2_today` exists; surface trees-equivalent.
+- Acceptance: daily solar/efficiency/forecast/CO₂ tiles populate or are hidden.
+
+## Sprint J — Earnings & savings 🟡
+The "Aggregated savings" screen (today/month/lifetime £, per-system, calendar).
+- **Earnings today / month / lifetime (£)** and per-system breakdown — these come
+  from EcoFlow's savings/earnings API combined with the tariff config; investigate
+  the endpoint. We already have `energy_savings_today` (history-based).
+- Acceptance: a "savings today" + "lifetime savings" capability that matches the app.
+
+## Sprint K — STREAM Microinverter device 🟡
+The app shows the Microinverter (`STREAM Microinverter-0489`) with PV1/PV2 + grid
+connection port — a device we currently **exclude** (its REST quota is empty).
+- Investigate whether the Microinverter (`BK01`) publishes PV/grid data over MQTT;
+  if so, add a dedicated (solarpanel or "other") device for it.
+- Acceptance: the microinverter appears with its PV1/PV2 + grid port (if data exists).
+
+## Sprint L — Tariff / rates 🟡 (low priority)
+The home screen shows Consumption rate (£0.56) and Feed-in rate.
+- If the open API exposes the STREAM tariff config, show consumption/feed-in rates
+  as read-only info. Otherwise rely on the user's Octopus integration for tariffs.
+
+---
+
+## Recommended order
+G (immediate, confirmed data) → H (capacity/Wh) → I (history fix unlocks daily
+stats + forecast) → J (earnings) → K (microinverter) → L (tariff).
+
+## Notes
+- G and H are **confirmed feasible now** (MQTT data exists) and low risk.
+- I, J, K, L need an API/endpoint investigation spike before committing.
+- `target_power` remains infeasible (no watt setpoint), unchanged.
