@@ -22,6 +22,9 @@ export class EcoFlowMqtt {
   private client: MqttClient | null = null;
   private account = '';
   private connecting: Promise<void> | null = null;
+  private ended = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private backoffMs = 0;
   // Multiple devices may share one SN (e.g. the STREAM system device, the main
   // unit sub-device and the Smart Meter all read the main SN), so each SN keeps
   // a set of handlers rather than a single one.
@@ -29,44 +32,103 @@ export class EcoFlowMqtt {
   private readonly statusHandlers = new Map<string, Set<StatusHandler>>();
   private readonly log: (...args: any[]) => void;
 
-  constructor(private readonly opts: EcoFlowMqttOptions) {
+  constructor(private opts: EcoFlowMqttOptions) {
     this.log = opts.log || (() => {});
   }
 
+  /** Update credentials/region; the next (re)connect uses them. */
+  updateOptions(opts: EcoFlowMqttOptions): void {
+    this.opts = opts;
+  }
+
   async connect(): Promise<void> {
-    // A client object means we are already connected or establishing/reconnecting.
-    // mqtt.js handles reconnection internally, and EcoFlow allows only one session
-    // per account, so we must never create a second client.
-    if (this.client) return;
+    if (this.client) return; // already connected / establishing
     if (this.connecting) {
-      await this.connecting;
+      await this.connecting.catch(() => {});
       return;
     }
-    this.connecting = (async () => {
-      const api = new EcoFlowClient(this.opts);
-      const cert = await api.getCertification();
-      this.account = cert.certificateAccount;
-      const url = `${cert.protocol}://${cert.url}:${cert.port}`;
-      this.client = mqtt.connect(url, {
-        username: cert.certificateAccount,
-        password: cert.certificatePassword,
-        clientId: `homey_${cert.certificateAccount}_${Date.now()}`,
-        reconnectPeriod: 5000,
-        protocolVersion: 5,
-        clean: true,
-      });
-      this.client.on('message', (topic, payload) => this.onMessage(topic, payload));
-      this.client.on('error', (e) => this.log('error', e?.message || e));
-      this.client.on('connect', () => {
-        this.log('connected');
-        for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
-      });
-    })();
+    this.ended = false;
+    this.connecting = this.establish();
     try {
       await this.connecting;
+    } catch (e) {
+      // Establishing failed (e.g. bad cert fetch) — schedule a retry and rethrow
+      // so the caller can fall back to polling for now.
+      this.scheduleReconnect();
+      throw e;
     } finally {
       this.connecting = null;
     }
+  }
+
+  /** Force a reconnect (e.g. after credentials changed), keeping subscriptions. */
+  async reconnect(): Promise<void> {
+    if (this.client) {
+      try {
+        this.client.end(true);
+      } catch { /* ignore */ }
+      this.client = null;
+    }
+    this.backoffMs = 0;
+    await this.connect();
+  }
+
+  /**
+   * Open a session with a FRESH certificate. We manage reconnection ourselves
+   * (mqtt.js auto-reconnect is disabled) so an expired certificate is replaced
+   * with a new one on every attempt instead of looping forever on a stale one.
+   */
+  private async establish(): Promise<void> {
+    const api = new EcoFlowClient(this.opts);
+    const cert = await api.getCertification();
+    this.account = cert.certificateAccount;
+    const url = `${cert.protocol}://${cert.url}:${cert.port}`;
+    const client = mqtt.connect(url, {
+      username: cert.certificateAccount,
+      password: cert.certificatePassword,
+      clientId: `homey_${cert.certificateAccount}_${Date.now()}`,
+      reconnectPeriod: 0, // we reconnect manually to refresh the certificate
+      protocolVersion: 5,
+      clean: true,
+    });
+    this.client = client;
+    client.on('message', (topic, payload) => this.onMessage(topic, payload));
+    client.on('error', (e) => this.log('error', e?.message || e));
+    client.on('connect', () => {
+      this.backoffMs = 0;
+      this.log('connected');
+      for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
+    });
+    client.on('close', () => this.onDisconnect('close'));
+    client.on('offline', () => this.onDisconnect('offline'));
+  }
+
+  private onDisconnect(reason: string): void {
+    if (this.ended) return;
+    this.log('disconnected', reason);
+    if (this.client) {
+      try {
+        this.client.end(true);
+      } catch { /* ignore */ }
+      this.client = null;
+    }
+    this.scheduleReconnect();
+  }
+
+  private scheduleReconnect(): void {
+    if (this.ended || this.reconnectTimer || this.client) return;
+    // Exponential backoff (5s → 5min) with jitter.
+    this.backoffMs = Math.min(Math.max(this.backoffMs * 2, 5000), 5 * 60 * 1000);
+    const delay = this.backoffMs + Math.floor(Math.random() * 1000);
+    // Managed timer: cleared in end(). The lib has no Homey handle, so use global.
+    // eslint-disable-next-line homey-app/global-timers
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.establish().catch((e) => {
+        this.log('reconnect failed', e?.message || e);
+        this.scheduleReconnect();
+      });
+    }, delay);
   }
 
   subscribe(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): void {
@@ -150,6 +212,11 @@ export class EcoFlowMqtt {
   }
 
   async end(): Promise<void> {
+    this.ended = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.client) await new Promise<void>((res) => this.client!.end(false, {}, () => res()));
     this.client = null;
   }

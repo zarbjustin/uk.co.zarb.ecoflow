@@ -32,11 +32,20 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (!accessKey || !secretKey) return null;
     if (this.homey.settings.get('mqtt_enabled') === false) return null;
 
-    // Recreate the connection if the saved credentials/region changed.
+    // Update credentials/region in place if they changed (keeps subscriptions).
     const credsKey = `${accessKey}:${secretKey}:${host || ''}`;
     if (this.mqtt && credsKey !== this.mqttCredsKey) {
-      await this.mqtt.end().catch(() => {});
-      this.mqtt = null;
+      this.mqtt.updateOptions({
+        accessKey, secretKey, host, log: (...a) => this.log('[mqtt]', ...a),
+      });
+      this.mqttCredsKey = credsKey;
+      try {
+        await this.mqtt.reconnect();
+        return this.mqtt;
+      } catch (e: any) {
+        this.error('MQTT reconnect failed; falling back to polling', e?.message || e);
+        return null;
+      }
     }
     if (!this.mqtt) {
       this.mqtt = new EcoFlowMqtt({
