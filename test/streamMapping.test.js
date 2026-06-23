@@ -21,6 +21,14 @@ test('system scope reports whole-home grid (powGetSysGrid)', () => {
   assert.strictEqual(v['measure_power.grid'], 2769);
   assert.strictEqual(v['measure_power.load'], 3969);
   assert.strictEqual(v['measure_battery'], 20);
+  assert.strictEqual(v['battery_charging_state'], 'charging');
+});
+
+test('battery_charging_state reflects battery power sign', () => {
+  assert.strictEqual(mapStreamQuota({ powGetBpCms: 1500 })['battery_charging_state'], 'charging');
+  assert.strictEqual(mapStreamQuota({ powGetBpCms: -800 })['battery_charging_state'], 'discharging');
+  assert.strictEqual(mapStreamQuota({ powGetBpCms: 0 })['battery_charging_state'], 'idle');
+  assert.strictEqual(mapStreamQuota({})['battery_charging_state'], undefined);
 });
 
 test('unit scope reports the inverter own grid feed (gridConnectionPower)', () => {

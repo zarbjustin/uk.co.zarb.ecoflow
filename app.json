@@ -808,6 +808,7 @@
       ],
       "capabilities": [
         "measure_battery",
+        "battery_charging_state",
         "measure_power",
         "measure_power.pv",
         "measure_power.grid",

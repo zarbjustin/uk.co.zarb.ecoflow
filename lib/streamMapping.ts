@@ -86,7 +86,12 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   set('discharge_limit', num(q, ['cmsMinDsgSoc']));
 
   // Power flows (Watts)
-  set('measure_power', num(q, ['powGetBpCms'])); // battery power: + charging / - discharging
+  const batteryPower = num(q, ['powGetBpCms']); // + charging / - discharging
+  set('measure_power', batteryPower);
+  if (batteryPower !== undefined) {
+    // eslint-disable-next-line no-nested-ternary
+    set('battery_charging_state', batteryPower > 5 ? 'charging' : (batteryPower < -5 ? 'discharging' : 'idle'));
+  }
   set('measure_power.pv', pvSum(q));
   set('measure_power.grid', scope === 'unit'
     ? num(q, ['gridConnectionPower', 'powGetSysGrid', 'sysGridConnectionPower'])
