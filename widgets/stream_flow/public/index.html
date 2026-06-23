@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #EAF2F8;
+    }
+    .card {
+      background: linear-gradient(160deg, #123247 0%, #08151F 100%);
+      border-radius: 16px;
+      padding: 14px 16px;
+      height: 204px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .head { display: flex; align-items: center; justify-content: space-between; }
+    .title { font-size: 13px; font-weight: 600; color: #cfe0ec; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .soc { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+    .soc .dot { width: 9px; height: 9px; border-radius: 50%; background: #38C172; }
+    .grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+    .stat .label { font-size: 11px; color: #9bb3c4; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat .value { font-size: 20px; font-weight: 700; line-height: 1.1; }
+    .stat .sub { font-size: 11px; color: #9bb3c4; min-height: 13px; }
+    .grid .value { color: #F5A623; }
+    .solar .value { color: #F6CE48; }
+    .home .value { color: #4FB8F0; }
+    .battery .value { color: #38C172; }
+    .muted { opacity: 0.55; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <div class="title" id="title">STREAM</div>
+      <div class="soc" id="socWrap"><span class="dot" id="socDot"></span><span id="soc">—</span></div>
+    </div>
+    <div class="grid">
+      <div class="stat grid"><div class="label">From grid</div><div class="value" id="grid">—</div><div class="sub" id="gridSub"></div></div>
+      <div class="stat solar"><div class="label">Solar</div><div class="value" id="solar">—</div><div class="sub"></div></div>
+      <div class="stat home"><div class="label">Home</div><div class="value" id="home">—</div><div class="sub"></div></div>
+      <div class="stat battery"><div class="label">Battery</div><div class="value" id="battery">—</div><div class="sub" id="batterySub"></div></div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    function fmtPower(w) {
+      if (w === null || w === undefined) return '—';
+      const a = Math.abs(w);
+      if (a >= 100) return (w / 1000).toFixed(2) + ' kW';
+      return Math.round(w) + ' W';
+    }
+
+    function onHomeyReady(Homey) {
+      const settings = Homey.getSettings() || {};
+      const index = Number(settings.index) || 1;
+      Homey.ready();
+
+      function set(id, text) { document.getElementById(id).textContent = text; }
+
+      async function refresh() {
+        try {
+          const d = await Homey.api('GET', '/?index=' + index, {});
+          if (!d || !d.ok) {
+            set('title', 'No STREAM system found');
+            return;
+          }
+          set('title', d.name || 'STREAM');
+
+          // Grid: positive = importing, negative = exporting.
+          set('grid', fmtPower(d.grid == null ? null : Math.abs(d.grid)));
+          set('gridSub', d.grid == null ? '' : (d.grid < -5 ? 'exporting' : (d.grid > 5 ? 'importing' : '')));
+
+          set('solar', fmtPower(d.solar));
+          set('home', fmtPower(d.home));
+
+          // Battery power magnitude + state.
+          set('battery', fmtPower(d.battery == null ? null : Math.abs(d.battery)));
+          const stateLabel = d.state ? d.state.charAt(0).toUpperCase() + d.state.slice(1) : '';
+          set('batterySub', stateLabel);
+
+          // SoC badge.
+          set('soc', d.soc == null ? '—' : Math.round(d.soc) + '%');
+          const dot = document.getElementById('socDot');
+          dot.style.background = d.state === 'discharging' ? '#F5A623' : (d.state === 'idle' ? '#9bb3c4' : '#38C172');
+
+          document.querySelector('.card').classList.toggle('muted', d.available === false);
+        } catch (e) {
+          // keep last values on transient errors
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 3000);
+    }
+  </script>
+</body>
+</html>

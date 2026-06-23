@@ -6,6 +6,7 @@
     "test/",
     "drivers/*/pair/",
     "settings/",
+    "widgets/",
     "assets/"
   ],
   "rules": {
