@@ -35,6 +35,8 @@ module.exports = class StreamSocketDevice extends Homey.Device {
     });
 
     this.registerCapabilityListener('onoff', async (on: boolean) => {
+      // Per-unit relays are reported per unit, so socket control targets the
+      // unit's own SN (not the system main SN). Verify on hardware for members.
       const cmd = this.outlet === 2 ? StreamCmd.ac2(this.sn, on) : StreamCmd.ac1(this.sn, on);
       await this.client.setQuota(cmd);
       this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);

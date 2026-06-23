@@ -11,6 +11,7 @@ module.exports = class PowerStreamDevice extends Homey.Device {
   private client!: EcoFlowClient;
   private pollTimer: NodeJS.Timeout | null = null;
   private sn = '';
+  private quotaHandler?: (q: Record<string, any>) => void;
 
   async onInit(): Promise<void> {
     this.sn = this.getData().sn;
@@ -34,7 +35,10 @@ module.exports = class PowerStreamDevice extends Homey.Device {
     }, interval);
 
     try {
-      await (this.homey.app as any).subscribeRealtime?.(this.sn, (q: Record<string, any>) => this.applyQuota(q).catch((e) => this.error('mqtt apply', e)));
+      this.quotaHandler = (q: Record<string, any>) => {
+        this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
+      };
+      await (this.homey.app as any).subscribeRealtime?.(this.sn, this.quotaHandler);
     } catch (e) {
       this.error('mqtt subscribe failed', e);
     }
@@ -76,7 +80,7 @@ module.exports = class PowerStreamDevice extends Homey.Device {
   }
 
   async onDeleted(): Promise<void> {
-    (this.homey.app as any).unsubscribeRealtime?.(this.sn);
+    (this.homey.app as any).unsubscribeRealtime?.(this.sn, this.quotaHandler);
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
   }
 };

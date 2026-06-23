@@ -34,7 +34,10 @@ export class EcoFlowMqtt {
   }
 
   async connect(): Promise<void> {
-    if (this.client?.connected) return;
+    // A client object means we are already connected or establishing/reconnecting.
+    // mqtt.js handles reconnection internally, and EcoFlow allows only one session
+    // per account, so we must never create a second client.
+    if (this.client) return;
     if (this.connecting) {
       await this.connecting;
       return;

@@ -3,6 +3,7 @@
 import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
 import { mapSmartMeterQuota, accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
+import { toFiniteNumber } from '../../lib/quota';
 
 const DEFAULT_POLL_MS = 30000;
 
@@ -30,6 +31,7 @@ module.exports = class SmartMeterDevice extends Homey.Device {
   private exportWh = 0;
   private lastTs = 0;
   private quotaHandler?: (q: Record<string, any>) => void;
+  private pendingCaps = new Set<string>();
 
   async onInit(): Promise<void> {
     this.sn = this.getData().sn;
@@ -88,20 +90,15 @@ module.exports = class SmartMeterDevice extends Homey.Device {
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapSmartMeterQuota(quota);
 
-    // Choose what the energy meter represents: net grid power (signed) or the
-    // home's total load (always positive). The per-phase values from the mapping
-    // still apply for standalone meters.
-    const toNum = (v: any): number | undefined => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : undefined;
-    };
-    const gridW = toNum(quota.powGetSysGrid) ?? toNum(quota.gridConnectionPower);
-    const loadW = toNum(quota.powGetSysLoad);
+    const gridW = toFiniteNumber(quota.powGetSysGrid) ?? toFiniteNumber(quota.gridConnectionPower);
+    const loadW = toFiniteNumber(quota.powGetSysLoad);
+    // The live tile shows either grid power or home load; the cumulative meters
+    // ALWAYS track grid import/export, so switching the display mode can never
+    // corrupt the (monotonic) energy totals.
     const power = this.meterSource === 'load' ? loadW : gridW;
     delete values['measure_power'];
 
-    // Always-positive grid import/export tiles, derived from the signed grid
-    // power regardless of what the primary meter shows.
+    // Always-positive grid import/export tiles, derived from the signed grid power.
     const split = splitGridPower(gridW);
     if (split) {
       if (this.getCapabilityValue('measure_power.grid_import') !== split.importW) {
@@ -112,19 +109,19 @@ module.exports = class SmartMeterDevice extends Homey.Device {
       }
     }
 
-    if (typeof power === 'number') {
-      if (this.getCapabilityValue('measure_power') !== power) {
-        await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
-      }
-      // Integrate into monotonic import/export energy counters. In "load" mode
-      // power is always positive, so only the imported (consumed) counter grows.
+    if (typeof power === 'number' && this.getCapabilityValue('measure_power') !== power) {
+      await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
+    }
+
+    // Integrate cumulative import/export from the signed grid power. Capture the
+    // interval and re-anchor the timestamp synchronously (before any await) to
+    // avoid a concurrent poll+MQTT double-count.
+    if (typeof gridW === 'number') {
       const now = Date.now();
-      if (this.lastTs > 0) {
-        const next = accumulateEnergy(
-          { importWh: this.importWh, exportWh: this.exportWh },
-          power,
-          now - this.lastTs,
-        );
+      const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
+      this.lastTs = now;
+      if (dtMs > 0) {
+        const next = accumulateEnergy({ importWh: this.importWh, exportWh: this.exportWh }, gridW, dtMs);
         if (next.importWh !== this.importWh || next.exportWh !== this.exportWh) {
           this.importWh = next.importWh;
           this.exportWh = next.exportWh;
@@ -134,7 +131,6 @@ module.exports = class SmartMeterDevice extends Homey.Device {
           await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
         }
       }
-      this.lastTs = now;
     }
 
     for (const [cap, value] of Object.entries(values)) {
@@ -152,8 +148,9 @@ module.exports = class SmartMeterDevice extends Homey.Device {
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
     if (changedKeys.includes('meter_source')) {
+      // Only the live tile changes; the cumulative meters always track grid, so
+      // no counter reset is needed (switching can't corrupt the energy totals).
       this.meterSource = (newSettings.meter_source as 'grid' | 'load') || 'grid';
-      this.lastTs = 0; // re-anchor integration so switching source doesn't jump
       await this.applyMeterSourceTitle();
       this.poll().catch((e) => this.error('poll failed', e));
     }
@@ -168,13 +165,16 @@ module.exports = class SmartMeterDevice extends Homey.Device {
 
   /** Add an optional (per-phase) capability the first time data for it arrives. */
   private async ensureCapability(cap: string): Promise<void> {
-    if (this.hasCapability(cap)) return;
+    if (this.hasCapability(cap) || this.pendingCaps.has(cap)) return;
     if (!(cap in DYNAMIC_TITLES)) return;
+    this.pendingCaps.add(cap);
     try {
       await this.addCapability(cap);
       await this.setCapabilityOptions(cap, { title: { en: DYNAMIC_TITLES[cap] } });
     } catch (e) {
       this.error(`addCapability ${cap}`, e);
+    } finally {
+      this.pendingCaps.delete(cap);
     }
   }
 

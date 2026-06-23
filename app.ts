@@ -5,9 +5,17 @@ import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
 
 module.exports = class EcoFlowApp extends Homey.App {
   private mqtt: EcoFlowMqtt | null = null;
+  private mqttCredsKey = '';
 
   async onInit(): Promise<void> {
     this.log('EcoFlow app initialised');
+  }
+
+  async onUninit(): Promise<void> {
+    // Close the shared MQTT session cleanly so EcoFlow's broker (one session per
+    // account) doesn't reject the next start with a stale ghost connection.
+    await this.mqtt?.end().catch(() => {});
+    this.mqtt = null;
   }
 
   private getCredentials(): { accessKey?: string; secretKey?: string; host?: string } {
@@ -23,10 +31,18 @@ module.exports = class EcoFlowApp extends Homey.App {
     const { accessKey, secretKey, host } = this.getCredentials();
     if (!accessKey || !secretKey) return null;
     if (this.homey.settings.get('mqtt_enabled') === false) return null;
+
+    // Recreate the connection if the saved credentials/region changed.
+    const credsKey = `${accessKey}:${secretKey}:${host || ''}`;
+    if (this.mqtt && credsKey !== this.mqttCredsKey) {
+      await this.mqtt.end().catch(() => {});
+      this.mqtt = null;
+    }
     if (!this.mqtt) {
       this.mqtt = new EcoFlowMqtt({
         accessKey, secretKey, host, log: (...a) => this.log('[mqtt]', ...a),
       });
+      this.mqttCredsKey = credsKey;
     }
     try {
       await this.mqtt.connect();

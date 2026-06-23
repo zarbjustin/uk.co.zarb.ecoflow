@@ -75,16 +75,19 @@ module.exports = class StreamSolarDevice extends Homey.Device {
       if (this.getCapabilityValue('measure_power') !== power) {
         await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
       }
+      // Capture the interval and re-anchor synchronously (before any await) to
+      // avoid a concurrent poll+MQTT double-count.
       const now = Date.now();
-      if (this.lastTs > 0) {
-        const next = integratePositivePower(this.generatedWh, power, now - this.lastTs);
+      const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
+      this.lastTs = now;
+      if (dtMs > 0) {
+        const next = integratePositivePower(this.generatedWh, power, dtMs);
         if (next !== this.generatedWh) {
           this.generatedWh = next;
           await this.setStoreValue('generatedWh', this.generatedWh).catch(() => {});
           await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
         }
       }
-      this.lastTs = now;
     }
 
     for (let i = 1; i <= 4; i += 1) {

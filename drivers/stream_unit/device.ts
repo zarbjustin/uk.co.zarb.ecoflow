@@ -14,6 +14,7 @@ module.exports = class StreamUnitDevice extends Homey.Device {
   private client!: EcoFlowClient;
   private pollTimer: NodeJS.Timeout | null = null;
   private sn = '';
+  private mqttOffline = false;
   private quotaHandler?: (q: Record<string, any>) => void;
   private statusHandler?: (online: boolean) => void;
 
@@ -43,6 +44,7 @@ module.exports = class StreamUnitDevice extends Homey.Device {
         this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
       };
       this.statusHandler = (online: boolean) => {
+        this.mqttOffline = !online;
         if (online) this.setAvailable().catch(() => {});
         else this.setUnavailable('Device offline').catch(() => {});
       };
@@ -58,7 +60,7 @@ module.exports = class StreamUnitDevice extends Homey.Device {
     try {
       const quota = await this.client.getQuotaAll(this.sn);
       await this.applyQuota(quota);
-      if (!this.getAvailable()) await this.setAvailable();
+      if (!this.mqttOffline && !this.getAvailable()) await this.setAvailable();
     } catch (e: any) {
       this.error('quota poll error', e?.message || e);
       await this.setUnavailable(e?.message || 'EcoFlow API error').catch(() => {});

@@ -4,6 +4,7 @@ import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { integrateSignedPower, followResettableCounter } from '../../lib/energyIntegration';
+import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 
@@ -22,9 +23,10 @@ module.exports = class StreamDevice extends Homey.Device {
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
   private prevMode: string | undefined;
-  private prevCharging: boolean | undefined;
+  private prevCharging: boolean | null | undefined;
   private prevExporting: boolean | undefined;
   private prevOnline: boolean | undefined;
+  private mqttOffline = false;
   private faulted = false;
   // Locally-integrated cumulative battery energy (Wh). The STREAM REST API does
   // not expose accuChgEnergy/accuDsgEnergy, so Homey Energy's charged/discharged
@@ -72,6 +74,7 @@ module.exports = class StreamDevice extends Homey.Device {
         this.applyQuota(q).catch((e) => this.error('mqtt apply', e));
       };
       this.statusHandler = (online: boolean) => {
+        this.mqttOffline = !online;
         this.setOnline(online).catch(() => {});
       };
       await (this.homey.app as any).subscribeRealtime?.(this.sn, this.quotaHandler, this.statusHandler);
@@ -131,7 +134,9 @@ module.exports = class StreamDevice extends Homey.Device {
     try {
       const quota = await this.client.getQuotaAll(this.sn);
       await this.applyQuota(quota);
-      await this.setOnline(true);
+      // The REST API can return a stale 200 for an offline device; trust the
+      // realtime MQTT offline status over a poll success to avoid flapping.
+      if (!this.mqttOffline) await this.setOnline(true);
     } catch (e: any) {
       this.error('quota poll error', e?.message || e);
       await this.setOnline(false, e?.message || 'EcoFlow API error');
@@ -179,21 +184,29 @@ module.exports = class StreamDevice extends Homey.Device {
     quota: Record<string, any>,
     batteryPowerW: number | boolean | string | undefined,
   ): Promise<void> {
-    const accuChg = Number(quota.accuChgEnergy);
-    const accuDsg = Number(quota.accuDsgEnergy);
-    const hasChg = Number.isFinite(accuChg);
-    const hasDsg = Number.isFinite(accuDsg);
+    const accuChg = toFiniteNumber(quota.accuChgEnergy);
+    const accuDsg = toFiniteNumber(quota.accuDsgEnergy);
+    const hasChg = accuChg !== undefined;
+    const hasDsg = accuDsg !== undefined;
+
+    // Capture the interval and re-anchor the timestamp SYNCHRONOUSLY (before any
+    // await) so a concurrent applyQuota (poll + MQTT) can't integrate the same
+    // interval twice. Re-anchoring also runs on the counter path so a later poll
+    // doesn't double-count over a stale timestamp.
+    const now = Date.now();
+    const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
+    this.lastEnergyTs = now;
 
     if (hasChg || hasDsg) {
       let changed = false;
       if (hasChg) {
-        const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg);
+        const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
         if (r.totalWh !== this.chargedWh) changed = true;
         this.chargedWh = r.totalWh;
         this.chargedRawWh = r.lastRawWh;
       }
       if (hasDsg) {
-        const r = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg);
+        const r = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg as number);
         if (r.totalWh !== this.dischargedWh) changed = true;
         this.dischargedWh = r.totalWh;
         this.dischargedRawWh = r.lastRawWh;
@@ -202,21 +215,17 @@ module.exports = class StreamDevice extends Homey.Device {
       return;
     }
 
-    if (typeof batteryPowerW !== 'number') return;
-    const now = Date.now();
-    if (this.lastEnergyTs > 0) {
-      const next = integrateSignedPower(
-        { posWh: this.chargedWh, negWh: this.dischargedWh },
-        batteryPowerW,
-        now - this.lastEnergyTs,
-      );
-      if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
-        this.chargedWh = next.posWh;
-        this.dischargedWh = next.negWh;
-        await this.persistBatteryEnergy();
-      }
+    if (typeof batteryPowerW !== 'number' || dtMs <= 0) return;
+    const next = integrateSignedPower(
+      { posWh: this.chargedWh, negWh: this.dischargedWh },
+      batteryPowerW,
+      dtMs,
+    );
+    if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
+      this.chargedWh = next.posWh;
+      this.dischargedWh = next.negWh;
+      await this.persistBatteryEnergy();
     }
-    this.lastEnergyTs = now;
   }
 
   private async persistBatteryEnergy(): Promise<void> {
@@ -248,15 +257,20 @@ module.exports = class StreamDevice extends Homey.Device {
     }
     const battPower = values['measure_power'];
     if (typeof battPower === 'number') {
-      const charging = battPower > 5;
-      const discharging = battPower < -5;
-      if (charging || discharging) {
-        const nowCharging = charging;
-        if (this.prevCharging !== undefined && nowCharging !== this.prevCharging) {
+      // Resolve the charge state including the idle band, so the edge is detected
+      // correctly across charging -> idle -> charging transitions.
+      let nowCharging: boolean | null = null;
+      if (battPower > 5) nowCharging = true;
+      else if (battPower < -5) nowCharging = false;
+      if (nowCharging !== null) {
+        if (this.prevCharging !== undefined && this.prevCharging !== null && nowCharging !== this.prevCharging) {
           const card = nowCharging ? 'charging_started' : 'discharging_started';
           flow.getDeviceTriggerCard(card).trigger(this, { power: battPower }).catch(() => {});
         }
         this.prevCharging = nowCharging;
+      } else {
+        // Idle: clear so the next active period is detected as a fresh edge.
+        this.prevCharging = null;
       }
     }
     const mode = values['operating_mode'];

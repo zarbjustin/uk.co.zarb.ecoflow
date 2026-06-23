@@ -1,4 +1,7 @@
 {
+  "1.3.1": {
+    "en": "Reliability fixes from a multi-model code review: prevents duplicate MQTT sessions, stops energy meters double-counting under concurrent updates, keeps cumulative meters monotonic when switching the meter mode, fixes the 'charging started' flow trigger after idle, avoids offline/online flapping, and cleans up the MQTT connection on app shutdown."
+  },
   "1.3.0": {
     "en": "New 'STREAM Energy Flow' dashboard widget showing the live EcoFlow-style picture — Grid, Solar, Home and Battery (with % and charge state) in kW, refreshing every few seconds."
   },
