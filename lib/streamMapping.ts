@@ -28,10 +28,8 @@ function perPv(q: Quota, i: number): number | undefined {
   return legacy;
 }
 
-/** Sum of available per-PV watts, preferring the firmware-specific keys. */
-function pvSum(q: Quota): number | undefined {
-  const direct = num(q, ['powGetPvSum']);
-  if (direct !== undefined) return direct;
+/** Sum of the unit's own per-PV strings (excludes the system-level sum). */
+function perPvSum(q: Quota): number | undefined {
   let total = 0;
   let any = false;
   for (let i = 1; i <= 4; i += 1) {
@@ -42,6 +40,13 @@ function pvSum(q: Quota): number | undefined {
     }
   }
   return any ? total : undefined;
+}
+
+/** Sum of available PV watts, preferring the firmware's system total. */
+function pvSum(q: Quota): number | undefined {
+  const direct = num(q, ['powGetPvSum']);
+  if (direct !== undefined) return direct;
+  return perPvSum(q);
 }
 
 /** Total solar generation in Watts (for the dedicated solar device). */
@@ -94,7 +99,8 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
     // eslint-disable-next-line no-nested-ternary
     set('battery_charging_state', batteryPower > 5 ? 'charging' : (batteryPower < -5 ? 'discharging' : 'idle'));
   }
-  set('measure_power.pv', pvSum(q));
+  // Solar: a unit shows its OWN strings; the system shows the firmware total.
+  set('measure_power.pv', scope === 'unit' ? perPvSum(q) : pvSum(q));
   set('measure_power.grid', scope === 'unit'
     ? num(q, ['gridConnectionPower', 'powGetSysGrid', 'sysGridConnectionPower'])
     : num(q, ['powGetSysGrid', 'sysGridConnectionPower', 'gridConnectionPower']));

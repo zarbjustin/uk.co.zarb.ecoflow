@@ -1,4 +1,7 @@
 {
+  "1.5.0": {
+    "en": "Per-unit detail like the EcoFlow app: each STREAM Unit now shows its own solar (PV1–4) and time-to-full/empty. The STREAM Microinverter is now supported as a solar device (PV1/PV2 + generated energy + grid feed)."
+  },
   "1.4.0": {
     "en": "Internal hardening: a shared device foundation reduces duplicated code, the realtime (MQTT) connection now recovers from certificate expiry with backoff and survives credential changes without losing updates, and the energy widget now shows today's solar. No changes to how your devices work."
   },

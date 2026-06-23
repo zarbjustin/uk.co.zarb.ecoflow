@@ -1,0 +1,43 @@
+{
+  "name": { "en": "STREAM Microinverter" },
+  "class": "solarpanel",
+  "connectivity": ["cloud"],
+  "capabilities": [
+    "measure_power",
+    "meter_power",
+    "measure_power.pv1",
+    "measure_power.pv2",
+    "measure_power.grid"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": { "title": { "en": "Solar power" } },
+    "meter_power": { "title": { "en": "Solar generated" } },
+    "measure_power.pv1": { "title": { "en": "Solar PV1" } },
+    "measure_power.pv2": { "title": { "en": "Solar PV2" } },
+    "measure_power.grid": { "title": { "en": "Grid feed" } }
+  },
+  "energy": {
+    "meterPowerExportedCapability": "meter_power"
+  },
+  "images": {
+    "small": "/drivers/stream_micro/assets/images/small.png",
+    "large": "/drivers/stream_micro/assets/images/large.png",
+    "xlarge": "/drivers/stream_micro/assets/images/xlarge.png"
+  },
+  "settings": [
+    {
+      "id": "poll_interval",
+      "type": "number",
+      "label": { "en": "Polling interval (seconds)" },
+      "value": 30,
+      "min": 10,
+      "max": 600,
+      "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+    }
+  ],
+  "pair": [
+    { "id": "credentials" },
+    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
+    { "id": "add_devices", "template": "add_devices" }
+  ]
+}

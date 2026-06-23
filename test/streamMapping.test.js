@@ -51,3 +51,11 @@ test('unit scope reads per-unit SoC and ignores system cmsBattSoc', () => {
   // System scope still uses the aggregate cmsBattSoc.
   assert.strictEqual(mapStreamQuota({ cmsBattSoc: 20 })['measure_battery'], 20);
 });
+
+test('solar is per-unit (own strings) for unit scope, system total for system scope', () => {
+  const q = { powGetPvSum: 845, powGetPv: 188, powGetPv2: 181 };
+  // System: uses the firmware total.
+  assert.strictEqual(mapStreamQuota(q)['measure_power.pv'], 845);
+  // Unit: sums the unit's own strings, ignoring the system total.
+  assert.strictEqual(mapStreamQuota(q, 'unit')['measure_power.pv'], 369);
+});

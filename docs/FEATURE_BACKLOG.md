@@ -18,6 +18,27 @@ MQTT** on the account. Each item notes data availability:
 
 ---
 
+## Sprint outcomes (after the live spike)
+- ✅ **G — Per-unit richness** (v1.5.0): each STREAM Unit now shows its own Solar
+  (+PV1–4) and charge/discharge **time-to-full/empty**. PV mapping is scope-aware
+  (unit = own strings; system = firmware total `powGetPvSum`).
+- ✅ **K — Microinverter device** (v1.5.0): the STREAM Microinverter now pairs as a
+  `solarpanel` device (PV1/PV2 + generated kWh + grid feed) — its rich data is on
+  MQTT even though its REST quota is empty.
+- 🟨 **H — Battery stored energy (Wh)**: charge/discharge **time** is delivered
+  (system + per-unit). Absolute **Wh** is NOT added — the capacity fields
+  (`remainCap`/`fullCap`/`designCap`) don't map cleanly to the app's Wh figure
+  (modules stack), so a wrong number would be worse than none. Revisit if a
+  reliable energy/capacity field is confirmed.
+- 🚫 **I — Daily stats / efficiency / forecast**, **J — Earnings/savings**,
+  **L — Tariff rates**: NOT available via the EcoFlow **open** IoT API. The history
+  endpoint rejects every code we try (error 1006 across BK61/STREAM/etc.), and
+  there are no efficiency/forecast/earnings/tariff fields in the device quota.
+  These are EcoFlow **app-internal** analytics (private cloud API) — out of scope
+  to reverse‑engineer (unstable, like `target_power`).
+
+---
+
 ## Sprint G — Per-unit richness ✅ (high value, low risk)
 Mirror the EcoFlow per-unit detail screen (Ultra X / AC Pro).
 - **Per-unit solar**: `measure_power.pv` (sum of the unit's own strings, NOT the
