@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960"><g transform="scale(1.875)">
     <circle cx="256" cy="150" r="58" fill="#15171A"/>
     <g fill="none" stroke="#15171A" stroke-width="30" stroke-linejoin="round" stroke-linecap="round">
       <line x1="256" y1="40" x2="256" y2="66"/>

@@ -1,4 +1,7 @@
 {
+  "1.6.0": {
+    "en": "Polished for the Homey App Store: refreshed app and device icons (full-canvas, each device now has its own unique icon), new lively app artwork and clean white-background device images, plus a tidier app name and description. No changes to how your devices work."
+  },
   "1.5.0": {
     "en": "Per-unit detail like the EcoFlow app: each STREAM Unit now shows its own solar (PV1–4) and time-to-full/empty. The STREAM Microinverter is now supported as a solar device (PV1/PV2 + generated energy + grid feed)."
   },

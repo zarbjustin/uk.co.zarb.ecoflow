@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -8,16 +8,18 @@
     "local"
   ],
   "name": {
-    "en": "EcoFlow - Balcony Solar"
+    "en": "EcoFlow Balcony Solar"
   },
   "description": {
-    "en": "Monitor and control EcoFlow STREAM, PowerStream and Smart Meter energy systems: battery, solar, grid and AC outputs, with Energy dashboard, Flows and Insights."
+    "en": "Turn balcony sunlight into smarter home energy"
   },
   "category": [
     "energy"
   ],
   "brandColor": "#1AA3E8",
   "permissions": [],
+  "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",
+  "source": "https://github.com/zarbjustin/uk.co.zarb.ecoflow",
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",

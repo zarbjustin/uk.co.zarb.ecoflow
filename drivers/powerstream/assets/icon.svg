@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960"><g transform="scale(1.875)">
     <line x1="190" y1="96" x2="190" y2="170" fill="none" stroke="#15171A" stroke-width="30" stroke-linejoin="round" stroke-linecap="round"/>
     <line x1="322" y1="96" x2="322" y2="170" fill="none" stroke="#15171A" stroke-width="30" stroke-linejoin="round" stroke-linecap="round"/>
     <rect x="116" y="170" width="280" height="180" rx="30" fill="none" stroke="#15171A" stroke-width="30" stroke-linejoin="round" stroke-linecap="round"/>
