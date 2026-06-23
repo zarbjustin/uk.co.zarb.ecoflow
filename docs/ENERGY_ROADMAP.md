@@ -9,14 +9,32 @@ a live EcoFlow account.
 - ✅ **Sprint 14a** — `stream` device now declares `energy.homeBattery:true` with
   `meterPowerImported/ExportedCapability` (charged/discharged).
 - ✅ **Sprint 15** — shared monotonic energy core (`lib/energyIntegration.ts`:
-  `integrateSignedPower`, `integratePositivePower`); Smart Meter reuses it.
-- ✅ **Sprint 16 (core)** — battery `meter_power.charged/.discharged` are now
-  integrated locally from `powGetBpCms` (REST has no lifetime counter) and
-  persisted monotonically.
-- ✅ **Sprint 17 (core)** — new `stream_solar` (`solarpanel`) device: `measure_power`
-  = total PV (≥0), `meter_power` = locally-integrated generation.
-- ⏳ Next: controller split + migration (Sprint 18), `target_power_mode` (19),
-  `target_power` spike (20), extras (21), publish (22).
+  `integrateSignedPower`, `integratePositivePower`, `followResettableCounter`);
+  Smart Meter reuses it.
+- ✅ **Sprint 16** — battery `meter_power.charged/.discharged`: prefers the device
+  counters (`accuChgEnergy/accuDsgEnergy`, delivered over **MQTT**) with
+  firmware-reset protection, and falls back to integrating `powGetBpCms` when only
+  the sparse REST snapshot is available. Persisted monotonically.
+- ✅ **Sprint 17** — new `stream_solar` (`solarpanel`) device: `measure_power` =
+  total PV (≥0), `meter_power` = locally-integrated generation.
+- ✅ **Configure-once onboarding** — credentials are entered once (App Settings or
+  first pairing) and saved globally; every driver's pairing now auto-skips the
+  credentials screen straight to the device list (`lib/pairing.ts`).
+- ✅ **Sprint 18** — fault `alarm_generic` on the battery tile + `fault_cleared`
+  Flow trigger (alongside the existing `fault_raised`).
+- ✅ **Sprint 21 (controls)** — settable charge/discharge SoC limits
+  (`cfgMaxChgSoc`/`cfgMinDsgSoc`) via sliders + "Set charge/discharge limit" Flow
+  actions. (REST `cfg*` names inferred from the confirmed MQTT `cms*` fields —
+  verify on hardware.)
+- 🚫 **Sprint 19/20 (`target_power`/`target_power_mode`) — NOT FEASIBLE.** The
+  spike (two independent open-source integrations) confirmed the STREAM open API
+  exposes **no charge/discharge watt setpoint**. Adding `target_power` would be a
+  fake control, so it is intentionally omitted; the rich `operating_mode` picker,
+  backup reserve and SoC limits provide the available control surface instead. The
+  compatibility bump to 12.13.0 is therefore also skipped (broader support kept).
+- ⏳ Remaining: controller/load split (optional — kept on the battery tile for
+  now), MQTT data-availability audit + history model-code discovery, widgets,
+  publish.
 
 
 This roadmap was produced with a **multi-model** pass (GPT‑5.4 + Gemini 3.1 Pro +

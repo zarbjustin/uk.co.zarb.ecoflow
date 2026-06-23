@@ -1,4 +1,7 @@
 {
+  "1.1.0": {
+    "en": "Full Homey Energy integration: STREAM is now a proper home battery (charged/discharged meters), with a new STREAM Solar device and the Smart Meter as a grid meter. Fixes discovery of all STREAM models (Ultra X, AC Pro, etc.). Configure your EcoFlow keys once — pairing more devices no longer re-asks. Adds settable charge/discharge limits, fault alarms, and richer realtime data over MQTT."
+  },
   "1.0.0": {
     "en": "Initial release: EcoFlow STREAM monitoring & control (battery, solar, grid, AC outputs, backup reserve, operating mode, feed-in), Smart Meter (per-phase power/voltage/current + energy), Homey Energy integration, Flow cards and Insights, with realtime MQTT updates."
   }

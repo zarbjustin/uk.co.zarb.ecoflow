@@ -1,9 +1,9 @@
 'use strict';
 
 import Homey from 'homey';
-import { EcoFlowClient } from '../../lib/EcoFlowClient';
 import { classifyDevice } from '../../lib/ecoflowDevices';
 import { EcoFlowDevice } from '../../lib/types';
+import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -41,6 +41,12 @@ module.exports = class StreamDriver extends Homey.Driver {
     flow.getActionCard('set_ac_output').registerRunListener(
       (args: any) => args.device.flowSetAc(args.output, args.state === 'on'),
     );
+    flow.getActionCard('set_charge_limit').registerRunListener(
+      (args: any) => args.device.flowSetChargeLimit(args.level),
+    );
+    flow.getActionCard('set_discharge_limit').registerRunListener(
+      (args: any) => args.device.flowSetDischargeLimit(args.level),
+    );
 
     // Trigger arg-matching for the battery threshold card
     flow.getDeviceTriggerCard('battery_level_crossed').registerRunListener((args: any, state: any) => {
@@ -51,24 +57,10 @@ module.exports = class StreamDriver extends Homey.Driver {
   }
 
   async onPair(session: any): Promise<void> {
-    let creds: { accessKey: string; secretKey: string; host?: string } = { accessKey: '', secretKey: '' };
-
-    session.setHandler('login', async (data: { accessKey: string; secretKey: string; host?: string }) => {
-      const client = new EcoFlowClient({ accessKey: data.accessKey, secretKey: data.secretKey, host: data.host });
-      // Throws if the credentials are invalid.
-      await client.getDeviceList();
-      creds = data;
-      this.homey.settings.set('accessKey', data.accessKey);
-      this.homey.settings.set('secretKey', data.secretKey);
-      if (data.host) this.homey.settings.set('host', data.host);
-      return true;
-    });
+    registerCredentialHandlers(this, session);
 
     session.setHandler('list_devices', async () => {
-      const accessKey = creds.accessKey || (this.homey.settings.get('accessKey') as string);
-      const secretKey = creds.secretKey || (this.homey.settings.get('secretKey') as string);
-      const host = creds.host || (this.homey.settings.get('host') as string);
-      const client = new EcoFlowClient({ accessKey, secretKey, host });
+      const client = clientFromSettings(this);
 
       const devices = await client.getDeviceList();
 

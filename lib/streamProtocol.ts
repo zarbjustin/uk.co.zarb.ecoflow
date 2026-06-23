@@ -25,4 +25,6 @@ export const StreamCmd = {
   backupReserve: (sn: string, soc: number) => streamEnvelope(sn, { cfgBackupReverseSoc: Math.max(3, Math.min(95, Math.round(soc))) }),
   feedIn: (sn: string, on: boolean) => streamEnvelope(sn, { cfgFeedGridMode: on ? 2 : 1 }),
   operatingMode: (sn: string, mode: OperatingMode) => streamEnvelope(sn, { cfgEnergyStrategyOperateMode: { [MODE_PARAM[mode]]: true } }),
+  chargeLimit: (sn: string, soc: number) => streamEnvelope(sn, { cfgMaxChgSoc: Math.max(50, Math.min(100, Math.round(soc))) }),
+  dischargeLimit: (sn: string, soc: number) => streamEnvelope(sn, { cfgMinDsgSoc: Math.max(0, Math.min(30, Math.round(soc))) }),
 };

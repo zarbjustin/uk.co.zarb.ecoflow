@@ -1,0 +1,17 @@
+{
+  "id": "set_discharge_limit",
+  "title": { "en": "Set discharge limit" },
+  "titleFormatted": { "en": "Set discharge limit to [[level]]%" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "range",
+      "name": "level",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "label": "%",
+      "labelDecimals": 0
+    }
+  ]
+}

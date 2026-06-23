@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -153,6 +153,19 @@
               "en": "Battery power"
             },
             "example": -600
+          }
+        ]
+      },
+      {
+        "id": "fault_cleared",
+        "title": {
+          "en": "A fault was cleared"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
           }
         ]
       },
@@ -515,6 +528,56 @@
         ]
       },
       {
+        "id": "set_charge_limit",
+        "title": {
+          "en": "Set charge limit"
+        },
+        "titleFormatted": {
+          "en": "Set charge limit to [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "min": 50,
+            "max": 100,
+            "step": 1,
+            "label": "%",
+            "labelDecimals": 0
+          }
+        ]
+      },
+      {
+        "id": "set_discharge_limit",
+        "title": {
+          "en": "Set discharge limit"
+        },
+        "titleFormatted": {
+          "en": "Set discharge limit to [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "min": 0,
+            "max": 30,
+            "step": 1,
+            "label": "%",
+            "labelDecimals": 0
+          }
+        ]
+      },
+      {
         "id": "set_feed_in",
         "title": {
           "en": "Set grid feed-in"
@@ -794,7 +857,8 @@
         "measure_power.from_grid",
         "charge_remaining",
         "discharge_remaining",
-        "battery_cycles"
+        "battery_cycles",
+        "alarm_generic"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -892,6 +956,11 @@
           },
           "insightsTitleFalse": {
             "en": "AC2 turned off"
+          }
+        },
+        "alarm_generic": {
+          "title": {
+            "en": "Fault"
           }
         }
       },
@@ -1182,9 +1251,12 @@
         "en": "%"
       },
       "decimals": 0,
+      "min": 50,
+      "max": 100,
+      "step": 1,
       "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
+      "setable": true,
+      "uiComponent": "slider",
       "insights": true
     },
     "charge_remaining": {
@@ -1224,9 +1296,12 @@
         "en": "%"
       },
       "decimals": 0,
+      "min": 0,
+      "max": 30,
+      "step": 1,
       "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
+      "setable": true,
+      "uiComponent": "slider",
       "insights": true
     },
     "discharge_remaining": {

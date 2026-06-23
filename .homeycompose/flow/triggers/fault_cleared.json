@@ -1,0 +1,5 @@
+{
+  "id": "fault_cleared",
+  "title": { "en": "A fault was cleared" },
+  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+}

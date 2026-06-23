@@ -3,7 +3,7 @@
 import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
 import { mapStreamQuota } from '../../lib/streamMapping';
-import { integrateSignedPower } from '../../lib/energyIntegration';
+import { integrateSignedPower, followResettableCounter } from '../../lib/energyIntegration';
 import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 
@@ -28,9 +28,12 @@ module.exports = class StreamDevice extends Homey.Device {
   private faulted = false;
   // Locally-integrated cumulative battery energy (Wh). The STREAM REST API does
   // not expose accuChgEnergy/accuDsgEnergy, so Homey Energy's charged/discharged
-  // meters are derived from the battery power and persisted monotonically.
+  // meters are derived from the battery power and persisted monotonically. When
+  // MQTT delivers the device counters they are preferred (reset-protected).
   private chargedWh = 0;
   private dischargedWh = 0;
+  private chargedRawWh: number | undefined;
+  private dischargedRawWh: number | undefined;
   private lastEnergyTs = 0;
 
   async onInit(): Promise<void> {
@@ -38,6 +41,8 @@ module.exports = class StreamDevice extends Homey.Device {
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.sn;
     this.chargedWh = (this.getStoreValue('chargedWh') as number) || 0;
     this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
+    this.chargedRawWh = this.getStoreValue('chargedRawWh') as number | undefined;
+    this.dischargedRawWh = this.getStoreValue('dischargedRawWh') as number | undefined;
 
     const accessKey = this.homey.settings.get('accessKey') as string;
     const secretKey = this.homey.settings.get('secretKey') as string;
@@ -114,6 +119,8 @@ module.exports = class StreamDevice extends Homey.Device {
     this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
     this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.send(StreamCmd.backupReserve(this.mainSn, v)));
     this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
+    this.registerCapabilityListener('charge_limit', async (v: number) => this.send(StreamCmd.chargeLimit(this.mainSn, v)));
+    this.registerCapabilityListener('discharge_limit', async (v: number) => this.send(StreamCmd.dischargeLimit(this.mainSn, v)));
   }
 
   /** Send a STREAM set command and refresh state shortly after. */
@@ -159,13 +166,44 @@ module.exports = class StreamDevice extends Homey.Device {
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
-    await this.integrateBatteryEnergy(values['measure_power']);
+    await this.updateBatteryEnergy(quota, values['measure_power']);
     this.fireTriggers(values);
     this.checkFaults(quota);
   }
 
-  /** Integrate battery power (+charge/-discharge, W) into monotonic kWh meters. */
-  private async integrateBatteryEnergy(batteryPowerW: number | boolean | string | undefined): Promise<void> {
+  /**
+   * Update the monotonic charged/discharged meters. Prefers the device's own
+   * cumulative counters (accuChgEnergy/accuDsgEnergy, delivered over MQTT) with
+   * firmware-reset protection; falls back to integrating the battery power when
+   * only the REST snapshot (which omits those counters) is available.
+   */
+  private async updateBatteryEnergy(
+    quota: Record<string, any>,
+    batteryPowerW: number | boolean | string | undefined,
+  ): Promise<void> {
+    const accuChg = Number(quota.accuChgEnergy);
+    const accuDsg = Number(quota.accuDsgEnergy);
+    const hasChg = Number.isFinite(accuChg);
+    const hasDsg = Number.isFinite(accuDsg);
+
+    if (hasChg || hasDsg) {
+      let changed = false;
+      if (hasChg) {
+        const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg);
+        if (r.totalWh !== this.chargedWh) changed = true;
+        this.chargedWh = r.totalWh;
+        this.chargedRawWh = r.lastRawWh;
+      }
+      if (hasDsg) {
+        const r = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg);
+        if (r.totalWh !== this.dischargedWh) changed = true;
+        this.dischargedWh = r.totalWh;
+        this.dischargedRawWh = r.lastRawWh;
+      }
+      if (changed) await this.persistBatteryEnergy();
+      return;
+    }
+
     if (typeof batteryPowerW !== 'number') return;
     const now = Date.now();
     if (this.lastEnergyTs > 0) {
@@ -177,13 +215,19 @@ module.exports = class StreamDevice extends Homey.Device {
       if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
         this.chargedWh = next.posWh;
         this.dischargedWh = next.negWh;
-        await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
-        await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
-        await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-        await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+        await this.persistBatteryEnergy();
       }
     }
     this.lastEnergyTs = now;
+  }
+
+  private async persistBatteryEnergy(): Promise<void> {
+    await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
+    await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
+    if (this.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', this.chargedRawWh).catch(() => {});
+    if (this.dischargedRawWh !== undefined) await this.setStoreValue('dischargedRawWh', this.dischargedRawWh).catch(() => {});
+    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
   }
 
   private fireTriggers(values: Record<string, number | boolean | string>): void {
@@ -252,10 +296,16 @@ module.exports = class StreamDevice extends Homey.Device {
         break;
       }
     }
+    const isFaulted = active !== null;
+    if (this.hasCapability('alarm_generic') && this.getCapabilityValue('alarm_generic') !== isFaulted) {
+      this.setCapabilityValue('alarm_generic', isFaulted).catch(() => {});
+    }
     if (active && !this.faulted) {
       this.homey.flow.getDeviceTriggerCard('fault_raised').trigger(this, active).catch(() => {});
+    } else if (!isFaulted && this.faulted) {
+      this.homey.flow.getDeviceTriggerCard('fault_cleared').trigger(this).catch(() => {});
     }
-    this.faulted = active !== null;
+    this.faulted = isFaulted;
   }
 
   /** Condition + action helpers used by flow cards. */
@@ -287,6 +337,16 @@ module.exports = class StreamDevice extends Homey.Device {
   async flowSetFeedIn(on: boolean): Promise<void> {
     await this.send(StreamCmd.feedIn(this.mainSn, on));
     await this.setCapabilityValue('feed_in_control', on).catch(() => {});
+  }
+
+  async flowSetChargeLimit(level: number): Promise<void> {
+    await this.send(StreamCmd.chargeLimit(this.mainSn, level));
+    await this.setCapabilityValue('charge_limit', level).catch(() => {});
+  }
+
+  async flowSetDischargeLimit(level: number): Promise<void> {
+    await this.send(StreamCmd.dischargeLimit(this.mainSn, level));
+    await this.setCapabilityValue('discharge_limit', level).catch(() => {});
   }
 
   async flowSetAc(which: 'ac1' | 'ac2', on: boolean): Promise<void> {

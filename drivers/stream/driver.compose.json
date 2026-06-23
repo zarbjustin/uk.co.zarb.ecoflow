@@ -38,7 +38,8 @@
     "measure_power.from_grid",
     "charge_remaining",
     "discharge_remaining",
-    "battery_cycles"
+    "battery_cycles",
+    "alarm_generic"
   ],
   "capabilitiesOptions": {
     "measure_power": { "title": { "en": "Battery power" } },
@@ -65,6 +66,9 @@
       "title": { "en": "AC output 2" },
       "insightsTitleTrue": { "en": "AC2 turned on" },
       "insightsTitleFalse": { "en": "AC2 turned off" }
+    },
+    "alarm_generic": {
+      "title": { "en": "Fault" }
     }
   },
   "images": {

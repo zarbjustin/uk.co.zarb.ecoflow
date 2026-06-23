@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { integrateSignedPower, integratePositivePower } = require('../.homeybuild/lib/energyIntegration.js');
+const { integrateSignedPower, integratePositivePower, followResettableCounter } = require('../.homeybuild/lib/energyIntegration.js');
 
 test('integrateSignedPower splits charge/import (pos) and discharge/export (neg)', () => {
   let s = { posWh: 0, negWh: 0 };
@@ -37,4 +37,21 @@ test('integration is monotonic over a sequence', () => {
     assert.ok(gen >= prev, 'generated energy never decreases');
     prev = gen;
   }
+});
+
+test('followResettableCounter follows a device counter and absorbs resets', () => {
+  // First sample only anchors (no jump).
+  let s = followResettableCounter(0, undefined, 1000);
+  assert.strictEqual(s.totalWh, 0);
+  assert.strictEqual(s.lastRawWh, 1000);
+  // Normal increase adds the delta.
+  s = followResettableCounter(s.totalWh, s.lastRawWh, 1500);
+  assert.strictEqual(s.totalWh, 500);
+  // Firmware reset (raw drops) counts the new raw from zero, never decreasing.
+  s = followResettableCounter(s.totalWh, s.lastRawWh, 200);
+  assert.strictEqual(s.totalWh, 700);
+  assert.strictEqual(s.lastRawWh, 200);
+  // Invalid raw leaves the total unchanged.
+  s = followResettableCounter(s.totalWh, s.lastRawWh, NaN);
+  assert.strictEqual(s.totalWh, 700);
 });

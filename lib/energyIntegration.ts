@@ -46,3 +46,28 @@ export function integratePositivePower(prevWh: number, powerW: number, dtMs: num
   if (!validInterval(powerW, dtMs) || powerW <= 0) return prevWh;
   return prevWh + (powerW * dtMs) / 3_600_000;
 }
+
+/**
+ * Track a device-reported cumulative counter that may reset to 0 (e.g. on a
+ * firmware update) and produce a strictly monotonic total. The first sample only
+ * anchors `lastRaw` (no jump). A decrease is treated as a reset and the new raw
+ * value is counted from zero.
+ *
+ * @param prevTotalWh  the monotonic total so far (Wh)
+ * @param lastRawWh    the previous raw counter value, or undefined on first call
+ * @param rawWh        the current raw counter value (Wh)
+ */
+export function followResettableCounter(
+  prevTotalWh: number,
+  lastRawWh: number | undefined,
+  rawWh: number,
+): { totalWh: number; lastRawWh: number } {
+  if (!Number.isFinite(rawWh) || rawWh < 0) {
+    return { totalWh: prevTotalWh, lastRawWh: lastRawWh ?? 0 };
+  }
+  if (lastRawWh === undefined) {
+    return { totalWh: prevTotalWh, lastRawWh: rawWh };
+  }
+  const delta = rawWh >= lastRawWh ? rawWh - lastRawWh : rawWh;
+  return { totalWh: prevTotalWh + delta, lastRawWh: rawWh };
+}

@@ -3,8 +3,11 @@
   "title": { "en": "Charge limit" },
   "units": { "en": "%" },
   "decimals": 0,
+  "min": 50,
+  "max": 100,
+  "step": 1,
   "getable": true,
-  "setable": false,
-  "uiComponent": "sensor",
+  "setable": true,
+  "uiComponent": "slider",
   "insights": true
 }
