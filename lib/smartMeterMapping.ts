@@ -59,6 +59,12 @@ export function mapSmartMeterQuota(q: Quota): Record<string, number> {
   return out;
 }
 
+/** Split a signed grid power (W) into always-positive import and export. */
+export function splitGridPower(powerW: number | undefined): { importW: number; exportW: number } | undefined {
+  if (typeof powerW !== 'number' || !Number.isFinite(powerW)) return undefined;
+  return { importW: Math.max(0, powerW), exportW: Math.max(0, -powerW) };
+}
+
 /**
  * Integrate instantaneous grid power into monotonic cumulative import/export
  * energy. Thin wrapper around the shared {@link integrateSignedPower} that keeps

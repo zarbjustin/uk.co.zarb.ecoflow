@@ -1,6 +1,6 @@
 {
   "1.2.0": {
-    "en": "New EcoFlow-style icons and graphics throughout. Each AC socket on STREAM AC Pro / Ultra X is now its own smart-plug device (on/off + live power) for clearer control. The Smart Meter can now show either Grid power or total Home load — pick it in the device settings."
+    "en": "New EcoFlow-style icons and graphics throughout, including a clearer electricity-meter icon. Each AC socket on STREAM AC Pro / Ultra X is now its own smart-plug device (on/off + live power). The Smart Meter can show either Grid power or total Home load (device settings), adds live Grid import / Grid export tiles, and updates faster."
   },
   "1.1.0": {
     "en": "Full Homey Energy integration: STREAM is now a proper home battery (charged/discharged meters), with a new STREAM Solar device and the Smart Meter as a grid meter. Fixes discovery of all STREAM models (Ultra X, AC Pro, etc.). Configure your EcoFlow keys once — pairing more devices no longer re-asks. Adds settable charge/discharge limits, fault alarms, and richer realtime data over MQTT."

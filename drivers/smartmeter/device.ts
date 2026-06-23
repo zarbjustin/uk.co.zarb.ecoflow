@@ -2,7 +2,7 @@
 
 import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
-import { mapSmartMeterQuota, accumulateEnergy } from '../../lib/smartMeterMapping';
+import { mapSmartMeterQuota, accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
 
 const DEFAULT_POLL_MS = 30000;
 
@@ -95,10 +95,22 @@ module.exports = class SmartMeterDevice extends Homey.Device {
       const n = Number(v);
       return Number.isFinite(n) ? n : undefined;
     };
-    const power = this.meterSource === 'load'
-      ? toNum(quota.powGetSysLoad)
-      : (toNum(quota.powGetSysGrid) ?? toNum(quota.gridConnectionPower));
+    const gridW = toNum(quota.powGetSysGrid) ?? toNum(quota.gridConnectionPower);
+    const loadW = toNum(quota.powGetSysLoad);
+    const power = this.meterSource === 'load' ? loadW : gridW;
     delete values['measure_power'];
+
+    // Always-positive grid import/export tiles, derived from the signed grid
+    // power regardless of what the primary meter shows.
+    const split = splitGridPower(gridW);
+    if (split) {
+      if (this.getCapabilityValue('measure_power.grid_import') !== split.importW) {
+        await this.setCapabilityValue('measure_power.grid_import', split.importW).catch(() => {});
+      }
+      if (this.getCapabilityValue('measure_power.grid_export') !== split.exportW) {
+        await this.setCapabilityValue('measure_power.grid_export', split.exportW).catch(() => {});
+      }
+    }
 
     if (typeof power === 'number') {
       if (this.getCapabilityValue('measure_power') !== power) {

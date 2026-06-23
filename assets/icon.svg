@@ -1,5 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-    <g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g>
     <circle cx="256" cy="150" r="58" fill="#15171A"/>
     <g fill="none" stroke="#15171A" stroke-width="30" stroke-linejoin="round" stroke-linecap="round">
       <line x1="256" y1="40" x2="256" y2="66"/>
@@ -9,5 +8,4 @@
       <line x1="140" y1="150" x2="166" y2="150"/>
     </g>
     <rect x="150" y="276" width="212" height="170" rx="30" fill="none" stroke="#15171A" stroke-width="30" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M268 300 L222 372 H260 L246 422 L316 344 H276 Z" fill="#15171A"/></g>
-  </svg>
+    <path d="M268 300 L222 372 H260 L246 422 L316 344 H276 Z" fill="#15171A"/></g></svg>

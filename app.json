@@ -698,6 +698,8 @@
       ],
       "capabilities": [
         "measure_power",
+        "measure_power.grid_import",
+        "measure_power.grid_export",
         "meter_power.imported",
         "meter_power.exported"
       ],
@@ -705,6 +707,16 @@
         "measure_power": {
           "title": {
             "en": "Grid power"
+          }
+        },
+        "measure_power.grid_import": {
+          "title": {
+            "en": "Grid import"
+          }
+        },
+        "measure_power.grid_export": {
+          "title": {
+            "en": "Grid export"
           }
         },
         "meter_power.imported": {
@@ -755,7 +767,7 @@
           "label": {
             "en": "Polling interval (seconds)"
           },
-          "value": 30,
+          "value": 15,
           "min": 10,
           "max": 600,
           "hint": {

@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { mapSmartMeterQuota, accumulateEnergy, looksLikeSmartMeter } = require('../.homeybuild/lib/smartMeterMapping.js');
+const { mapSmartMeterQuota, accumulateEnergy, looksLikeSmartMeter, splitGridPower } = require('../.homeybuild/lib/smartMeterMapping.js');
 
 test('grid power comes from powGetSysGrid (STREAM main) with gridConnectionPower fallback', () => {
   assert.strictEqual(mapSmartMeterQuota({ powGetSysGrid: 2769 })['measure_power'], 2769);
@@ -49,4 +49,12 @@ test('accumulateEnergy ignores invalid or oversized intervals', () => {
 test('looksLikeSmartMeter detects standalone per-phase meters only', () => {
   assert.strictEqual(looksLikeSmartMeter({ gridConnectionPowerL1: 1 }), true);
   assert.strictEqual(looksLikeSmartMeter({ powGetSysGrid: 2769 }), false);
+});
+
+test('splitGridPower splits signed grid power into positive import/export', () => {
+  assert.deepStrictEqual(splitGridPower(2769), { importW: 2769, exportW: 0 });
+  assert.deepStrictEqual(splitGridPower(-500), { importW: 0, exportW: 500 });
+  assert.deepStrictEqual(splitGridPower(0), { importW: 0, exportW: 0 });
+  assert.strictEqual(splitGridPower(undefined), undefined);
+  assert.strictEqual(splitGridPower(NaN), undefined);
 });
