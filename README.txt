@@ -1,3 +1,3 @@
-Your EcoFlow STREAM turns the balcony into a small power station, and this app brings it fully into Homey. See live solar generation, battery charge, grid import and export, and the power flowing through every AC output, right on the Homey Energy dashboard and in Insights.
+Your EcoFlow STREAM turns a sunny balcony into a real home power station, and this app brings all of it into Homey. Watch solar generation, battery charge, and grid import and export update live on the Homey Energy dashboard, with every reading saved to Insights so you can see exactly where your energy goes.
 
-Build Flows around your own energy: charge while the sun is strong, hold the battery back for the evening peak, get alerted to faults, and let your home respond to what it is actually producing, without reaching for your phone.
+From there, your home can act on its own power. Charge the battery while the sun is strong, save it for the evening peak, switch operating modes, control each AC output, and get alerted the moment something needs attention, all through Homey Flows, with no app-hopping required.
