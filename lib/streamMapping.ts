@@ -44,6 +44,16 @@ function pvSum(q: Quota): number | undefined {
   return any ? total : undefined;
 }
 
+/** Total solar generation in Watts (for the dedicated solar device). */
+export function solarPowerWatts(q: Quota): number | undefined {
+  return pvSum(q);
+}
+
+/** Per-PV string power in Watts, for input i (1-4). */
+export function perPvWatts(q: Quota, i: number): number | undefined {
+  return perPv(q, i);
+}
+
 function operatingMode(q: Quota): string | undefined {
   const modes: Array<[string, string]> = [
     ['energyStrategyOperateMode.operateSelfPoweredOpen', 'self_powered'],

@@ -1,6 +1,7 @@
 'use strict';
 
 import { Quota } from './types';
+import { integrateSignedPower } from './energyIntegration';
 
 function num(q: Quota, key: string): number | undefined {
   const v = q[key];
@@ -60,8 +61,8 @@ export function mapSmartMeterQuota(q: Quota): Record<string, number> {
 
 /**
  * Integrate instantaneous grid power into monotonic cumulative import/export
- * energy. Returns updated Wh totals; the caller persists them so the meters
- * never decrease (a Homey Energy requirement for cumulative meters).
+ * energy. Thin wrapper around the shared {@link integrateSignedPower} that keeps
+ * the meter's import/export naming.
  *
  * @param powerW  signed grid power in Watts (+import / -export)
  * @param dtMs    elapsed time since the previous sample, in milliseconds
@@ -71,13 +72,6 @@ export function accumulateEnergy(
   powerW: number,
   dtMs: number,
 ): { importWh: number; exportWh: number } {
-  // Guard against clock jumps / long gaps that would corrupt the totals.
-  const MAX_GAP_MS = 60 * 60 * 1000; // 1 hour
-  if (!Number.isFinite(powerW) || !Number.isFinite(dtMs) || dtMs <= 0 || dtMs > MAX_GAP_MS) {
-    return { importWh: prev.importWh, exportWh: prev.exportWh };
-  }
-  const wh = (Math.abs(powerW) * dtMs) / 3_600_000; // W * h
-  return powerW >= 0
-    ? { importWh: prev.importWh + wh, exportWh: prev.exportWh }
-    : { importWh: prev.importWh, exportWh: prev.exportWh + wh };
+  const next = integrateSignedPower({ posWh: prev.importWh, negWh: prev.exportWh }, powerW, dtMs);
+  return { importWh: next.posWh, exportWh: next.negWh };
 }

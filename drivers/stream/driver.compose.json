@@ -73,7 +73,9 @@
     "xlarge": "/drivers/stream/assets/images/xlarge.png"
   },
   "energy": {
-    "batteries": ["INTERNAL"]
+    "homeBattery": true,
+    "meterPowerImportedCapability": "meter_power.charged",
+    "meterPowerExportedCapability": "meter_power.discharged"
   },
   "settings": [
     {

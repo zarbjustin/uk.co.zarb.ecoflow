@@ -5,6 +5,20 @@ Status: planning · Target: make STREAM a first-class Homey **Energy** integrati
 (<https://apps.developer.homey.app/the-basics/devices/energy>) and verified against
 a live EcoFlow account.
 
+### Implementation status
+- ✅ **Sprint 14a** — `stream` device now declares `energy.homeBattery:true` with
+  `meterPowerImported/ExportedCapability` (charged/discharged).
+- ✅ **Sprint 15** — shared monotonic energy core (`lib/energyIntegration.ts`:
+  `integrateSignedPower`, `integratePositivePower`); Smart Meter reuses it.
+- ✅ **Sprint 16 (core)** — battery `meter_power.charged/.discharged` are now
+  integrated locally from `powGetBpCms` (REST has no lifetime counter) and
+  persisted monotonically.
+- ✅ **Sprint 17 (core)** — new `stream_solar` (`solarpanel`) device: `measure_power`
+  = total PV (≥0), `meter_power` = locally-integrated generation.
+- ⏳ Next: controller split + migration (Sprint 18), `target_power_mode` (19),
+  `target_power` spike (20), extras (21), publish (22).
+
+
 This roadmap was produced with a **multi-model** pass (GPT‑5.4 + Gemini 3.1 Pro +
 Sonnet 4.6, synthesised by Opus 4.8) and reconciled with live‑API probes of a real
 STREAM Ultra X / AC Pro / Smart Meter installation.

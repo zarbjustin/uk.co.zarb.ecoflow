@@ -3,6 +3,7 @@
 import Homey from 'homey';
 import { EcoFlowClient } from '../../lib/EcoFlowClient';
 import { mapStreamQuota } from '../../lib/streamMapping';
+import { integrateSignedPower } from '../../lib/energyIntegration';
 import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 
@@ -25,10 +26,18 @@ module.exports = class StreamDevice extends Homey.Device {
   private prevExporting: boolean | undefined;
   private prevOnline: boolean | undefined;
   private faulted = false;
+  // Locally-integrated cumulative battery energy (Wh). The STREAM REST API does
+  // not expose accuChgEnergy/accuDsgEnergy, so Homey Energy's charged/discharged
+  // meters are derived from the battery power and persisted monotonically.
+  private chargedWh = 0;
+  private dischargedWh = 0;
+  private lastEnergyTs = 0;
 
   async onInit(): Promise<void> {
     this.sn = this.getData().sn;
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.sn;
+    this.chargedWh = (this.getStoreValue('chargedWh') as number) || 0;
+    this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
 
     const accessKey = this.homey.settings.get('accessKey') as string;
     const secretKey = this.homey.settings.get('secretKey') as string;
@@ -42,6 +51,9 @@ module.exports = class StreamDevice extends Homey.Device {
       accessKey, secretKey, host, log: (...a) => this.log(...a),
     });
     this.registerControlListeners();
+    // Seed the cumulative meters so Homey Energy has a starting value.
+    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
 
     await this.poll();
     const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
@@ -138,13 +150,40 @@ module.exports = class StreamDevice extends Homey.Device {
   /** Apply a quota payload to capabilities (used by polling and MQTT). */
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapStreamQuota(quota);
+    // Charged/discharged energy is integrated locally (see integrateBatteryEnergy),
+    // so drop any values mapped from absent device counters to avoid conflicts.
+    delete values['meter_power.charged'];
+    delete values['meter_power.discharged'];
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
+    await this.integrateBatteryEnergy(values['measure_power']);
     this.fireTriggers(values);
     this.checkFaults(quota);
+  }
+
+  /** Integrate battery power (+charge/-discharge, W) into monotonic kWh meters. */
+  private async integrateBatteryEnergy(batteryPowerW: number | boolean | string | undefined): Promise<void> {
+    if (typeof batteryPowerW !== 'number') return;
+    const now = Date.now();
+    if (this.lastEnergyTs > 0) {
+      const next = integrateSignedPower(
+        { posWh: this.chargedWh, negWh: this.dischargedWh },
+        batteryPowerW,
+        now - this.lastEnergyTs,
+      );
+      if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
+        this.chargedWh = next.posWh;
+        this.dischargedWh = next.negWh;
+        await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
+        await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
+        await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+        await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+      }
+    }
+    this.lastEnergyTs = now;
   }
 
   private fireTriggers(values: Record<string, number | boolean | string>): void {
