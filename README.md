@@ -7,16 +7,17 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 ## Features
 
 ### STREAM (Ultra / Pro / AC Pro / Max / Ultra X)
-- **System device:** one device per STREAM installation (addressed by its main SN) showing aggregated battery level & health, battery/solar/grid/home power, temperature, voltage and charge/discharge limits.
-- **Per-unit devices:** each physical inverter/battery (e.g. Ultra X Left/Right, AC Pro 1.1–1.4) is also added as its own device showing its grid feed and AC-output (relay) control.
-- **Control:** AC outputs 1 & 2, backup-reserve level (3–95%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off.
-- **Homey Energy:** the system device appears as a home battery (charge/discharge + stored energy).
+- **Home Battery device:** one per STREAM installation (main SN) — battery level & health, battery/solar/grid/home power, temperature, voltage, charge/discharge limits, backup reserve and operating mode. Appears in **Homey Energy** as home storage with charged/discharged meters.
+- **Solar device:** a `solarpanel` device per system showing PV generation + cumulative solar energy.
+- **Per-unit monitors:** each physical inverter (Ultra X Left/Right, AC Pro 1.1–1.4) is available as its own device showing its grid feed.
+- **AC sockets:** each AC outlet on AC Pro / Ultra X is its own **smart-plug device** (on/off + live power) — clearer than generic toggles.
+- **Control:** settable charge/discharge limits, backup-reserve level (3–95%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
 - Devices are classified by serial prefix (BK11 Ultra, BK12 Pro, BK31 AC Pro, BK41 Max, BK51 AC, BK61 Ultra X), so all current STREAM models are discovered; the Microinverter (BK01) is skipped as it exposes no telemetry.
 
 ### Smart Meter (CT_EF_01)
-- Added as a **Homey Energy grid meter** showing whole-home grid power (positive = importing, negative = exporting).
-- When the meter is part of a STREAM system its own serial returns no data, so the reading is taken from the system's `powGetSysGrid` automatically.
-- Cumulative **imported/exported energy** is derived from the live grid power as monotonic counters (the public API does not expose grid kWh totals). Standalone meters that report per-phase power/voltage/current have those values surfaced automatically.
+- Added as a **Homey Energy meter**. A device setting lets it show either **Grid power** (import/export) or **Home load** (total consumption).
+- When the meter is part of a STREAM system its own serial returns no data, so the reading is taken from the system's main SN (`powGetSysGrid` / `powGetSysLoad`) automatically.
+- Cumulative **imported/exported energy** is derived from the live power as monotonic counters (the public API does not expose grid kWh totals). Standalone meters that report per-phase power/voltage/current have those values surfaced automatically.
 
 ### Automation
 - **Triggers:** solar power changed, grid power changed, battery level crossed above/below a threshold.

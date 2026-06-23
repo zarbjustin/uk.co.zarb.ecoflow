@@ -38,9 +38,6 @@ module.exports = class StreamDriver extends Homey.Driver {
     flow.getActionCard('set_feed_in').registerRunListener(
       (args: any) => args.device.flowSetFeedIn(args.state === 'on'),
     );
-    flow.getActionCard('set_ac_output').registerRunListener(
-      (args: any) => args.device.flowSetAc(args.output, args.state === 'on'),
-    );
     flow.getActionCard('set_charge_limit').registerRunListener(
       (args: any) => args.device.flowSetChargeLimit(args.level),
     );

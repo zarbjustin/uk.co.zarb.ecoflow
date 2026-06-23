@@ -25,6 +25,7 @@ module.exports = class SmartMeterDevice extends Homey.Device {
   private pollTimer: NodeJS.Timeout | null = null;
   private sn = '';
   private sourceSn = '';
+  private meterSource: 'grid' | 'load' = 'grid';
   private importWh = 0;
   private exportWh = 0;
   private lastTs = 0;
@@ -33,6 +34,7 @@ module.exports = class SmartMeterDevice extends Homey.Device {
   async onInit(): Promise<void> {
     this.sn = this.getData().sn;
     this.sourceSn = (this.getStoreValue('sourceSn') as string) || this.sn;
+    this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
     this.importWh = (this.getStoreValue('importWh') as number) || 0;
     this.exportWh = (this.getStoreValue('exportWh') as number) || 0;
 
@@ -52,6 +54,7 @@ module.exports = class SmartMeterDevice extends Homey.Device {
     // start integrating immediately.
     await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
+    await this.applyMeterSourceTitle();
 
     await this.poll();
     const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
@@ -85,9 +88,24 @@ module.exports = class SmartMeterDevice extends Homey.Device {
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapSmartMeterQuota(quota);
 
-    // Integrate grid power into monotonic import/export energy counters.
-    const power = values['measure_power'];
+    // Choose what the energy meter represents: net grid power (signed) or the
+    // home's total load (always positive). The per-phase values from the mapping
+    // still apply for standalone meters.
+    const toNum = (v: any): number | undefined => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    const power = this.meterSource === 'load'
+      ? toNum(quota.powGetSysLoad)
+      : (toNum(quota.powGetSysGrid) ?? toNum(quota.gridConnectionPower));
+    delete values['measure_power'];
+
     if (typeof power === 'number') {
+      if (this.getCapabilityValue('measure_power') !== power) {
+        await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
+      }
+      // Integrate into monotonic import/export energy counters. In "load" mode
+      // power is always positive, so only the imported (consumed) counter grows.
       const now = Date.now();
       if (this.lastTs > 0) {
         const next = accumulateEnergy(
@@ -111,6 +129,28 @@ module.exports = class SmartMeterDevice extends Homey.Device {
       await this.ensureCapability(cap);
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
+    }
+  }
+
+  /** Title the live power tile to match the selected source. */
+  private async applyMeterSourceTitle(): Promise<void> {
+    const title = this.meterSource === 'load' ? 'Home load' : 'Grid power';
+    await this.setCapabilityOptions('measure_power', { title: { en: title } }).catch(() => {});
+  }
+
+  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.includes('meter_source')) {
+      this.meterSource = (newSettings.meter_source as 'grid' | 'load') || 'grid';
+      this.lastTs = 0; // re-anchor integration so switching source doesn't jump
+      await this.applyMeterSourceTitle();
+      this.poll().catch((e) => this.error('poll failed', e));
+    }
+    if (changedKeys.includes('poll_interval')) {
+      if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+      const interval = ((Number(newSettings.poll_interval) || 30) * 1000) || DEFAULT_POLL_MS;
+      this.pollTimer = this.homey.setInterval(() => {
+        this.poll().catch((e) => this.error('poll failed', e));
+      }, interval);
     }
   }
 

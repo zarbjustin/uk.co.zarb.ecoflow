@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -450,58 +450,6 @@
         ]
       },
       {
-        "id": "set_ac_output",
-        "title": {
-          "en": "Set AC output"
-        },
-        "titleFormatted": {
-          "en": "Turn AC output [[output]] [[state]]"
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=stream"
-          },
-          {
-            "type": "dropdown",
-            "name": "output",
-            "values": [
-              {
-                "id": "ac1",
-                "title": {
-                  "en": "1"
-                }
-              },
-              {
-                "id": "ac2",
-                "title": {
-                  "en": "2"
-                }
-              }
-            ]
-          },
-          {
-            "type": "dropdown",
-            "name": "state",
-            "values": [
-              {
-                "id": "on",
-                "title": {
-                  "en": "on"
-                }
-              },
-              {
-                "id": "off",
-                "title": {
-                  "en": "off"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
         "id": "set_backup_reserve",
         "title": {
           "en": "Set backup reserve level"
@@ -777,6 +725,31 @@
       },
       "settings": [
         {
+          "id": "meter_source",
+          "type": "dropdown",
+          "label": {
+            "en": "Energy meter shows"
+          },
+          "value": "grid",
+          "values": [
+            {
+              "id": "grid",
+              "label": {
+                "en": "Grid power (import / export)"
+              }
+            },
+            {
+              "id": "load",
+              "label": {
+                "en": "Home load (total consumption)"
+              }
+            }
+          ],
+          "hint": {
+            "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive)."
+          }
+        },
+        {
           "id": "poll_interval",
           "type": "number",
           "label": {
@@ -834,8 +807,6 @@
         "battery_soh",
         "charge_limit",
         "discharge_limit",
-        "onoff.ac1",
-        "onoff.ac2",
         "backup_reserve_soc",
         "operating_mode",
         "feed_in_control",
@@ -936,28 +907,6 @@
             "en": "Load from grid"
           }
         },
-        "onoff.ac1": {
-          "title": {
-            "en": "AC output 1"
-          },
-          "insightsTitleTrue": {
-            "en": "AC1 turned on"
-          },
-          "insightsTitleFalse": {
-            "en": "AC1 turned off"
-          }
-        },
-        "onoff.ac2": {
-          "title": {
-            "en": "AC output 2"
-          },
-          "insightsTitleTrue": {
-            "en": "AC2 turned on"
-          },
-          "insightsTitleFalse": {
-            "en": "AC2 turned off"
-          }
-        },
         "alarm_generic": {
           "title": {
             "en": "Fault"
@@ -1028,6 +977,56 @@
         }
       ],
       "id": "stream"
+    },
+    {
+      "name": {
+        "en": "STREAM Socket"
+      },
+      "class": "socket",
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "onoff",
+        "measure_power"
+      ],
+      "images": {
+        "small": "/drivers/stream_socket/assets/images/small.png",
+        "large": "/drivers/stream_socket/assets/images/large.png",
+        "xlarge": "/drivers/stream_socket/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval (seconds)"
+          },
+          "value": 30,
+          "min": 10,
+          "max": 600,
+          "hint": {
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+          }
+        }
+      ],
+      "pair": [
+        {
+          "id": "credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "stream_socket"
     },
     {
       "name": {
@@ -1127,36 +1126,12 @@
         "cloud"
       ],
       "capabilities": [
-        "measure_power.grid",
-        "onoff.ac1",
-        "onoff.ac2"
+        "measure_power.grid"
       ],
       "capabilitiesOptions": {
         "measure_power.grid": {
           "title": {
             "en": "Grid feed"
-          }
-        },
-        "onoff.ac1": {
-          "title": {
-            "en": "AC output 1"
-          },
-          "insightsTitleTrue": {
-            "en": "AC1 turned on"
-          },
-          "insightsTitleFalse": {
-            "en": "AC1 turned off"
-          }
-        },
-        "onoff.ac2": {
-          "title": {
-            "en": "AC output 2"
-          },
-          "insightsTitleTrue": {
-            "en": "AC2 turned on"
-          },
-          "insightsTitleFalse": {
-            "en": "AC2 turned off"
           }
         }
       },

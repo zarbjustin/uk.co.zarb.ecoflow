@@ -19,6 +19,17 @@
   },
   "settings": [
     {
+      "id": "meter_source",
+      "type": "dropdown",
+      "label": { "en": "Energy meter shows" },
+      "value": "grid",
+      "values": [
+        { "id": "grid", "label": { "en": "Grid power (import / export)" } },
+        { "id": "load", "label": { "en": "Home load (total consumption)" } }
+      ],
+      "hint": { "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive)." }
+    },
+    {
       "id": "poll_interval",
       "type": "number",
       "label": { "en": "Polling interval (seconds)" },

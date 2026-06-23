@@ -15,8 +15,6 @@
     "battery_soh",
     "charge_limit",
     "discharge_limit",
-    "onoff.ac1",
-    "onoff.ac2",
     "backup_reserve_soc",
     "operating_mode",
     "feed_in_control",
@@ -57,16 +55,6 @@
     "measure_power.from_pv": { "title": { "en": "Load from solar" } },
     "measure_power.from_battery": { "title": { "en": "Load from battery" } },
     "measure_power.from_grid": { "title": { "en": "Load from grid" } },
-    "onoff.ac1": {
-      "title": { "en": "AC output 1" },
-      "insightsTitleTrue": { "en": "AC1 turned on" },
-      "insightsTitleFalse": { "en": "AC1 turned off" }
-    },
-    "onoff.ac2": {
-      "title": { "en": "AC output 2" },
-      "insightsTitleTrue": { "en": "AC2 turned on" },
-      "insightsTitleFalse": { "en": "AC2 turned off" }
-    },
     "alarm_generic": {
       "title": { "en": "Fault" }
     }

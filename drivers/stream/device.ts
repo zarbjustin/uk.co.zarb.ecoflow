@@ -114,8 +114,6 @@ module.exports = class StreamDevice extends Homey.Device {
   }
 
   private registerControlListeners(): void {
-    this.registerCapabilityListener('onoff.ac1', async (v: boolean) => this.send(StreamCmd.ac1(this.mainSn, v)));
-    this.registerCapabilityListener('onoff.ac2', async (v: boolean) => this.send(StreamCmd.ac2(this.mainSn, v)));
     this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
     this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.send(StreamCmd.backupReserve(this.mainSn, v)));
     this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
@@ -347,11 +345,6 @@ module.exports = class StreamDevice extends Homey.Device {
   async flowSetDischargeLimit(level: number): Promise<void> {
     await this.send(StreamCmd.dischargeLimit(this.mainSn, level));
     await this.setCapabilityValue('discharge_limit', level).catch(() => {});
-  }
-
-  async flowSetAc(which: 'ac1' | 'ac2', on: boolean): Promise<void> {
-    await this.send(which === 'ac2' ? StreamCmd.ac2(this.mainSn, on) : StreamCmd.ac1(this.mainSn, on));
-    await this.setCapabilityValue(which === 'ac2' ? 'onoff.ac2' : 'onoff.ac1', on).catch(() => {});
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {

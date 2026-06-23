@@ -3,22 +3,10 @@
   "class": "other",
   "connectivity": ["cloud"],
   "capabilities": [
-    "measure_power.grid",
-    "onoff.ac1",
-    "onoff.ac2"
+    "measure_power.grid"
   ],
   "capabilitiesOptions": {
-    "measure_power.grid": { "title": { "en": "Grid feed" } },
-    "onoff.ac1": {
-      "title": { "en": "AC output 1" },
-      "insightsTitleTrue": { "en": "AC1 turned on" },
-      "insightsTitleFalse": { "en": "AC1 turned off" }
-    },
-    "onoff.ac2": {
-      "title": { "en": "AC output 2" },
-      "insightsTitleTrue": { "en": "AC2 turned on" },
-      "insightsTitleFalse": { "en": "AC2 turned off" }
-    }
+    "measure_power.grid": { "title": { "en": "Grid feed" } }
   },
   "images": {
     "small": "/drivers/stream_unit/assets/images/small.png",
