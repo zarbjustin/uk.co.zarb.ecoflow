@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -8,7 +8,7 @@
     "local"
   ],
   "name": {
-    "en": "EcoFlow Balcony Solar"
+    "en": "EcoFlow - Stream Systems"
   },
   "description": {
     "en": "Turn balcony sunlight into smarter home energy"
