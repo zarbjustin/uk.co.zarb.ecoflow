@@ -34,5 +34,8 @@
   },
   "1.6.4": {
     "en": "Adds STREAM Solar settings that explain the aggregate source and list each STREAM unit's PV inputs contributing to the system solar total."
+  },
+  "1.6.5": {
+    "en": "Refreshes the EcoFlow driver icons and device images so each STREAM-related device is easier to recognise in Homey."
   }
 }
