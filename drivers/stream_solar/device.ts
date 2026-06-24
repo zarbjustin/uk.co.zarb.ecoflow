@@ -1,7 +1,7 @@
 'use strict';
 
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
-import { solarPowerWatts, perPvWatts } from '../../lib/streamMapping';
+import { solarPowerWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
 
 /**
@@ -19,6 +19,12 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   }
 
   protected async onReady(): Promise<void> {
+    for (let i = 1; i <= 4; i += 1) {
+      const cap = `measure_power.pv${i}`;
+      if (this.hasCapability(cap)) {
+        await this.removeCapability(cap).catch((e) => this.error(`remove ${cap}`, e));
+      }
+    }
     this.generatedWh = (this.getStoreValue('generatedWh') as number) || 0;
     await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
   }
@@ -45,13 +51,5 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
       }
     }
 
-    for (let i = 1; i <= 4; i += 1) {
-      const cap = `measure_power.pv${i}`;
-      if (!this.hasCapability(cap)) continue;
-      const v = perPvWatts(quota, i);
-      if (v !== undefined && this.getCapabilityValue(cap) !== v) {
-        await this.setCapabilityValue(cap, v).catch((e) => this.error(cap, e));
-      }
-    }
   }
 };

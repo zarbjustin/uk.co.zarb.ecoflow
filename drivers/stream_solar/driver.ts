@@ -20,8 +20,10 @@ module.exports = class StreamSolarDriver extends Homey.Driver {
       const client = clientFromSettings(this);
       const units = await collectStreamUnits(client);
       const results: any[] = [];
-      for (const [mainSn, groupUnits] of groupByMainSn(units)) {
-        results.push({ name: `${systemName(groupUnits, mainSn)} Solar`, data: { sn: mainSn }, store: { mainSn } });
+      const groups = Array.from(groupByMainSn(units));
+      for (const [mainSn, groupUnits] of groups) {
+        const suffix = groups.length > 1 ? ` (${systemName(groupUnits, mainSn)})` : '';
+        results.push({ name: `STREAM Solar System${suffix}`, data: { sn: mainSn }, store: { mainSn } });
       }
       return results;
     });
