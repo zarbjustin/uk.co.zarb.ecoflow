@@ -1,8 +1,9 @@
 'use strict';
 
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
-import { solarPowerWatts } from '../../lib/streamMapping';
+import { perPvWatts, solarPowerWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
+import { collectStreamUnits } from '../../lib/streamPairing';
 
 /**
  * STREAM solar generation as a Homey `solarpanel` device. `measure_power` is the
@@ -13,6 +14,7 @@ import { integratePositivePower } from '../../lib/energyIntegration';
 module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   private generatedWh = 0;
   private lastTs = 0;
+  private attributionTimer: NodeJS.Timeout | null = null;
 
   protected getReadSn(): string {
     return (this.getStoreValue('mainSn') as string) || this.getData().sn;
@@ -27,6 +29,10 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
     }
     this.generatedWh = (this.getStoreValue('generatedWh') as number) || 0;
     await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
+    await this.refreshAttributionSettings().catch((e) => this.error('refresh PV attribution', e));
+    this.attributionTimer = this.homey.setInterval(() => {
+      this.refreshAttributionSettings().catch((e) => this.error('refresh PV attribution', e));
+    }, 5 * 60 * 1000);
   }
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
@@ -50,6 +56,27 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
         }
       }
     }
+  }
 
+  protected async onTeardown(): Promise<void> {
+    if (this.attributionTimer) this.homey.clearInterval(this.attributionTimer);
+  }
+
+  private async refreshAttributionSettings(): Promise<void> {
+    const mainSn = this.getReadSn();
+    const units = (await collectStreamUnits(this.client)).filter((u) => u.mainSn === mainSn);
+    const lines = units.map((u, idx) => {
+      const name = u.device.deviceName || `STREAM Unit ${idx + 1}`;
+      const pv: string[] = [];
+      for (let i = 1; i <= 4; i += 1) {
+        const watts = perPvWatts(u.quota, i);
+        if (watts !== undefined) pv.push(`PV${i} ${Math.round(watts)} W`);
+      }
+      return `${name}: ${pv.length ? pv.join(', ') : 'no PV input reported'}`;
+    });
+    await this.setSettings({
+      aggregation_source: `Whole STREAM system (${units.length || 1} unit${units.length === 1 ? '' : 's'})`,
+      pv_attribution: lines.length ? lines.join('\n') : 'No STREAM units found for this system yet.',
+    }).catch((e) => this.error('set PV attribution settings', e));
   }
 };

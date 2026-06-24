@@ -27,6 +27,20 @@
       "min": 10,
       "max": 600,
       "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+    },
+    {
+      "id": "aggregation_source",
+      "type": "text",
+      "label": { "en": "Aggregation source" },
+      "value": "STREAM system total",
+      "hint": { "en": "This solar device represents the whole STREAM system, not one physical unit." }
+    },
+    {
+      "id": "pv_attribution",
+      "type": "text",
+      "label": { "en": "PV attribution" },
+      "value": "Refreshes after the device starts.",
+      "hint": { "en": "Shows each STREAM unit's PV inputs that contribute to this aggregate solar total." }
     }
   ],
   "pair": [

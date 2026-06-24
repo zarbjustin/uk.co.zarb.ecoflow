@@ -31,5 +31,8 @@
   },
   "1.6.3": {
     "en": "Clarifies the STREAM Solar device as a whole-system solar aggregate and removes misleading per-unit PV input tiles from that aggregate view."
+  },
+  "1.6.4": {
+    "en": "Adds STREAM Solar settings that explain the aggregate source and list each STREAM unit's PV inputs contributing to the system solar total."
   }
 }
