@@ -1,4 +1,7 @@
 {
+  "1.7.0": {
+    "en": "STREAM Unit devices are now fully controllable, tailored to each model and its role. Every unit gains AC output 1/2 switches and AC output power; the system main unit also gains the whole-home controls and flow tiles (operating mode, backup reserve, charge/discharge limits, grid feed-in, house consumption and the house power split). Solar models (e.g. STREAM Ultra X) show their PV inputs; AC-coupled models (e.g. STREAM AC Pro) hide the solar tiles they cannot report."
+  },
   "1.6.9": {
     "en": "New STREAM Unit icon: the device icon and images now show the STREAM unit itself (3D enclosure with its front display panel and side cooling fins) instead of a generic battery, so the 6 physical STREAM units are easier to recognise at a glance."
   },
