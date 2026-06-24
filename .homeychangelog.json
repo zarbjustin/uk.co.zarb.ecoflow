@@ -1,4 +1,7 @@
 {
+  "1.6.9": {
+    "en": "New STREAM Unit icon: the device icon and images now show the STREAM unit itself (3D enclosure with its front display panel and side cooling fins) instead of a generic battery, so the 6 physical STREAM units are easier to recognise at a glance."
+  },
   "1.6.8": {
     "en": "STREAM Unit devices are now tailored to their exact model. Each unit's Settings page shows its model, serial number, role in the system and energy source, and AC-coupled units (e.g. STREAM AC Pro) no longer show solar (PV) tiles they cannot report. STREAM Battery, Solar and Microinverter devices are unchanged."
   },
