@@ -4,3 +4,4 @@ test/
 drivers/*/pair/
 settings/
 assets/
+disabled-drivers/

@@ -9,5 +9,5 @@
     "skipLibCheck": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", ".homeybuild", "test"]
+  "exclude": ["node_modules", ".homeybuild", "test", "disabled-drivers"]
 }
