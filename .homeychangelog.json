@@ -1,4 +1,7 @@
 {
+  "1.7.3": {
+    "en": "STREAM Unit icon redrawn as a clean outline so it no longer appears as a solid black shape on the device tile."
+  },
   "1.7.2": {
     "en": "New device-specific icons for STREAM Battery, STREAM Solar and Smart Plug. Removed the PowerStream device, which is not offered by this app."
   },
