@@ -1,4 +1,7 @@
 {
+  "1.6.8": {
+    "en": "STREAM Unit devices are now tailored to their exact model. Each unit's Settings page shows its model, serial number, role in the system and energy source, and AC-coupled units (e.g. STREAM AC Pro) no longer show solar (PV) tiles they cannot report. STREAM Battery, Solar and Microinverter devices are unchanged."
+  },
   "1.6.0": {
     "en": "Polished for the Homey App Store: refreshed app and device icons (full-canvas, each device now has its own unique icon), new lively app artwork and clean white-background device images, plus a tidier app name and description. No changes to how your devices work."
   },

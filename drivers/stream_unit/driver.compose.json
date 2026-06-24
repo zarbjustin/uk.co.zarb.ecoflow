@@ -44,6 +44,40 @@
   },
   "settings": [
     {
+      "type": "group",
+      "label": { "en": "Device information" },
+      "children": [
+        {
+          "id": "model",
+          "type": "label",
+          "label": { "en": "Model" },
+          "value": "—",
+          "hint": { "en": "The specific STREAM product this unit is, detected from its serial number." }
+        },
+        {
+          "id": "serial_number",
+          "type": "label",
+          "label": { "en": "Serial number" },
+          "value": "—",
+          "hint": { "en": "This physical unit's EcoFlow serial number." }
+        },
+        {
+          "id": "system_role",
+          "type": "label",
+          "label": { "en": "Role in system" },
+          "value": "—",
+          "hint": { "en": "Whether this unit is the system's main unit (which reports whole-home totals) or a member unit." }
+        },
+        {
+          "id": "power_source",
+          "type": "label",
+          "label": { "en": "Energy source" },
+          "value": "—",
+          "hint": { "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input." }
+        }
+      ]
+    },
+    {
       "id": "poll_interval",
       "type": "number",
       "label": { "en": "Polling interval (seconds)" },
