@@ -40,5 +40,8 @@
   },
   "1.6.6": {
     "en": "Updates the STREAM Microinverter and Smart Meter driver images to match the real EcoFlow devices more closely."
+  },
+  "1.6.7": {
+    "en": "Updates the STREAM battery driver icons and images so the battery devices are easier to recognise in Homey."
   }
 }
