@@ -1,4 +1,7 @@
 {
+  "1.7.1": {
+    "en": "Fix: existing STREAM Ultra X units now correctly gain their solar PV input tiles (previously only brand-new pairings showed them)."
+  },
   "1.7.0": {
     "en": "STREAM Unit devices are now fully controllable, tailored to each model and its role. Every unit gains AC output 1/2 switches and AC output power; the system main unit also gains the whole-home controls and flow tiles (operating mode, backup reserve, charge/discharge limits, grid feed-in, house consumption and the house power split). Solar models (e.g. STREAM Ultra X) show their PV inputs; AC-coupled models (e.g. STREAM AC Pro) hide the solar tiles they cannot report."
   },

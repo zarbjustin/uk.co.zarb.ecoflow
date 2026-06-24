@@ -86,14 +86,18 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     }
   }
 
-  /** Keep `measure_power.pv` + `measure_power.pv1..N`; remove the rest. */
+  /** Ensure `measure_power.pv` + `measure_power.pv1..N`; remove any beyond N. */
   private async tailorSolarCapabilities(solarInputs: number): Promise<void> {
-    if (solarInputs <= 0 && this.hasCapability('measure_power.pv')) {
+    if (solarInputs > 0) {
+      await this.ensureCapabilities(['measure_power.pv']);
+    } else if (this.hasCapability('measure_power.pv')) {
       await this.removeCapability('measure_power.pv').catch((e) => this.error('remove measure_power.pv', e));
     }
     for (let i = 1; i <= 4; i += 1) {
       const cap = `measure_power.pv${i}`;
-      if (i > solarInputs && this.hasCapability(cap)) {
+      if (i <= solarInputs) {
+        await this.ensureCapabilities([cap]);
+      } else if (this.hasCapability(cap)) {
         await this.removeCapability(cap).catch((e) => this.error(`remove ${cap}`, e));
       }
     }
