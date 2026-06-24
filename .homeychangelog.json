@@ -25,5 +25,8 @@
   },
   "1.6.1": {
     "en": "Polished for the Homey App Store: refreshed full-canvas app and device icons (each device now unique), lively new app artwork, clean white-background device images, and a tidier name and description. No changes to device behaviour."
+  },
+  "1.6.2": {
+    "en": "Improves the STREAM and STREAM Unit device views with clearer energy-flow labels, better capability ordering, and per-unit battery-flow status."
   }
 }

@@ -1,9 +1,11 @@
 {
   "name": { "en": "STREAM Unit" },
-  "class": "other",
+  "class": "battery",
   "connectivity": ["cloud"],
   "capabilities": [
     "measure_battery",
+    "battery_charging_state",
+    "measure_power",
     "measure_power.grid",
     "measure_power.pv",
     "measure_power.pv1",
@@ -17,12 +19,20 @@
     "battery_cycles"
   ],
   "capabilitiesOptions": {
-    "measure_power.grid": { "title": { "en": "Grid feed" } },
-    "measure_power.pv": { "title": { "en": "Solar" } },
-    "measure_power.pv1": { "title": { "en": "Solar PV1" } },
-    "measure_power.pv2": { "title": { "en": "Solar PV2" } },
-    "measure_power.pv3": { "title": { "en": "Solar PV3" } },
-    "measure_power.pv4": { "title": { "en": "Solar PV4" } }
+    "measure_battery": { "title": { "en": "Battery" } },
+    "battery_charging_state": { "title": { "en": "Battery state" } },
+    "measure_power": { "title": { "en": "Battery flow" } },
+    "measure_power.grid": { "title": { "en": "Grid import/export" } },
+    "measure_power.pv": { "title": { "en": "Solar generation" } },
+    "measure_power.pv1": { "title": { "en": "PV input 1" } },
+    "measure_power.pv2": { "title": { "en": "PV input 2" } },
+    "measure_power.pv3": { "title": { "en": "PV input 3" } },
+    "measure_power.pv4": { "title": { "en": "PV input 4" } },
+    "charge_remaining": { "title": { "en": "Time to full" } },
+    "discharge_remaining": { "title": { "en": "Time to empty" } },
+    "measure_temperature": { "title": { "en": "Battery temperature" } },
+    "battery_soh": { "title": { "en": "Battery health" } },
+    "battery_cycles": { "title": { "en": "Battery cycles" } }
   },
   "energy": {
     "batteries": ["INTERNAL"]

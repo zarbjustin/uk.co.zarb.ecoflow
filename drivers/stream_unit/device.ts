@@ -9,6 +9,14 @@ import { mapStreamQuota } from '../../lib/streamMapping';
  * arrives over MQTT; the REST snapshot only carries the unit's grid feed.
  */
 module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
+  protected async onReady(): Promise<void> {
+    for (const cap of ['battery_charging_state', 'measure_power']) {
+      if (!this.hasCapability(cap)) {
+        await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
+      }
+    }
+  }
+
   protected getReadSn(): string {
     return this.getData().sn;
   }
