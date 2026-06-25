@@ -42,7 +42,15 @@ npm test           # tsc && node --test (signer golden-vector tests)
 npm run lint
 homey app validate --level publish
 homey app run --remote   # run on your Homey Pro
+homey app install        # install the current build on the selected Homey Pro
 ```
+
+## Release & publish
+See [`docs/STATUS.md`](docs/STATUS.md) for the full handoff. In short:
+1. Commit & push to `master`.
+2. Run the **Update Homey App Version** workflow (patch/minor/major + changelog) — it bumps the version, updates `.homeychangelog.json`, tags and releases.
+3. Run the **Publish Homey App** workflow to upload a new App Store build.
+4. Optionally `homey app install` to push the build to your local Homey Pro.
 
 ## Notes & limitations
 - The public API only reports *instantaneous* grid power for the Smart Meter (no kWh totals), so imported/exported energy is integrated locally into monotonic counters for the Energy dashboard.
