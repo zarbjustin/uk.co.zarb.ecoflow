@@ -2,6 +2,24 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Outstanding / next actions (resume here)
+
+- [ ] **Submit Build 7** for certification on the dashboard and **paste the reply** from
+  `docs/CERTIFICATION_REPLY.md` into the Homey review thread (subject: "EcoFlow STREAM Series").
+- [ ] On hardware: **confirm the self-heating field name** (candidates in
+  `docs/FEATURE_BACKLOG.md`) and the **STREAM Max PV-input count**; adjust
+  `lib/streamMapping.ts` / `lib/streamModels.ts` if needed.
+- [ ] Optional: verify the new v1.8.0 tariff Flows on the live STREAM (cheap-charge /
+  peak-export) and the daily-history tiles populate.
+
+## Session log
+
+- **2026-06-25** — Cloned repo; renamed app **"EcoFlow - Stream Systems" → "EcoFlow STREAM Series"**;
+  set app icon to white EF monogram on black (`brandColor #000000`). Drafted the standalone-app
+  certification reply + refreshed reviewer notes. Implemented recommendation sets **A/B/C**
+  (see below) and shipped **v1.8.0 / Build 7**, installed on the local Homey Pro. Releases this
+  session: v1.7.9 (black icon) → v1.7.10 (rename) → v1.8.0 (A/B/C features).
+
 ## Current state (2026-06-25)
 
 - **App:** `uk.co.zarb.ecoflow` — "EcoFlow STREAM Series" · SDK v3 · TypeScript.
