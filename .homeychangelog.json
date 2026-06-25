@@ -79,5 +79,8 @@
   },
   "1.7.9": {
     "en": "App icon now shows the white EcoFlow monogram on a black background."
+  },
+  "1.7.10": {
+    "en": "Renamed the app to \"EcoFlow STREAM Series\"."
   }
 }
