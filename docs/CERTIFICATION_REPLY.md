@@ -13,7 +13,7 @@ intent**, not device exclusivity.
 
 ## Reply to paste into the review thread
 
-**Subject: RE: EcoFlow STREAM Systems — clarification on a standalone app**
+**Subject: RE: EcoFlow STREAM Series — clarification on a standalone app**
 
 Hi, and thank you for the thorough review and the kind words on the documentation.
 
