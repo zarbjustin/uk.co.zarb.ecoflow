@@ -5,17 +5,17 @@
 ## Current state (2026-06-25)
 
 - **App:** `uk.co.zarb.ecoflow` — "EcoFlow STREAM Series" · SDK v3 · TypeScript.
-- **Latest version:** **v1.7.10** (tag `v1.7.10`).
-- **Latest App Store upload:** **Build ID 6** —
-  <https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/6>
+- **Latest version:** **v1.8.0** (tag `v1.8.0`).
+- **Latest App Store upload:** **Build ID 7** —
+  <https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/7>
   (uploaded by the Publish workflow; promote/submit on the dashboard).
-- **Local install:** v1.7.10 installed on **Justin's Homey Pro** (192.168.1.142) via
+- **Local install:** v1.8.0 installed on **Justin's Homey Pro** (192.168.1.142) via
   `homey app install`.
 - **Branding:** app icon is the **white EcoFlow EF monogram on a black background**
   (`brandColor: #000000`, `assets/icon.svg` monogram fill white). Black `brandColor`
   also tints the app's accent colour elsewhere in the Homey UI — this is intentional.
 
-## Recent feature additions (v1.8.0 — pending release)
+## Recent feature additions (v1.8.0)
 
 Grounded in the EcoFlow STREAM product line + the app's own backlog:
 - **A1** Corrected MPPT/solar-input counts from official specs (Ultra=4, Pro=3, Ultra X=4)
