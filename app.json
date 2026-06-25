@@ -326,6 +326,50 @@
     ],
     "conditions": [
       {
+        "id": "battery_soc",
+        "title": {
+          "en": "Battery level is above/below"
+        },
+        "titleFormatted": {
+          "en": "Battery level is [[direction]] [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%"
+            }
+          }
+        ]
+      },
+      {
         "id": "feed_in_enabled",
         "title": {
           "en": "Grid feed-in !{{is|is not}} enabled"
@@ -438,6 +482,64 @@
       }
     ],
     "actions": [
+      {
+        "id": "prepare_for_cheap_import",
+        "title": {
+          "en": "Prepare for cheap grid import"
+        },
+        "titleFormatted": {
+          "en": "Prepare for cheap import (charge to [[reserve]]%)"
+        },
+        "hint": {
+          "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile)."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "reserve",
+            "min": 3,
+            "max": 95,
+            "step": 1,
+            "placeholder": {
+              "en": "%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "prepare_for_peak_export",
+        "title": {
+          "en": "Prepare for peak / export"
+        },
+        "titleFormatted": {
+          "en": "Prepare for peak export (reserve [[reserve]]%)"
+        },
+        "hint": {
+          "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "reserve",
+            "min": 3,
+            "max": 95,
+            "step": 1,
+            "placeholder": {
+              "en": "%"
+            }
+          }
+        ]
+      },
       {
         "id": "refresh_now",
         "title": {
@@ -744,13 +846,6 @@
         "discharge_remaining",
         "meter_power.charged",
         "meter_power.discharged",
-        "energy_solar_today",
-        "energy_consumption_today",
-        "energy_grid_import_today",
-        "energy_grid_export_today",
-        "energy_savings_today",
-        "co2_today",
-        "energy_independence",
         "measure_power.pv1",
         "measure_power.pv2",
         "measure_power.pv3",
@@ -840,41 +935,6 @@
         "meter_power.discharged": {
           "title": {
             "en": "Discharged total"
-          }
-        },
-        "energy_solar_today": {
-          "title": {
-            "en": "Solar today"
-          }
-        },
-        "energy_consumption_today": {
-          "title": {
-            "en": "Consumption today"
-          }
-        },
-        "energy_grid_import_today": {
-          "title": {
-            "en": "Grid import today"
-          }
-        },
-        "energy_grid_export_today": {
-          "title": {
-            "en": "Grid export today"
-          }
-        },
-        "energy_savings_today": {
-          "title": {
-            "en": "Savings today"
-          }
-        },
-        "co2_today": {
-          "title": {
-            "en": "CO₂ avoided today"
-          }
-        },
-        "energy_independence": {
-          "title": {
-            "en": "Energy independence"
           }
         },
         "measure_power.pv1": {
@@ -1467,6 +1527,17 @@
               "hint": {
                 "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input."
               }
+            },
+            {
+              "id": "ac_output",
+              "type": "label",
+              "label": {
+                "en": "AC output"
+              },
+              "value": "—",
+              "hint": {
+                "en": "Rated AC output for this model. Ultra/Ultra X support a higher paired (parallel) output when two units are linked."
+              }
             }
           ]
         },
@@ -1749,20 +1820,6 @@
         "en": "Feed-in disabled"
       }
     },
-    "led_brightness": {
-      "type": "number",
-      "title": {
-        "en": "LED brightness"
-      },
-      "decimals": 0,
-      "min": 0,
-      "max": 1023,
-      "step": 1,
-      "getable": true,
-      "setable": true,
-      "uiComponent": "slider",
-      "insights": false
-    },
     "operating_mode": {
       "type": "enum",
       "title": {
@@ -1798,23 +1855,6 @@
         }
       ]
     },
-    "output_target_power": {
-      "type": "number",
-      "title": {
-        "en": "Output power"
-      },
-      "units": {
-        "en": "W"
-      },
-      "decimals": 0,
-      "min": 0,
-      "max": 800,
-      "step": 1,
-      "getable": true,
-      "setable": true,
-      "uiComponent": "slider",
-      "insights": true
-    },
     "power_factor": {
       "type": "number",
       "title": {
@@ -1826,62 +1866,15 @@
       "uiComponent": "sensor",
       "insights": true
     },
-    "ps_charge_limit": {
-      "type": "number",
+    "self_heating": {
+      "type": "boolean",
       "title": {
-        "en": "Charge limit"
+        "en": "Self-heating"
       },
-      "units": {
-        "en": "%"
-      },
-      "decimals": 0,
-      "min": 70,
-      "max": 100,
-      "step": 1,
       "getable": true,
-      "setable": true,
-      "uiComponent": "slider",
+      "setable": false,
+      "uiComponent": "sensor",
       "insights": true
-    },
-    "ps_discharge_limit": {
-      "type": "number",
-      "title": {
-        "en": "Discharge limit"
-      },
-      "units": {
-        "en": "%"
-      },
-      "decimals": 0,
-      "min": 1,
-      "max": 30,
-      "step": 1,
-      "getable": true,
-      "setable": true,
-      "uiComponent": "slider",
-      "insights": true
-    },
-    "supply_priority": {
-      "type": "enum",
-      "title": {
-        "en": "Supply priority"
-      },
-      "getable": true,
-      "setable": true,
-      "uiComponent": "picker",
-      "values": [
-        {
-          "id": "power_supply",
-          "title": {
-            "en": "Prioritise supply"
-          }
-        },
-        {
-          "id": "power_storage",
-          "title": {
-            "en": "Prioritise storage"
-          }
-        }
-      ]
     }
   }
 }

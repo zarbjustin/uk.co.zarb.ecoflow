@@ -15,6 +15,23 @@
   (`brandColor: #000000`, `assets/icon.svg` monogram fill white). Black `brandColor`
   also tints the app's accent colour elsewhere in the Homey UI — this is intentional.
 
+## Recent feature additions (v1.8.0 — pending release)
+
+Grounded in the EcoFlow STREAM product line + the app's own backlog:
+- **A1** Corrected MPPT/solar-input counts from official specs (Ultra=4, Pro=3, Ultra X=4)
+  in `lib/streamModels.ts`; per-unit PV tiles follow automatically.
+- **A2** Daily-history tiles (`energy_*_today`, `co2_today`, `energy_independence`) are now
+  **added on demand** only when EcoFlow's history feed returns data, and blank ones are
+  cleaned up on upgrade — no empty energy tiles for models whose history API is rejected.
+- **A3** Removed dead PowerStream-only capabilities (`output_target_power`, `supply_priority`,
+  `ps_charge_limit`, `ps_discharge_limit`, `led_brightness`) from the shipped surface.
+- **B5** New tariff Flow actions: **Prepare for cheap grid import** and **Prepare for peak / export**.
+- **B6** New condition: **Battery level is above/below**.
+- **C7** New read-only **AC output** info setting (notes the 2300 W paired figure for Ultra/Ultra X).
+- **C8** New **Self-heating** read-only tile, added on demand when the unit reports a heating field
+  (candidate field names pending hardware confirmation — see `docs/FEATURE_BACKLOG.md`).
+- **B4** Added `docs/OCTOPUS_FLOWS.md` — ready-made Octopus Agile automation recipes.
+
 ## Scope (deliberate)
 
 - Focused **only** on the EcoFlow **STREAM** balcony-solar/battery product line and the

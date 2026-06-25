@@ -1,0 +1,10 @@
+{
+  "id": "prepare_for_peak_export",
+  "title": { "en": "Prepare for peak / export" },
+  "titleFormatted": { "en": "Prepare for peak export (reserve [[reserve]]%)" },
+  "hint": { "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window." },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    { "type": "number", "name": "reserve", "min": 3, "max": 95, "step": 1, "placeholder": { "en": "%" } }
+  ]
+}

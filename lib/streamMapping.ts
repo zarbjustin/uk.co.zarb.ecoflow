@@ -136,5 +136,14 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   set('discharge_remaining', num(q, ['bmsDsgRemTime', 'cmsDsgRemTime', 'dsgRemainTime']));
   set('battery_cycles', num(q, ['cycles']));
 
+  // Battery self-heating status (cold-weather). Field name is unconfirmed across
+  // firmwares, so several candidates are tried and the capability is only added
+  // (by the device) when one is actually present — no blank tile otherwise.
+  set('self_heating', bool(q, 'bmsHeatingStatus')
+    ?? bool(q, 'heatingStatus')
+    ?? bool(q, 'selfHeating')
+    ?? bool(q, 'heatStatus')
+    ?? bool(q, 'sysHeatStatus'));
+
   return out;
 }

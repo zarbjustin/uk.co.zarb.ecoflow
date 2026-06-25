@@ -21,8 +21,9 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 
 ### Automation
 - **Triggers:** solar power changed, grid power changed, battery level crossed above/below a threshold.
-- **Conditions:** operating mode is…, grid feed-in is enabled.
-- **Actions:** set operating mode, set backup reserve, set grid feed-in, turn AC output on/off.
+- **Conditions:** operating mode is…, grid feed-in is enabled, **battery level is above/below**, solar power above.
+- **Actions:** set operating mode, set backup reserve, set charge/discharge limit, set grid feed-in, turn AC output on/off, and tariff helpers **Prepare for cheap grid import** / **Prepare for peak / export**.
+- **Tariff automation:** ready-made [Octopus Agile recipes](docs/OCTOPUS_FLOWS.md) for charging in the cheapest window and exporting at peak.
 - **Insights:** all measurements are logged automatically.
 
 ### Under the hood

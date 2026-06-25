@@ -25,6 +25,9 @@ module.exports = class StreamDriver extends Homey.Driver {
     flow.getConditionCard('solar_power_above').registerRunListener(
       (args: any) => (args.device.getCapabilityValue('measure_power.pv') as number) > args.watts,
     );
+    flow.getConditionCard('battery_soc').registerRunListener(
+      (args: any) => args.device.batterySocIs(args.direction, args.level),
+    );
 
     // Actions
     flow.getActionCard('refresh_now').registerRunListener((args: any) => args.device.flowRefresh());
@@ -42,6 +45,12 @@ module.exports = class StreamDriver extends Homey.Driver {
     );
     flow.getActionCard('set_discharge_limit').registerRunListener(
       (args: any) => args.device.flowSetDischargeLimit(args.level),
+    );
+    flow.getActionCard('prepare_for_cheap_import').registerRunListener(
+      (args: any) => args.device.flowPrepareCheapImport(args.reserve),
+    );
+    flow.getActionCard('prepare_for_peak_export').registerRunListener(
+      (args: any) => args.device.flowPreparePeakExport(args.reserve),
     );
 
     // Trigger arg-matching for the battery threshold card

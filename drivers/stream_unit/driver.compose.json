@@ -100,6 +100,13 @@
           "label": { "en": "Energy source" },
           "value": "—",
           "hint": { "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input." }
+        },
+        {
+          "id": "ac_output",
+          "type": "label",
+          "label": { "en": "AC output" },
+          "value": "—",
+          "hint": { "en": "Rated AC output for this model. Ultra/Ultra X support a higher paired (parallel) output when two units are linked." }
         }
       ]
     },

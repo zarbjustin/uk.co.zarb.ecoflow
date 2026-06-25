@@ -59,3 +59,9 @@ test('solar is per-unit (own strings) for unit scope, system total for system sc
   // Unit: sums the unit's own strings, ignoring the system total.
   assert.strictEqual(mapStreamQuota(q, 'unit')['measure_power.pv'], 369);
 });
+
+test('self_heating is mapped only when the device reports a heating field', () => {
+  assert.strictEqual(mapStreamQuota({}).self_heating, undefined);
+  assert.strictEqual(mapStreamQuota({ bmsHeatingStatus: 1 }, 'unit').self_heating, true);
+  assert.strictEqual(mapStreamQuota({ heatingStatus: 0 }, 'unit').self_heating, false);
+});

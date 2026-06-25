@@ -11,6 +11,23 @@ const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
+
+  /**
+   * Daily-history capabilities and their titles. These are NOT declared on the
+   * driver: they only populate when EcoFlow's history feed returns data, so they
+   * are added on demand (and stale/blank ones are removed) to avoid empty tiles
+   * when the history feed is unavailable for a model.
+   */
+  private static readonly HISTORY_TITLES: Record<string, string> = {
+    energy_solar_today: 'Solar today',
+    energy_consumption_today: 'Consumption today',
+    energy_grid_import_today: 'Grid import today',
+    energy_grid_export_today: 'Grid export today',
+    energy_savings_today: 'Savings today',
+    co2_today: 'CO₂ avoided today',
+    energy_independence: 'Energy independence',
+  };
+
   private historyTimer: NodeJS.Timeout | null = null;
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
@@ -48,7 +65,30 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
 
+    await this.cleanupBlankHistoryCapabilities();
+
     if (this.getSetting('enable_history') !== false) this.startHistory();
+  }
+
+  /**
+   * Remove any daily-history capability that exists but never received a value
+   * (e.g. left over from an older version, or a model whose history feed the API
+   * rejects). A working feed re-adds them via applyDailyEnergy.
+   */
+  private async cleanupBlankHistoryCapabilities(): Promise<void> {
+    for (const cap of Object.keys(StreamDevice.HISTORY_TITLES)) {
+      if (this.hasCapability(cap) && this.getCapabilityValue(cap) === null) {
+        await this.removeCapability(cap).catch((e) => this.error(`remove ${cap}`, e));
+      }
+    }
+  }
+
+  /** Ensure a history capability exists (with its title) before setting it. */
+  private async ensureHistoryCapability(cap: string): Promise<void> {
+    if (this.hasCapability(cap)) return;
+    await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
+    const title = StreamDevice.HISTORY_TITLES[cap];
+    if (title) await this.setCapabilityOptions(cap, { title: { en: title } }).catch(() => {});
   }
 
   private startHistory(): void {
@@ -77,7 +117,9 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       energy_independence: d.independencePct,
     };
     for (const [cap, value] of Object.entries(map)) {
-      if (value === undefined || !this.hasCapability(cap)) continue;
+      if (value === undefined) continue;
+      await this.ensureHistoryCapability(cap);
+      if (!this.hasCapability(cap)) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
   }
@@ -300,6 +342,37 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   async flowSetDischargeLimit(level: number): Promise<void> {
     await this.send(StreamCmd.dischargeLimit(this.mainSn, level));
     await this.setCapabilityValue('discharge_limit', level).catch(() => {});
+  }
+
+  /**
+   * Tariff helper — "prepare for cheap import": raise the backup-reserve target
+   * (which pulls a charge from the grid) and lift the charge limit to 100% so the
+   * battery fills during a cheap window (e.g. Octopus Agile low-price slots).
+   */
+  async flowPrepareCheapImport(reserve: number): Promise<void> {
+    await this.send(StreamCmd.chargeLimit(this.mainSn, 100));
+    await this.send(StreamCmd.backupReserve(this.mainSn, reserve));
+    await this.setCapabilityValue('charge_limit', 100).catch(() => {});
+    await this.setCapabilityValue('backup_reserve_soc', reserve).catch(() => {});
+  }
+
+  /**
+   * Tariff helper — "prepare for peak/export": drop the backup reserve so the
+   * battery is free to discharge, and enable grid feed-in so surplus is exported
+   * during a high-price window.
+   */
+  async flowPreparePeakExport(reserve: number): Promise<void> {
+    await this.send(StreamCmd.backupReserve(this.mainSn, reserve));
+    await this.send(StreamCmd.feedIn(this.mainSn, true));
+    await this.setCapabilityValue('backup_reserve_soc', reserve).catch(() => {});
+    await this.setCapabilityValue('feed_in_control', true).catch(() => {});
+  }
+
+  /** Battery SoC condition helper. */
+  batterySocIs(direction: 'above' | 'below', level: number): boolean {
+    const soc = this.getCapabilityValue('measure_battery') as number;
+    if (typeof soc !== 'number') return false;
+    return direction === 'above' ? soc > level : soc < level;
   }
 
   protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {

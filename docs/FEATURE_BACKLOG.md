@@ -100,3 +100,18 @@ stats + forecast) → J (earnings) → K (microinverter) → L (tariff).
 - G and H are **confirmed feasible now** (MQTT data exists) and low risk.
 - I, J, K, L need an API/endpoint investigation spike before committing.
 - `target_power` remains infeasible (no watt setpoint), unchanged.
+
+---
+
+## Hardware-verification notes (v1.8.0)
+- **Self-heating capability (`self_heating`)** — added as a read-only tile that the
+  STREAM Unit adds *on demand* when the quota reports a heating field. Candidate field
+  names tried in `lib/streamMapping.ts`: `bmsHeatingStatus`, `heatingStatus`,
+  `selfHeating`, `heatStatus`, `sysHeatStatus`. **Confirm the real field on a cold-running
+  unit** and prune the candidate list once known.
+- **MPPT input counts** — corrected from official specs: STREAM Ultra (BK11)=4,
+  STREAM Pro (BK12)=3, STREAM Ultra X (BK61)=4. **STREAM Max (BK41)** is not officially
+  documented; currently treated as a 4-input solar model — verify its true PV-input count
+  on hardware and adjust `lib/streamModels.ts` if it produces empty PV tiles.
+- **AC-output rating (`ac_output` setting)** — informational, model-derived (Ultra/Ultra X
+  note the 2300 W paired figure). Confirm STREAM Max's rating.

@@ -137,6 +137,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       serial_number: sn,
       system_role: isMain ? 'System main unit' : 'Member unit',
       power_source: spec.energySource,
+      ac_output: spec.acOutput,
     }).catch((e) => this.error('set info settings', e));
   }
 
@@ -150,6 +151,11 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapStreamQuota(quota, 'unit');
+    // Self-heating is reported only by some firmwares; add the tile on demand so
+    // it never shows blank on units that don't report it.
+    if (values.self_heating !== undefined && !this.hasCapability('self_heating')) {
+      await this.addCapability('self_heating').catch((e) => this.error('add self_heating', e));
+    }
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
       if (this.getCapabilityValue(cap) === value) continue;

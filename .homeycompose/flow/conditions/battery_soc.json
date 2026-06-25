@@ -1,0 +1,17 @@
+{
+  "id": "battery_soc",
+  "title": { "en": "Battery level is above/below" },
+  "titleFormatted": { "en": "Battery level is [[direction]] [[level]]%" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "values": [
+        { "id": "above", "title": { "en": "above" } },
+        { "id": "below", "title": { "en": "below" } }
+      ]
+    },
+    { "type": "number", "name": "level", "min": 0, "max": 100, "step": 1, "placeholder": { "en": "%" } }
+  ]
+}

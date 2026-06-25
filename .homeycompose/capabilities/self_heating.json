@@ -1,0 +1,8 @@
+{
+  "type": "boolean",
+  "title": { "en": "Self-heating" },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true
+}

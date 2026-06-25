@@ -18,29 +18,37 @@ export interface StreamModelSpec {
   solarInputs: number;
   /** Short, human-readable description of how the unit is powered. */
   energySource: string;
+  /** Rated AC output, noting the paired/parallel figure where supported. */
+  acOutput: string;
 }
 
 const SOLAR_SOURCE = 'Solar (PV/MPPT), AC and grid';
 const AC_SOURCE = 'AC-coupled (charges from AC/grid, no direct solar input)';
 
+// MPPT/solar-input counts and AC-output ratings are taken from EcoFlow's
+// official STREAM specifications/user manuals:
+//   STREAM Ultra   — 4× MPPT (2000 W PV), 1200 W AC (2300 W paired)
+//   STREAM Ultra X — 4× MPPT (2000 W PV), 1200 W AC (2300 W paired)
+//   STREAM Pro     — 3× MPPT (1500 W PV), 800 W AC
+//   STREAM AC/ACPro— AC-coupled, no PV, 800 W AC
 const SPECS: Record<string, StreamModelSpec> = {
   BK11: {
-    model: 'STREAM Ultra', acCoupled: false, solarInputs: 2, energySource: SOLAR_SOURCE,
+    model: 'STREAM Ultra', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W (2300 W paired)',
   },
   BK12: {
-    model: 'STREAM Pro', acCoupled: false, solarInputs: 2, energySource: SOLAR_SOURCE,
+    model: 'STREAM Pro', acCoupled: false, solarInputs: 3, energySource: SOLAR_SOURCE, acOutput: '800 W',
   },
   BK31: {
-    model: 'STREAM AC Pro', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE,
+    model: 'STREAM AC Pro', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE, acOutput: '800 W',
   },
   BK41: {
-    model: 'STREAM Max', acCoupled: false, solarInputs: 2, energySource: SOLAR_SOURCE,
+    model: 'STREAM Max', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W',
   },
   BK51: {
-    model: 'STREAM AC', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE,
+    model: 'STREAM AC', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE, acOutput: '800 W',
   },
   BK61: {
-    model: 'STREAM Ultra X', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE,
+    model: 'STREAM Ultra X', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W (2300 W paired)',
   },
 };
 
@@ -49,6 +57,7 @@ const UNKNOWN: StreamModelSpec = {
   acCoupled: false,
   solarInputs: 4,
   energySource: SOLAR_SOURCE,
+  acOutput: '—',
 };
 
 /** Resolve the model spec for a STREAM unit from its serial number. */
