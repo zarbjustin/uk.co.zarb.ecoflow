@@ -5,11 +5,11 @@
 ## Current state (2026-06-25)
 
 - **App:** `uk.co.zarb.ecoflow` — "EcoFlow STREAM Series" · SDK v3 · TypeScript.
-- **Latest version:** **v1.7.9** (tag `v1.7.9`).
-- **Latest App Store upload:** **Build ID 5** —
-  <https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/5>
+- **Latest version:** **v1.7.10** (tag `v1.7.10`).
+- **Latest App Store upload:** **Build ID 6** —
+  <https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/6>
   (uploaded by the Publish workflow; promote/submit on the dashboard).
-- **Local install:** v1.7.9 installed on **Justin's Homey Pro** (192.168.1.142) via
+- **Local install:** v1.7.10 installed on **Justin's Homey Pro** (192.168.1.142) via
   `homey app install`.
 - **Branding:** app icon is the **white EcoFlow EF monogram on a black background**
   (`brandColor: #000000`, `assets/icon.svg` monogram fill white). Black `brandColor`
