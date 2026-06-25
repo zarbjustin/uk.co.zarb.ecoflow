@@ -1,4 +1,4 @@
-# Reviewer Notes — EcoFlow - Stream Systems
+# Reviewer Notes — EcoFlow STREAM Series
 
 Paste the relevant parts of this into the **"Submit for certification"** review-notes field on
 the Homey Developer Tools. It explains to Athom's reviewer how to test a cloud-connected app
@@ -12,7 +12,7 @@ they have no hardware for.
 
 ## What the app does
 
-EcoFlow - Stream Systems integrates the EcoFlow **STREAM** balcony-solar/battery system and the
+EcoFlow STREAM Series integrates the EcoFlow **STREAM** balcony-solar/battery system and the
 EcoFlow **Smart Meter** with Homey Energy. It is deliberately scoped to the STREAM product line
 only — PowerStream and portable power stations are intentionally excluded. It reads live solar,
 battery, grid and per-socket data over EcoFlow's official **IoT Open Platform** (REST + MQTT) and
@@ -34,7 +34,7 @@ a device the app authenticates but lists no devices.
 
 ## How to test (reviewer steps)
 
-1. Add device → **EcoFlow - Stream Systems** → choose a driver (e.g. *STREAM*).
+1. Add device → **EcoFlow STREAM Series** → choose a driver (e.g. *STREAM*).
 2. On first device, enter the **Access Key**, **Secret Key** and **Region** below.
 3. The pairing screen lists the discovered EcoFlow devices; select and add.
 4. Verify on the device:

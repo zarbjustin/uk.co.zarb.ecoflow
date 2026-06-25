@@ -48,7 +48,7 @@ modelled specifically on Homey's Energy spec for this fixed-installation use cas
 I haven't previously collaborated with Marcus and have no prior relationship with him. I'm
 genuinely open to a conversation about how this STREAM-specific Energy integration could
 benefit users — including contributing ideas upstream — but I believe a focused,
-clearly-named app ("EcoFlow - Stream Systems") is the clearest experience for owners of this
+clearly-named app ("EcoFlow STREAM Series") is the clearest experience for owners of this
 specific product, especially those (like me) using it for tariff-based automation.
 
 I'm happy to provide a test account or a live screen-share so you can see the Energy

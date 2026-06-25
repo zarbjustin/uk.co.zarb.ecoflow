@@ -1,10 +1,10 @@
-# Project Status & Handoff — EcoFlow - Stream Systems
+# Project Status & Handoff — EcoFlow STREAM Series
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
 ## Current state (2026-06-25)
 
-- **App:** `uk.co.zarb.ecoflow` — "EcoFlow - Stream Systems" · SDK v3 · TypeScript.
+- **App:** `uk.co.zarb.ecoflow` — "EcoFlow STREAM Series" · SDK v3 · TypeScript.
 - **Latest version:** **v1.7.9** (tag `v1.7.9`).
 - **Latest App Store upload:** **Build ID 5** —
   <https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/5>
