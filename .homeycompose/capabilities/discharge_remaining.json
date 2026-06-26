@@ -1,1 +1,1 @@
-{ "type": "number", "title": { "en": "Discharge time remaining" }, "units": { "en": "min" }, "decimals": 0, "getable": true, "setable": false, "uiComponent": "sensor", "insights": true }
+{ "type": "number", "title": { "en": "Discharge time remaining" }, "units": { "en": "min" }, "decimals": 0, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/time-empty.svg", "insights": true }

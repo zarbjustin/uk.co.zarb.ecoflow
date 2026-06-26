@@ -4,6 +4,7 @@
   "getable": true,
   "setable": true,
   "uiComponent": "picker",
+  "icon": "/assets/capabilities/operating-mode.svg",
   "values": [
     { "id": "self_powered", "title": { "en": "Self-powered" } },
     { "id": "ai", "title": { "en": "AI / Smart scheduling" } },

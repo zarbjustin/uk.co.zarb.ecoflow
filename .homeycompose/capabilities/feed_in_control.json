@@ -4,6 +4,7 @@
   "getable": true,
   "setable": true,
   "uiComponent": "toggle",
+  "icon": "/assets/capabilities/feed-in.svg",
   "insights": true,
   "insightsTitleTrue": { "en": "Feed-in enabled" },
   "insightsTitleFalse": { "en": "Feed-in disabled" }

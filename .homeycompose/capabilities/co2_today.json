@@ -1,1 +1,1 @@
-{ "type": "number", "title": { "en": "CO₂ avoided today" }, "units": { "en": "kg" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "insights": true }
+{ "type": "number", "title": { "en": "CO₂ avoided today" }, "units": { "en": "kg" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/solar.svg", "insights": true }

@@ -9,5 +9,6 @@
   "getable": true,
   "setable": true,
   "uiComponent": "slider",
+  "icon": "/assets/capabilities/limit-up.svg",
   "insights": true
 }
