@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -1620,8 +1620,8 @@
       "getable": true,
       "setable": true,
       "uiComponent": "slider",
-      "insights": true,
-      "icon": "/assets/capabilities/reserve.svg"
+      "icon": "/assets/capabilities/reserve.svg",
+      "insights": true
     },
     "battery_cycles": {
       "type": "number",
@@ -1632,8 +1632,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/battery-cycles.svg"
+      "icon": "/assets/capabilities/battery-cycles.svg",
+      "insights": true
     },
     "battery_soh": {
       "type": "number",
@@ -1647,8 +1647,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/battery-health.svg"
+      "icon": "/assets/capabilities/battery-health.svg",
+      "insights": true
     },
     "charge_limit": {
       "type": "number",
@@ -1665,8 +1665,8 @@
       "getable": true,
       "setable": true,
       "uiComponent": "slider",
-      "insights": true,
-      "icon": "/assets/capabilities/limit-up.svg"
+      "icon": "/assets/capabilities/limit-up.svg",
+      "insights": true
     },
     "charge_remaining": {
       "type": "number",
@@ -1680,8 +1680,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/time-full.svg"
+      "icon": "/assets/capabilities/time-full.svg",
+      "insights": true
     },
     "co2_today": {
       "type": "number",
@@ -1695,8 +1695,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/solar.svg"
+      "icon": "/assets/capabilities/solar.svg",
+      "insights": true
     },
     "discharge_limit": {
       "type": "number",
@@ -1713,8 +1713,8 @@
       "getable": true,
       "setable": true,
       "uiComponent": "slider",
-      "insights": true,
-      "icon": "/assets/capabilities/limit-down.svg"
+      "icon": "/assets/capabilities/limit-down.svg",
+      "insights": true
     },
     "discharge_remaining": {
       "type": "number",
@@ -1728,8 +1728,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/time-empty.svg"
+      "icon": "/assets/capabilities/time-empty.svg",
+      "insights": true
     },
     "energy_consumption_today": {
       "type": "number",
@@ -1743,8 +1743,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/home-load.svg"
+      "icon": "/assets/capabilities/home-load.svg",
+      "insights": true
     },
     "energy_grid_export_today": {
       "type": "number",
@@ -1758,8 +1758,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/feed-in.svg"
+      "icon": "/assets/capabilities/feed-in.svg",
+      "insights": true
     },
     "energy_grid_import_today": {
       "type": "number",
@@ -1773,8 +1773,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/grid.svg"
+      "icon": "/assets/capabilities/grid.svg",
+      "insights": true
     },
     "energy_independence": {
       "type": "number",
@@ -1788,8 +1788,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/daily-energy.svg"
+      "icon": "/assets/capabilities/daily-energy.svg",
+      "insights": true
     },
     "energy_savings_today": {
       "type": "number",
@@ -1800,8 +1800,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/daily-energy.svg"
+      "icon": "/assets/capabilities/daily-energy.svg",
+      "insights": true
     },
     "energy_solar_today": {
       "type": "number",
@@ -1815,8 +1815,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/solar.svg"
+      "icon": "/assets/capabilities/solar.svg",
+      "insights": true
     },
     "feed_in_control": {
       "type": "boolean",
@@ -1826,14 +1826,14 @@
       "getable": true,
       "setable": true,
       "uiComponent": "toggle",
+      "icon": "/assets/capabilities/feed-in.svg",
       "insights": true,
       "insightsTitleTrue": {
         "en": "Feed-in enabled"
       },
       "insightsTitleFalse": {
         "en": "Feed-in disabled"
-      },
-      "icon": "/assets/capabilities/feed-in.svg"
+      }
     },
     "operating_mode": {
       "type": "enum",
@@ -1843,6 +1843,7 @@
       "getable": true,
       "setable": true,
       "uiComponent": "picker",
+      "icon": "/assets/capabilities/operating-mode.svg",
       "values": [
         {
           "id": "self_powered",
@@ -1868,8 +1869,7 @@
             "en": "Time-of-use"
           }
         }
-      ],
-      "icon": "/assets/capabilities/operating-mode.svg"
+      ]
     },
     "power_factor": {
       "type": "number",
@@ -1890,8 +1890,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": true,
-      "icon": "/assets/capabilities/self-heating.svg"
+      "icon": "/assets/capabilities/self-heating.svg",
+      "insights": true
     }
   }
 }

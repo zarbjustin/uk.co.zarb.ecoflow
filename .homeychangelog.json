@@ -85,5 +85,8 @@
   },
   "1.8.0": {
     "en": "Accurate per-model solar inputs, smarter energy tiles, new Octopus-style tariff Flow actions (cheap-charge / peak-export), a battery-level condition, and AC-output info."
+  },
+  "1.8.1": {
+    "en": "Improve Homey device tile icons for STREAM capability status and controls."
   }
 }
