@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "House from battery" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/house-from-battery.svg", "insights": true }

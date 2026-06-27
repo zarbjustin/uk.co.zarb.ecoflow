@@ -1305,27 +1305,27 @@
         "measure_battery",
         "battery_charging_state",
         "operating_mode",
-        "measure_power",
+        "stream_unit_power_battery_flow",
         "measure_power.load",
-        "measure_power.grid",
-        "measure_power.pv",
-        "measure_power.from_pv",
-        "measure_power.from_battery",
-        "measure_power.from_grid",
+        "stream_unit_power_grid",
+        "stream_unit_power_solar",
+        "stream_unit_power_from_solar",
+        "stream_unit_power_from_battery",
+        "stream_unit_power_from_grid",
         "onoff.ac1",
         "onoff.ac2",
-        "measure_power.schuko1",
-        "measure_power.schuko2",
+        "stream_unit_power_ac1",
+        "stream_unit_power_ac2",
         "backup_reserve_soc",
         "charge_limit",
         "discharge_limit",
         "feed_in_control",
         "charge_remaining",
         "discharge_remaining",
-        "measure_power.pv1",
-        "measure_power.pv2",
-        "measure_power.pv3",
-        "measure_power.pv4",
+        "stream_unit_power_pv1",
+        "stream_unit_power_pv2",
+        "stream_unit_power_pv3",
+        "stream_unit_power_pv4",
         "measure_temperature",
         "battery_soh",
         "battery_cycles"
@@ -1346,39 +1346,9 @@
             "en": "Mode"
           }
         },
-        "measure_power": {
-          "title": {
-            "en": "Battery flow"
-          }
-        },
         "measure_power.load": {
           "title": {
             "en": "House consumption"
-          }
-        },
-        "measure_power.grid": {
-          "title": {
-            "en": "Grid import/export"
-          }
-        },
-        "measure_power.pv": {
-          "title": {
-            "en": "Solar generation"
-          }
-        },
-        "measure_power.from_pv": {
-          "title": {
-            "en": "House from solar"
-          }
-        },
-        "measure_power.from_battery": {
-          "title": {
-            "en": "House from battery"
-          }
-        },
-        "measure_power.from_grid": {
-          "title": {
-            "en": "House from grid"
           }
         },
         "onoff.ac1": {
@@ -1389,16 +1359,6 @@
         "onoff.ac2": {
           "title": {
             "en": "AC output 2"
-          }
-        },
-        "measure_power.schuko1": {
-          "title": {
-            "en": "AC output 1 power"
-          }
-        },
-        "measure_power.schuko2": {
-          "title": {
-            "en": "AC output 2 power"
           }
         },
         "backup_reserve_soc": {
@@ -1429,26 +1389,6 @@
         "discharge_remaining": {
           "title": {
             "en": "Time to empty"
-          }
-        },
-        "measure_power.pv1": {
-          "title": {
-            "en": "PV input 1"
-          }
-        },
-        "measure_power.pv2": {
-          "title": {
-            "en": "PV input 2"
-          }
-        },
-        "measure_power.pv3": {
-          "title": {
-            "en": "PV input 3"
-          }
-        },
-        "measure_power.pv4": {
-          "title": {
-            "en": "PV input 4"
           }
         },
         "measure_temperature": {
@@ -1880,6 +1820,7 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
+      "icon": "/assets/capabilities/power-factor.svg",
       "insights": true
     },
     "self_heating": {
@@ -1891,6 +1832,186 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/capabilities/self-heating.svg",
+      "insights": true
+    },
+    "stream_unit_power_ac1": {
+      "type": "number",
+      "title": {
+        "en": "AC output 1 power"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/ac-output.svg",
+      "insights": true
+    },
+    "stream_unit_power_ac2": {
+      "type": "number",
+      "title": {
+        "en": "AC output 2 power"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/ac-output.svg",
+      "insights": true
+    },
+    "stream_unit_power_battery_flow": {
+      "type": "number",
+      "title": {
+        "en": "Battery flow"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/battery-flow.svg",
+      "insights": true
+    },
+    "stream_unit_power_from_battery": {
+      "type": "number",
+      "title": {
+        "en": "House from battery"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/house-from-battery.svg",
+      "insights": true
+    },
+    "stream_unit_power_from_grid": {
+      "type": "number",
+      "title": {
+        "en": "House from grid"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/house-from-grid.svg",
+      "insights": true
+    },
+    "stream_unit_power_from_solar": {
+      "type": "number",
+      "title": {
+        "en": "House from solar"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/house-from-solar.svg",
+      "insights": true
+    },
+    "stream_unit_power_grid": {
+      "type": "number",
+      "title": {
+        "en": "Grid import/export"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/grid-import-export.svg",
+      "insights": true
+    },
+    "stream_unit_power_pv1": {
+      "type": "number",
+      "title": {
+        "en": "PV input 1"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": true
+    },
+    "stream_unit_power_pv2": {
+      "type": "number",
+      "title": {
+        "en": "PV input 2"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": true
+    },
+    "stream_unit_power_pv3": {
+      "type": "number",
+      "title": {
+        "en": "PV input 3"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": true
+    },
+    "stream_unit_power_pv4": {
+      "type": "number",
+      "title": {
+        "en": "PV input 4"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": true
+    },
+    "stream_unit_power_solar": {
+      "type": "number",
+      "title": {
+        "en": "Solar generation"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/solar-meter.svg",
       "insights": true
     }
   }

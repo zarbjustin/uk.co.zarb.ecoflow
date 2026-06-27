@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Solar generation" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/solar-meter.svg", "insights": true }

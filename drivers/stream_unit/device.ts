@@ -32,6 +32,12 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     'discharge_limit',
     'feed_in_control',
     'measure_power.load',
+    'stream_unit_power_from_solar',
+    'stream_unit_power_from_battery',
+    'stream_unit_power_from_grid',
+  ];
+
+  private static readonly LEGACY_SYSTEM_CAPS = [
     'measure_power.from_pv',
     'measure_power.from_battery',
     'measure_power.from_grid',
@@ -41,9 +47,29 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private static readonly AC_CAPS = [
     'onoff.ac1',
     'onoff.ac2',
+    'stream_unit_power_ac1',
+    'stream_unit_power_ac2',
+  ];
+
+  private static readonly LEGACY_AC_POWER_CAPS = [
     'measure_power.schuko1',
     'measure_power.schuko2',
   ];
+
+  private static readonly POWER_CAP_MAP: Record<string, string> = {
+    'measure_power.pv': 'stream_unit_power_solar',
+    'measure_power.pv1': 'stream_unit_power_pv1',
+    'measure_power.pv2': 'stream_unit_power_pv2',
+    'measure_power.pv3': 'stream_unit_power_pv3',
+    'measure_power.pv4': 'stream_unit_power_pv4',
+    'measure_power.schuko1': 'stream_unit_power_ac1',
+    'measure_power.schuko2': 'stream_unit_power_ac2',
+    'measure_power.from_pv': 'stream_unit_power_from_solar',
+    'measure_power.from_battery': 'stream_unit_power_from_battery',
+    'measure_power.from_grid': 'stream_unit_power_from_grid',
+    measure_power: 'stream_unit_power_battery_flow',
+    'measure_power.grid': 'stream_unit_power_grid',
+  };
 
   protected async onReady(): Promise<void> {
     const sn = this.getData().sn as string;
@@ -57,7 +83,9 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const isMain = this.mainSn === sn;
 
     // Base per-unit capabilities every unit should have.
-    await this.ensureCapabilities(['battery_charging_state', 'measure_power', ...StreamUnitDevice.AC_CAPS]);
+    await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...StreamUnitDevice.AC_CAPS]);
+    await this.removeCapabilities(['measure_power', 'measure_power.grid']);
+    await this.removeCapabilities(StreamUnitDevice.LEGACY_AC_POWER_CAPS);
 
     // Solar tiles: solar models keep their PV inputs; AC-coupled models drop them.
     await this.tailorSolarCapabilities(spec.acCoupled ? 0 : spec.solarInputs);
@@ -65,6 +93,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     // Whole-home controls/tiles only on the system main unit.
     if (isMain) await this.ensureCapabilities(StreamUnitDevice.SYSTEM_CAPS);
     else await this.removeCapabilities(StreamUnitDevice.SYSTEM_CAPS);
+    await this.removeCapabilities(StreamUnitDevice.LEGACY_SYSTEM_CAPS);
 
     this.registerControlListeners(isMain);
     await this.refreshInfoSettings(sn, isMain).catch((e) => this.error('refresh info settings', e));
@@ -86,19 +115,26 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     }
   }
 
-  /** Ensure `measure_power.pv` + `measure_power.pv1..N`; remove any beyond N. */
+  /** Ensure solar generation + PV1..N; remove any beyond N and legacy tiles. */
   private async tailorSolarCapabilities(solarInputs: number): Promise<void> {
     if (solarInputs > 0) {
-      await this.ensureCapabilities(['measure_power.pv']);
-    } else if (this.hasCapability('measure_power.pv')) {
+      await this.ensureCapabilities(['stream_unit_power_solar']);
+    } else if (this.hasCapability('stream_unit_power_solar')) {
+      await this.removeCapability('stream_unit_power_solar').catch((e) => this.error('remove stream_unit_power_solar', e));
+    }
+    if (this.hasCapability('measure_power.pv')) {
       await this.removeCapability('measure_power.pv').catch((e) => this.error('remove measure_power.pv', e));
     }
     for (let i = 1; i <= 4; i += 1) {
-      const cap = `measure_power.pv${i}`;
+      const cap = `stream_unit_power_pv${i}`;
+      const legacyCap = `measure_power.pv${i}`;
       if (i <= solarInputs) {
         await this.ensureCapabilities([cap]);
       } else if (this.hasCapability(cap)) {
         await this.removeCapability(cap).catch((e) => this.error(`remove ${cap}`, e));
+      }
+      if (this.hasCapability(legacyCap)) {
+        await this.removeCapability(legacyCap).catch((e) => this.error(`remove ${legacyCap}`, e));
       }
     }
   }
@@ -151,6 +187,11 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapStreamQuota(quota, 'unit');
+    for (const [source, target] of Object.entries(StreamUnitDevice.POWER_CAP_MAP)) {
+      const value = values[source];
+      if (value !== undefined) values[target] = value;
+      delete values[source];
+    }
     // Self-heating is reported only by some firmwares; add the tile on demand so
     // it never shows blank on units that don't report it.
     if (values.self_heating !== undefined && !this.hasCapability('self_heating')) {
