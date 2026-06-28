@@ -25,6 +25,18 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private lastTs = 0;
   private pendingCaps = new Set<string>();
 
+  private static readonly LIVE_POWER_CAPS = [
+    'measure_power',
+    'smartmeter_power_grid',
+    'smartmeter_power_import',
+    'smartmeter_power_export',
+  ];
+
+  private static readonly LEGACY_LIVE_POWER_CAPS = [
+    'measure_power.grid_import',
+    'measure_power.grid_export',
+  ];
+
   protected getReadSn(): string {
     // When the meter is part of a STREAM system its own SN is empty, so read the
     // resolved source SN (the system main) where powGetSysGrid/Load live.
@@ -35,6 +47,8 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
     this.importWh = (this.getStoreValue('importWh') as number) || 0;
     this.exportWh = (this.getStoreValue('exportWh') as number) || 0;
+    await this.ensureCapabilities(SmartMeterDevice.LIVE_POWER_CAPS);
+    await this.removeCapabilities(SmartMeterDevice.LEGACY_LIVE_POWER_CAPS);
     await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
     await this.applyMeterSourceTitle();
@@ -49,20 +63,23 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     // ALWAYS track grid import/export, so switching the display mode can never
     // corrupt the (monotonic) energy totals.
     const power = this.meterSource === 'load' ? loadW : gridW;
-    delete values['measure_power'];
 
     const split = splitGridPower(gridW);
     if (split) {
-      if (this.getCapabilityValue('measure_power.grid_import') !== split.importW) {
-        await this.setCapabilityValue('measure_power.grid_import', split.importW).catch(() => {});
+      if (this.getCapabilityValue('smartmeter_power_import') !== split.importW) {
+        await this.setCapabilityValue('smartmeter_power_import', split.importW).catch(() => {});
       }
-      if (this.getCapabilityValue('measure_power.grid_export') !== split.exportW) {
-        await this.setCapabilityValue('measure_power.grid_export', split.exportW).catch(() => {});
+      if (this.getCapabilityValue('smartmeter_power_export') !== split.exportW) {
+        await this.setCapabilityValue('smartmeter_power_export', split.exportW).catch(() => {});
       }
     }
 
-    if (typeof power === 'number' && this.getCapabilityValue('measure_power') !== power) {
-      await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
+    if (typeof power === 'number' && this.getCapabilityValue('smartmeter_power_grid') !== power) {
+      await this.setCapabilityValue('smartmeter_power_grid', power).catch((e) => this.error('smartmeter_power_grid', e));
+    }
+
+    if (typeof power === 'number') {
+      values['measure_power'] = power;
     }
 
     if (typeof gridW === 'number') {
@@ -100,6 +117,23 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private async applyMeterSourceTitle(): Promise<void> {
     const title = this.meterSource === 'load' ? 'Home load' : 'Grid power';
     await this.setCapabilityOptions('measure_power', { title: { en: title } }).catch(() => {});
+    await this.setCapabilityOptions('smartmeter_power_grid', { title: { en: title } }).catch(() => {});
+  }
+
+  private async ensureCapabilities(caps: string[]): Promise<void> {
+    for (const cap of caps) {
+      if (!this.hasCapability(cap)) {
+        await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
+      }
+    }
+  }
+
+  private async removeCapabilities(caps: string[]): Promise<void> {
+    for (const cap of caps) {
+      if (this.hasCapability(cap)) {
+        await this.removeCapability(cap).catch((e) => this.error(`remove ${cap}`, e));
+      }
+    }
   }
 
   /** Add an optional (per-phase) capability the first time data for it arrives. */

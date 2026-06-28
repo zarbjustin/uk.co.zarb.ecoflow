@@ -1,0 +1,27 @@
+{
+  "name": { "en": "STREAM Solar Target" },
+  "settings": [
+    {
+      "id": "index",
+      "type": "number",
+      "title": { "en": "STREAM system number" },
+      "value": 1,
+      "min": 1,
+      "max": 10,
+      "hint": { "en": "If you have more than one STREAM system, choose which one (1 = first)." }
+    },
+    {
+      "id": "target",
+      "type": "number",
+      "title": { "en": "Daily solar target (kWh)" },
+      "value": 10,
+      "min": 1,
+      "max": 100,
+      "hint": { "en": "Used until a real solar forecast source is added." }
+    }
+  ],
+  "height": 254,
+  "api": {
+    "getSolarForecast": { "method": "GET", "path": "/" }
+  }
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #EEF4F7; }
+    .card { height: 226px; padding: 14px 16px; border-radius: 16px; background: #17291F; display: flex; flex-direction: column; gap: 13px; }
+    .head { display: flex; justify-content: space-between; gap: 10px; }
+    .title { font-size: 13px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .pct { font-size: 12px; color: #A8B9AD; white-space: nowrap; }
+    .solar { font-size: 42px; line-height: 1; font-weight: 800; color: #F6CE48; }
+    .bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 0%; background: #F6CE48; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: auto; }
+    .label { font-size: 10px; color: #A8B9AD; text-transform: uppercase; letter-spacing: .35px; }
+    .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+    .muted { opacity: .55; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="head"><div class="title" id="title">Solar Forecast</div><div class="pct" id="pct">—</div></div>
+    <div class="solar" id="solar">—</div>
+    <div class="bar"><span id="bar"></span></div>
+    <div class="grid">
+      <div><div class="label">Target</div><div class="value" id="target">—</div></div>
+      <div><div class="label">Now</div><div class="value" id="now">—</div></div>
+      <div><div class="label">Home today</div><div class="value" id="home">—</div></div>
+      <div><div class="label">Independence</div><div class="value" id="independence">—</div></div>
+    </div>
+  </div>
+  <script>
+    function kwh(v) { return v == null ? '—' : v.toFixed(2) + ' kWh'; }
+    function power(w) { return w == null ? '—' : Math.round(w) + ' W'; }
+    function pct(v) { return v == null ? '—' : Math.round(v) + '%'; }
+    function onHomeyReady(Homey) {
+      const settings = Homey.getSettings() || {};
+      const index = Number(settings.index) || 1;
+      const target = Number(settings.target) || 10;
+      Homey.ready();
+      async function refresh() {
+        const d = await Homey.api('GET', '/?index=' + index + '&target=' + target, {});
+        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
+        document.getElementById('title').textContent = d.name || 'Solar Forecast';
+        document.getElementById('solar').textContent = kwh(d.solarToday);
+        document.getElementById('target').textContent = kwh(d.target);
+        document.getElementById('now').textContent = power(d.solar);
+        document.getElementById('home').textContent = kwh(d.consumptionToday);
+        document.getElementById('independence').textContent = pct(d.independence);
+        document.getElementById('pct').textContent = pct(d.progress);
+        document.getElementById('bar').style.width = (d.progress == null ? 0 : d.progress) + '%';
+        document.getElementById('card').classList.toggle('muted', d.available === false);
+      }
+      refresh(); setInterval(refresh, 30000);
+    }
+  </script>
+</body>
+</html>

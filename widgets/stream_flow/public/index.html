@@ -11,7 +11,7 @@
       color: #EAF2F8;
     }
     .card {
-      background: linear-gradient(160deg, #123247 0%, #08151F 100%);
+      background: #10222C;
       border-radius: 16px;
       padding: 14px 16px;
       height: 226px;
@@ -23,11 +23,22 @@
     .title { font-size: 13px; font-weight: 600; color: #cfe0ec; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .soc { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
     .soc .dot { width: 9px; height: 9px; border-radius: 50%; background: #38C172; }
+    .flowline {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+    }
+    .node { text-align: center; min-width: 0; }
+    .node .name { font-size: 10px; color: #9bb3c4; text-transform: uppercase; letter-spacing: .35px; }
+    .node .power { font-size: 15px; font-weight: 800; margin-top: 2px; white-space: nowrap; }
+    .arrow { color: #5F7482; font-size: 18px; font-weight: 800; }
     .grid {
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
+      grid-template-rows: 1fr;
       gap: 10px;
     }
     .stat {
@@ -42,7 +53,7 @@
     .stat .label { font-size: 11px; color: #9bb3c4; text-transform: uppercase; letter-spacing: 0.5px; }
     .stat .value { font-size: 20px; font-weight: 700; line-height: 1.1; }
     .stat .sub { font-size: 11px; color: #9bb3c4; min-height: 13px; }
-    .grid .value { color: #F5A623; }
+    .import .value { color: #F5A623; }
     .solar .value { color: #F6CE48; }
     .home .value { color: #4FB8F0; }
     .battery .value { color: #38C172; }
@@ -56,11 +67,16 @@
       <div class="title" id="title">STREAM</div>
       <div class="soc" id="socWrap"><span class="dot" id="socDot"></span><span id="soc">—</span></div>
     </div>
+    <div class="flowline">
+      <div class="node"><div class="name">Solar</div><div class="power solar" id="flowSolar">—</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="name">Home</div><div class="power home" id="flowHome">—</div></div>
+      <div class="arrow" id="gridArrow">↔</div>
+      <div class="node"><div class="name">Grid</div><div class="power import" id="flowGrid">—</div></div>
+    </div>
     <div class="grid">
-      <div class="stat grid"><div class="label">From grid</div><div class="value" id="grid">—</div><div class="sub" id="gridSub"></div></div>
-      <div class="stat solar"><div class="label">Solar</div><div class="value" id="solar">—</div><div class="sub"></div></div>
-      <div class="stat home"><div class="label">Home</div><div class="value" id="home">—</div><div class="sub"></div></div>
       <div class="stat battery"><div class="label">Battery</div><div class="value" id="battery">—</div><div class="sub" id="batterySub"></div></div>
+      <div class="stat import"><div class="label">Grid</div><div class="value" id="grid">—</div><div class="sub" id="gridSub"></div></div>
     </div>
     <div class="foot" id="foot"></div>
   </div>
@@ -93,8 +109,10 @@
           set('grid', fmtPower(d.grid == null ? null : Math.abs(d.grid)));
           set('gridSub', d.grid == null ? '' : (d.grid < -5 ? 'exporting' : (d.grid > 5 ? 'importing' : '')));
 
-          set('solar', fmtPower(d.solar));
-          set('home', fmtPower(d.home));
+          set('flowSolar', fmtPower(d.solar));
+          set('flowHome', fmtPower(d.home));
+          set('flowGrid', fmtPower(d.grid == null ? null : Math.abs(d.grid)));
+          set('gridArrow', d.grid == null ? '↔' : (d.grid < -5 ? '←' : (d.grid > 5 ? '→' : '↔')));
 
           // Battery power magnitude + state.
           set('battery', fmtPower(d.battery == null ? null : Math.abs(d.battery)));

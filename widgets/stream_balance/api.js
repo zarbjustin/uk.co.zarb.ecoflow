@@ -3,7 +3,7 @@
 const { streamData } = require('../stream_common');
 
 module.exports = {
-  async getFlow({ homey, query }) {
+  async getBalance({ homey, query }) {
     return streamData(homey, query);
   },
 };

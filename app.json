@@ -722,8 +722,9 @@
       ],
       "capabilities": [
         "measure_power",
-        "measure_power.grid_import",
-        "measure_power.grid_export",
+        "smartmeter_power_grid",
+        "smartmeter_power_import",
+        "smartmeter_power_export",
         "meter_power.imported",
         "meter_power.exported"
       ],
@@ -731,16 +732,6 @@
         "measure_power": {
           "title": {
             "en": "Grid power"
-          }
-        },
-        "measure_power.grid_import": {
-          "title": {
-            "en": "Grid import"
-          }
-        },
-        "measure_power.grid_export": {
-          "title": {
-            "en": "Grid export"
           }
         },
         "meter_power.imported": {
@@ -1083,10 +1074,14 @@
       ],
       "capabilities": [
         "measure_power",
+        "stream_micro_power_solar",
         "meter_power",
         "measure_power.pv1",
+        "stream_micro_power_pv1",
         "measure_power.pv2",
-        "measure_power.grid"
+        "stream_micro_power_pv2",
+        "measure_power.grid",
+        "stream_micro_power_grid_feed"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -1515,6 +1510,62 @@
     }
   ],
   "widgets": {
+    "stream_balance": {
+      "name": {
+        "en": "STREAM Today Balance"
+      },
+      "settings": [
+        {
+          "id": "index",
+          "type": "number",
+          "title": {
+            "en": "STREAM system number"
+          },
+          "value": 1,
+          "min": 1,
+          "max": 10,
+          "hint": {
+            "en": "If you have more than one STREAM system, choose which one (1 = first)."
+          }
+        }
+      ],
+      "height": 254,
+      "api": {
+        "getBalance": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_balance"
+    },
+    "stream_battery_plan": {
+      "name": {
+        "en": "STREAM Battery Plan"
+      },
+      "settings": [
+        {
+          "id": "index",
+          "type": "number",
+          "title": {
+            "en": "STREAM system number"
+          },
+          "value": 1,
+          "min": 1,
+          "max": 10,
+          "hint": {
+            "en": "If you have more than one STREAM system, choose which one (1 = first)."
+          }
+        }
+      ],
+      "height": 254,
+      "api": {
+        "getBatteryPlan": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_battery_plan"
+    },
     "stream_flow": {
       "name": {
         "en": "STREAM Energy Flow"
@@ -1542,6 +1593,75 @@
         }
       },
       "id": "stream_flow"
+    },
+    "stream_solar_forecast": {
+      "name": {
+        "en": "STREAM Solar Target"
+      },
+      "settings": [
+        {
+          "id": "index",
+          "type": "number",
+          "title": {
+            "en": "STREAM system number"
+          },
+          "value": 1,
+          "min": 1,
+          "max": 10,
+          "hint": {
+            "en": "If you have more than one STREAM system, choose which one (1 = first)."
+          }
+        },
+        {
+          "id": "target",
+          "type": "number",
+          "title": {
+            "en": "Daily solar target (kWh)"
+          },
+          "value": 10,
+          "min": 1,
+          "max": 100,
+          "hint": {
+            "en": "Used until a real solar forecast source is added."
+          }
+        }
+      ],
+      "height": 254,
+      "api": {
+        "getSolarForecast": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_solar_forecast"
+    },
+    "stream_tariff_opportunity": {
+      "name": {
+        "en": "STREAM Tariff Opportunity"
+      },
+      "settings": [
+        {
+          "id": "index",
+          "type": "number",
+          "title": {
+            "en": "STREAM system number"
+          },
+          "value": 1,
+          "min": 1,
+          "max": 10,
+          "hint": {
+            "en": "If you have more than one STREAM system, choose which one (1 = first)."
+          }
+        }
+      ],
+      "height": 254,
+      "api": {
+        "getTariffOpportunity": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_tariff_opportunity"
     }
   },
   "capabilities": {
@@ -1832,6 +1952,111 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/capabilities/self-heating.svg",
+      "insights": true
+    },
+    "smartmeter_power_export": {
+      "type": "number",
+      "title": {
+        "en": "Grid export"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/grid-export.svg",
+      "insights": true
+    },
+    "smartmeter_power_grid": {
+      "type": "number",
+      "title": {
+        "en": "Grid power"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/grid-import-export.svg",
+      "insights": true
+    },
+    "smartmeter_power_import": {
+      "type": "number",
+      "title": {
+        "en": "Grid import"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/grid-import.svg",
+      "insights": true
+    },
+    "stream_micro_power_grid_feed": {
+      "type": "number",
+      "title": {
+        "en": "Grid feed"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/grid-export.svg",
+      "insights": true
+    },
+    "stream_micro_power_pv1": {
+      "type": "number",
+      "title": {
+        "en": "Solar PV1"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": true
+    },
+    "stream_micro_power_pv2": {
+      "type": "number",
+      "title": {
+        "en": "Solar PV2"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": true
+    },
+    "stream_micro_power_solar": {
+      "type": "number",
+      "title": {
+        "en": "Solar power"
+      },
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/solar-meter.svg",
       "insights": true
     },
     "stream_unit_power_ac1": {

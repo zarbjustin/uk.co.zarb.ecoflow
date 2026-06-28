@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Grid feed" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/grid-export.svg", "insights": true }

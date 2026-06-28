@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #EEF4F7; }
+    .card { height: 226px; padding: 14px 16px; border-radius: 16px; background: #1D2630; display: flex; flex-direction: column; gap: 13px; }
+    .head { font-size: 13px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .action { font-size: 30px; line-height: 1.05; font-weight: 800; color: #F6CE48; }
+    .reason { font-size: 13px; line-height: 1.25; color: #B6C5CB; min-height: 34px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: auto; }
+    .label { font-size: 10px; color: #98AAB3; text-transform: uppercase; letter-spacing: .35px; }
+    .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+    .muted { opacity: .55; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="head" id="title">Tariff Opportunity</div>
+    <div class="action" id="action">—</div>
+    <div class="reason" id="reason"></div>
+    <div class="grid">
+      <div><div class="label">Grid</div><div class="value" id="grid">—</div></div>
+      <div><div class="label">Battery</div><div class="value" id="soc">—</div></div>
+      <div><div class="label">Mode</div><div class="value" id="mode">—</div></div>
+      <div><div class="label">Feed-in</div><div class="value" id="feed">—</div></div>
+    </div>
+  </div>
+  <script>
+    function power(w) { return w == null ? '—' : Math.round(Math.abs(w)) + ' W'; }
+    function pct(v) { return v == null ? '—' : Math.round(v) + '%'; }
+    function label(v) { return v ? String(v).replace(/_/g, ' ') : '—'; }
+    function onHomeyReady(Homey) {
+      const index = Number((Homey.getSettings() || {}).index) || 1;
+      Homey.ready();
+      async function refresh() {
+        const d = await Homey.api('GET', '/?index=' + index, {});
+        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
+        document.getElementById('title').textContent = d.name || 'Tariff Opportunity';
+        document.getElementById('action').textContent = d.recommendation || 'Watch';
+        document.getElementById('reason').textContent = d.reason || '';
+        document.getElementById('grid').textContent = d.grid == null ? '—' : (d.grid < -5 ? 'Export ' : (d.grid > 5 ? 'Import ' : 'Flat ')) + power(d.grid);
+        document.getElementById('soc').textContent = pct(d.soc);
+        document.getElementById('mode').textContent = label(d.mode);
+        document.getElementById('feed').textContent = d.feedIn ? 'On' : 'Off';
+        document.getElementById('card').classList.toggle('muted', d.available === false);
+      }
+      refresh(); setInterval(refresh, 10000);
+    }
+  </script>
+</body>
+</html>

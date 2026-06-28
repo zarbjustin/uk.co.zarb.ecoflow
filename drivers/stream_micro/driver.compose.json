@@ -4,10 +4,14 @@
   "connectivity": ["cloud"],
   "capabilities": [
     "measure_power",
+    "stream_micro_power_solar",
     "meter_power",
     "measure_power.pv1",
+    "stream_micro_power_pv1",
     "measure_power.pv2",
-    "measure_power.grid"
+    "stream_micro_power_pv2",
+    "measure_power.grid",
+    "stream_micro_power_grid_feed"
   ],
   "capabilitiesOptions": {
     "measure_power": { "title": { "en": "Solar power" } },
