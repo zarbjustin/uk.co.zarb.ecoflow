@@ -88,5 +88,8 @@
   },
   "1.8.1": {
     "en": "Improve Homey device tile icons for STREAM capability status and controls."
+  },
+  "1.8.2": {
+    "en": "Add STREAM dashboard widgets and improve Smart Meter and Microinverter live icons/status indicators."
   }
 }
