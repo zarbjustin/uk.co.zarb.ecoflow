@@ -1,6 +1,7 @@
 {
   "name": { "en": "STREAM" },
   "class": "battery",
+  "platforms": ["local"],
   "connectivity": ["cloud"],
   "capabilities": [
     "measure_battery",

@@ -49,17 +49,38 @@
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
       Homey.get('mqtt_enabled', function (err, v) { if (!err && v === false) document.getElementById('mqtt').checked = false; });
 
-      document.getElementById('save').addEventListener('click', function () {
+      function saveSetting(Homey, key, value) {
+        return new Promise(function (resolve, reject) {
+          Homey.set(key, value, function (err) { if (err) reject(err); else resolve(); });
+        });
+      }
+
+      function validateCredentials(Homey, accessKey, secretKey, host) {
+        return new Promise(function (resolve, reject) {
+          Homey.api('POST', '/validate-credentials', { accessKey: accessKey, secretKey: secretKey, host: host }, function (err, result) {
+            if (err) reject(err); else resolve(result);
+          });
+        });
+      }
+
+      document.getElementById('save').addEventListener('click', async function () {
         var a = document.getElementById('accessKey').value.trim();
         var s = document.getElementById('secretKey').value.trim();
         var h = document.getElementById('host').value;
         var m = document.getElementById('mqtt').checked;
-        Homey.set('accessKey', a, function () {});
-        Homey.set('secretKey', s, function () {});
-        Homey.set('mqtt_enabled', m, function () {});
-        Homey.set('host', h, function () {
-          document.getElementById('saved').textContent = 'Saved. Restart paired devices to apply.';
-        });
+        var status = document.getElementById('saved');
+        if (!a || !s) { status.textContent = 'Access Key and Secret Key are required.'; return; }
+        status.textContent = 'Saving...';
+        try {
+          await validateCredentials(Homey, a, s, h);
+          await saveSetting(Homey, 'accessKey', a);
+          await saveSetting(Homey, 'secretKey', s);
+          await saveSetting(Homey, 'host', h);
+          await saveSetting(Homey, 'mqtt_enabled', m);
+          status.textContent = 'Saved. Running devices will apply the new connection settings.';
+        } catch (err) {
+          status.textContent = 'Could not save settings: ' + (err && err.message ? err.message : err);
+        }
       });
     }
   </script>

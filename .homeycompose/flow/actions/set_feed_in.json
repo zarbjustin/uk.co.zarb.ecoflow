@@ -7,6 +7,7 @@
     {
       "type": "dropdown",
       "name": "state",
+      "title": { "en": "Feed-in state" },
       "values": [
         { "id": "on", "title": { "en": "on" } },
         { "id": "off", "title": { "en": "off" } }

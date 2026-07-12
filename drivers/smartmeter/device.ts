@@ -3,6 +3,7 @@
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapSmartMeterQuota, accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
 import { toFiniteNumber } from '../../lib/quota';
+import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 
 /** Default titles for per-phase capabilities added dynamically. */
 const DYNAMIC_TITLES: Record<string, string> = {
@@ -24,6 +25,7 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private exportWh = 0;
   private lastTs = 0;
   private pendingCaps = new Set<string>();
+  private energyCheckpoint!: EnergyCheckpoint;
 
   private static readonly LIVE_POWER_CAPS = [
     'measure_power',
@@ -47,6 +49,10 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
     this.importWh = (this.getStoreValue('importWh') as number) || 0;
     this.exportWh = (this.getStoreValue('exportWh') as number) || 0;
+    this.energyCheckpoint = new EnergyCheckpoint(this.homey, async () => {
+      await this.setStoreValue('importWh', this.importWh);
+      await this.setStoreValue('exportWh', this.exportWh);
+    });
     await this.ensureCapabilities(SmartMeterDevice.LIVE_POWER_CAPS);
     await this.removeCapabilities(SmartMeterDevice.LEGACY_LIVE_POWER_CAPS);
     await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
@@ -91,8 +97,7 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
         if (next.importWh !== this.importWh || next.exportWh !== this.exportWh) {
           this.importWh = next.importWh;
           this.exportWh = next.exportWh;
-          await this.setStoreValue('importWh', this.importWh).catch(() => {});
-          await this.setStoreValue('exportWh', this.exportWh).catch(() => {});
+          this.energyCheckpoint.mark();
           await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
           await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
         }
@@ -104,6 +109,10 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
+  }
+
+  protected async onTeardown(): Promise<void> {
+    await this.energyCheckpoint?.flush();
   }
 
   protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {

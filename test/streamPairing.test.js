@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  collectStreamUnits, groupByMainSn, systemName,
+  collectStreamUnits, groupByMainSn, mapWithConcurrency, systemName,
 } = require('../.homeybuild/lib/streamPairing.js');
 
 const MAIN = 'BK61ZK1B2H720041';
@@ -49,4 +49,18 @@ test('systemName prefers the main unit name', async () => {
   assert.strictEqual(systemName(units, MAIN), 'STREAM Ultra X Right');
   assert.strictEqual(systemName(units, 'UNKNOWN'), 'STREAM Ultra X Right'); // falls back to first
   assert.strictEqual(systemName([], MAIN), 'EcoFlow STREAM');
+});
+
+test('mapWithConcurrency preserves result order and respects its limit', async () => {
+  let active = 0;
+  let peak = 0;
+  const result = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (value) => {
+    active += 1;
+    peak = Math.max(peak, active);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    active -= 1;
+    return value * 2;
+  });
+  assert.deepStrictEqual(result, [2, 4, 6, 8, 10]);
+  assert.strictEqual(peak, 2);
 });

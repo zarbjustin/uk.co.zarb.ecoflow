@@ -4,6 +4,7 @@ import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { perPvWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
+import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 
 /**
  * STREAM Microinverter as a Homey solarpanel device. `measure_power` is the PV
@@ -12,6 +13,7 @@ import { toFiniteNumber } from '../../lib/quota';
 module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
   private generatedWh = 0;
   private lastTs = 0;
+  private energyCheckpoint!: EnergyCheckpoint;
 
   private static readonly LIVE_POWER_CAPS = [
     'measure_power',
@@ -30,6 +32,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
 
   protected async onReady(): Promise<void> {
     this.generatedWh = (this.getStoreValue('generatedWh') as number) || 0;
+    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.setStoreValue('generatedWh', this.generatedWh));
     await this.ensureCapabilities(StreamMicroDevice.LIVE_POWER_CAPS);
     await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
   }
@@ -73,11 +76,15 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
         const next = integratePositivePower(this.generatedWh, power, dtMs);
         if (next !== this.generatedWh) {
           this.generatedWh = next;
-          await this.setStoreValue('generatedWh', this.generatedWh).catch(() => {});
+          this.energyCheckpoint.mark();
           await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
         }
       }
     }
+  }
+
+  protected async onTeardown(): Promise<void> {
+    await this.energyCheckpoint?.flush();
   }
 
   private async ensureCapabilities(caps: string[]): Promise<void> {

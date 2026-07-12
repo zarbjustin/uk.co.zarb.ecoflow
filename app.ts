@@ -6,14 +6,41 @@ import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
 module.exports = class EcoFlowApp extends Homey.App {
   private mqtt: EcoFlowMqtt | null = null;
   private mqttCredsKey = '';
+  private settingsTimer: NodeJS.Timeout | null = null;
 
   async onInit(): Promise<void> {
+    this.homey.settings.on('set', (key: string) => {
+      if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
+        if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
+        this.settingsTimer = this.homey.setTimeout(() => {
+          this.settingsTimer = null;
+          this.applyConnectionSettings().catch((e) => this.error('Apply connection settings', e));
+        }, 250);
+      }
+    });
     this.log('EcoFlow app initialised');
+  }
+
+  private async applyConnectionSettings(): Promise<void> {
+    if (this.homey.settings.get('mqtt_enabled') === false) {
+      await this.mqtt?.end().catch(() => {});
+      return;
+    }
+    if (!this.mqtt) return;
+    const { accessKey, secretKey, host } = this.getCredentials();
+    if (!accessKey || !secretKey) return;
+    const credsKey = `${accessKey}:${secretKey}:${host || ''}`;
+    this.mqtt.updateOptions({
+      accessKey, secretKey, host, log: (...a) => this.log('[mqtt]', ...a),
+    });
+    this.mqttCredsKey = credsKey;
+    await this.mqtt.reconnect();
   }
 
   async onUninit(): Promise<void> {
     // Close the shared MQTT session cleanly so EcoFlow's broker (one session per
     // account) doesn't reject the next start with a stale ghost connection.
+    if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
     await this.mqtt?.end().catch(() => {});
     this.mqtt = null;
   }

@@ -10,6 +10,24 @@ export interface StreamUnit {
   quota: Record<string, any>;
 }
 
+export async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await mapper(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, worker));
+  return results;
+}
+
 /**
  * Discover the controllable STREAM units (Ultra/Pro/AC/AC Pro/Max/Ultra X) on the
  * account, each resolved to its system main SN with its current quota. Shared by
@@ -18,24 +36,25 @@ export interface StreamUnit {
  */
 export async function collectStreamUnits(client: EcoFlowClient): Promise<StreamUnit[]> {
   const devices = await client.getDeviceList();
-  const out: StreamUnit[] = [];
-  for (const d of devices) {
+  const discovered = await mapWithConcurrency(devices, 4, async (d): Promise<StreamUnit | null> => {
+    const metadataKind = classifyDevice(d);
+    if (metadataKind !== 'stream_unit' && metadataKind !== 'other') return null;
     let quota: Record<string, any> = {};
     try {
       quota = await client.getQuotaAll(d.sn);
     } catch {
       quota = {};
     }
-    if (classifyDevice(d, quota) !== 'stream_unit') continue;
+    if (classifyDevice(d, quota) !== 'stream_unit') return null;
     let mainSn = d.sn;
     try {
       mainSn = await client.getMainSn(d.sn);
     } catch {
       mainSn = d.sn;
     }
-    out.push({ device: d, mainSn, quota });
-  }
-  return out;
+    return { device: d, mainSn, quota };
+  });
+  return discovered.filter((unit): unit is StreamUnit => unit !== null);
 }
 
 /** Group STREAM units by their system main SN. */

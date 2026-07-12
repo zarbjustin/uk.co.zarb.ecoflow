@@ -4,6 +4,7 @@ import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { perPvWatts, solarPowerWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
 import { collectStreamUnits } from '../../lib/streamPairing';
+import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 
 /**
  * STREAM solar generation as a Homey `solarpanel` device. `measure_power` is the
@@ -15,6 +16,7 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   private generatedWh = 0;
   private lastTs = 0;
   private attributionTimer: NodeJS.Timeout | null = null;
+  private energyCheckpoint!: EnergyCheckpoint;
 
   protected getReadSn(): string {
     return (this.getStoreValue('mainSn') as string) || this.getData().sn;
@@ -28,11 +30,12 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
       }
     }
     this.generatedWh = (this.getStoreValue('generatedWh') as number) || 0;
+    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.setStoreValue('generatedWh', this.generatedWh));
     await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
     await this.refreshAttributionSettings().catch((e) => this.error('refresh PV attribution', e));
     this.attributionTimer = this.homey.setInterval(() => {
       this.refreshAttributionSettings().catch((e) => this.error('refresh PV attribution', e));
-    }, 5 * 60 * 1000);
+    }, 30 * 60 * 1000);
   }
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
@@ -51,7 +54,7 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
         const next = integratePositivePower(this.generatedWh, power, dtMs);
         if (next !== this.generatedWh) {
           this.generatedWh = next;
-          await this.setStoreValue('generatedWh', this.generatedWh).catch(() => {});
+          this.energyCheckpoint.mark();
           await this.setCapabilityValue('meter_power', this.generatedWh / 1000).catch(() => {});
         }
       }
@@ -60,6 +63,7 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
 
   protected async onTeardown(): Promise<void> {
     if (this.attributionTimer) this.homey.clearInterval(this.attributionTimer);
+    await this.energyCheckpoint?.flush();
   }
 
   private async refreshAttributionSettings(): Promise<void> {

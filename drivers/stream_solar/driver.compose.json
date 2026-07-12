@@ -1,6 +1,7 @@
 {
   "name": { "en": "STREAM Solar" },
   "class": "solarpanel",
+  "platforms": ["local"],
   "connectivity": ["cloud"],
   "capabilities": [
     "measure_power",

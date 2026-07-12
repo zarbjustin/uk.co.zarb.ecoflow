@@ -1,6 +1,7 @@
 {
   "name": { "en": "STREAM Socket" },
   "class": "socket",
+  "platforms": ["local"],
   "connectivity": ["cloud"],
   "capabilities": [
     "onoff",

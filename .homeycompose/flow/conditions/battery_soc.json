@@ -7,11 +7,12 @@
     {
       "type": "dropdown",
       "name": "direction",
+      "title": { "en": "Direction" },
       "values": [
         { "id": "above", "title": { "en": "above" } },
         { "id": "below", "title": { "en": "below" } }
       ]
     },
-    { "type": "number", "name": "level", "min": 0, "max": 100, "step": 1, "placeholder": { "en": "%" } }
+    { "type": "number", "name": "level", "title": { "en": "Battery level" }, "min": 0, "max": 100, "step": 1, "placeholder": { "en": "%" } }
   ]
 }

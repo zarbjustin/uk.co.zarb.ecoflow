@@ -26,6 +26,11 @@ function pickDevice(homey, query) {
     return { error: 'no_driver' };
   }
   if (!devices.length) return { error: 'no_device' };
+  if (query.deviceId) {
+    const selected = devices.find((device) => device.getId() === query.deviceId);
+    if (selected) return { device: selected };
+    return { error: 'device_not_found' };
+  }
   const idx = Math.min(devices.length - 1, Math.max(0, (parseInt(query.index, 10) || 1) - 1));
   return { device: devices[idx] };
 }

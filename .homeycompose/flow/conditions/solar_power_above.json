@@ -4,6 +4,6 @@
   "titleFormatted": { "en": "Solar power !{{is|is not}} above [[watts]] W" },
   "args": [
     { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "watts", "min": 0, "max": 10000, "step": 10, "placeholder": { "en": "W" } }
+    { "type": "number", "name": "watts", "title": { "en": "Solar power" }, "min": 0, "max": 10000, "step": 10, "placeholder": { "en": "W" } }
   ]
 }

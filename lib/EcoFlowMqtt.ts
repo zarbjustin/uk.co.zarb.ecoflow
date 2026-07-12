@@ -44,7 +44,7 @@ export class EcoFlowMqtt {
   async connect(): Promise<void> {
     if (this.client) return; // already connected / establishing
     if (this.connecting) {
-      await this.connecting.catch(() => {});
+      await this.connecting;
       return;
     }
     this.ended = false;
@@ -64,6 +64,8 @@ export class EcoFlowMqtt {
   /** Force a reconnect (e.g. after credentials changed), keeping subscriptions. */
   async reconnect(): Promise<void> {
     if (this.client) {
+      this.client.removeAllListeners('close');
+      this.client.removeAllListeners('offline');
       try {
         this.client.end(true);
       } catch { /* ignore */ }
@@ -93,20 +95,39 @@ export class EcoFlowMqtt {
     });
     this.client = client;
     client.on('message', (topic, payload) => this.onMessage(topic, payload));
-    client.on('error', (e) => this.log('error', e?.message || e));
-    client.on('connect', () => {
-      this.backoffMs = 0;
-      this.log('connected');
-      for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
-    });
     client.on('close', () => this.onDisconnect('close'));
     client.on('offline', () => this.onDisconnect('offline'));
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      client.once('connect', () => {
+        settled = true;
+        this.backoffMs = 0;
+        this.log('connected');
+        for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
+        resolve();
+      });
+      client.once('close', () => {
+        if (!settled) reject(new Error('MQTT connection closed before it was ready'));
+      });
+      client.on('error', (e) => {
+        this.log('error', e?.message || e);
+        if (!settled) reject(e);
+      });
+    }).catch((e) => {
+      if (this.client === client) this.client = null;
+      client.removeAllListeners('close');
+      client.removeAllListeners('offline');
+      client.end(true);
+      throw e;
+    });
   }
 
   private onDisconnect(reason: string): void {
     if (this.ended) return;
     this.log('disconnected', reason);
     if (this.client) {
+      this.client.removeAllListeners('close');
+      this.client.removeAllListeners('offline');
       try {
         this.client.end(true);
       } catch { /* ignore */ }
@@ -124,7 +145,7 @@ export class EcoFlowMqtt {
     // eslint-disable-next-line homey-app/global-timers
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.establish().catch((e) => {
+      this.connect().catch((e) => {
         this.log('reconnect failed', e?.message || e);
         this.scheduleReconnect();
       });

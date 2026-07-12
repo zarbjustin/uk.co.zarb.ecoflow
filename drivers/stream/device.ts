@@ -6,6 +6,8 @@ import { integrateSignedPower, followResettableCounter } from '../../lib/energyI
 import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
+import { powerDirection, PowerDirection, startedDirection } from '../../lib/flowStates';
+import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 
@@ -33,10 +35,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
   private prevMode: string | undefined;
-  private prevCharging: boolean | null | undefined;
-  private prevExporting: boolean | undefined;
+  private prevBatteryDirection: PowerDirection | undefined;
+  private prevGridDirection: PowerDirection | undefined;
   private prevOnline: boolean | undefined;
-  private faulted = false;
+  private activeFaults = new Map<string, number>();
   // Locally-integrated cumulative battery energy (Wh). Prefer the device's own
   // counters (accuChgEnergy/accuDsgEnergy via MQTT, reset-protected); fall back
   // to integrating battery power when only the sparse REST snapshot is available.
@@ -45,6 +47,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private chargedRawWh: number | undefined;
   private dischargedRawWh: number | undefined;
   private lastEnergyTs = 0;
+  private energyCheckpoint!: EnergyCheckpoint;
 
   protected getReadSn(): string {
     return this.getData().sn;
@@ -60,6 +63,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
     this.chargedRawWh = this.getStoreValue('chargedRawWh') as number | undefined;
     this.dischargedRawWh = this.getStoreValue('dischargedRawWh') as number | undefined;
+    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistBatteryStore());
 
     this.registerControlListeners();
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
@@ -101,7 +105,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private async refreshHistory(): Promise<void> {
     const prefix = (this.getSetting('history_prefix') as string) || 'BK621';
-    const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix);
+    const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix, this.homey.clock.getTimezone());
     await this.applyDailyEnergy(daily);
   }
 
@@ -179,11 +183,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
     // Capture the interval and re-anchor the timestamp SYNCHRONOUSLY (before any
     // await) so a concurrent applyQuota (poll + MQTT) can't double-count.
-    const now = Date.now();
-    const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
-    this.lastEnergyTs = now;
-
     if (hasChg || hasDsg) {
+      this.lastEnergyTs = Date.now();
       let changed = false;
       if (hasChg) {
         const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
@@ -197,11 +198,15 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         this.dischargedWh = r.totalWh;
         this.dischargedRawWh = r.lastRawWh;
       }
-      if (changed) await this.persistBatteryEnergy();
+      if (changed) await this.updateBatteryEnergyCapabilities();
       return;
     }
 
-    if (typeof batteryPowerW !== 'number' || dtMs <= 0) return;
+    if (typeof batteryPowerW !== 'number') return;
+    const now = Date.now();
+    const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
+    this.lastEnergyTs = now;
+    if (dtMs <= 0) return;
     const next = integrateSignedPower(
       { posWh: this.chargedWh, negWh: this.dischargedWh },
       batteryPowerW,
@@ -210,17 +215,21 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
       this.chargedWh = next.posWh;
       this.dischargedWh = next.negWh;
-      await this.persistBatteryEnergy();
+      await this.updateBatteryEnergyCapabilities();
     }
   }
 
-  private async persistBatteryEnergy(): Promise<void> {
+  private async updateBatteryEnergyCapabilities(): Promise<void> {
+    this.energyCheckpoint.mark();
+    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+  }
+
+  private async persistBatteryStore(): Promise<void> {
     await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
     await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
     if (this.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', this.chargedRawWh).catch(() => {});
     if (this.dischargedRawWh !== undefined) await this.setStoreValue('dischargedRawWh', this.dischargedRawWh).catch(() => {});
-    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
   }
 
   private fireTriggers(values: Record<string, number | boolean | string>): void {
@@ -233,30 +242,24 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     const grid = values['measure_power.grid'];
     if (typeof grid === 'number' && grid !== this.prevGrid) {
       flow.getDeviceTriggerCard('grid_power_changed').trigger(this, { power: grid }).catch(() => {});
-      const exporting = grid < -5;
-      if (this.prevExporting !== undefined && exporting !== this.prevExporting) {
-        const card = exporting ? 'grid_export_started' : 'grid_import_started';
+      const direction = powerDirection(grid);
+      const started = startedDirection(this.prevGridDirection, direction);
+      if (started !== null) {
+        const card = started < 0 ? 'grid_export_started' : 'grid_import_started';
         flow.getDeviceTriggerCard(card).trigger(this, { power: grid }).catch(() => {});
       }
-      this.prevExporting = exporting;
+      this.prevGridDirection = direction;
       this.prevGrid = grid;
     }
     const battPower = values['measure_power'];
     if (typeof battPower === 'number') {
-      // Resolve charge state including the idle band so the edge is detected
-      // correctly across charging -> idle -> charging transitions.
-      let nowCharging: boolean | null = null;
-      if (battPower > 5) nowCharging = true;
-      else if (battPower < -5) nowCharging = false;
-      if (nowCharging !== null) {
-        if (this.prevCharging !== undefined && this.prevCharging !== null && nowCharging !== this.prevCharging) {
-          const card = nowCharging ? 'charging_started' : 'discharging_started';
-          flow.getDeviceTriggerCard(card).trigger(this, { power: battPower }).catch(() => {});
-        }
-        this.prevCharging = nowCharging;
-      } else {
-        this.prevCharging = null;
+      const direction = powerDirection(battPower);
+      const started = startedDirection(this.prevBatteryDirection, direction);
+      if (started !== null) {
+        const card = started > 0 ? 'charging_started' : 'discharging_started';
+        flow.getDeviceTriggerCard(card).trigger(this, { power: battPower }).catch(() => {});
       }
+      this.prevBatteryDirection = direction;
     }
     const mode = values['operating_mode'];
     if (typeof mode === 'string' && mode !== this.prevMode) {
@@ -285,24 +288,32 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       ['pv1ErrCode', 'pv1'],
       ['pv2ErrCode', 'pv2'],
     ];
-    let active: { source: string; code: number } | null = null;
+    const current = new Map(this.activeFaults);
+    let sawFaultField = false;
     for (const [key, source] of codes) {
+      if (!(key in quota)) continue;
+      sawFaultField = true;
       const v = Number(quota[key]);
       if (Number.isFinite(v) && v !== 0) {
-        active = { source, code: v };
-        break;
+        current.set(source, v);
+      } else {
+        current.delete(source);
       }
     }
-    const isFaulted = active !== null;
+    if (!sawFaultField) return;
+    const isFaulted = current.size > 0;
     if (this.hasCapability('alarm_generic') && this.getCapabilityValue('alarm_generic') !== isFaulted) {
       this.setCapabilityValue('alarm_generic', isFaulted).catch(() => {});
     }
-    if (active && !this.faulted) {
-      this.homey.flow.getDeviceTriggerCard('fault_raised').trigger(this, active).catch(() => {});
-    } else if (!isFaulted && this.faulted) {
+    for (const [source, code] of current) {
+      if (this.activeFaults.get(source) !== code) {
+        this.homey.flow.getDeviceTriggerCard('fault_raised').trigger(this, { source, code }).catch(() => {});
+      }
+    }
+    if (!isFaulted && this.activeFaults.size > 0) {
       this.homey.flow.getDeviceTriggerCard('fault_cleared').trigger(this).catch(() => {});
     }
-    this.faulted = isFaulted;
+    this.activeFaults = current;
   }
 
   /** Condition + action helpers used by flow cards. */
@@ -350,8 +361,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    * battery fills during a cheap window (e.g. Octopus Agile low-price slots).
    */
   async flowPrepareCheapImport(reserve: number): Promise<void> {
-    await this.send(StreamCmd.chargeLimit(this.mainSn, 100));
-    await this.send(StreamCmd.backupReserve(this.mainSn, reserve));
+    await this.sendSequence('Prepare for cheap import', [
+      StreamCmd.chargeLimit(this.mainSn, 100),
+      StreamCmd.backupReserve(this.mainSn, reserve),
+    ]);
     await this.setCapabilityValue('charge_limit', 100).catch(() => {});
     await this.setCapabilityValue('backup_reserve_soc', reserve).catch(() => {});
   }
@@ -362,10 +375,29 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    * during a high-price window.
    */
   async flowPreparePeakExport(reserve: number): Promise<void> {
-    await this.send(StreamCmd.backupReserve(this.mainSn, reserve));
-    await this.send(StreamCmd.feedIn(this.mainSn, true));
+    await this.sendSequence('Prepare for peak export', [
+      StreamCmd.backupReserve(this.mainSn, reserve),
+      StreamCmd.feedIn(this.mainSn, true),
+    ]);
     await this.setCapabilityValue('backup_reserve_soc', reserve).catch(() => {});
     await this.setCapabilityValue('feed_in_control', true).catch(() => {});
+  }
+
+  private async sendSequence(label: string, payloads: Record<string, any>[]): Promise<void> {
+    let completed = 0;
+    try {
+      for (const payload of payloads) {
+        await this.client.setQuota(payload);
+        completed += 1;
+      }
+      await this.setWarning(null).catch(() => {});
+      this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
+    } catch (e: any) {
+      const message = `${label} partly applied (${completed}/${payloads.length} commands). Check device state.`;
+      await this.setWarning(message).catch(() => {});
+      this.homey.setTimeout(() => this.poll().catch((pollError) => this.error('post-set poll', pollError)), 1500);
+      throw new Error(`${message} ${e?.message || e}`);
+    }
   }
 
   /** Battery SoC condition helper. */
@@ -387,5 +419,6 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   protected async onTeardown(): Promise<void> {
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
+    await this.energyCheckpoint?.flush();
   }
 };

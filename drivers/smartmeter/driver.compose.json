@@ -1,6 +1,7 @@
 {
   "name": { "en": "Smart Meter" },
   "class": "sensor",
+  "platforms": ["local"],
   "connectivity": ["cloud"],
   "capabilities": [
     "measure_power",

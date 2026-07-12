@@ -92,13 +92,15 @@
     function onHomeyReady(Homey) {
       const settings = Homey.getSettings() || {};
       const index = Number(settings.index) || 1;
+      const deviceId = (Homey.getDeviceIds && Homey.getDeviceIds()[0]) || '';
+      const selector = deviceId ? '&deviceId=' + encodeURIComponent(deviceId) : '';
       Homey.ready();
 
       function set(id, text) { document.getElementById(id).textContent = text; }
 
       async function refresh() {
         try {
-          const d = await Homey.api('GET', '/?index=' + index, {});
+          const d = await Homey.api('GET', '/?index=' + index + selector, {});
           if (!d || !d.ok) {
             set('title', 'No STREAM system found');
             return;
@@ -128,7 +130,8 @@
 
           document.querySelector('.card').classList.toggle('muted', d.available === false);
         } catch (e) {
-          // keep last values on transient errors
+          set('title', 'STREAM data unavailable');
+          document.querySelector('.card').classList.add('muted');
         }
       }
 

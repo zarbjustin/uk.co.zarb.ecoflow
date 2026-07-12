@@ -1,16 +1,11 @@
 {
   "name": { "en": "STREAM Energy Flow" },
-  "settings": [
-    {
-      "id": "index",
-      "type": "number",
-      "title": { "en": "STREAM system number" },
-      "value": 1,
-      "min": 1,
-      "max": 10,
-      "hint": { "en": "If you have more than one STREAM system, choose which one (1 = first)." }
-    }
-  ],
+  "devices": {
+    "type": "app",
+    "singular": true,
+    "filter": { "capabilities": "alarm_generic,measure_battery" }
+  },
+  "settings": [],
   "height": 254,
   "api": {
     "getFlow": { "method": "GET", "path": "/" }

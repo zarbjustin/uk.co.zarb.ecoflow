@@ -19,6 +19,12 @@
   ],
   "brandColor": "#000000",
   "permissions": [],
+  "api": {
+    "validateCredentials": {
+      "method": "POST",
+      "path": "/validate-credentials"
+    }
+  },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",
   "source": "https://github.com/zarbjustin/uk.co.zarb.ecoflow",
   "images": {
@@ -49,6 +55,9 @@
           {
             "type": "dropdown",
             "name": "direction",
+            "title": {
+              "en": "Direction"
+            },
             "values": [
               {
                 "id": "above",
@@ -67,6 +76,9 @@
           {
             "type": "number",
             "name": "level",
+            "title": {
+              "en": "Battery level"
+            },
             "min": 0,
             "max": 100,
             "step": 1,
@@ -342,6 +354,9 @@
           {
             "type": "dropdown",
             "name": "direction",
+            "title": {
+              "en": "Direction"
+            },
             "values": [
               {
                 "id": "above",
@@ -360,6 +375,9 @@
           {
             "type": "number",
             "name": "level",
+            "title": {
+              "en": "Battery level"
+            },
             "min": 0,
             "max": 100,
             "step": 1,
@@ -425,6 +443,9 @@
           {
             "type": "dropdown",
             "name": "mode",
+            "title": {
+              "en": "Operating mode"
+            },
             "values": [
               {
                 "id": "self_powered",
@@ -471,6 +492,9 @@
           {
             "type": "number",
             "name": "watts",
+            "title": {
+              "en": "Solar power"
+            },
             "min": 0,
             "max": 10000,
             "step": 10,
@@ -502,6 +526,9 @@
           {
             "type": "number",
             "name": "reserve",
+            "title": {
+              "en": "Reserve level"
+            },
             "min": 3,
             "max": 95,
             "step": 1,
@@ -531,6 +558,9 @@
           {
             "type": "number",
             "name": "reserve",
+            "title": {
+              "en": "Reserve level"
+            },
             "min": 3,
             "max": 95,
             "step": 1,
@@ -570,6 +600,9 @@
           {
             "type": "number",
             "name": "level",
+            "title": {
+              "en": "Reserve level"
+            },
             "min": 3,
             "max": 95,
             "step": 1,
@@ -596,6 +629,9 @@
           {
             "type": "range",
             "name": "level",
+            "title": {
+              "en": "Charge limit"
+            },
             "min": 50,
             "max": 100,
             "step": 1,
@@ -621,6 +657,9 @@
           {
             "type": "range",
             "name": "level",
+            "title": {
+              "en": "Discharge limit"
+            },
             "min": 0,
             "max": 30,
             "step": 1,
@@ -646,6 +685,9 @@
           {
             "type": "dropdown",
             "name": "state",
+            "title": {
+              "en": "Feed-in state"
+            },
             "values": [
               {
                 "id": "on",
@@ -680,6 +722,9 @@
           {
             "type": "dropdown",
             "name": "mode",
+            "title": {
+              "en": "Operating mode"
+            },
             "values": [
               {
                 "id": "self_powered",
@@ -717,6 +762,9 @@
         "en": "Smart Meter"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "connectivity": [
         "cloud"
       ],
@@ -818,6 +866,9 @@
         "en": "STREAM"
       },
       "class": "battery",
+      "platforms": [
+        "local"
+      ],
       "connectivity": [
         "cloud"
       ],
@@ -1069,6 +1120,9 @@
         "en": "STREAM Microinverter"
       },
       "class": "solarpanel",
+      "platforms": [
+        "local"
+      ],
       "connectivity": [
         "cloud"
       ],
@@ -1156,6 +1210,9 @@
         "en": "STREAM Socket"
       },
       "class": "socket",
+      "platforms": [
+        "local"
+      ],
       "connectivity": [
         "cloud"
       ],
@@ -1206,6 +1263,9 @@
         "en": "STREAM Solar"
       },
       "class": "solarpanel",
+      "platforms": [
+        "local"
+      ],
       "connectivity": [
         "cloud"
       ],
@@ -1293,6 +1353,9 @@
         "en": "STREAM Unit"
       },
       "class": "battery",
+      "platforms": [
+        "local"
+      ],
       "connectivity": [
         "cloud"
       ],
@@ -1514,21 +1577,14 @@
       "name": {
         "en": "STREAM Today Balance"
       },
-      "settings": [
-        {
-          "id": "index",
-          "type": "number",
-          "title": {
-            "en": "STREAM system number"
-          },
-          "value": 1,
-          "min": 1,
-          "max": 10,
-          "hint": {
-            "en": "If you have more than one STREAM system, choose which one (1 = first)."
-          }
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "capabilities": "alarm_generic,measure_battery"
         }
-      ],
+      },
+      "settings": [],
       "height": 254,
       "api": {
         "getBalance": {
@@ -1542,21 +1598,14 @@
       "name": {
         "en": "STREAM Battery Plan"
       },
-      "settings": [
-        {
-          "id": "index",
-          "type": "number",
-          "title": {
-            "en": "STREAM system number"
-          },
-          "value": 1,
-          "min": 1,
-          "max": 10,
-          "hint": {
-            "en": "If you have more than one STREAM system, choose which one (1 = first)."
-          }
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "capabilities": "alarm_generic,measure_battery"
         }
-      ],
+      },
+      "settings": [],
       "height": 254,
       "api": {
         "getBatteryPlan": {
@@ -1570,21 +1619,14 @@
       "name": {
         "en": "STREAM Energy Flow"
       },
-      "settings": [
-        {
-          "id": "index",
-          "type": "number",
-          "title": {
-            "en": "STREAM system number"
-          },
-          "value": 1,
-          "min": 1,
-          "max": 10,
-          "hint": {
-            "en": "If you have more than one STREAM system, choose which one (1 = first)."
-          }
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "capabilities": "alarm_generic,measure_battery"
         }
-      ],
+      },
+      "settings": [],
       "height": 254,
       "api": {
         "getFlow": {
@@ -1598,20 +1640,14 @@
       "name": {
         "en": "STREAM Solar Target"
       },
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "capabilities": "alarm_generic,measure_battery"
+        }
+      },
       "settings": [
-        {
-          "id": "index",
-          "type": "number",
-          "title": {
-            "en": "STREAM system number"
-          },
-          "value": 1,
-          "min": 1,
-          "max": 10,
-          "hint": {
-            "en": "If you have more than one STREAM system, choose which one (1 = first)."
-          }
-        },
         {
           "id": "target",
           "type": "number",
@@ -1639,21 +1675,14 @@
       "name": {
         "en": "STREAM Tariff Opportunity"
       },
-      "settings": [
-        {
-          "id": "index",
-          "type": "number",
-          "title": {
-            "en": "STREAM system number"
-          },
-          "value": 1,
-          "min": 1,
-          "max": 10,
-          "hint": {
-            "en": "If you have more than one STREAM system, choose which one (1 = first)."
-          }
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "capabilities": "alarm_generic,measure_battery"
         }
-      ],
+      },
+      "settings": [],
       "height": 254,
       "api": {
         "getTariffOpportunity": {

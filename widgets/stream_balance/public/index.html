@@ -42,9 +42,11 @@
     function pct(v) { return v == null ? '—' : Math.round(v) + '%'; }
     function onHomeyReady(Homey) {
       const index = Number((Homey.getSettings() || {}).index) || 1;
+      const deviceId = (Homey.getDeviceIds && Homey.getDeviceIds()[0]) || '';
+      const selector = deviceId ? '&deviceId=' + encodeURIComponent(deviceId) : '';
       Homey.ready();
       async function refresh() {
-        const d = await Homey.api('GET', '/?index=' + index, {});
+        const d = await Homey.api('GET', '/?index=' + index + selector, {});
         if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
         document.getElementById('title').textContent = d.name || 'Today’s Energy';
         document.getElementById('solar').textContent = kwh(d.solarToday);
@@ -56,7 +58,13 @@
         document.getElementById('foot').textContent = d.co2Today == null ? '' : 'CO2 avoided ' + d.co2Today.toFixed(2) + ' kg';
         document.getElementById('card').classList.toggle('muted', d.available === false);
       }
-      refresh(); setInterval(refresh, 30000);
+      function scheduledRefresh() {
+        refresh().catch(function () {
+          document.getElementById('title').textContent = 'STREAM data unavailable';
+          document.getElementById('card').classList.add('muted');
+        });
+      }
+      scheduledRefresh(); setInterval(scheduledRefresh, 30000);
     }
   </script>
 </body>

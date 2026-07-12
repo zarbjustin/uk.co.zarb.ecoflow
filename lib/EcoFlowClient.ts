@@ -1,8 +1,10 @@
 'use strict';
 
 import https from 'https';
+import crypto from 'crypto';
 import { URL } from 'url';
 import { authHeaders } from './sign';
+import { normalizeApiHost } from './apiHost';
 import {
   AppCertification, EcoFlowDevice, HistoryPoint, Quota,
 } from './types';
@@ -30,24 +32,29 @@ export class EcoFlowApiError extends Error {
  * Handles HMAC-SHA256 request signing and the documented endpoints.
  */
 export class EcoFlowClient {
+  private static readonly responseCache = new Map<string, { expires: number; value: any }>();
+  private static readonly inFlight = new Map<string, Promise<any>>();
   private readonly accessKey: string;
   private readonly secretKey: string;
   private readonly host: string;
   private readonly log: (...args: any[]) => void;
+  private readonly cacheIdentity: string;
 
   constructor(opts: EcoFlowClientOptions) {
     if (!opts.accessKey || !opts.secretKey) throw new Error('accessKey and secretKey are required');
     this.accessKey = opts.accessKey;
     this.secretKey = opts.secretKey;
-    this.host = (opts.host || 'https://api.ecoflow.com').replace(/\/$/, '');
+    this.host = normalizeApiHost(opts.host);
     this.log = opts.log || (() => {});
+    const secretFingerprint = crypto.createHmac('sha256', this.secretKey).update('ecoflow-cache').digest('hex');
+    this.cacheIdentity = `${this.host}:${this.accessKey}:${secretFingerprint}`;
   }
 
   // ----- Public endpoints --------------------------------------------------
 
   /** GET /iot-open/sign/device/list — devices bound to the account. */
   async getDeviceList(): Promise<EcoFlowDevice[]> {
-    const data = await this.request('GET', '/iot-open/sign/device/list');
+    const data = await this.cachedRequest('device-list', 30000, () => this.request('GET', '/iot-open/sign/device/list'));
     return (data as EcoFlowDevice[]) || [];
   }
 
@@ -56,13 +63,17 @@ export class EcoFlowClient {
    * multi-device STREAM/BKW system. Most STREAM commands target the main SN.
    */
   async getMainSn(anySn: string): Promise<string> {
-    const data = await this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn } });
+    const data = await this.cachedRequest(`main-sn:${anySn}`, 5 * 60 * 1000, () => (
+      this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn } })
+    ));
     return (data && (data.sn as string)) || anySn;
   }
 
   /** GET /iot-open/sign/device/quota/all — all current quota fields (flat map). */
   async getQuotaAll(sn: string): Promise<Quota> {
-    const data = await this.request('GET', '/iot-open/sign/device/quota/all', { query: { sn } });
+    const data = await this.cachedRequest(`quota:${sn}`, 1500, () => (
+      this.request('GET', '/iot-open/sign/device/quota/all', { query: { sn } })
+    ));
     return (data as Quota) || {};
   }
 
@@ -97,6 +108,20 @@ export class EcoFlowClient {
   }
 
   // ----- Transport ---------------------------------------------------------
+
+  private async cachedRequest<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
+    const fullKey = `${this.cacheIdentity}:${key}`;
+    const cached = EcoFlowClient.responseCache.get(fullKey);
+    if (cached && cached.expires > Date.now()) return cached.value as T;
+    const existing = EcoFlowClient.inFlight.get(fullKey);
+    if (existing) return existing as Promise<T>;
+    const request = load().then((value) => {
+      EcoFlowClient.responseCache.set(fullKey, { expires: Date.now() + ttlMs, value });
+      return value;
+    }).finally(() => EcoFlowClient.inFlight.delete(fullKey));
+    EcoFlowClient.inFlight.set(fullKey, request);
+    return request;
+  }
 
   private request(
     method: 'GET' | 'POST' | 'PUT',

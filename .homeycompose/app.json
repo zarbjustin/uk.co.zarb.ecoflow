@@ -18,6 +18,12 @@
   ],
   "brandColor": "#000000",
   "permissions": [],
+  "api": {
+    "validateCredentials": {
+      "method": "POST",
+      "path": "/validate-credentials"
+    }
+  },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",
   "source": "https://github.com/zarbjustin/uk.co.zarb.ecoflow",
   "images": {

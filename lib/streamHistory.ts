@@ -32,9 +32,13 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-/** Today's UTC range in the API's 'yyyy-MM-dd HH:mm:ss' format. */
-export function todayRangeUtc(now = new Date()): { beginTime: string; endTime: string } {
-  const d = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
+/** Today's Homey-local range in the API's 'yyyy-MM-dd HH:mm:ss' format. */
+export function todayRange(now = new Date(), timeZone = 'UTC'): { beginTime: string; endTime: string } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  const d = `${value('year')}-${pad(Number(value('month')))}-${pad(Number(value('day')))}`;
   return { beginTime: `${d} 00:00:00`, endTime: `${d} 23:59:59` };
 }
 
@@ -43,8 +47,9 @@ export async function fetchDailyEnergy(
   client: EcoFlowClient,
   sn: string,
   prefix = 'BK621',
+  timeZone = 'UTC',
 ): Promise<DailyEnergy> {
-  const { beginTime, endTime } = todayRangeUtc();
+  const { beginTime, endTime } = todayRange(new Date(), timeZone);
   const code = (k: string) => CODES[k].replace('PFX', prefix);
   const get = async (k: string) => {
     try {
