@@ -97,5 +97,8 @@
   },
   "1.8.4": {
     "en": "Improve STREAM device icons, model identification, and Home Battery pairing."
+  },
+  "1.8.5": {
+    "en": "Add support for optional PayPal donations through Homey's native Donate button."
   }
 }

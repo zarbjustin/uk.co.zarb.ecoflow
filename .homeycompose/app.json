@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -26,6 +26,13 @@
   },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",
   "source": "https://github.com/zarbjustin/uk.co.zarb.ecoflow",
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "zarbie"
+      }
+    }
+  },
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
