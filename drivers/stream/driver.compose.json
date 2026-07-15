@@ -1,5 +1,5 @@
 {
-  "name": { "en": "STREAM" },
+  "name": { "en": "STREAM Home Battery" },
   "class": "battery",
   "platforms": ["local"],
   "connectivity": ["cloud"],

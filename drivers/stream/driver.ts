@@ -2,7 +2,7 @@
 
 import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
-import { collectStreamUnits, groupByMainSn, systemName } from '../../lib/streamPairing';
+import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -67,11 +67,17 @@ module.exports = class StreamDriver extends Homey.Driver {
     session.setHandler('list_devices', async () => {
       const client = clientFromSettings(this);
       const units = await collectStreamUnits(client);
-      // A multi-unit STREAM installation is one "system" addressed by its main
-      // SN; surface a single system device per group, named after its main unit.
+      // A multi-unit STREAM installation is one household battery addressed by
+      // its main SN. Only add the physical main-unit name when multiple systems
+      // need to be distinguished from each other.
       const results: any[] = [];
-      for (const [mainSn, groupUnits] of groupByMainSn(units)) {
-        results.push({ name: systemName(groupUnits, mainSn), data: { sn: mainSn }, store: { mainSn } });
+      const groups = groupByMainSn(units);
+      for (const [mainSn, groupUnits] of groups) {
+        results.push({
+          name: householdBatteryName(groupUnits, mainSn, groups.size > 1),
+          data: { sn: mainSn },
+          store: { mainSn },
+        });
       }
       return results;
     });

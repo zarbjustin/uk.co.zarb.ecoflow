@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  collectStreamUnits, groupByMainSn, mapWithConcurrency, systemName,
+  collectStreamUnits, groupByMainSn, householdBatteryName, mapWithConcurrency, systemName,
 } = require('../.homeybuild/lib/streamPairing.js');
 
 const MAIN = 'BK61ZK1B2H720041';
@@ -49,6 +49,19 @@ test('systemName prefers the main unit name', async () => {
   assert.strictEqual(systemName(units, MAIN), 'STREAM Ultra X Right');
   assert.strictEqual(systemName(units, 'UNKNOWN'), 'STREAM Ultra X Right'); // falls back to first
   assert.strictEqual(systemName([], MAIN), 'EcoFlow STREAM');
+});
+
+test('householdBatteryName identifies the aggregate home battery', () => {
+  const units = [{
+    device: { sn: MAIN, deviceName: 'STREAM Ultra X Right' },
+    mainSn: MAIN,
+    quota: {},
+  }];
+  assert.strictEqual(householdBatteryName(units, MAIN), 'STREAM Home Battery');
+  assert.strictEqual(
+    householdBatteryName(units, MAIN, true),
+    'STREAM Home Battery (STREAM Ultra X Right)',
+  );
 });
 
 test('mapWithConcurrency preserves result order and respects its limit', async () => {

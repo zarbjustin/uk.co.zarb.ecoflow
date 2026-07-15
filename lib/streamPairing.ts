@@ -73,3 +73,12 @@ export function systemName(units: StreamUnit[], mainSn: string): string {
   const main = units.find((u) => u.device.sn === mainSn);
   return main?.device.deviceName || units[0]?.device.deviceName || 'EcoFlow STREAM';
 }
+
+export function householdBatteryName(
+  units: StreamUnit[],
+  mainSn: string,
+  includeSystemName = false,
+): string {
+  const base = 'STREAM Home Battery';
+  return includeSystemName ? `${base} (${systemName(units, mainSn)})` : base;
+}

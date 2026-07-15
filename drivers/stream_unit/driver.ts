@@ -3,6 +3,7 @@
 import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits } from '../../lib/streamPairing';
+import { streamModelFromSn } from '../../lib/streamModels';
 
 module.exports = class StreamUnitDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -16,11 +17,15 @@ module.exports = class StreamUnitDriver extends Homey.Driver {
       const client = clientFromSettings(this);
       // Each physical STREAM inverter/battery unit becomes its own device.
       const units = await collectStreamUnits(client);
-      return units.map((u) => ({
-        name: u.device.deviceName || 'EcoFlow STREAM Unit',
-        data: { sn: u.device.sn },
-        store: { mainSn: u.mainSn },
-      }));
+      return units.map((u) => {
+        const model = streamModelFromSn(u.device.sn);
+        return {
+          name: u.device.deviceName || model.model,
+          data: { sn: u.device.sn },
+          store: { mainSn: u.mainSn },
+          ...(model.icon ? { icon: model.icon } : {}),
+        };
+      });
     });
   }
 };

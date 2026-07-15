@@ -20,10 +20,13 @@ export interface StreamModelSpec {
   energySource: string;
   /** Rated AC output, noting the paired/parallel figure where supported. */
   acOutput: string;
+  /** Optional model-specific icon, relative to the STREAM Unit assets folder. */
+  icon?: string;
 }
 
 const SOLAR_SOURCE = 'Solar (PV/MPPT), AC and grid';
 const AC_SOURCE = 'AC-coupled (charges from AC/grid, no direct solar input)';
+const STANDARD_ICON = '/stream-standard.svg';
 
 // MPPT/solar-input counts and AC-output ratings are taken from EcoFlow's
 // official STREAM specifications/user manuals:
@@ -33,22 +36,47 @@ const AC_SOURCE = 'AC-coupled (charges from AC/grid, no direct solar input)';
 //   STREAM AC/ACPro— AC-coupled, no PV, 800 W AC
 const SPECS: Record<string, StreamModelSpec> = {
   BK11: {
-    model: 'STREAM Ultra', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W (2300 W paired)',
+    model: 'STREAM Ultra',
+    acCoupled: false,
+    solarInputs: 4,
+    energySource: SOLAR_SOURCE,
+    acOutput: '1200 W (2300 W paired)',
+    icon: STANDARD_ICON,
   },
   BK12: {
-    model: 'STREAM Pro', acCoupled: false, solarInputs: 3, energySource: SOLAR_SOURCE, acOutput: '800 W',
+    model: 'STREAM Pro',
+    acCoupled: false,
+    solarInputs: 3,
+    energySource: SOLAR_SOURCE,
+    acOutput: '800 W',
+    icon: STANDARD_ICON,
   },
   BK31: {
-    model: 'STREAM AC Pro', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE, acOutput: '800 W',
+    model: 'STREAM AC Pro',
+    acCoupled: true,
+    solarInputs: 0,
+    energySource: AC_SOURCE,
+    acOutput: '800 W',
+    icon: STANDARD_ICON,
   },
   BK41: {
-    model: 'STREAM Max', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W',
+    model: 'STREAM Max',
+    acCoupled: false,
+    solarInputs: 4,
+    energySource: SOLAR_SOURCE,
+    acOutput: '1200 W',
+    icon: STANDARD_ICON,
   },
   BK51: {
     model: 'STREAM AC', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE, acOutput: '800 W',
   },
   BK61: {
-    model: 'STREAM Ultra X', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W (2300 W paired)',
+    model: 'STREAM Ultra X',
+    acCoupled: false,
+    solarInputs: 4,
+    energySource: SOLAR_SOURCE,
+    acOutput: '1200 W (2300 W paired)',
+    icon: '/stream-ultra-x.svg',
   },
 };
 

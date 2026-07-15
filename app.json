@@ -863,7 +863,7 @@
     },
     {
       "name": {
-        "en": "STREAM"
+        "en": "STREAM Home Battery"
       },
       "class": "battery",
       "platforms": [
