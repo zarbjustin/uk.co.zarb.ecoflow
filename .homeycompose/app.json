@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.8.5",
+  "version": "1.8.6",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -16,6 +16,16 @@
   "category": [
     "energy"
   ],
+  "tags": {
+    "en": [
+      "EcoFlow",
+      "STREAM",
+      "solar",
+      "battery",
+      "smart meter",
+      "energy storage"
+    ]
+  },
   "brandColor": "#000000",
   "permissions": [],
   "api": {

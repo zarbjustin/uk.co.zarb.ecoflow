@@ -100,5 +100,8 @@
   },
   "1.8.5": {
     "en": "Add support for optional PayPal donations through Homey's native Donate button."
+  },
+  "1.8.6": {
+    "en": "Extend the backup reserve control to 100% and improve App Store search tags."
   }
 }

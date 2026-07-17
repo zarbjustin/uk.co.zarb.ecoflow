@@ -11,7 +11,7 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 - **Solar device:** a `solarpanel` device per system showing PV generation + cumulative solar energy.
 - **Per-unit monitors:** each physical inverter (Ultra X Left/Right, AC Pro 1.1–1.4) is available as its own device showing its grid feed.
 - **AC sockets:** each AC outlet on AC Pro / Ultra X is its own **smart-plug device** (on/off + live power) — clearer than generic toggles.
-- **Control:** settable charge/discharge limits, backup-reserve level (3–95%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
+- **Control:** settable charge/discharge limits, backup-reserve level (3–100%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
 - Devices are classified by serial prefix (BK11 Ultra, BK12 Pro, BK31 AC Pro, BK41 Max, BK51 AC, BK61 Ultra X), so all current STREAM models are discovered; the Microinverter (BK01) is skipped as it exposes no telemetry.
 
 ### Smart Meter (CT_EF_01)

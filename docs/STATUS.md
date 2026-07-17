@@ -20,13 +20,13 @@
   (see below) and shipped **v1.8.0 / Build 7**, installed on the local Homey Pro. Releases this
   session: v1.7.9 (black icon) → v1.7.10 (rename) → v1.8.0 (A/B/C features).
 
-## Current state (2026-07-15)
+## Current state (2026-07-17)
 
 - **App:** `uk.co.zarb.ecoflow` — "EcoFlow STREAM Series" · SDK v3 · TypeScript.
-- **Latest version:** **v1.8.5** (tag `v1.8.5`).
-- **Release note:** Homey's native optional PayPal donation metadata is configured for
-  `paypal.me/zarbie`. Homey only displays the Donate button for non-verified developers.
-- **Local install:** v1.8.0 installed on **Justin's Homey Pro** (192.168.1.142) via
+- **Latest version:** **v1.8.6** (tag `v1.8.6`).
+- **Release note:** Backup reserve controls now support the full 3-100% STREAM range,
+  and App Store search tags improve discoverability.
+- **Local install:** v1.8.6 installed on **Justin's Homey Pro** (192.168.1.142) via
   `homey app install`.
 - **Branding:** app icon is the **white EcoFlow EF monogram on a black background**
   (`brandColor: #000000`, `assets/icon.svg` monogram fill white). Black `brandColor`

@@ -45,7 +45,7 @@ morning regardless of price.
 | Prepare for cheap grid import | Action | Charge limit → 100% + backup reserve → chosen % (grid charge in cheap window) |
 | Prepare for peak / export | Action | Backup reserve → chosen % + grid feed-in on (discharge/export) |
 | Set operating mode | Action | Self-powered / AI / Scheduled / Time-of-use |
-| Set backup reserve | Action | Reserve floor 3–95% |
+| Set backup reserve | Action | Reserve floor 3–100% |
 | Set charge limit / Set discharge limit | Action | Max charge SoC / min discharge SoC |
 | Set grid feed-in | Action | Export on/off |
 | Battery level is above/below | Condition | Gate any flow on SoC |

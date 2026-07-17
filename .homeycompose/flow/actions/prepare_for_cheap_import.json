@@ -5,6 +5,6 @@
   "hint": { "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile)." },
   "args": [
     { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "reserve", "title": { "en": "Reserve level" }, "min": 3, "max": 95, "step": 1, "placeholder": { "en": "%" } }
+    { "type": "number", "name": "reserve", "title": { "en": "Reserve level" }, "min": 3, "max": 100, "step": 1, "placeholder": { "en": "%" } }
   ]
 }

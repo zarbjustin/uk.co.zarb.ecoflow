@@ -4,7 +4,7 @@
   "units": { "en": "%" },
   "decimals": 0,
   "min": 3,
-  "max": 95,
+  "max": 100,
   "step": 1,
   "getable": true,
   "setable": true,
