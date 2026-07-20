@@ -4,8 +4,8 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Submit Build 15 (v1.10.0)** for certification on the dashboard
-  (<https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/15>) and paste
+- [ ] **Submit Build 16 (v1.10.1)** for certification on the dashboard
+  (<https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/16>) and paste
   `docs/REVIEWER_NOTES.md` + `docs/CERTIFICATION_REPLY.md` into the review thread.
 - [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:
   confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
@@ -13,11 +13,11 @@
 
 ## Release state (2026-07-20)
 
-- **Latest version:** **v1.10.0** — **Build ID 15** uploaded to the App Store (pending manual
+- **Latest version:** **v1.10.1** — **Build ID 16** uploaded to the App Store (pending manual
   submit). Also installed on **Justin's Homey Pro** via `homey app install`.
-- v1.10.0 = v1.9.0 (multi-model review + widget-preview fixes) **plus** the fit-and-finish sprints
+- v1.10.1 = v1.9.0 (multi-model review + widget-preview fixes) **plus** the fit-and-finish sprints
   (retry/hardening, de/nl i18n, real solar forecast, provider-agnostic tariff, docs + hardware
-  tooling).
+  tooling) **plus** enriched App Store tags (en/de/nl) + `bugs` URL. PayPal donate = `zarbie`.
 
 ## Fit-and-finish sprints (2026-07-20, after v1.9.0 / Build 14)
 
