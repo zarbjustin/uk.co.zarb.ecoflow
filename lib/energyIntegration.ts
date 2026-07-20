@@ -14,6 +14,21 @@
 /** Maximum sample gap to integrate over; longer gaps (downtime, clock jumps) are ignored. */
 export const MAX_GAP_MS = 60 * 60 * 1000; // 1 hour
 
+/**
+ * Decide how to account battery energy for a quota sample, avoiding the
+ * cross-mode double-count (device `accu*Energy` counters vs REST power
+ * integration). Once counters have EVER been seen (`countersAvailable`) they are
+ * authoritative and power is never integrated again.
+ *  - 'counter'   → this sample carries counters; advance from them.
+ *  - 'skip'      → counters are the source but this sample has none; do nothing.
+ *  - 'integrate' → counters never seen; integrate power as the fallback.
+ */
+export function batteryEnergyMode(hasCounters: boolean, countersAvailable: boolean): 'counter' | 'skip' | 'integrate' {
+  if (hasCounters) return 'counter';
+  if (countersAvailable) return 'skip';
+  return 'integrate';
+}
+
 function validInterval(powerW: number, dtMs: number): boolean {
   return Number.isFinite(powerW) && Number.isFinite(dtMs) && dtMs > 0 && dtMs <= MAX_GAP_MS;
 }

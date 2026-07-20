@@ -138,8 +138,15 @@
         }
       }
 
-      refresh();
-      setInterval(refresh, 3000);
+      let busy = false;
+      function scheduledRefresh() {
+        if (busy) return;
+        busy = true;
+        refresh().finally(function () { busy = false; });
+      }
+      scheduledRefresh();
+      const timer = setInterval(scheduledRefresh, 3000);
+      window.addEventListener('pagehide', function () { clearInterval(timer); });
     }
   </script>
 </body>

@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { URL } from 'url';
 import { authHeaders } from './sign';
 import { normalizeApiHost } from './apiHost';
+import { withRetry } from './retry';
 import {
   AppCertification, EcoFlowDevice, HistoryPoint, Quota,
 } from './types';
@@ -123,7 +124,25 @@ export class EcoFlowClient {
     return request;
   }
 
-  private request(
+  /**
+   * Perform a signed request. Idempotent GETs are retried a couple of times on
+   * transient network/timeout/parse errors (genuine API rejections carry a code
+   * and are never retried) so one-shot flow actions don't fail on a blip.
+   */
+  private async request(
+    method: 'GET' | 'POST' | 'PUT',
+    path: string,
+    opts: { query?: Record<string, any>; body?: Record<string, any> } = {},
+  ): Promise<any> {
+    return withRetry(() => this.requestOnce(method, path, opts), {
+      // Only idempotent GETs are retried; real API rejections carry a code.
+      attempts: method === 'GET' ? 3 : 1,
+      isRetryable: (e) => !(e instanceof EcoFlowApiError),
+      delayMs: (attempt) => 300 * attempt + Math.floor(Math.random() * 200),
+    });
+  }
+
+  private requestOnce(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
     opts: { query?: Record<string, any>; body?: Record<string, any> } = {},
