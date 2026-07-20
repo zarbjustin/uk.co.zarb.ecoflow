@@ -103,5 +103,8 @@
   },
   "1.8.6": {
     "en": "Extend the backup reserve control to 100% and improve App Store search tags."
+  },
+  "1.9.0": {
+    "en": "Five dashboard widgets each now have their own accurate preview. Safer backup-reserve control fixes a case where changes could silently fail. Energy meters stay accurate across restarts and a sturdier realtime connection. New tariff/grid Flow cards. STREAM Max solar-input correction."
   }
 }
