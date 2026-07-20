@@ -106,5 +106,8 @@
   },
   "1.9.0": {
     "en": "Five dashboard widgets each now have their own accurate preview. Safer backup-reserve control fixes a case where changes could silently fail. Energy meters stay accurate across restarts and a sturdier realtime connection. New tariff/grid Flow cards. STREAM Max solar-input correction."
+  },
+  "1.10.0": {
+    "en": "German and Dutch translations. New: a real solar forecast (today and tomorrow) from your local weather, plus tariff-aware Flows that work with any electricity-price app (Octopus, Tibber, aWATTar and more). Sturdier connectivity and more reliable widgets."
   }
 }
