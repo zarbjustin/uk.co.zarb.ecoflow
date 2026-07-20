@@ -39,6 +39,7 @@ test('STREAM Pro (BK12) exposes 3 MPPT inputs', () => {
 test('STREAM Max (BK41) uses the standard STREAM enclosure icon', () => {
   const spec = streamModelFromSn('BK41ZK1A4H4R0001');
   assert.strictEqual(spec.model, 'STREAM Max');
+  assert.strictEqual(spec.solarInputs, 2);
   assert.strictEqual(spec.icon, '/stream-standard.svg');
 });
 

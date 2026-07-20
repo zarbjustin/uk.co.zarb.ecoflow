@@ -31,6 +31,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   };
 
   private historyTimer: NodeJS.Timeout | null = null;
+  private historyDay = '';
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
@@ -110,8 +111,19 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private async refreshHistory(): Promise<void> {
+    // On a calendar-day rollover, zero the existing daily tiles so a broken/empty
+    // history feed can't keep showing yesterday's totals as "today"; fresh data
+    // then overwrites them as it arrives.
+    const tz = this.homey.clock.getTimezone();
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
+    if (this.historyDay && this.historyDay !== today) {
+      for (const cap of Object.keys(StreamDevice.HISTORY_TITLES)) {
+        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, 0).catch(() => {});
+      }
+    }
+    this.historyDay = today;
     const prefix = (this.getSetting('history_prefix') as string) || 'BK621';
-    const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix, this.homey.clock.getTimezone());
+    const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix, tz);
     await this.applyDailyEnergy(daily);
   }
 

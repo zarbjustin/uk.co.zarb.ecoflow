@@ -63,6 +63,14 @@ export class EcoFlowMqtt {
 
   /** Force a reconnect (e.g. after credentials changed), keeping subscriptions. */
   async reconnect(): Promise<void> {
+    // If a connect is in flight (possibly with the OLD credentials), let it settle
+    // and then discard its client, so we re-establish with the new options rather
+    // than silently keeping the stale session.
+    if (this.connecting) {
+      try {
+        await this.connecting;
+      } catch { /* ignore */ }
+    }
     if (this.client) {
       this.client.removeAllListeners('close');
       this.client.removeAllListeners('offline');
@@ -105,6 +113,10 @@ export class EcoFlowMqtt {
       client.once('connect', () => {
         settled = true;
         this.backoffMs = 0;
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
         this.log('connected');
         for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
         resolve();

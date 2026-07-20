@@ -71,7 +71,7 @@ export async function fetchDailyEnergy(
   const pick = (arr: any[], extra?: string): number | undefined => {
     if (!Array.isArray(arr) || arr.length === 0) return undefined;
     const row = extra !== undefined ? arr.find((r) => String(r.extra) === extra) : arr[0];
-    if (!row || row.indexValue === undefined) return undefined;
+    if (!row || row.indexValue === undefined || row.indexValue === null || String(row.indexValue).trim() === '') return undefined;
     const n = Number(row.indexValue);
     return Number.isFinite(n) ? n : undefined;
   };
