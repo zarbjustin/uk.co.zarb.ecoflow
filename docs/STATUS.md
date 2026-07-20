@@ -4,11 +4,20 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Bump the version** (minor → **v1.10.0**) via *Update Homey App Version* and run
-  *Publish Homey App*, then resubmit for certification (reviewer notes/reply are current).
-- [ ] **Hardware verification** — run `scripts/homeyscript/stream-field-probe.js` and follow
-  `docs/HARDWARE_VERIFICATION.md`: confirm the self-heating field, STREAM Max (BK41) 2-PV count,
-  and per-socket fields; then adjust `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
+- [ ] **Submit Build 15 (v1.10.0)** for certification on the dashboard
+  (<https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/15>) and paste
+  `docs/REVIEWER_NOTES.md` + `docs/CERTIFICATION_REPLY.md` into the review thread.
+- [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:
+  confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
+  `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
+
+## Release state (2026-07-20)
+
+- **Latest version:** **v1.10.0** — **Build ID 15** uploaded to the App Store (pending manual
+  submit). Also installed on **Justin's Homey Pro** via `homey app install`.
+- v1.10.0 = v1.9.0 (multi-model review + widget-preview fixes) **plus** the fit-and-finish sprints
+  (retry/hardening, de/nl i18n, real solar forecast, provider-agnostic tariff, docs + hardware
+  tooling).
 
 ## Fit-and-finish sprints (2026-07-20, after v1.9.0 / Build 14)
 
