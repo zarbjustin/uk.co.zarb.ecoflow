@@ -128,3 +128,24 @@ d066db1 fix: high-severity review findings H1-H5
 1465477 docs: product research, multi-model code review, feature eval, spec & sprint plan
 ```
 (These 7 commits are **not yet pushed** to `origin/master`.)
+
+## ⚠️ IMPORTANT — this branch diverged from origin/master
+This session branched from **v1.8.0 (`fb9989b`)** and worked locally. Meanwhile
+**`origin/master` advanced independently to ~v1.8.5** with commits that OVERLAP this session's
+work (parallel implementation — likely another agent/session):
+```
+9cbe1c6 Extend backup reserve to 100 percent
+6bae136 Add PayPal donation support
+59830dc Improve STREAM device identity and icons        <-- icons (relevant to the open issue!)
+350d27e Harden EcoFlow reliability, security, and widgets <-- overlaps H*/M* fixes
+2a9bd55 Add STREAM dashboard widgets and icon fixes       <-- overlaps the 5-widget work
+9ccf733 Improve STREAM Unit capability icons
+dc77236 Add Homey capability icons
++ version bumps v1.8.1..v1.8.5
+```
+**Do not force-push to master.** This session's 8 commits were pushed to a separate branch
+(`copilot/multi-model-review-2026-07-20`) instead. Before integrating, DIFF the two lines of work
+— both added widgets, hardening and icon changes, so a straight merge will conflict and duplicate.
+The remote's `59830dc`/`9ccf733`/`dc77236` icon commits are especially relevant to the open
+driver-icon issue: the user's Homey has been running THIS branch's build, which differs from
+master's icon work — reconcile which icon set the user actually wants.
