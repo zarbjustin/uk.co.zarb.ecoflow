@@ -58,6 +58,7 @@ const fixture = {
   solarForecastToday: 9.2,
   solarForecastTomorrow: 7.4,
   // tariff/recommendation api.js derives these:
+  priceNow: 12.5,
   recommendation: 'Store solar',
   reason: 'Solar is above home load; spare power can charge the battery.',
 };

@@ -598,6 +598,93 @@
         ]
       },
       {
+        "id": "electricity_price",
+        "title": {
+          "en": "Electricity price is above/below",
+          "de": "Strompreis ist über/unter",
+          "nl": "Stroomprijs is boven/onder"
+        },
+        "titleFormatted": {
+          "en": "Electricity price is [[direction]] [[price]]",
+          "de": "Strompreis ist [[direction]] [[price]]",
+          "nl": "Stroomprijs is [[direction]] [[price]]"
+        },
+        "hint": {
+          "en": "Uses the price set via the 'Set current electricity price' action.",
+          "de": "Verwendet den über die Aktion 'Aktuellen Strompreis festlegen' gesetzten Preis.",
+          "nl": "Gebruikt de prijs die is ingesteld via de actie 'Huidige stroomprijs instellen'."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "price",
+            "min": -1000,
+            "max": 1000,
+            "step": 0.01,
+            "placeholder": {
+              "en": "price/kWh"
+            }
+          }
+        ]
+      },
+      {
+        "id": "electricity_price_negative",
+        "title": {
+          "en": "Electricity price !{{is|is not}} negative",
+          "de": "Strompreis !{{ist|ist nicht}} negativ",
+          "nl": "Stroomprijs !{{is|is niet}} negatief"
+        },
+        "titleFormatted": {
+          "en": "Electricity price !{{is|is not}} negative",
+          "de": "Strompreis !{{ist|ist nicht}} negativ",
+          "nl": "Stroomprijs !{{is|is niet}} negatief"
+        },
+        "hint": {
+          "en": "True when the price you feed in is below zero (you are paid to consume). Uses the 'Set current electricity price' action.",
+          "de": "Wahr, wenn der eingespeiste Preis unter null liegt (du wirst fürs Verbrauchen bezahlt). Verwendet die Aktion 'Aktuellen Strompreis festlegen'.",
+          "nl": "Waar wanneer de ingevoerde prijs onder nul ligt (je wordt betaald om te verbruiken). Gebruikt de actie 'Huidige stroomprijs instellen'."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
         "id": "feed_in_enabled",
         "title": {
           "en": "Grid feed-in !{{is|is not}} enabled",
@@ -1116,6 +1203,41 @@
             "step": 1,
             "label": "%",
             "labelDecimals": 0
+          }
+        ]
+      },
+      {
+        "id": "set_electricity_price",
+        "title": {
+          "en": "Set current electricity price",
+          "de": "Aktuellen Strompreis festlegen",
+          "nl": "Huidige stroomprijs instellen"
+        },
+        "titleFormatted": {
+          "en": "Set current electricity price to [[price]]",
+          "de": "Aktuellen Strompreis auf [[price]] setzen",
+          "nl": "Huidige stroomprijs instellen op [[price]]"
+        },
+        "hint": {
+          "en": "Feed the current half-hourly price from any tariff app (Octopus, Tibber, aWATTar, …). The STREAM app then shows it and drives the electricity-price conditions.",
+          "de": "Speise den aktuellen halbstündlichen Preis aus einer beliebigen Tarif-App ein (Octopus, Tibber, aWATTar, …). Die STREAM-App zeigt ihn dann an und steuert die Strompreis-Bedingungen.",
+          "nl": "Voer de huidige halfuurlijkse prijs in vanuit elke tarief-app (Octopus, Tibber, aWATTar, …). De STREAM-app toont deze dan en stuurt de stroomprijs-voorwaarden aan."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "price",
+            "min": -1000,
+            "max": 1000,
+            "step": 0.01,
+            "placeholder": {
+              "en": "price/kWh"
+            }
           }
         ]
       },
@@ -1693,6 +1815,21 @@
             "en": "Tune to your array size: expected kWh per MJ/m² of daily solar radiation. Raise if the forecast reads low versus your actual solar, lower if it reads high.",
             "de": "An deine Anlagengröße anpassen: erwartete kWh pro MJ/m² täglicher Solarstrahlung. Erhöhen, wenn die Prognose zu niedrig ist, senken, wenn sie zu hoch ist.",
             "nl": "Stem af op je systeemgrootte: verwachte kWh per MJ/m² dagelijkse zonnestraling. Verhoog als de prognose te laag is, verlaag als deze te hoog is."
+          }
+        },
+        {
+          "id": "price_unit",
+          "type": "text",
+          "label": {
+            "en": "Electricity price unit",
+            "de": "Einheit des Strompreises",
+            "nl": "Eenheid van de stroomprijs"
+          },
+          "value": "p/kWh",
+          "hint": {
+            "en": "Display unit for the electricity price you feed in via the 'Set electricity price' Flow action (e.g. p/kWh, ct/kWh). Feed the price from any tariff app (Octopus, Tibber, aWATTar, …).",
+            "de": "Anzeigeeinheit für den Strompreis, den du über die Flow-Aktion 'Strompreis festlegen' einspeist (z. B. ct/kWh). Speise den Preis aus einer beliebigen Tarif-App ein (Tibber, aWATTar, Octopus, …).",
+            "nl": "Weergave-eenheid voor de stroomprijs die je invoert via de Flow-actie 'Stroomprijs instellen' (bijv. ct/kWh). Voer de prijs in vanuit elke tarief-app (Tibber, aWATTar, Octopus, …)."
           }
         }
       ],
@@ -3159,6 +3296,23 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/capabilities/solar-meter.svg",
+      "insights": true
+    },
+    "tariff_price_now": {
+      "type": "number",
+      "title": {
+        "en": "Electricity price",
+        "de": "Strompreis",
+        "nl": "Stroomprijs"
+      },
+      "units": {
+        "en": "p/kWh"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/grid.svg",
       "insights": true
     }
   }

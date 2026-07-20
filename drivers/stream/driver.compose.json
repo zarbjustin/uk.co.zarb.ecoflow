@@ -336,6 +336,21 @@
         "de": "An deine Anlagengröße anpassen: erwartete kWh pro MJ/m² täglicher Solarstrahlung. Erhöhen, wenn die Prognose zu niedrig ist, senken, wenn sie zu hoch ist.",
         "nl": "Stem af op je systeemgrootte: verwachte kWh per MJ/m² dagelijkse zonnestraling. Verhoog als de prognose te laag is, verlaag als deze te hoog is."
       }
+    },
+    {
+      "id": "price_unit",
+      "type": "text",
+      "label": {
+        "en": "Electricity price unit",
+        "de": "Einheit des Strompreises",
+        "nl": "Eenheid van de stroomprijs"
+      },
+      "value": "p/kWh",
+      "hint": {
+        "en": "Display unit for the electricity price you feed in via the 'Set electricity price' Flow action (e.g. p/kWh, ct/kWh). Feed the price from any tariff app (Octopus, Tibber, aWATTar, …).",
+        "de": "Anzeigeeinheit für den Strompreis, den du über die Flow-Aktion 'Strompreis festlegen' einspeist (z. B. ct/kWh). Speise den Preis aus einer beliebigen Tarif-App ein (Tibber, aWATTar, Octopus, …).",
+        "nl": "Weergave-eenheid voor de stroomprijs die je invoert via de Flow-actie 'Stroomprijs instellen' (bijv. ct/kWh). Voer de prijs in vanuit elke tarief-app (Tibber, aWATTar, Octopus, …)."
+      }
     }
   ],
   "pair": [

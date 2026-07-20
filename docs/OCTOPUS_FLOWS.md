@@ -1,10 +1,36 @@
-# Octopus Agile + STREAM: ready-made Homey Flows
+# Tariff-aware STREAM Flows (provider-agnostic)
 
-These recipes use the **EcoFlow STREAM Series** Flow cards together with the
-[Octopus Energy](https://homey.app/) (Agile) app for Homey to optimise your battery
-against half-hourly prices. They rely only on the controls the EcoFlow open API
-actually exposes — operating mode, backup-reserve target, charge/discharge SoC limits
-and grid feed-in — because the API has **no direct charge/discharge watt setpoint**.
+These recipes optimise your STREAM battery against your electricity tariff. The app is
+**provider-agnostic**: it doesn't fetch prices itself, so it works with **any** tariff app in
+**any** region — feed your current price in from the tariff app you already use (Octopus Agile,
+**Tibber**, **aWATTar**, ENTSO-E, etc.).
+
+## Native price cards (no extra dependency beyond your tariff app)
+1. **Every time your tariff app reports a new price** → EcoFlow STREAM → **Set current electricity
+   price** → `[price]` (use the tariff app's price token/logic variable). Set the display unit under
+   the STREAM device's settings (`p/kWh`, `ct/kWh`, …).
+2. The STREAM device then shows an **Electricity price** tile, the **Energy Recommendation** widget
+   reflects it, and these conditions become available:
+   - **Electricity price is above / below `X`**
+   - **Electricity price is negative** (you're paid to consume)
+
+### Example: charge when the price is cheap
+**When** your tariff app's price changes → **And** EcoFlow STREAM *Electricity price is below* `X`
+→ **Then** EcoFlow STREAM → **Prepare for cheap grid import** → reserve `100%`.
+
+### Example: grab a negative-price event
+**When** your tariff app's price changes → **And** EcoFlow STREAM *Electricity price is negative*
+→ **Then** EcoFlow STREAM → **Prepare for cheap grid import** → reserve `100%` (fill the battery
+while the grid pays you). This should take precedence over any solar/self-consumption logic.
+
+---
+
+## Legacy recipes (using a separate Octopus/Tibber app's own condition cards)
+
+The recipes below use the STREAM Flow cards together with your tariff app's **own** price
+conditions (e.g. the Octopus Energy or Tibber Homey app). They rely only on the controls the
+EcoFlow open API exposes — operating mode, backup-reserve target, charge/discharge SoC limits and
+grid feed-in — because the API has **no direct charge/discharge watt setpoint**.
 
 > Devices: add your **STREAM** system device (the home-battery device). The cards
 > below appear under *EcoFlow STREAM Series*.

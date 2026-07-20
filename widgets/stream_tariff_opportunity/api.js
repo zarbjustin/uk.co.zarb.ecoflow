@@ -9,7 +9,10 @@ module.exports = {
 
     let recommendation = 'Watch';
     let reason = 'Waiting for stronger solar, grid or battery signal.';
-    if (data.gridExport != null && data.gridExport > 100 && data.feedIn) {
+    if (data.priceNow != null && data.priceNow < 0) {
+      recommendation = 'Charge now';
+      reason = 'Electricity price is negative — importing pays you. Fill the battery.';
+    } else if (data.gridExport != null && data.gridExport > 100 && data.feedIn) {
       recommendation = 'Exporting';
       reason = 'Grid export is active and feed-in is enabled.';
     } else if (data.solar != null && data.home != null && data.solar > data.home + 100) {

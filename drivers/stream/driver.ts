@@ -3,12 +3,7 @@
 import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
-
-/** Compare a forecast capability value against an above/below threshold. */
-function forecastCompare(value: unknown, direction: 'above' | 'below', kwh: number): boolean {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return false;
-  return direction === 'above' ? value > kwh : value < kwh;
-}
+import { aboveBelow } from '../../lib/thresholds';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -38,10 +33,16 @@ module.exports = class StreamDriver extends Homey.Driver {
       (args: any) => args.device.isChargingFromSolar(),
     );
     flow.getConditionCard('solar_forecast_today').registerRunListener(
-      (args: any) => forecastCompare(args.device.getCapabilityValue('solar_forecast_today'), args.direction, args.kwh),
+      (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_today'), args.direction, args.kwh),
     );
     flow.getConditionCard('solar_forecast_tomorrow').registerRunListener(
-      (args: any) => forecastCompare(args.device.getCapabilityValue('solar_forecast_tomorrow'), args.direction, args.kwh),
+      (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_tomorrow'), args.direction, args.kwh),
+    );
+    flow.getConditionCard('electricity_price').registerRunListener(
+      (args: any) => aboveBelow(args.device.getCapabilityValue('tariff_price_now'), args.direction, args.price),
+    );
+    flow.getConditionCard('electricity_price_negative').registerRunListener(
+      (args: any) => args.device.priceIsNegative(),
     );
     flow.getConditionCard('battery_soc').registerRunListener(
       (args: any) => args.device.batterySocIs(args.direction, args.level),
@@ -72,6 +73,9 @@ module.exports = class StreamDriver extends Homey.Driver {
     );
     flow.getActionCard('release_for_export').registerRunListener(
       (args: any) => args.device.flowReleaseForExport(),
+    );
+    flow.getActionCard('set_electricity_price').registerRunListener(
+      (args: any) => args.device.flowSetElectricityPrice(args.price),
     );
 
     // Trigger arg-matching for the battery threshold card
