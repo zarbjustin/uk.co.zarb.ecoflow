@@ -1,5 +1,10 @@
 {
   "name": { "en": "STREAM Energy Flow" },
+  "devices": {
+    "type": "app",
+    "singular": true,
+    "filter": { "class": "battery", "capabilities": "backup_reserve_soc" }
+  },
   "settings": [
     {
       "id": "index",

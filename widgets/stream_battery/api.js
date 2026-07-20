@@ -1,12 +1,8 @@
 'use strict';
 
 /**
- * Widget backend: returns the live EcoFlow-style power flow for a STREAM system,
- * read from the STREAM Battery (system) device's capabilities.
- *
- * Device resolution: prefers the device chosen via the widget's device picker
- * (its Homey id is passed as `?id=`), then the legacy `index` setting, then the
- * first STREAM system device — so single-system users always resolve correctly.
+ * Widget backend: STREAM battery state of charge with the backup-reserve and
+ * discharge-limit thresholds, charge state, time-to-full/empty and mode.
  */
 
 function resolveDevice(homey, query) {
@@ -35,21 +31,23 @@ function num(d, cap) {
 }
 
 module.exports = {
-  async getFlow({ homey, query }) {
+  async getBattery({ homey, query }) {
     const d = resolveDevice(homey, query);
     if (!d) return { ok: false, reason: 'no_device' };
-
     return {
       ok: true,
       name: d.getName(),
       available: d.getAvailable(),
-      grid: num(d, 'measure_power.grid'), // + import / - export (W)
-      solar: num(d, 'measure_power.pv'), // W
-      home: num(d, 'measure_power.load'), // W
-      battery: num(d, 'measure_power'), // + charging / - discharging (W)
-      soc: num(d, 'measure_battery'), // %
+      soc: num(d, 'measure_battery'),
+      reserve: num(d, 'backup_reserve_soc'),
+      dischargeLimit: num(d, 'discharge_limit'),
+      chargeLimit: num(d, 'charge_limit'),
+      battery: num(d, 'measure_power'),
       state: d.getCapabilityValue('battery_charging_state') || null,
-      solarToday: num(d, 'energy_solar_today'), // kWh
+      chargeRemaining: num(d, 'charge_remaining'),
+      dischargeRemaining: num(d, 'discharge_remaining'),
+      mode: d.getCapabilityValue('operating_mode') || null,
+      soh: num(d, 'battery_soh'),
     };
   },
 };

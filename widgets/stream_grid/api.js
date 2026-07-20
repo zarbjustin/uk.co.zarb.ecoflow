@@ -1,12 +1,8 @@
 'use strict';
 
 /**
- * Widget backend: returns the live EcoFlow-style power flow for a STREAM system,
- * read from the STREAM Battery (system) device's capabilities.
- *
- * Device resolution: prefers the device chosen via the widget's device picker
- * (its Homey id is passed as `?id=`), then the legacy `index` setting, then the
- * first STREAM system device — so single-system users always resolve correctly.
+ * Widget backend: live grid direction (import/export) with today's imported and
+ * exported energy and the grid feed-in state, read from the STREAM system device.
  */
 
 function resolveDevice(homey, query) {
@@ -35,21 +31,17 @@ function num(d, cap) {
 }
 
 module.exports = {
-  async getFlow({ homey, query }) {
+  async getGrid({ homey, query }) {
     const d = resolveDevice(homey, query);
     if (!d) return { ok: false, reason: 'no_device' };
-
     return {
       ok: true,
       name: d.getName(),
       available: d.getAvailable(),
       grid: num(d, 'measure_power.grid'), // + import / - export (W)
-      solar: num(d, 'measure_power.pv'), // W
-      home: num(d, 'measure_power.load'), // W
-      battery: num(d, 'measure_power'), // + charging / - discharging (W)
-      soc: num(d, 'measure_battery'), // %
-      state: d.getCapabilityValue('battery_charging_state') || null,
-      solarToday: num(d, 'energy_solar_today'), // kWh
+      importToday: d.hasCapability('energy_grid_import_today') ? num(d, 'energy_grid_import_today') : null,
+      exportToday: d.hasCapability('energy_grid_export_today') ? num(d, 'energy_grid_export_today') : null,
+      feedIn: typeof d.getCapabilityValue('feed_in_control') === 'boolean' ? d.getCapabilityValue('feed_in_control') : null,
     };
   },
 };

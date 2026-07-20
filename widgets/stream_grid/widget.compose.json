@@ -1,0 +1,13 @@
+{
+  "name": { "en": "STREAM Grid Import/Export" },
+  "devices": {
+    "type": "app",
+    "singular": true,
+    "filter": { "class": "battery", "capabilities": "backup_reserve_soc" }
+  },
+  "settings": [],
+  "height": 254,
+  "api": {
+    "getGrid": { "method": "GET", "path": "/" }
+  }
+}

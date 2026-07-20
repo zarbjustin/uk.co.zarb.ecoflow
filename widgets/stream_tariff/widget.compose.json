@@ -1,0 +1,13 @@
+{
+  "name": { "en": "STREAM Tariff Status" },
+  "devices": {
+    "type": "app",
+    "singular": true,
+    "filter": { "class": "battery", "capabilities": "backup_reserve_soc" }
+  },
+  "settings": [],
+  "height": 254,
+  "api": {
+    "getTariff": { "method": "GET", "path": "/" }
+  }
+}

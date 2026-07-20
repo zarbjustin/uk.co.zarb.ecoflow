@@ -1,0 +1,13 @@
+{
+  "name": { "en": "STREAM Battery & Reserve" },
+  "devices": {
+    "type": "app",
+    "singular": true,
+    "filter": { "class": "battery", "capabilities": "backup_reserve_soc" }
+  },
+  "settings": [],
+  "height": 254,
+  "api": {
+    "getBattery": { "method": "GET", "path": "/" }
+  }
+}

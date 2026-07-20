@@ -1575,9 +1575,39 @@
     }
   ],
   "widgets": {
+    "stream_battery": {
+      "name": {
+        "en": "STREAM Battery & Reserve"
+      },
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "class": "battery",
+          "capabilities": "backup_reserve_soc"
+        }
+      },
+      "settings": [],
+      "height": 254,
+      "api": {
+        "getBattery": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_battery"
+    },
     "stream_flow": {
       "name": {
         "en": "STREAM Energy Flow"
+      },
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "class": "battery",
+          "capabilities": "backup_reserve_soc"
+        }
       },
       "settings": [
         {
@@ -1602,6 +1632,72 @@
         }
       },
       "id": "stream_flow"
+    },
+    "stream_grid": {
+      "name": {
+        "en": "STREAM Grid Import/Export"
+      },
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "class": "battery",
+          "capabilities": "backup_reserve_soc"
+        }
+      },
+      "settings": [],
+      "height": 254,
+      "api": {
+        "getGrid": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_grid"
+    },
+    "stream_solar_today": {
+      "name": {
+        "en": "STREAM Solar Today"
+      },
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "class": "battery",
+          "capabilities": "backup_reserve_soc"
+        }
+      },
+      "settings": [],
+      "height": 254,
+      "api": {
+        "getSolar": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_solar_today"
+    },
+    "stream_tariff": {
+      "name": {
+        "en": "STREAM Tariff Status"
+      },
+      "devices": {
+        "type": "app",
+        "singular": true,
+        "filter": {
+          "class": "battery",
+          "capabilities": "backup_reserve_soc"
+        }
+      },
+      "settings": [],
+      "height": 254,
+      "api": {
+        "getTariff": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "stream_tariff"
     }
   },
   "capabilities": {

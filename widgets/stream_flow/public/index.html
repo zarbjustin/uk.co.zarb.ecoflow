@@ -78,11 +78,18 @@
       const index = Number(settings.index) || 1;
       Homey.ready();
 
+      let busy = false;
+      let deviceId = null;
+      try { const ids = Homey.getDeviceIds(); if (ids && ids.length) deviceId = ids[0]; } catch (e) {}
+      const query = deviceId ? '/?id=' + encodeURIComponent(deviceId) : '/?index=' + index;
+
       function set(id, text) { document.getElementById(id).textContent = text; }
 
       async function refresh() {
+        if (busy) return;
+        busy = true;
         try {
-          const d = await Homey.api('GET', '/?index=' + index, {});
+          const d = await Homey.api('GET', query, {});
           if (!d || !d.ok) {
             set('title', 'No STREAM system found');
             return;
@@ -111,11 +118,14 @@
           document.querySelector('.card').classList.toggle('muted', d.available === false);
         } catch (e) {
           // keep last values on transient errors
+        } finally {
+          busy = false;
         }
       }
 
       refresh();
-      setInterval(refresh, 3000);
+      const timer = setInterval(refresh, 3000);
+      window.addEventListener('pagehide', function () { clearInterval(timer); });
     }
   </script>
 </body>

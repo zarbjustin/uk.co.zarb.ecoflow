@@ -1,12 +1,8 @@
 'use strict';
 
 /**
- * Widget backend: returns the live EcoFlow-style power flow for a STREAM system,
- * read from the STREAM Battery (system) device's capabilities.
- *
- * Device resolution: prefers the device chosen via the widget's device picker
- * (its Homey id is passed as `?id=`), then the legacy `index` setting, then the
- * first STREAM system device — so single-system users always resolve correctly.
+ * Widget backend: today's solar yield plus live PV, per-string breakdown and
+ * (when the history feed populates them) CO2 avoided and energy independence.
  */
 
 function resolveDevice(homey, query) {
@@ -35,21 +31,21 @@ function num(d, cap) {
 }
 
 module.exports = {
-  async getFlow({ homey, query }) {
+  async getSolar({ homey, query }) {
     const d = resolveDevice(homey, query);
     if (!d) return { ok: false, reason: 'no_device' };
-
+    const strings = ['measure_power.pv1', 'measure_power.pv2', 'measure_power.pv3', 'measure_power.pv4']
+      .filter((c) => d.hasCapability(c))
+      .map((c) => num(d, c));
     return {
       ok: true,
       name: d.getName(),
       available: d.getAvailable(),
-      grid: num(d, 'measure_power.grid'), // + import / - export (W)
-      solar: num(d, 'measure_power.pv'), // W
-      home: num(d, 'measure_power.load'), // W
-      battery: num(d, 'measure_power'), // + charging / - discharging (W)
-      soc: num(d, 'measure_battery'), // %
-      state: d.getCapabilityValue('battery_charging_state') || null,
-      solarToday: num(d, 'energy_solar_today'), // kWh
+      solarToday: num(d, 'energy_solar_today'),
+      pv: num(d, 'measure_power.pv'),
+      strings,
+      co2: d.hasCapability('co2_today') ? num(d, 'co2_today') : null,
+      independence: d.hasCapability('energy_independence') ? num(d, 'energy_independence') : null,
     };
   },
 };

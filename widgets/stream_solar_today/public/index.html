@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #FDF6E3; }
+    .card {
+      background: linear-gradient(160deg, #3a2f10 0%, #1a1405 100%);
+      border-radius: 16px; padding: 14px 16px; height: 226px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .head { display: flex; align-items: center; justify-content: space-between; }
+    .title { font-size: 13px; font-weight: 600; color: #f2e2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sun { font-size: 18px; }
+    .today { display: flex; align-items: baseline; gap: 8px; }
+    .today .big { font-size: 40px; font-weight: 800; color: #F6CE48; line-height: 1; }
+    .today .unit { font-size: 15px; color: #d8c98f; }
+    .today .live { margin-left: auto; font-size: 12px; color: #d8c98f; text-align: right; }
+    .today .live b { color: #F6CE48; font-size: 15px; }
+    .bars { display: flex; gap: 6px; align-items: flex-end; height: 46px; }
+    .bar { flex: 1; height: 100%; background: rgba(255,255,255,0.06); border-radius: 5px 5px 3px 3px; position: relative; display: flex; align-items: flex-end; }
+    .bar .fill { width: 100%; background: linear-gradient(#F6CE48, #F5A623); border-radius: 5px 5px 3px 3px; }
+    .bar .lab { position: absolute; bottom: -15px; left: 0; right: 0; text-align: center; font-size: 9px; color: #b7a870; }
+    .foot { display: flex; justify-content: space-between; font-size: 11px; color: #d8c98f; min-height: 14px; margin-top: 14px; }
+    .muted { opacity: 0.55; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="head">
+      <div class="title" id="title">STREAM Solar</div>
+      <div class="sun">☀️</div>
+    </div>
+    <div class="today">
+      <span class="big" id="today">—</span><span class="unit">kWh today</span>
+      <span class="live" id="live"></span>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="foot"><span id="co2"></span><span id="indep"></span></div>
+  </div>
+
+  <script type="text/javascript">
+    function set(id, t) { document.getElementById(id).textContent = t; }
+    function fmtPower(w) {
+      if (w == null) return '0 W';
+      var a = Math.abs(w);
+      if (a >= 1000) return (w / 1000).toFixed(2) + ' kW';
+      return Math.round(w) + ' W';
+    }
+
+    function onHomeyReady(Homey) {
+      Homey.ready();
+      var busy = false;
+      var deviceId = null;
+      try { var ids = Homey.getDeviceIds(); if (ids && ids.length) deviceId = ids[0]; } catch (e) {}
+
+      function renderBars(strings) {
+        var el = document.getElementById('bars');
+        el.innerHTML = '';
+        if (!strings || !strings.length) { el.style.display = 'none'; return; }
+        el.style.display = 'flex';
+        var max = Math.max(1, Math.max.apply(null, strings.map(function (s) { return s || 0; })));
+        strings.forEach(function (s, i) {
+          var bar = document.createElement('div'); bar.className = 'bar';
+          var fill = document.createElement('div'); fill.className = 'fill';
+          fill.style.height = Math.round(((s || 0) / max) * 100) + '%';
+          var lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = 'PV' + (i + 1);
+          bar.appendChild(fill); bar.appendChild(lab); el.appendChild(bar);
+        });
+      }
+
+      async function refresh() {
+        if (busy) return; busy = true;
+        try {
+          var q = deviceId ? '/?id=' + encodeURIComponent(deviceId) : '/';
+          var d = await Homey.api('GET', q, {});
+          if (!d || !d.ok) { set('title', 'No STREAM system found'); return; }
+          set('title', d.name || 'STREAM Solar');
+          set('today', d.solarToday == null ? '—' : d.solarToday.toFixed(2));
+          document.getElementById('live').innerHTML = 'now<br><b>' + fmtPower(d.pv) + '</b>';
+          renderBars(d.strings);
+          set('co2', d.co2 == null ? '' : ('CO₂ avoided ' + d.co2.toFixed(1) + ' kg'));
+          set('indep', d.independence == null ? '' : ('Independence ' + Math.round(d.independence) + '%'));
+          document.getElementById('card').classList.toggle('muted', d.available === false);
+        } catch (e) { /* keep last values */ }
+        finally { busy = false; }
+      }
+
+      refresh();
+      var timer = setInterval(refresh, 3000);
+      window.addEventListener('pagehide', function () { clearInterval(timer); });
+    }
+  </script>
+</body>
+</html>

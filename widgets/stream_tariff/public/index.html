@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #EAF2F8; }
+    .card {
+      background: linear-gradient(160deg, #0f2f2b 0%, #06140f 100%);
+      border-radius: 16px; padding: 14px 16px; height: 226px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .head { display: flex; align-items: center; justify-content: space-between; }
+    .title { font-size: 13px; font-weight: 600; color: #c9e6dc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mode { font-size: 11px; font-weight: 700; color: #7ee6c2; }
+    .badge {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.06); font-size: 14px; font-weight: 700;
+    }
+    .badge .dot { width: 10px; height: 10px; border-radius: 50%; background: #9bb3c4; flex: 0 0 10px; }
+    .badge.charge { background: rgba(79,184,240,0.18); color: #9ed8f7; }
+    .badge.charge .dot { background: #4FB8F0; }
+    .badge.export { background: rgba(56,193,114,0.18); color: #7ee6a6; }
+    .badge.export .dot { background: #38C172; }
+    .badge.hold { background: rgba(245,166,35,0.16); color: #f7c983; }
+    .badge.hold .dot { background: #F5A623; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+    .stat { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 7px 10px; }
+    .stat .label { font-size: 10px; color: #8fb3a8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat .value { font-size: 15px; font-weight: 700; }
+    .muted { opacity: 0.55; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="head">
+      <div class="title" id="title">Tariff</div>
+      <div class="mode" id="mode"></div>
+    </div>
+    <div class="badge hold" id="badge"><span class="dot"></span><span id="badgeText">—</span></div>
+    <div class="grid">
+      <div class="stat"><div class="label">Backup reserve</div><div class="value" id="reserve">—</div></div>
+      <div class="stat"><div class="label">Battery</div><div class="value" id="soc">—</div></div>
+      <div class="stat"><div class="label">Charge limit</div><div class="value" id="chg">—</div></div>
+      <div class="stat"><div class="label">Discharge limit</div><div class="value" id="dsg">—</div></div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var MODES = { self_powered: 'Self-powered', ai: 'AI / Smart', scheduled: 'Scheduled', tou: 'Time-of-use' };
+    function set(id, t) { document.getElementById(id).textContent = t; }
+    function pct(v) { return v == null ? '—' : Math.round(v) + '%'; }
+
+    function deriveBadge(d) {
+      var g = d.grid;
+      var importing = g != null && g > 5;
+      var exporting = g != null && g < -5;
+      // Charging in a cheap window: charge limit maxed and importing from grid.
+      if (importing && d.chargeLimit != null && d.chargeLimit >= 100) {
+        return { cls: 'charge', text: 'Charging in cheap window' };
+      }
+      // Exporting at peak: feed-in on and exporting to grid.
+      if (exporting && d.feedIn) {
+        return { cls: 'export', text: 'Exporting at peak' };
+      }
+      if (importing) return { cls: 'charge', text: 'Importing from grid' };
+      if (exporting) return { cls: 'export', text: 'Exporting to grid' };
+      return { cls: 'hold', text: 'Holding — self-powered' };
+    }
+
+    function onHomeyReady(Homey) {
+      Homey.ready();
+      var busy = false;
+      var deviceId = null;
+      try { var ids = Homey.getDeviceIds(); if (ids && ids.length) deviceId = ids[0]; } catch (e) {}
+
+      async function refresh() {
+        if (busy) return; busy = true;
+        try {
+          var q = deviceId ? '/?id=' + encodeURIComponent(deviceId) : '/';
+          var d = await Homey.api('GET', q, {});
+          if (!d || !d.ok) { set('title', 'No STREAM system found'); return; }
+          set('title', d.name || 'Tariff');
+          set('mode', d.mode ? (MODES[d.mode] || d.mode) : '');
+          var b = deriveBadge(d);
+          var badge = document.getElementById('badge');
+          badge.className = 'badge ' + b.cls;
+          set('badgeText', b.text);
+          set('reserve', pct(d.reserve));
+          set('soc', pct(d.soc));
+          set('chg', pct(d.chargeLimit));
+          set('dsg', pct(d.dischargeLimit));
+          document.getElementById('card').classList.toggle('muted', d.available === false);
+        } catch (e) { /* keep last values */ }
+        finally { busy = false; }
+      }
+
+      refresh();
+      var timer = setInterval(refresh, 3000);
+      window.addEventListener('pagehide', function () { clearInterval(timer); });
+    }
+  </script>
+</body>
+</html>

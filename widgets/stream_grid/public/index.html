@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #EAF2F8; }
+    .card {
+      background: linear-gradient(160deg, #2a1533 0%, #120818 100%);
+      border-radius: 16px; padding: 14px 16px; height: 226px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .head { display: flex; align-items: center; justify-content: space-between; }
+    .title { font-size: 13px; font-weight: 600; color: #e0cfec; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); }
+    .pill.import { background: rgba(224,85,90,0.22); color: #ff9ea1; }
+    .pill.export { background: rgba(56,193,114,0.22); color: #7ee6a6; }
+    .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .dir { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #b39cc4; }
+    .big { font-size: 42px; font-weight: 800; line-height: 1; }
+    .big.import { color: #E0555A; }
+    .big.export { color: #38C172; }
+    .big.idle { color: #9bb3c4; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 8px 12px; }
+    .stat .label { font-size: 10px; color: #b39cc4; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat .value { font-size: 17px; font-weight: 700; }
+    .stat.imp .value { color: #ff9ea1; }
+    .stat.exp .value { color: #7ee6a6; }
+    .muted { opacity: 0.55; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="head">
+      <div class="title" id="title">Grid</div>
+      <div class="pill" id="feed">—</div>
+    </div>
+    <div class="hero">
+      <div class="dir" id="dir">Grid</div>
+      <div class="big idle" id="big">—</div>
+    </div>
+    <div class="stats">
+      <div class="stat imp"><div class="label">Imported today</div><div class="value" id="imp">—</div></div>
+      <div class="stat exp"><div class="label">Exported today</div><div class="value" id="exp">—</div></div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    function set(id, t) { document.getElementById(id).textContent = t; }
+    function fmtPower(w) {
+      if (w == null) return '—';
+      var a = Math.abs(w);
+      if (a >= 1000) return (a / 1000).toFixed(2) + ' kW';
+      return Math.round(a) + ' W';
+    }
+    function fmtKwh(k) { return k == null ? '—' : k.toFixed(2) + ' kWh'; }
+
+    function onHomeyReady(Homey) {
+      Homey.ready();
+      var busy = false;
+      var deviceId = null;
+      try { var ids = Homey.getDeviceIds(); if (ids && ids.length) deviceId = ids[0]; } catch (e) {}
+
+      async function refresh() {
+        if (busy) return; busy = true;
+        try {
+          var q = deviceId ? '/?id=' + encodeURIComponent(deviceId) : '/';
+          var d = await Homey.api('GET', q, {});
+          if (!d || !d.ok) { set('title', 'No STREAM system found'); return; }
+          set('title', d.name || 'Grid');
+
+          var g = d.grid;
+          var mode = g == null ? 'idle' : (g > 5 ? 'import' : (g < -5 ? 'export' : 'idle'));
+          var big = document.getElementById('big');
+          big.className = 'big ' + mode;
+          big.textContent = fmtPower(g);
+          set('dir', mode === 'import' ? 'Importing from grid' : mode === 'export' ? 'Exporting to grid' : 'Grid idle');
+
+          set('imp', fmtKwh(d.importToday));
+          set('exp', fmtKwh(d.exportToday));
+
+          var feed = document.getElementById('feed');
+          if (d.feedIn === null) { feed.className = 'pill'; feed.textContent = ''; }
+          else if (d.feedIn) { feed.className = 'pill export'; feed.textContent = 'Feed-in on'; }
+          else { feed.className = 'pill import'; feed.textContent = 'Feed-in off'; }
+
+          document.getElementById('card').classList.toggle('muted', d.available === false);
+        } catch (e) { /* keep last values */ }
+        finally { busy = false; }
+      }
+
+      refresh();
+      var timer = setInterval(refresh, 3000);
+      window.addEventListener('pagehide', function () { clearInterval(timer); });
+    }
+  </script>
+</body>
+</html>

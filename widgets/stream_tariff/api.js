@@ -1,12 +1,11 @@
 'use strict';
 
 /**
- * Widget backend: returns the live EcoFlow-style power flow for a STREAM system,
- * read from the STREAM Battery (system) device's capabilities.
- *
- * Device resolution: prefers the device chosen via the widget's device picker
- * (its Homey id is passed as `?id=`), then the legacy `index` setting, then the
- * first STREAM system device — so single-system users always resolve correctly.
+ * Widget backend: tariff-relevant control state — operating mode, backup reserve,
+ * charge/discharge limits and feed-in — plus a state badge derived from the live
+ * grid direction and control settings. Half-hourly prices come from the user's
+ * Octopus integration (the EcoFlow open API exposes no tariff data), so this
+ * widget never invents price figures.
  */
 
 function resolveDevice(homey, query) {
@@ -35,21 +34,20 @@ function num(d, cap) {
 }
 
 module.exports = {
-  async getFlow({ homey, query }) {
+  async getTariff({ homey, query }) {
     const d = resolveDevice(homey, query);
     if (!d) return { ok: false, reason: 'no_device' };
-
     return {
       ok: true,
       name: d.getName(),
       available: d.getAvailable(),
-      grid: num(d, 'measure_power.grid'), // + import / - export (W)
-      solar: num(d, 'measure_power.pv'), // W
-      home: num(d, 'measure_power.load'), // W
-      battery: num(d, 'measure_power'), // + charging / - discharging (W)
-      soc: num(d, 'measure_battery'), // %
-      state: d.getCapabilityValue('battery_charging_state') || null,
-      solarToday: num(d, 'energy_solar_today'), // kWh
+      mode: d.getCapabilityValue('operating_mode') || null,
+      reserve: num(d, 'backup_reserve_soc'),
+      chargeLimit: num(d, 'charge_limit'),
+      dischargeLimit: num(d, 'discharge_limit'),
+      feedIn: typeof d.getCapabilityValue('feed_in_control') === 'boolean' ? d.getCapabilityValue('feed_in_control') : null,
+      grid: num(d, 'measure_power.grid'),
+      soc: num(d, 'measure_battery'),
     };
   },
 };
