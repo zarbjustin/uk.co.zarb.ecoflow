@@ -3,7 +3,7 @@
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { streamModelFromSn } from '../../lib/streamModels';
-import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
+import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
 
 /**
  * A single physical STREAM inverter/battery unit. The device is tailored to its
@@ -153,7 +153,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     }
     if (!isMain) return;
     this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
-    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.send(StreamCmd.backupReserve(this.mainSn, v)));
+    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.applyBackupReserve(v));
     this.registerCapabilityListener('charge_limit', async (v: number) => this.send(StreamCmd.chargeLimit(this.mainSn, v)));
     this.registerCapabilityListener('discharge_limit', async (v: number) => this.send(StreamCmd.dischargeLimit(this.mainSn, v)));
     this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
@@ -163,6 +163,37 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private async send(payload: Record<string, any>): Promise<void> {
     await this.client.setQuota(payload);
     this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
+  }
+
+  /**
+   * Apply a backup-reserve target safely (only the main unit exposes this). Lowers
+   * the discharge limit first when required so EcoFlow doesn't reject the reserve
+   * with error 8524, then verifies the device accepted it.
+   */
+  private async applyBackupReserve(targetSoc: number): Promise<void> {
+    const current = this.getCapabilityValue('discharge_limit');
+    const currentLimit = typeof current === 'number' && Number.isFinite(current) ? current : undefined;
+    const seq = backupReserveSequence(this.mainSn, targetSoc, currentLimit);
+    for (const cmd of seq.commands) {
+      // eslint-disable-next-line no-await-in-loop
+      await this.client.setQuota(cmd);
+    }
+    if (seq.newDischargeLimit !== undefined) {
+      await this.setCapabilityValue('discharge_limit', seq.newDischargeLimit).catch(() => {});
+    }
+    await new Promise<void>((resolve) => {
+      this.homey.setTimeout(resolve, 1500);
+    });
+    await this.poll();
+    const applied = this.getCapabilityValue('backup_reserve_soc');
+    const appliedNum = typeof applied === 'number' && Number.isFinite(applied) ? applied : undefined;
+    if (appliedNum === undefined || Math.abs(appliedNum - seq.reserve) > 2) {
+      throw new Error(
+        `EcoFlow did not apply the backup reserve (requested ${seq.reserve}%, device reports `
+        + `${appliedNum ?? 'unknown'}%). It must exceed the discharge limit by ~3%.`,
+      );
+    }
+    await this.setCapabilityValue('backup_reserve_soc', seq.reserve).catch(() => {});
   }
 
   /** Populate the read-only model/serial/role settings shown on the device page. */

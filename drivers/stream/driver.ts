@@ -52,6 +52,9 @@ module.exports = class StreamDriver extends Homey.Driver {
     flow.getActionCard('prepare_for_peak_export').registerRunListener(
       (args: any) => args.device.flowPreparePeakExport(args.reserve),
     );
+    flow.getActionCard('release_for_export').registerRunListener(
+      (args: any) => args.device.flowReleaseForExport(),
+    );
 
     // Trigger arg-matching for the battery threshold card
     flow.getDeviceTriggerCard('battery_level_crossed').registerRunListener((args: any, state: any) => {

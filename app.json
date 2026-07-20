@@ -601,6 +601,25 @@
         ]
       },
       {
+        "id": "release_for_export",
+        "title": {
+          "en": "Release battery for export now"
+        },
+        "titleFormatted": {
+          "en": "Release battery for export now"
+        },
+        "hint": {
+          "en": "Lowers the discharge limit and backup reserve to the minimum (in the correct order, avoiding EcoFlow error 8524) and enables grid feed-in, so the battery discharges/exports immediately — e.g. at the start of a peak-price window."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
         "id": "set_backup_reserve",
         "title": {
           "en": "Set backup reserve level"

@@ -164,10 +164,29 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   async onDeleted(): Promise<void> {
+    await this.teardown();
+  }
+
+  async onUninit(): Promise<void> {
+    await this.teardown();
+  }
+
+  /**
+   * Idempotent teardown shared by onDeleted and onUninit. Homey calls onUninit
+   * (not onDeleted) on app update / reboot / single-device re-init, so the MQTT
+   * handlers, timers AND the energy checkpoint MUST be released/flushed here too —
+   * otherwise the coalesced energy write is lost and meter_power regresses
+   * (non-monotonic) across restarts, corrupting the Homey Energy dashboard.
+   */
+  private async teardown(): Promise<void> {
     if (this.subscribedSn) {
       getApp(this.homey).unsubscribeRealtime(this.subscribedSn, this.quotaHandler, this.statusHandler);
+      this.subscribedSn = undefined;
     }
-    if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+    if (this.pollTimer) {
+      this.homey.clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
     await this.onTeardown();
   }
 }
