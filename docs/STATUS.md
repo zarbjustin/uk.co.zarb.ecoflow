@@ -4,13 +4,40 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Submit Build 7** for certification on the dashboard and **paste the reply** from
-  `docs/CERTIFICATION_REPLY.md` into the Homey review thread (subject: "EcoFlow STREAM Series").
-- [ ] On hardware: **confirm the self-heating field name** (candidates in
-  `docs/FEATURE_BACKLOG.md`) and the **STREAM Max PV-input count**; adjust
-  `lib/streamMapping.ts` / `lib/streamModels.ts` if needed.
-- [ ] Optional: verify the new v1.8.0 tariff Flows on the live STREAM (cheap-charge /
-  peak-export) and the daily-history tiles populate.
+- [ ] **Merge the review PR** (`copilot/review-v1.8.6`) then **bump the version** (minor →
+  v1.9.0) via *Update Homey App Version* and run *Publish Homey App*.
+- [ ] **Resubmit for certification** and paste `docs/REVIEWER_NOTES.md` (now covers the **5 distinct
+  widget previews**) + `docs/CERTIFICATION_REPLY.md` into the review thread.
+- [ ] On hardware: **confirm the self-heating field name**, the **STREAM Max (BK41) PV-input count**
+  (now set to **2** — verify), and the per-socket `powGetSchuko1/2` fields.
+- [ ] Optional: verify the 8524-safe reserve sequence, `Release battery for export now`, and the
+  new grid threshold triggers on the live STREAM.
+
+## Review & hardening pass on v1.8.6 (2026-07-20)
+
+A full multi-model review + implementation pass on the current release (branch
+`copilot/review-v1.8.6`, PR pending):
+- **Deliverables:** `docs/PRODUCT_RESEARCH.md`, `docs/CODE_REVIEW_v1.8.6.md` (GPT-5.6 Sol +
+  GPT-5.5 + Opus 4.8), `docs/FEATURE_EVALUATION.md`, `docs/SPECIFICATION.md`, `docs/SPRINTS.md`,
+  `docs/PRE_SUBMISSION_CHECKLIST.md`.
+- **Widgets (Sprint 1, certification fix):** replaced the shared placeholder with a **distinct,
+  accurate preview per widget** (`npm run widgets:preview`); fixed the reversed Energy-Flow grid
+  arrow; renamed "Solar Forecast" → "Solar Target" and "Tariff Opportunity" → "Energy
+  Recommendation"; qualified the estimated consumption/independence values; mute on no-device.
+- **High fixes (Sprint 2):** H1 backup-reserve 8524 ordering + verify (+ `Release battery for
+  export now`); H2 `onUninit` flushes `EnergyCheckpoint` so meters stay monotonic across restarts;
+  H3 counter-latch stops battery double-count; H4 MQTT session can't survive teardown.
+- **Medium/low (Sprint 3):** BK41 PV count 4→2; history midnight reset + blank-parse; MQTT
+  reconnect credential refresh; timer/reference cleanups.
+- **Features (Sprint 4):** solar-below, charging-from-solar, grid import/export threshold triggers.
+- **Status:** 51/51 tests pass; lint clean; `homey app validate --level publish` clean.
+- **Already-fixed on master (not redone):** trigger state machine (`flowStates`), empty-string
+  parsing, poll/MQTT serialization, `getId()` binding, signing/SSRF security, 3–100% reserve.
+
+## Suggested v1.9.0 changelog (for the version workflow)
+> Five dashboard widgets now each have their own accurate preview; safer backup-reserve control
+> (fixes a silent no-op); trustworthy energy meters across restarts; sturdier realtime connection;
+> new tariff/grid Flow cards; STREAM Max solar-input fix.
 
 ## Session log
 
