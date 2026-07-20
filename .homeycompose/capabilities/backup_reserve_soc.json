@@ -1,7 +1,15 @@
 {
   "type": "number",
-  "title": { "en": "Backup reserve" },
-  "units": { "en": "%" },
+  "title": {
+    "en": "Backup reserve",
+    "de": "Notstromreserve",
+    "nl": "Back-upreserve"
+  },
+  "units": {
+    "en": "%",
+    "de": "%",
+    "nl": "%"
+  },
   "decimals": 0,
   "min": 3,
   "max": 100,

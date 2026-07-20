@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Energy independence" }, "units": { "en": "%" }, "decimals": 0, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/daily-energy.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Energy independence",
+    "de": "Energieautarkie",
+    "nl": "Energieonafhankelijkheid"
+  },
+  "units": {
+    "en": "%",
+    "de": "%",
+    "nl": "%"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/daily-energy.svg",
+  "insights": true
+}

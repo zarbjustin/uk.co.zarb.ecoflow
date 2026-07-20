@@ -1,7 +1,32 @@
 {
   "id": "solar_power_changed",
-  "title": { "en": "Solar power changed" },
-  "titleFormatted": { "en": "Solar power changed" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
-  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Solar power" }, "example": 450 }]
+  "title": {
+    "en": "Solar power changed",
+    "de": "Solarleistung geändert",
+    "nl": "Zonnevermogen gewijzigd"
+  },
+  "titleFormatted": {
+    "en": "Solar power changed",
+    "de": "Solarleistung geändert",
+    "nl": "Zonnevermogen gewijzigd"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Solar power",
+        "de": "Solarleistung",
+        "nl": "Zonnevermogen"
+      },
+      "example": 450
+    }
+  ]
 }

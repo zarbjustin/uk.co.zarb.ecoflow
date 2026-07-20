@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Grid power" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/grid-import-export.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Grid power",
+    "de": "Netzleistung",
+    "nl": "Netvermogen"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/grid-import-export.svg",
+  "insights": true
+}

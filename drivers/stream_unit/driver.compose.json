@@ -1,8 +1,16 @@
 {
-  "name": { "en": "STREAM Unit" },
+  "name": {
+    "en": "STREAM Unit",
+    "de": "STREAM-Einheit",
+    "nl": "STREAM-unit"
+  },
   "class": "battery",
-  "platforms": ["local"],
-  "connectivity": ["cloud"],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
   "capabilities": [
     "measure_battery",
     "battery_charging_state",
@@ -33,24 +41,116 @@
     "battery_cycles"
   ],
   "capabilitiesOptions": {
-    "measure_battery": { "title": { "en": "Battery" } },
-    "battery_charging_state": { "title": { "en": "Battery state" } },
-    "operating_mode": { "title": { "en": "Mode" } },
-    "measure_power.load": { "title": { "en": "House consumption" } },
-    "onoff.ac1": { "title": { "en": "AC output 1" } },
-    "onoff.ac2": { "title": { "en": "AC output 2" } },
-    "backup_reserve_soc": { "title": { "en": "Backup reserve" } },
-    "charge_limit": { "title": { "en": "Charge limit" } },
-    "discharge_limit": { "title": { "en": "Discharge limit" } },
-    "feed_in_control": { "title": { "en": "Grid feed-in" } },
-    "charge_remaining": { "title": { "en": "Time to full" } },
-    "discharge_remaining": { "title": { "en": "Time to empty" } },
-    "measure_temperature": { "title": { "en": "Battery temperature" } },
-    "battery_soh": { "title": { "en": "Battery health" } },
-    "battery_cycles": { "title": { "en": "Battery cycles" } }
+    "measure_battery": {
+      "title": {
+        "en": "Battery",
+        "de": "Batterie",
+        "nl": "Batterij"
+      }
+    },
+    "battery_charging_state": {
+      "title": {
+        "en": "Battery state",
+        "de": "Batteriestatus",
+        "nl": "Batterijstatus"
+      }
+    },
+    "operating_mode": {
+      "title": {
+        "en": "Mode",
+        "de": "Modus",
+        "nl": "Modus"
+      }
+    },
+    "measure_power.load": {
+      "title": {
+        "en": "House consumption",
+        "de": "Hausverbrauch",
+        "nl": "Huisverbruik"
+      }
+    },
+    "onoff.ac1": {
+      "title": {
+        "en": "AC output 1",
+        "de": "AC-Ausgang 1",
+        "nl": "AC-uitgang 1"
+      }
+    },
+    "onoff.ac2": {
+      "title": {
+        "en": "AC output 2",
+        "de": "AC-Ausgang 2",
+        "nl": "AC-uitgang 2"
+      }
+    },
+    "backup_reserve_soc": {
+      "title": {
+        "en": "Backup reserve",
+        "de": "Notstromreserve",
+        "nl": "Back-upreserve"
+      }
+    },
+    "charge_limit": {
+      "title": {
+        "en": "Charge limit",
+        "de": "Ladegrenze",
+        "nl": "Laadlimiet"
+      }
+    },
+    "discharge_limit": {
+      "title": {
+        "en": "Discharge limit",
+        "de": "Entladegrenze",
+        "nl": "Ontlaadlimiet"
+      }
+    },
+    "feed_in_control": {
+      "title": {
+        "en": "Grid feed-in",
+        "de": "Netzeinspeisung",
+        "nl": "Teruglevering aan net"
+      }
+    },
+    "charge_remaining": {
+      "title": {
+        "en": "Time to full",
+        "de": "Zeit bis voll",
+        "nl": "Tijd tot vol"
+      }
+    },
+    "discharge_remaining": {
+      "title": {
+        "en": "Time to empty",
+        "de": "Zeit bis leer",
+        "nl": "Tijd tot leeg"
+      }
+    },
+    "measure_temperature": {
+      "title": {
+        "en": "Battery temperature",
+        "de": "Batterietemperatur",
+        "nl": "Batterijtemperatuur"
+      }
+    },
+    "battery_soh": {
+      "title": {
+        "en": "Battery health",
+        "de": "Batteriezustand",
+        "nl": "Batterijconditie"
+      }
+    },
+    "battery_cycles": {
+      "title": {
+        "en": "Battery cycles",
+        "de": "Batteriezyklen",
+        "nl": "Batterijcycli"
+      }
+    }
   },
   "energy": {
-    "batteries": ["INTERNAL"]
+    "batteries": [
+      "INTERNAL"
+    ]
   },
   "images": {
     "small": "/drivers/stream_unit/assets/images/small.png",
@@ -60,58 +160,121 @@
   "settings": [
     {
       "type": "group",
-      "label": { "en": "Device information" },
+      "label": {
+        "en": "Device information",
+        "de": "Geräteinformationen",
+        "nl": "Apparaatinformatie"
+      },
       "children": [
         {
           "id": "model",
           "type": "label",
-          "label": { "en": "Model" },
+          "label": {
+            "en": "Model",
+            "de": "Modell",
+            "nl": "Model"
+          },
           "value": "—",
-          "hint": { "en": "The specific STREAM product this unit is, detected from its serial number." }
+          "hint": {
+            "en": "The specific STREAM product this unit is, detected from its serial number.",
+            "de": "Das genaue STREAM-Produkt dieser Einheit, erkannt anhand der Seriennummer.",
+            "nl": "Het specifieke STREAM-product van deze unit, gedetecteerd via het serienummer."
+          }
         },
         {
           "id": "serial_number",
           "type": "label",
-          "label": { "en": "Serial number" },
+          "label": {
+            "en": "Serial number",
+            "de": "Seriennummer",
+            "nl": "Serienummer"
+          },
           "value": "—",
-          "hint": { "en": "This physical unit's EcoFlow serial number." }
+          "hint": {
+            "en": "This physical unit's EcoFlow serial number.",
+            "de": "Die EcoFlow-Seriennummer dieser physischen Einheit.",
+            "nl": "Het EcoFlow-serienummer van deze fysieke unit."
+          }
         },
         {
           "id": "system_role",
           "type": "label",
-          "label": { "en": "Role in system" },
+          "label": {
+            "en": "Role in system",
+            "de": "Rolle im System",
+            "nl": "Rol in systeem"
+          },
           "value": "—",
-          "hint": { "en": "Whether this unit is the system's main unit (which reports whole-home totals and system controls) or a member unit." }
+          "hint": {
+            "en": "Whether this unit is the system's main unit (which reports whole-home totals and system controls) or a member unit.",
+            "de": "Ob diese Einheit die Haupteinheit des Systems ist (meldet Gesamtdaten des Hauses und Systemsteuerungen) oder eine Mitgliedseinheit.",
+            "nl": "Of deze unit de hoofdeenheid van het systeem is (rapporteert totalen voor het hele huis en systeembediening) of een deelnemende unit."
+          }
         },
         {
           "id": "power_source",
           "type": "label",
-          "label": { "en": "Energy source" },
+          "label": {
+            "en": "Energy source",
+            "de": "Energiequelle",
+            "nl": "Energiebron"
+          },
           "value": "—",
-          "hint": { "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input." }
+          "hint": {
+            "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input.",
+            "de": "Wie dieses Modell mit Energie versorgt wird. AC-gekoppelte Einheiten (z. B. STREAM AC Pro) haben keinen direkten Solareingang.",
+            "nl": "Hoe dit model wordt gevoed. AC-gekoppelde units (bijv. STREAM AC Pro) hebben geen directe zonne-ingang."
+          }
         },
         {
           "id": "ac_output",
           "type": "label",
-          "label": { "en": "AC output" },
+          "label": {
+            "en": "AC output",
+            "de": "AC-Ausgang",
+            "nl": "AC-uitgang"
+          },
           "value": "—",
-          "hint": { "en": "Rated AC output for this model. Ultra/Ultra X support a higher paired (parallel) output when two units are linked." }
+          "hint": {
+            "en": "Rated AC output for this model. Ultra/Ultra X support a higher paired (parallel) output when two units are linked.",
+            "de": "Nennleistung des AC-Ausgangs für dieses Modell. Ultra/Ultra X unterstützen eine höhere gekoppelte (parallele) Leistung, wenn zwei Einheiten verbunden sind.",
+            "nl": "Nominaal AC-uitgangsvermogen voor dit model. Ultra/Ultra X ondersteunen een hoger gekoppeld (parallel) vermogen wanneer twee units zijn gekoppeld."
+          }
         }
       ]
     },
     {
       "id": "poll_interval",
       "type": "number",
-      "label": { "en": "Polling interval (seconds)" },
+      "label": {
+        "en": "Polling interval (seconds)",
+        "de": "Abfrageintervall (Sekunden)",
+        "nl": "Poll-interval (seconden)"
+      },
       "value": 30,
       "min": 10,
       "max": 600,
-      "hint": { "en": "How often to fetch this unit's data over REST. MQTT delivers realtime updates between polls." }
+      "hint": {
+        "en": "How often to fetch this unit's data over REST. MQTT delivers realtime updates between polls.",
+        "de": "Wie oft die Daten dieser Einheit per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+        "nl": "Hoe vaak gegevens van deze unit via REST worden opgehaald. MQTT levert realtime updates tussen polls."
+      }
     }
   ],
   "pair": [
-    { "id": "credentials" },
-    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
-    { "id": "add_devices", "template": "add_devices" }
+    {
+      "id": "credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
   ]
 }

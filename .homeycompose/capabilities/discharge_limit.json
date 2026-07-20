@@ -1,7 +1,15 @@
 {
   "type": "number",
-  "title": { "en": "Discharge limit" },
-  "units": { "en": "%" },
+  "title": {
+    "en": "Discharge limit",
+    "de": "Entladegrenze",
+    "nl": "Ontlaadlimiet"
+  },
+  "units": {
+    "en": "%",
+    "de": "%",
+    "nl": "%"
+  },
   "decimals": 0,
   "min": 0,
   "max": 30,

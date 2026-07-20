@@ -1,6 +1,27 @@
 {
   "id": "charging_started",
-  "title": { "en": "Battery started charging" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
-  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Battery power" }, "example": 800 }]
+  "title": {
+    "en": "Battery started charging",
+    "de": "Batterie lädt jetzt",
+    "nl": "Batterij is begonnen met opladen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Battery power",
+        "de": "Batterieleistung",
+        "nl": "Batterijvermogen"
+      },
+      "example": 800
+    }
+  ]
 }

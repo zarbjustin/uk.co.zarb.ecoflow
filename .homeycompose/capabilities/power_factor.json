@@ -1,6 +1,10 @@
 {
   "type": "number",
-  "title": { "en": "Power factor" },
+  "title": {
+    "en": "Power factor",
+    "de": "Leistungsfaktor",
+    "nl": "Vermogensfactor"
+  },
   "decimals": 2,
   "getable": true,
   "setable": false,

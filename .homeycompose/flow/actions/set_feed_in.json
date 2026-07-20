@@ -1,16 +1,46 @@
 {
   "id": "set_feed_in",
-  "title": { "en": "Set grid feed-in" },
-  "titleFormatted": { "en": "Turn grid feed-in [[state]]" },
+  "title": {
+    "en": "Set grid feed-in",
+    "de": "Netzeinspeisung einstellen",
+    "nl": "Teruglevering aan net instellen"
+  },
+  "titleFormatted": {
+    "en": "Turn grid feed-in [[state]]",
+    "de": "Netzeinspeisung [[state]] schalten",
+    "nl": "Teruglevering aan net [[state]] zetten"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
     {
       "type": "dropdown",
       "name": "state",
-      "title": { "en": "Feed-in state" },
+      "title": {
+        "en": "Feed-in state",
+        "de": "Einspeisestatus",
+        "nl": "Terugleverstatus"
+      },
       "values": [
-        { "id": "on", "title": { "en": "on" } },
-        { "id": "off", "title": { "en": "off" } }
+        {
+          "id": "on",
+          "title": {
+            "en": "on",
+            "de": "ein",
+            "nl": "aan"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "off",
+            "de": "aus",
+            "nl": "uit"
+          }
+        }
       ]
     }
   ]

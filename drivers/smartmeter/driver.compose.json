@@ -1,8 +1,16 @@
 {
-  "name": { "en": "Smart Meter" },
+  "name": {
+    "en": "Smart Meter",
+    "de": "Smart Meter",
+    "nl": "Smart Meter"
+  },
   "class": "sensor",
-  "platforms": ["local"],
-  "connectivity": ["cloud"],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
   "capabilities": [
     "measure_power",
     "smartmeter_power_grid",
@@ -12,9 +20,27 @@
     "meter_power.exported"
   ],
   "capabilitiesOptions": {
-    "measure_power": { "title": { "en": "Grid power" } },
-    "meter_power.imported": { "title": { "en": "Imported" } },
-    "meter_power.exported": { "title": { "en": "Exported" } }
+    "measure_power": {
+      "title": {
+        "en": "Grid power",
+        "de": "Netzleistung",
+        "nl": "Netvermogen"
+      }
+    },
+    "meter_power.imported": {
+      "title": {
+        "en": "Imported",
+        "de": "Bezogen",
+        "nl": "Afgenomen"
+      }
+    },
+    "meter_power.exported": {
+      "title": {
+        "en": "Exported",
+        "de": "Eingespeist",
+        "nl": "Teruggeleverd"
+      }
+    }
   },
   "energy": {
     "cumulative": true,
@@ -25,22 +51,52 @@
     {
       "id": "meter_source",
       "type": "dropdown",
-      "label": { "en": "Energy meter shows" },
+      "label": {
+        "en": "Energy meter shows",
+        "de": "Energiezähler zeigt",
+        "nl": "Energiemeter toont"
+      },
       "value": "grid",
       "values": [
-        { "id": "grid", "label": { "en": "Grid power (import / export)" } },
-        { "id": "load", "label": { "en": "Home load (total consumption)" } }
+        {
+          "id": "grid",
+          "label": {
+            "en": "Grid power (import / export)",
+            "de": "Netzleistung (Bezug / Einspeisung)",
+            "nl": "Netvermogen (afname / teruglevering)"
+          }
+        },
+        {
+          "id": "load",
+          "label": {
+            "en": "Home load (total consumption)",
+            "de": "Hauslast (Gesamtverbrauch)",
+            "nl": "Huisbelasting (totaalverbruik)"
+          }
+        }
       ],
-      "hint": { "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive)." }
+      "hint": {
+        "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive).",
+        "de": "Netz = Nettofluss zum/vom Netz (Import positiv, Export negativ). Hauslast = Gesamtleistung, die dein Zuhause gerade verbraucht (immer positiv).",
+        "nl": "Net = nettostroom van/naar het net (import positief, export negatief). Huisbelasting = het totale vermogen dat je huis nu gebruikt (altijd positief)."
+      }
     },
     {
       "id": "poll_interval",
       "type": "number",
-      "label": { "en": "Polling interval (seconds)" },
+      "label": {
+        "en": "Polling interval (seconds)",
+        "de": "Abfrageintervall (Sekunden)",
+        "nl": "Poll-interval (seconden)"
+      },
       "value": 15,
       "min": 10,
       "max": 600,
-      "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+      "hint": {
+        "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+        "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+        "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
+      }
     }
   ],
   "images": {
@@ -49,8 +105,19 @@
     "xlarge": "/drivers/smartmeter/assets/images/xlarge.png"
   },
   "pair": [
-    { "id": "credentials" },
-    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
-    { "id": "add_devices", "template": "add_devices" }
+    {
+      "id": "credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
   ]
 }

@@ -1,1 +1,14 @@
-{ "type": "number", "title": { "en": "Battery cycles" }, "decimals": 0, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/battery-cycles.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Battery cycles",
+    "de": "Batteriezyklen",
+    "nl": "Batterijcycli"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/battery-cycles.svg",
+  "insights": true
+}

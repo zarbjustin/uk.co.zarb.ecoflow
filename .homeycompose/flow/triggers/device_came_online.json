@@ -1,5 +1,15 @@
 {
   "id": "device_came_online",
-  "title": { "en": "Device came online" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+  "title": {
+    "en": "Device came online",
+    "de": "Gerät ist online gegangen",
+    "nl": "Apparaat is online gekomen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ]
 }

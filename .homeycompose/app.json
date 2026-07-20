@@ -8,10 +8,14 @@
     "local"
   ],
   "name": {
-    "en": "EcoFlow STREAM Series"
+    "en": "EcoFlow STREAM Series",
+    "de": "EcoFlow STREAM Series",
+    "nl": "EcoFlow STREAM Series"
   },
   "description": {
-    "en": "Turn balcony sunlight into smarter home energy"
+    "en": "Turn balcony sunlight into smarter home energy",
+    "de": "Balkonsonne in smartere Hausenergie verwandeln",
+    "nl": "Maak van balkonzon slimme energie voor thuis"
   },
   "category": [
     "energy"

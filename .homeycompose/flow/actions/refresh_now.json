@@ -1,5 +1,15 @@
 {
   "id": "refresh_now",
-  "title": { "en": "Refresh data now" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+  "title": {
+    "en": "Refresh data now",
+    "de": "Daten jetzt aktualisieren",
+    "nl": "Gegevens nu verversen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ]
 }

@@ -1,9 +1,37 @@
 {
   "id": "fault_raised",
-  "title": { "en": "A fault was raised" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "title": {
+    "en": "A fault was raised",
+    "de": "Eine Störung wurde gemeldet",
+    "nl": "Er is een storing gemeld"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ],
   "tokens": [
-    { "name": "source", "type": "string", "title": { "en": "Source" }, "example": "inverter" },
-    { "name": "code", "type": "number", "title": { "en": "Code" }, "example": 4096 }
+    {
+      "name": "source",
+      "type": "string",
+      "title": {
+        "en": "Source",
+        "de": "Quelle",
+        "nl": "Bron"
+      },
+      "example": "inverter"
+    },
+    {
+      "name": "code",
+      "type": "number",
+      "title": {
+        "en": "Code",
+        "de": "Code",
+        "nl": "Code"
+      },
+      "example": 4096
+    }
   ]
 }

@@ -1,23 +1,40 @@
 {
-  "name": { "en": "STREAM Solar Target" },
+  "name": {
+    "en": "STREAM Solar Target",
+    "de": "STREAM-Solarziel",
+    "nl": "STREAM-zonnestroomdoel"
+  },
   "devices": {
     "type": "app",
     "singular": true,
-    "filter": { "capabilities": "alarm_generic,measure_battery" }
+    "filter": {
+      "capabilities": "alarm_generic,measure_battery"
+    }
   },
   "settings": [
     {
       "id": "target",
       "type": "number",
-      "title": { "en": "Daily solar target (kWh)" },
+      "title": {
+        "en": "Daily solar target (kWh)",
+        "de": "Tägliches Solarziel (kWh)",
+        "nl": "Dagelijks zonnestroomdoel (kWh)"
+      },
       "value": 10,
       "min": 1,
       "max": 100,
-      "hint": { "en": "Used until a real solar forecast source is added." }
+      "hint": {
+        "en": "Used until a real solar forecast source is added.",
+        "de": "Wird verwendet, bis eine echte Solarprognosequelle hinzugefügt wird.",
+        "nl": "Wordt gebruikt totdat een echte zonneverwachtingsbron is toegevoegd."
+      }
     }
   ],
   "height": 254,
   "api": {
-    "getSolarForecast": { "method": "GET", "path": "/" }
+    "getSolarForecast": {
+      "method": "GET",
+      "path": "/"
+    }
   }
 }

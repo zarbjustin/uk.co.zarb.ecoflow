@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Solar today" }, "units": { "en": "kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/solar.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Solar today",
+    "de": "Solar heute",
+    "nl": "Zonne-energie vandaag"
+  },
+  "units": {
+    "en": "kWh",
+    "de": "kWh",
+    "nl": "kWh"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/solar.svg",
+  "insights": true
+}

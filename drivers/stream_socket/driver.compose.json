@@ -1,8 +1,16 @@
 {
-  "name": { "en": "STREAM Socket" },
+  "name": {
+    "en": "STREAM Socket",
+    "de": "STREAM-Steckdose",
+    "nl": "STREAM-stopcontact"
+  },
   "class": "socket",
-  "platforms": ["local"],
-  "connectivity": ["cloud"],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
   "capabilities": [
     "onoff",
     "measure_power"
@@ -16,16 +24,35 @@
     {
       "id": "poll_interval",
       "type": "number",
-      "label": { "en": "Polling interval (seconds)" },
+      "label": {
+        "en": "Polling interval (seconds)",
+        "de": "Abfrageintervall (Sekunden)",
+        "nl": "Poll-interval (seconden)"
+      },
       "value": 30,
       "min": 10,
       "max": 600,
-      "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+      "hint": {
+        "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+        "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+        "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
+      }
     }
   ],
   "pair": [
-    { "id": "credentials" },
-    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
-    { "id": "add_devices", "template": "add_devices" }
+    {
+      "id": "credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
   ]
 }

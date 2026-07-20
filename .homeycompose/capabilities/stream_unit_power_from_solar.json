@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "House from solar" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/house-from-solar.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "House from solar",
+    "de": "Haus aus Solar",
+    "nl": "Huis uit zonne-energie"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/house-from-solar.svg",
+  "insights": true
+}

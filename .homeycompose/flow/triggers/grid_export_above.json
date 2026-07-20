@@ -1,10 +1,44 @@
 {
   "id": "grid_export_above",
-  "title": { "en": "Grid export rises above" },
-  "titleFormatted": { "en": "Grid export rises above [[watts]] W" },
+  "title": {
+    "en": "Grid export rises above",
+    "de": "Netzeinspeisung steigt über",
+    "nl": "Teruglevering aan net stijgt boven"
+  },
+  "titleFormatted": {
+    "en": "Grid export rises above [[watts]] W",
+    "de": "Netzeinspeisung steigt über [[watts]] W",
+    "nl": "Teruglevering aan net stijgt boven [[watts]] W"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "watts", "min": 0, "max": 15000, "step": 50, "placeholder": { "en": "W" } }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
+    {
+      "type": "number",
+      "name": "watts",
+      "min": 0,
+      "max": 15000,
+      "step": 50,
+      "placeholder": {
+        "en": "W",
+        "de": "W",
+        "nl": "W"
+      }
+    }
   ],
-  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Grid export" }, "example": 800 }]
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Grid export",
+        "de": "Netzeinspeisung",
+        "nl": "Teruglevering aan net"
+      },
+      "example": 800
+    }
+  ]
 }

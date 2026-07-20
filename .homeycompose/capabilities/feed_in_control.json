@@ -1,11 +1,23 @@
 {
   "type": "boolean",
-  "title": { "en": "Grid feed-in" },
+  "title": {
+    "en": "Grid feed-in",
+    "de": "Netzeinspeisung",
+    "nl": "Teruglevering aan net"
+  },
   "getable": true,
   "setable": true,
   "uiComponent": "toggle",
   "icon": "/assets/capabilities/feed-in.svg",
   "insights": true,
-  "insightsTitleTrue": { "en": "Feed-in enabled" },
-  "insightsTitleFalse": { "en": "Feed-in disabled" }
+  "insightsTitleTrue": {
+    "en": "Feed-in enabled",
+    "de": "Einspeisung aktiviert",
+    "nl": "Teruglevering ingeschakeld"
+  },
+  "insightsTitleFalse": {
+    "en": "Feed-in disabled",
+    "de": "Einspeisung deaktiviert",
+    "nl": "Teruglevering uitgeschakeld"
+  }
 }
