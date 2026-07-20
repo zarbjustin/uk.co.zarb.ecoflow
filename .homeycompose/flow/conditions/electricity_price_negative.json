@@ -1,0 +1,21 @@
+{
+  "id": "electricity_price_negative",
+  "title": {
+    "en": "Electricity price !{{is|is not}} negative",
+    "de": "Strompreis !{{ist|ist nicht}} negativ",
+    "nl": "Stroomprijs !{{is|is niet}} negatief"
+  },
+  "titleFormatted": {
+    "en": "Electricity price !{{is|is not}} negative",
+    "de": "Strompreis !{{ist|ist nicht}} negativ",
+    "nl": "Stroomprijs !{{is|is niet}} negatief"
+  },
+  "hint": {
+    "en": "True when the price you feed in is below zero (you are paid to consume). Uses the 'Set current electricity price' action.",
+    "de": "Wahr, wenn der eingespeiste Preis unter null liegt (du wirst fürs Verbrauchen bezahlt). Verwendet die Aktion 'Aktuellen Strompreis festlegen'.",
+    "nl": "Waar wanneer de ingevoerde prijs onder nul ligt (je wordt betaald om te verbruiken). Gebruikt de actie 'Huidige stroomprijs instellen'."
+  },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" }
+  ]
+}

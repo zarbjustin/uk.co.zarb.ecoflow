@@ -8,7 +8,9 @@
     html, body { margin: 0; padding: 0; }
     body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #EEF4F7; }
     .card { height: 226px; padding: 14px 16px; border-radius: 16px; background: #1D2630; display: flex; flex-direction: column; gap: 13px; }
-    .head { font-size: 13px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .title { font-size: 13px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .price { font-size: 12px; font-weight: 700; color: #F6CE48; white-space: nowrap; }
     .action { font-size: 30px; line-height: 1.05; font-weight: 800; color: #F6CE48; }
     .reason { font-size: 13px; line-height: 1.25; color: #B6C5CB; min-height: 34px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: auto; }
@@ -19,7 +21,7 @@
 </head>
 <body>
   <div class="card" id="card">
-    <div class="head" id="title">Energy Recommendation</div>
+    <div class="head"><div class="title" id="title">Energy Recommendation</div><div class="price" id="price"></div></div>
     <div class="action" id="action">—</div>
     <div class="reason" id="reason"></div>
     <div class="grid">
@@ -42,6 +44,7 @@
         const d = await Homey.api('GET', '/?index=' + index + selector, {});
         if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
         document.getElementById('title').textContent = d.name || 'Energy Recommendation';
+        document.getElementById('price').textContent = d.priceNow == null ? '' : (d.priceNow.toFixed(2) + ' /kWh');
         document.getElementById('action').textContent = d.recommendation || 'Watch';
         document.getElementById('reason').textContent = d.reason || '';
         document.getElementById('grid').textContent = d.grid == null ? '—' : (d.grid < -5 ? 'Export ' : (d.grid > 5 ? 'Import ' : 'Flat ')) + power(d.grid);

@@ -450,6 +450,26 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return batt > 5 && surplus > 5;
   }
 
+  /**
+   * Flow action: set the current electricity price (provider-agnostic — fed from
+   * any tariff app such as Octopus, Tibber or aWATTar). Exposed as a capability so
+   * the widget and price conditions can use it. The display unit follows the
+   * device's `price_unit` setting.
+   */
+  async flowSetElectricityPrice(price: number): Promise<void> {
+    const cap = 'tariff_price_now';
+    if (!this.hasCapability(cap)) await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
+    const unit = (this.getSetting('price_unit') as string) || 'p/kWh';
+    await this.setCapabilityOptions(cap, { units: { en: unit } }).catch(() => {});
+    await this.setCapabilityValue(cap, price).catch((e) => this.error('set price', e));
+  }
+
+  /** Condition: current electricity price is negative (paid to consume). */
+  priceIsNegative(): boolean {
+    const p = this.getCapabilityValue('tariff_price_now');
+    return typeof p === 'number' && Number.isFinite(p) && p < 0;
+  }
+
   async flowRefresh(): Promise<void> {
     await this.poll();
     if (this.getSetting('enable_history') !== false) await this.refreshHistory().catch(() => {});

@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Electricity price", "de": "Strompreis", "nl": "Stroomprijs" }, "units": { "en": "p/kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/grid.svg", "insights": true }

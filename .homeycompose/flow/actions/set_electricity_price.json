@@ -1,0 +1,22 @@
+{
+  "id": "set_electricity_price",
+  "title": {
+    "en": "Set current electricity price",
+    "de": "Aktuellen Strompreis festlegen",
+    "nl": "Huidige stroomprijs instellen"
+  },
+  "titleFormatted": {
+    "en": "Set current electricity price to [[price]]",
+    "de": "Aktuellen Strompreis auf [[price]] setzen",
+    "nl": "Huidige stroomprijs instellen op [[price]]"
+  },
+  "hint": {
+    "en": "Feed the current half-hourly price from any tariff app (Octopus, Tibber, aWATTar, …). The STREAM app then shows it and drives the electricity-price conditions.",
+    "de": "Speise den aktuellen halbstündlichen Preis aus einer beliebigen Tarif-App ein (Octopus, Tibber, aWATTar, …). Die STREAM-App zeigt ihn dann an und steuert die Strompreis-Bedingungen.",
+    "nl": "Voer de huidige halfuurlijkse prijs in vanuit elke tarief-app (Octopus, Tibber, aWATTar, …). De STREAM-app toont deze dan en stuurt de stroomprijs-voorwaarden aan."
+  },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    { "type": "number", "name": "price", "min": -1000, "max": 1000, "step": 0.01, "placeholder": { "en": "price/kWh" } }
+  ]
+}
