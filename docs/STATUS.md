@@ -4,17 +4,17 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Submit Build 16 (v1.10.1)** for certification on the dashboard
-  (<https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/16>) and paste
-  `docs/REVIEWER_NOTES.md` + `docs/CERTIFICATION_REPLY.md` into the review thread.
+- [ ] **Monitor Build 16 (v1.10.1) certification** on the dashboard
+  (<https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/16>). The build is under
+  review; respond with `docs/REVIEWER_NOTES.md` + `docs/CERTIFICATION_REPLY.md` if requested.
 - [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:
   confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
   `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
 
 ## Release state (2026-07-20)
 
-- **Latest version:** **v1.10.1** — **Build ID 16** uploaded to the App Store (pending manual
-  submit). Also installed on **Justin's Homey Pro** via `homey app install`.
+- **Latest version:** **v1.10.1** — **Build ID 16** submitted to the App Store and currently under
+  certification review. Also installed on **Justin's Homey Pro** via `homey app install`.
 - v1.10.1 = v1.9.0 (multi-model review + widget-preview fixes) **plus** the fit-and-finish sprints
   (retry/hardening, de/nl i18n, real solar forecast, provider-agnostic tariff, docs + hardware
   tooling) **plus** enriched App Store tags (en/de/nl) + `bugs` URL. PayPal donate = `zarbie`.
@@ -77,7 +77,7 @@ A full multi-model review + implementation pass on the current release (branch
   (see below) and shipped **v1.8.0 / Build 7**, installed on the local Homey Pro. Releases this
   session: v1.7.9 (black icon) → v1.7.10 (rename) → v1.8.0 (A/B/C features).
 
-## Current state (2026-07-17)
+## Historical snapshot — v1.8.6 (2026-07-17)
 
 - **App:** `uk.co.zarb.ecoflow` — "EcoFlow STREAM Series" · SDK v3 · TypeScript.
 - **Latest version:** **v1.8.6** (tag `v1.8.6`).

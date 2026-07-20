@@ -1,0 +1,3 @@
+Je EcoFlow STREAM verandert een zonnig balkon in een echte energiecentrale voor thuis, en deze app brengt het volledige systeem naar Homey. Bekijk live de zonneproductie, batterijlading en netafname en -teruglevering op het Homey Energy-dashboard. Alle metingen worden opgeslagen in Insights, zodat je precies kunt zien waar je energie naartoe gaat.
+
+Daarna kan je huis slim reageren op zijn eigen energie. Laad de batterij wanneer de zon volop schijnt, bewaar energie voor de avondpiek, wissel van bedrijfsmodus, bedien elke AC-uitgang en ontvang direct een melding wanneer iets aandacht nodig heeft - allemaal via Homey Flows, zonder voortdurend tussen apps te hoeven wisselen.
