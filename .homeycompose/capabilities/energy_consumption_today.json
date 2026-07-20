@@ -1,1 +1,1 @@
-{ "type": "number", "title": { "en": "Consumption today" }, "units": { "en": "kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/home-load.svg", "insights": true }
+{ "type": "number", "title": { "en": "Consumption today (est.)" }, "units": { "en": "kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/home-load.svg", "insights": true }

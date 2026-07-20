@@ -4,7 +4,8 @@
   "scripts": {
     "build": "tsc",
     "test": "tsc && node --test test/*.test.js",
-    "lint": "eslint --ext .js,.ts --ignore-path .gitignore ."
+    "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
+    "widgets:preview": "node scripts/generate-widget-previews.mjs"
   },
   "dependencies": {
     "mqtt": "^5.10.1"
@@ -15,6 +16,7 @@
     "@types/node": "^22.10.0",
     "eslint": "^7.32.0",
     "eslint-config-athom": "^3.1.5",
+    "playwright": "^1.61.1",
     "typescript": "^6.0.3"
   },
   "overrides": {

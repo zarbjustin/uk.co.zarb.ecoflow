@@ -28,3 +28,32 @@ export const StreamCmd = {
   chargeLimit: (sn: string, soc: number) => streamEnvelope(sn, { cfgMaxChgSoc: Math.max(50, Math.min(100, Math.round(soc))) }),
   dischargeLimit: (sn: string, soc: number) => streamEnvelope(sn, { cfgMinDsgSoc: Math.max(0, Math.min(30, Math.round(soc))) }),
 };
+
+/** Minimum margin (SoC %) the backup reserve must exceed the discharge limit by. */
+export const RESERVE_OVER_DISCHARGE_MARGIN = 3;
+
+/**
+ * EcoFlow rejects a backup-reserve change (error 8524) unless the target reserve
+ * exceeds the current discharge limit by ~{@link RESERVE_OVER_DISCHARGE_MARGIN}.
+ * Flow cards swallow that error, so a naive "set reserve" is a silent no-op and
+ * the battery never releases. This returns the ordered command sequence to apply
+ * a target reserve safely: lower the discharge limit first when needed, then set
+ * the reserve. Pure and side-effect free so it can be unit-tested.
+ */
+export function backupReserveSequence(
+  sn: string,
+  targetSoc: number,
+  currentDischargeLimit: number | undefined,
+): { reserve: number; newDischargeLimit?: number; commands: StreamSetEnvelope[] } {
+  const reserve = Math.max(3, Math.min(100, Math.round(targetSoc)));
+  const commands: StreamSetEnvelope[] = [];
+  let newDischargeLimit: number | undefined;
+  if (typeof currentDischargeLimit === 'number'
+      && Number.isFinite(currentDischargeLimit)
+      && reserve <= currentDischargeLimit + RESERVE_OVER_DISCHARGE_MARGIN) {
+    newDischargeLimit = Math.max(0, Math.min(30, reserve - RESERVE_OVER_DISCHARGE_MARGIN));
+    commands.push(StreamCmd.dischargeLimit(sn, newDischargeLimit));
+  }
+  commands.push(StreamCmd.backupReserve(sn, reserve));
+  return { reserve, newDischargeLimit, commands };
+}

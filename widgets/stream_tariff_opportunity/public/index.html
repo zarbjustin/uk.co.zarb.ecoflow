@@ -19,7 +19,7 @@
 </head>
 <body>
   <div class="card" id="card">
-    <div class="head" id="title">Tariff Opportunity</div>
+    <div class="head" id="title">Energy Recommendation</div>
     <div class="action" id="action">—</div>
     <div class="reason" id="reason"></div>
     <div class="grid">
@@ -40,8 +40,8 @@
       Homey.ready();
       async function refresh() {
         const d = await Homey.api('GET', '/?index=' + index + selector, {});
-        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
-        document.getElementById('title').textContent = d.name || 'Tariff Opportunity';
+        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
+        document.getElementById('title').textContent = d.name || 'Energy Recommendation';
         document.getElementById('action').textContent = d.recommendation || 'Watch';
         document.getElementById('reason').textContent = d.reason || '';
         document.getElementById('grid').textContent = d.grid == null ? '—' : (d.grid < -5 ? 'Export ' : (d.grid > 5 ? 'Import ' : 'Flat ')) + power(d.grid);

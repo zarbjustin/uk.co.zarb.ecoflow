@@ -62,9 +62,9 @@ const SPECS: Record<string, StreamModelSpec> = {
   BK41: {
     model: 'STREAM Max',
     acCoupled: false,
-    solarInputs: 4,
+    solarInputs: 2,
     energySource: SOLAR_SOURCE,
-    acOutput: '1200 W',
+    acOutput: '800 W',
     icon: STANDARD_ICON,
   },
   BK51: {

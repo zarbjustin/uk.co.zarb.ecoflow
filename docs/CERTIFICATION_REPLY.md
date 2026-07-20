@@ -56,6 +56,11 @@ dashboard integration and the Octopus-driven Flows working end-to-end.
 
 Thank you for considering this, and for the kind offer to help put me in touch with Marcus.
 
+P.S. On your other note — thank you for spotting that the widget previews were identical. Each of
+the five widgets (Energy Flow, Today Balance, Battery Plan, Solar Target, and Energy Recommendation)
+now has its own preview, rendered directly from the real widget, so every preview matches its actual
+widget.
+
 Best regards,
 Justin Zarb
 

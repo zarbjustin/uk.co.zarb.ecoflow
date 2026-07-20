@@ -1,0 +1,9 @@
+{
+  "id": "solar_power_below",
+  "title": { "en": "Solar power !{{is|is not}} below" },
+  "titleFormatted": { "en": "Solar power !{{is|is not}} below [[watts]] W" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    { "type": "number", "name": "watts", "min": 0, "max": 10000, "step": 10, "placeholder": { "en": "W" } }
+  ]
+}

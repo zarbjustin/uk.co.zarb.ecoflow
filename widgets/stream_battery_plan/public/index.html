@@ -53,7 +53,7 @@
       Homey.ready();
       async function refresh() {
         const d = await Homey.api('GET', '/?index=' + index + selector, {});
-        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
+        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
         document.getElementById('title').textContent = d.name || 'Battery Plan';
         document.getElementById('mode').textContent = label(d.mode);
         document.getElementById('soc').textContent = pct(d.soc);

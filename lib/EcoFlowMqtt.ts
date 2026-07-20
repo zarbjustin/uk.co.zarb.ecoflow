@@ -63,6 +63,14 @@ export class EcoFlowMqtt {
 
   /** Force a reconnect (e.g. after credentials changed), keeping subscriptions. */
   async reconnect(): Promise<void> {
+    // If a connect is in flight (possibly with the OLD credentials), let it settle
+    // and then discard its client, so we re-establish with the new options rather
+    // than silently keeping the stale session.
+    if (this.connecting) {
+      try {
+        await this.connecting;
+      } catch { /* ignore */ }
+    }
     if (this.client) {
       this.client.removeAllListeners('close');
       this.client.removeAllListeners('offline');
@@ -83,6 +91,9 @@ export class EcoFlowMqtt {
   private async establish(): Promise<void> {
     const api = new EcoFlowClient(this.opts);
     const cert = await api.getCertification();
+    // If we were torn down while fetching the certificate, do not open a session —
+    // otherwise a live client (and its listeners) would survive end()/onUninit.
+    if (this.ended) throw new Error('MQTT ended during connect');
     this.account = cert.certificateAccount;
     const url = `${cert.protocol}://${cert.url}:${cert.port}`;
     const client = mqtt.connect(url, {
@@ -102,6 +113,10 @@ export class EcoFlowMqtt {
       client.once('connect', () => {
         settled = true;
         this.backoffMs = 0;
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
         this.log('connected');
         for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
         resolve();
@@ -237,6 +252,13 @@ export class EcoFlowMqtt {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+    // Wait for any in-flight connect to settle so a client created during its
+    // certificate fetch can't survive teardown.
+    if (this.connecting) {
+      try {
+        await this.connecting;
+      } catch { /* ignore */ }
     }
     if (this.client) await new Promise<void>((res) => this.client!.end(false, {}, () => res()));
     this.client = null;

@@ -24,6 +24,8 @@ module.exports = class EcoFlowApp extends Homey.App {
   private async applyConnectionSettings(): Promise<void> {
     if (this.homey.settings.get('mqtt_enabled') === false) {
       await this.mqtt?.end().catch(() => {});
+      this.mqtt = null;
+      this.mqttCredsKey = '';
       return;
     }
     if (!this.mqtt) return;
