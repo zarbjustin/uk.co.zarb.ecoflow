@@ -27,8 +27,55 @@
       "STREAM",
       "solar",
       "battery",
+      "home battery",
       "smart meter",
-      "energy storage"
+      "energy storage",
+      "balcony solar",
+      "PV",
+      "solar forecast",
+      "dynamic tariff",
+      "Octopus",
+      "Tibber",
+      "aWATTar",
+      "Agile",
+      "grid",
+      "feed-in",
+      "energy"
+    ],
+    "de": [
+      "EcoFlow",
+      "STREAM",
+      "Solar",
+      "Batterie",
+      "Heimspeicher",
+      "Smart Meter",
+      "Stromspeicher",
+      "Balkonkraftwerk",
+      "PV",
+      "Solarprognose",
+      "dynamischer Stromtarif",
+      "Tibber",
+      "aWATTar",
+      "Netz",
+      "Einspeisung",
+      "Energie"
+    ],
+    "nl": [
+      "EcoFlow",
+      "STREAM",
+      "zonne-energie",
+      "batterij",
+      "thuisaccu",
+      "slimme meter",
+      "opslag",
+      "balkon zonnepanelen",
+      "PV",
+      "zonprognose",
+      "dynamisch tarief",
+      "Tibber",
+      "net",
+      "teruglevering",
+      "energie"
     ]
   },
   "brandColor": "#000000",
@@ -42,6 +89,9 @@
     }
   },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",
+  "bugs": {
+    "url": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues"
+  },
   "source": "https://github.com/zarbjustin/uk.co.zarb.ecoflow",
   "contributing": {
     "donate": {
