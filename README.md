@@ -20,15 +20,25 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 - Cumulative **imported/exported energy** is derived from the live power as monotonic counters (the public API does not expose grid kWh totals). Standalone meters that report per-phase power/voltage/current have those values surfaced automatically.
 
 ### Automation
-- **Triggers:** solar power changed, grid power changed, battery level crossed above/below a threshold.
-- **Conditions:** operating mode is…, grid feed-in is enabled, **battery level is above/below**, solar power above.
-- **Actions:** set operating mode, set backup reserve, set charge/discharge limit, set grid feed-in, turn AC output on/off, and tariff helpers **Prepare for cheap grid import** / **Prepare for peak / export**.
-- **Tariff automation:** ready-made [Octopus Agile recipes](docs/OCTOPUS_FLOWS.md) for charging in the cheapest window and exporting at peak.
+- **Triggers:** solar/grid power changed, grid import/export started, grid import/export **rises above** a threshold, charging/discharging started, battery level crossed, operating mode changed, fault raised/cleared, device online/offline.
+- **Conditions:** operating mode is…, grid feed-in enabled, battery level above/below, solar power **above/below**, **battery charging from solar**, **solar forecast today/tomorrow above/below**, **electricity price above/below**, **electricity price is negative**.
+- **Actions:** set operating mode, backup reserve (8524-safe, verified), charge/discharge limit, grid feed-in, per-socket on/off, tariff helpers **Prepare for cheap import** / **Prepare for peak/export** / **Release battery for export now**, and **Set current electricity price**.
+- **Solar forecast:** today's and tomorrow's expected yield from the local weather forecast ([Open-Meteo](https://open-meteo.com), keyless) at Homey's location, with a tunable calibration factor.
+- **Tariff automation (provider-agnostic):** feed your current price from **any** tariff app (Octopus, Tibber, aWATTar, …) into the *Set electricity price* action and drive price/negative-price Flows — see [tariff recipes](docs/OCTOPUS_FLOWS.md).
 - **Insights:** all measurements are logged automatically.
 
+### Dashboard widgets
+Five distinct widgets (each with its own accurate preview), bound to a chosen STREAM system:
+**Energy Flow**, **Today Balance**, **Battery Plan**, **Solar Forecast**, and **Energy
+Recommendation**. Regenerate previews from the real widget HTML with `npm run widgets:preview`.
+
+### Languages
+English, **German** and **Dutch**.
+
 ### Under the hood
-- Signed EcoFlow IoT Open Platform REST client (HMAC-SHA256, validated against the documented test vector).
+- Signed EcoFlow IoT Open Platform REST client (HMAC-SHA256, validated against the documented test vector), with bounded retry for transient blips.
 - Shared **MQTT** connection for realtime (~2 s) updates, with REST polling as a fallback.
+- **Troubleshooting / logs:** view the app's live log (incl. `[mqtt]` connection events) via *Homey Developer Tools → your app → Log*.
 
 ## Setup
 1. Create an **Access Key** and **Secret Key** at [developer.ecoflow.com](https://developer.ecoflow.com) → *IoT Background*.

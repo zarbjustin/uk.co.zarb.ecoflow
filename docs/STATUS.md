@@ -4,12 +4,33 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Merge the review PR** (`copilot/review-v1.8.6`) then **bump the version** (minor →
-  v1.9.0) via *Update Homey App Version* and run *Publish Homey App*.
-- [ ] **Resubmit for certification** and paste `docs/REVIEWER_NOTES.md` (now covers the **5 distinct
-  widget previews**) + `docs/CERTIFICATION_REPLY.md` into the review thread.
-- [ ] On hardware: **confirm the self-heating field name**, the **STREAM Max (BK41) PV-input count**
-  (now set to **2** — verify), and the per-socket `powGetSchuko1/2` fields.
+- [ ] **Bump the version** (minor → **v1.10.0**) via *Update Homey App Version* and run
+  *Publish Homey App*, then resubmit for certification (reviewer notes/reply are current).
+- [ ] **Hardware verification** — run `scripts/homeyscript/stream-field-probe.js` and follow
+  `docs/HARDWARE_VERIFICATION.md`: confirm the self-heating field, STREAM Max (BK41) 2-PV count,
+  and per-socket fields; then adjust `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
+
+## Fit-and-finish sprints (2026-07-20, after v1.9.0 / Build 14)
+
+Merged to `master` via PRs #2–#5 (each build/lint/test/validate green):
+- **S1 hardening:** REST retry (`lib/retry.ts`), `batteryEnergyMode` latch tests, widget in-flight
+  guard + pagehide teardown.
+- **S2 i18n:** German + Dutch across the whole app (279 localized objects).
+- **S3 solar forecast:** real Open-Meteo forecast (`lib/solarForecast.ts`), `solar_forecast_today/
+  tomorrow` capabilities, geolocation permission, forecast widget + conditions.
+- **S4 tariff (provider-agnostic):** `Set current electricity price` action + `Electricity price`
+  capability + price/negative-price conditions (shared `lib/thresholds.ts`); works with any tariff
+  app (Octopus/Tibber/aWATTar/…) in any region; Energy Recommendation widget shows the price.
+- **S5/S6 polish + hardware tooling:** README/docs refresh, provider-agnostic `OCTOPUS_FLOWS.md`,
+  `docs/HARDWARE_VERIFICATION.md` + the HomeyScript probe.
+- **Status:** 68/68 tests pass; lint clean; validates at `--level publish`.
+
+## Suggested v1.10.0 changelog (for the version workflow)
+> German & Dutch translations. New: real solar forecast (today & tomorrow) from your local weather,
+> and tariff-aware Flows that work with any electricity-price app. Plus sturdier connectivity and
+> more reliable widgets.
+
+## Previously — review & hardening pass on v1.8.6 (2026-07-20)
 - [ ] Optional: verify the 8524-safe reserve sequence, `Release battery for export now`, and the
   new grid threshold triggers on the live STREAM.
 
