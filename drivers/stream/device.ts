@@ -2,7 +2,7 @@
 
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
-import { integrateSignedPower, followResettableCounter } from '../../lib/energyIntegration';
+import { integrateSignedPower, followResettableCounter, batteryEnergyMode } from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
@@ -231,10 +231,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     const accuDsg = toFiniteNumber(quota.accuDsgEnergy);
     const hasChg = accuChg !== undefined;
     const hasDsg = accuDsg !== undefined;
+    const mode = batteryEnergyMode(hasChg || hasDsg, this.countersAvailable);
+    // Counters are authoritative once seen: 'skip' means the source is counters but
+    // this sample carries none, so we must not integrate power (double-count).
+    if (mode === 'skip') return;
 
     // Capture the interval and re-anchor the timestamp SYNCHRONOUSLY (before any
     // await) so a concurrent applyQuota (poll + MQTT) can't double-count.
-    if (hasChg || hasDsg) {
+    if (mode === 'counter') {
       this.lastEnergyTs = Date.now();
       this.countersAvailable = true;
       let changed = false;
@@ -254,10 +258,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       return;
     }
 
+    // mode === 'integrate' — counters have never been seen; integrate power.
     if (typeof batteryPowerW !== 'number') return;
-    // Device counters are authoritative once seen; never also integrate power or
-    // the same energy would be double-counted into the monotonic Homey meters.
-    if (this.countersAvailable) return;
     const now = Date.now();
     const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
     this.lastEnergyTs = now;

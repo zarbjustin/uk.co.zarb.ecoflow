@@ -56,13 +56,18 @@
         document.getElementById('bar').style.width = (d.progress == null ? 0 : d.progress) + '%';
         document.getElementById('card').classList.toggle('muted', d.available === false);
       }
+      var busy = false;
       function scheduledRefresh() {
+        if (busy) return;
+        busy = true;
         refresh().catch(function () {
           document.getElementById('title').textContent = 'STREAM data unavailable';
           document.getElementById('card').classList.add('muted');
-        });
+        }).finally(function () { busy = false; });
       }
-      scheduledRefresh(); setInterval(scheduledRefresh, 30000);
+      scheduledRefresh();
+      var timer = setInterval(scheduledRefresh, 30000);
+      window.addEventListener('pagehide', function () { clearInterval(timer); });
     }
   </script>
 </body>

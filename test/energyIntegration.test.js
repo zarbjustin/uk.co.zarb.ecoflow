@@ -55,3 +55,18 @@ test('followResettableCounter follows a device counter and absorbs resets', () =
   s = followResettableCounter(s.totalWh, s.lastRawWh, NaN);
   assert.strictEqual(s.totalWh, 700);
 });
+
+const { batteryEnergyMode } = require('../.homeybuild/lib/energyIntegration.js');
+
+test('batteryEnergyMode: sample with counters uses the counter path', () => {
+  assert.strictEqual(batteryEnergyMode(true, false), 'counter');
+  assert.strictEqual(batteryEnergyMode(true, true), 'counter');
+});
+
+test('batteryEnergyMode: once counters seen, a counter-less sample is skipped (no double-count)', () => {
+  assert.strictEqual(batteryEnergyMode(false, true), 'skip');
+});
+
+test('batteryEnergyMode: counters never seen -> integrate power fallback', () => {
+  assert.strictEqual(batteryEnergyMode(false, false), 'integrate');
+});
