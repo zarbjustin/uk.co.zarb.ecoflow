@@ -30,6 +30,7 @@ const AC_SOURCE = 'AC-coupled (charges from AC/grid, no direct solar input)';
 //   STREAM Ultra   — 4× MPPT (2000 W PV), 1200 W AC (2300 W paired)
 //   STREAM Ultra X — 4× MPPT (2000 W PV), 1200 W AC (2300 W paired)
 //   STREAM Pro     — 3× MPPT (1500 W PV), 800 W AC
+//   STREAM Max     — 2× MPPT (1000 W PV), 800 W AC  (see docs/PRODUCT_RESEARCH.md §5)
 //   STREAM AC/ACPro— AC-coupled, no PV, 800 W AC
 const SPECS: Record<string, StreamModelSpec> = {
   BK11: {
@@ -42,7 +43,7 @@ const SPECS: Record<string, StreamModelSpec> = {
     model: 'STREAM AC Pro', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE, acOutput: '800 W',
   },
   BK41: {
-    model: 'STREAM Max', acCoupled: false, solarInputs: 4, energySource: SOLAR_SOURCE, acOutput: '1200 W',
+    model: 'STREAM Max', acCoupled: false, solarInputs: 2, energySource: SOLAR_SOURCE, acOutput: '800 W',
   },
   BK51: {
     model: 'STREAM AC', acCoupled: true, solarInputs: 0, energySource: AC_SOURCE, acOutput: '800 W',

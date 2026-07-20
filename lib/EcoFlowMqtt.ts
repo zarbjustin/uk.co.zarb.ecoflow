@@ -79,8 +79,17 @@ export class EcoFlowMqtt {
    * with a new one on every attempt instead of looping forever on a stale one.
    */
   private async establish(): Promise<void> {
+    // A reconnect may have been scheduled while we were disconnected; cancel it
+    // so it can't fire later and open a duplicate session over this new client.
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     const api = new EcoFlowClient(this.opts);
     const cert = await api.getCertification();
+    // If we were torn down while fetching the certificate, do not connect —
+    // otherwise a live session (and its listeners) would survive end()/onUninit.
+    if (this.ended) return;
     this.account = cert.certificateAccount;
     const url = `${cert.protocol}://${cert.url}:${cert.port}`;
     const client = mqtt.connect(url, {
@@ -216,6 +225,13 @@ export class EcoFlowMqtt {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+    // Wait for any in-flight connect to settle so a client created during its
+    // certificate fetch can't survive teardown.
+    if (this.connecting) {
+      try {
+        await this.connecting;
+      } catch { /* ignore */ }
     }
     if (this.client) await new Promise<void>((res) => this.client!.end(false, {}, () => res()));
     this.client = null;

@@ -4,7 +4,7 @@ import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { integrateSignedPower, followResettableCounter } from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
-import { StreamCmd, OperatingMode } from '../../lib/streamProtocol';
+import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
@@ -45,6 +45,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private chargedRawWh: number | undefined;
   private dischargedRawWh: number | undefined;
   private lastEnergyTs = 0;
+  // Once the device's own energy counters (accu*Energy, via MQTT) have been seen,
+  // they are the authoritative source and the REST power-integration fallback is
+  // disabled to avoid double-counting the same energy into the Homey meters.
+  private usingCounters = false;
 
   protected getReadSn(): string {
     return this.getData().sn;
@@ -60,6 +64,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
     this.chargedRawWh = this.getStoreValue('chargedRawWh') as number | undefined;
     this.dischargedRawWh = this.getStoreValue('dischargedRawWh') as number | undefined;
+    this.usingCounters = this.getStoreValue('usingCounters') === true
+      || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined;
 
     this.registerControlListeners();
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
@@ -126,7 +132,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private registerControlListeners(): void {
     this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
-    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.send(StreamCmd.backupReserve(this.mainSn, v)));
+    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.applyBackupReserve(v));
     this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
     this.registerCapabilityListener('charge_limit', async (v: number) => this.send(StreamCmd.chargeLimit(this.mainSn, v)));
     this.registerCapabilityListener('discharge_limit', async (v: number) => this.send(StreamCmd.dischargeLimit(this.mainSn, v)));
@@ -136,6 +142,42 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private async send(payload: Record<string, any>): Promise<void> {
     await this.client.setQuota(payload);
     this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
+  }
+
+  /**
+   * Apply a backup-reserve target safely. EcoFlow rejects a reserve that does not
+   * exceed the discharge limit by ~3 (error 8524) — a silent no-op via the flow
+   * layer — so the discharge limit is lowered first when needed, then the reserve
+   * is set and VERIFIED against the device (surfacing an otherwise-swallowed
+   * failure to the user/flow).
+   */
+  protected async applyBackupReserve(targetSoc: number): Promise<void> {
+    const currentLimit = toFiniteNumber(this.getCapabilityValue('discharge_limit'));
+    const seq = backupReserveSequence(this.mainSn, targetSoc, currentLimit);
+    for (const cmd of seq.commands) {
+      // eslint-disable-next-line no-await-in-loop
+      await this.client.setQuota(cmd);
+    }
+    if (seq.newDischargeLimit !== undefined) {
+      await this.setCapabilityValue('discharge_limit', seq.newDischargeLimit).catch(() => {});
+    }
+    await this.verifyReserve(seq.reserve);
+  }
+
+  /** Poll and confirm the device actually accepted the reserve; throw if not. */
+  private async verifyReserve(target: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      this.homey.setTimeout(resolve, 1500);
+    });
+    await this.poll();
+    const applied = toFiniteNumber(this.getCapabilityValue('backup_reserve_soc'));
+    if (applied === undefined || Math.abs(applied - target) > 2) {
+      throw new Error(
+        `EcoFlow did not apply the backup reserve (requested ${target}%, device reports `
+        + `${applied ?? 'unknown'}%). It must exceed the discharge limit by ~3%.`,
+      );
+    }
+    await this.setCapabilityValue('backup_reserve_soc', target).catch(() => {});
   }
 
   /** Availability + online/offline flow triggers (overrides the base). */
@@ -184,6 +226,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.lastEnergyTs = now;
 
     if (hasChg || hasDsg) {
+      this.usingCounters = true;
       let changed = false;
       if (hasChg) {
         const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
@@ -201,6 +244,9 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       return;
     }
 
+    // Device counters are authoritative once seen; never also integrate power, or
+    // the same energy would be counted twice into the monotonic Homey meters.
+    if (this.usingCounters) return;
     if (typeof batteryPowerW !== 'number' || dtMs <= 0) return;
     const next = integrateSignedPower(
       { posWh: this.chargedWh, negWh: this.dischargedWh },
@@ -219,6 +265,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
     if (this.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', this.chargedRawWh).catch(() => {});
     if (this.dischargedRawWh !== undefined) await this.setStoreValue('dischargedRawWh', this.dischargedRawWh).catch(() => {});
+    if (this.usingCounters) await this.setStoreValue('usingCounters', true).catch(() => {});
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
   }
@@ -325,8 +372,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async flowSetBackupReserve(level: number): Promise<void> {
-    await this.send(StreamCmd.backupReserve(this.mainSn, level));
-    await this.setCapabilityValue('backup_reserve_soc', level).catch(() => {});
+    await this.applyBackupReserve(level);
   }
 
   async flowSetFeedIn(on: boolean): Promise<void> {
@@ -351,9 +397,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    */
   async flowPrepareCheapImport(reserve: number): Promise<void> {
     await this.send(StreamCmd.chargeLimit(this.mainSn, 100));
-    await this.send(StreamCmd.backupReserve(this.mainSn, reserve));
     await this.setCapabilityValue('charge_limit', 100).catch(() => {});
-    await this.setCapabilityValue('backup_reserve_soc', reserve).catch(() => {});
+    await this.applyBackupReserve(reserve);
   }
 
   /**
@@ -362,9 +407,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    * during a high-price window.
    */
   async flowPreparePeakExport(reserve: number): Promise<void> {
-    await this.send(StreamCmd.backupReserve(this.mainSn, reserve));
+    await this.applyBackupReserve(reserve);
     await this.send(StreamCmd.feedIn(this.mainSn, true));
-    await this.setCapabilityValue('backup_reserve_soc', reserve).catch(() => {});
     await this.setCapabilityValue('feed_in_control', true).catch(() => {});
   }
 

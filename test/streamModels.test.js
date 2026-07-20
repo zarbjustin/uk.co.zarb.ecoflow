@@ -32,6 +32,13 @@ test('STREAM Pro (BK12) exposes 3 MPPT inputs', () => {
   assert.strictEqual(spec.solarInputs, 3);
 });
 
+test('STREAM Max (BK41) exposes 2 MPPT inputs (not 4)', () => {
+  const spec = streamModelFromSn('BK41ZK1A4H4R0001');
+  assert.strictEqual(spec.model, 'STREAM Max');
+  assert.strictEqual(spec.acCoupled, false);
+  assert.strictEqual(spec.solarInputs, 2);
+});
+
 test('unknown / missing serials fall back to a generic STREAM Unit', () => {
   assert.strictEqual(streamModelFromSn('ZZ99XXXX').model, 'STREAM Unit');
   assert.strictEqual(streamModelFromSn(undefined).model, 'STREAM Unit');
