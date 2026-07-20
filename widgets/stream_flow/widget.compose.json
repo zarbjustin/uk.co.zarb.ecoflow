@@ -1,13 +1,22 @@
 {
-  "name": { "en": "STREAM Energy Flow" },
+  "name": {
+    "en": "STREAM Energy Flow",
+    "de": "STREAM-Energiefluss",
+    "nl": "STREAM-energiestroom"
+  },
   "devices": {
     "type": "app",
     "singular": true,
-    "filter": { "capabilities": "alarm_generic,measure_battery" }
+    "filter": {
+      "capabilities": "alarm_generic,measure_battery"
+    }
   },
   "settings": [],
   "height": 254,
   "api": {
-    "getFlow": { "method": "GET", "path": "/" }
+    "getFlow": {
+      "method": "GET",
+      "path": "/"
+    }
   }
 }

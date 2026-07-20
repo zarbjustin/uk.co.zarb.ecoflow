@@ -1,5 +1,15 @@
 {
   "id": "fault_cleared",
-  "title": { "en": "A fault was cleared" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+  "title": {
+    "en": "A fault was cleared",
+    "de": "Eine Störung wurde behoben",
+    "nl": "Een storing is verholpen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ]
 }

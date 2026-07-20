@@ -1,8 +1,16 @@
 {
-  "name": { "en": "STREAM Microinverter" },
+  "name": {
+    "en": "STREAM Microinverter",
+    "de": "STREAM-Mikrowechselrichter",
+    "nl": "STREAM-micro-omvormer"
+  },
   "class": "solarpanel",
-  "platforms": ["local"],
-  "connectivity": ["cloud"],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
   "capabilities": [
     "measure_power",
     "stream_micro_power_solar",
@@ -15,11 +23,41 @@
     "stream_micro_power_grid_feed"
   ],
   "capabilitiesOptions": {
-    "measure_power": { "title": { "en": "Solar power" } },
-    "meter_power": { "title": { "en": "Solar generated" } },
-    "measure_power.pv1": { "title": { "en": "Solar PV1" } },
-    "measure_power.pv2": { "title": { "en": "Solar PV2" } },
-    "measure_power.grid": { "title": { "en": "Grid feed" } }
+    "measure_power": {
+      "title": {
+        "en": "Solar power",
+        "de": "Solarleistung",
+        "nl": "Zonnevermogen"
+      }
+    },
+    "meter_power": {
+      "title": {
+        "en": "Solar generated",
+        "de": "Solar erzeugt",
+        "nl": "Opgewekte zonne-energie"
+      }
+    },
+    "measure_power.pv1": {
+      "title": {
+        "en": "Solar PV1",
+        "de": "Solar PV1",
+        "nl": "Zonne-PV1"
+      }
+    },
+    "measure_power.pv2": {
+      "title": {
+        "en": "Solar PV2",
+        "de": "Solar PV2",
+        "nl": "Zonne-PV2"
+      }
+    },
+    "measure_power.grid": {
+      "title": {
+        "en": "Grid feed",
+        "de": "Netzeinspeisung",
+        "nl": "Netteruglevering"
+      }
+    }
   },
   "energy": {
     "meterPowerExportedCapability": "meter_power"
@@ -33,16 +71,35 @@
     {
       "id": "poll_interval",
       "type": "number",
-      "label": { "en": "Polling interval (seconds)" },
+      "label": {
+        "en": "Polling interval (seconds)",
+        "de": "Abfrageintervall (Sekunden)",
+        "nl": "Poll-interval (seconden)"
+      },
       "value": 30,
       "min": 10,
       "max": 600,
-      "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+      "hint": {
+        "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+        "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+        "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
+      }
     }
   ],
   "pair": [
-    { "id": "credentials" },
-    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
-    { "id": "add_devices", "template": "add_devices" }
+    {
+      "id": "credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
   ]
 }

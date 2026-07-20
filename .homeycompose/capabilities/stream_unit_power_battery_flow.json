@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Battery flow" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/battery-flow.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Battery flow",
+    "de": "Batteriefluss",
+    "nl": "Batterijstroom"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/battery-flow.svg",
+  "insights": true
+}

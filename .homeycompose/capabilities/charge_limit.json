@@ -1,7 +1,15 @@
 {
   "type": "number",
-  "title": { "en": "Charge limit" },
-  "units": { "en": "%" },
+  "title": {
+    "en": "Charge limit",
+    "de": "Ladegrenze",
+    "nl": "Laadlimiet"
+  },
+  "units": {
+    "en": "%",
+    "de": "%",
+    "nl": "%"
+  },
   "decimals": 0,
   "min": 50,
   "max": 100,

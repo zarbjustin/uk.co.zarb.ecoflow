@@ -1,10 +1,44 @@
 {
   "id": "grid_import_above",
-  "title": { "en": "Grid import rises above" },
-  "titleFormatted": { "en": "Grid import rises above [[watts]] W" },
+  "title": {
+    "en": "Grid import rises above",
+    "de": "Netzbezug steigt über",
+    "nl": "Netafname stijgt boven"
+  },
+  "titleFormatted": {
+    "en": "Grid import rises above [[watts]] W",
+    "de": "Netzbezug steigt über [[watts]] W",
+    "nl": "Netafname stijgt boven [[watts]] W"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "watts", "min": 0, "max": 15000, "step": 50, "placeholder": { "en": "W" } }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
+    {
+      "type": "number",
+      "name": "watts",
+      "min": 0,
+      "max": 15000,
+      "step": 50,
+      "placeholder": {
+        "en": "W",
+        "de": "W",
+        "nl": "W"
+      }
+    }
   ],
-  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Grid import" }, "example": 1200 }]
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Grid import",
+        "de": "Netzbezug",
+        "nl": "Netafname"
+      },
+      "example": 1200
+    }
+  ]
 }

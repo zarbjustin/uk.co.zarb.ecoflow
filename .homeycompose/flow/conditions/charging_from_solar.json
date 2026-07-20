@@ -1,9 +1,25 @@
 {
   "id": "charging_from_solar",
-  "title": { "en": "Battery !{{is|is not}} charging from solar" },
-  "titleFormatted": { "en": "Battery !{{is|is not}} charging from solar" },
-  "hint": { "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid)." },
+  "title": {
+    "en": "Battery !{{is|is not}} charging from solar",
+    "de": "Batterie !{{is|is not}} per Solar am Laden",
+    "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+  },
+  "titleFormatted": {
+    "en": "Battery !{{is|is not}} charging from solar",
+    "de": "Batterie !{{is|is not}} per Solar am Laden",
+    "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+  },
+  "hint": {
+    "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid).",
+    "de": "Wahr, wenn die Batterie lädt und die Solarerzeugung die aktuelle Hauslast übersteigt (die Ladung kommt aus Solarüberschuss, nicht aus dem Netz).",
+    "nl": "Waar wanneer de batterij oplaadt en de zonne-opwek hoger is dan de huidige huisbelasting (de lading komt uit zonnestroomoverschot, niet uit het net)."
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
   ]
 }

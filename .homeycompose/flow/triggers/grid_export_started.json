@@ -1,6 +1,27 @@
 {
   "id": "grid_export_started",
-  "title": { "en": "Started exporting to grid" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
-  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Grid power" }, "example": -500 }]
+  "title": {
+    "en": "Started exporting to grid",
+    "de": "Einspeisung ins Netz gestartet",
+    "nl": "Teruglevering aan net gestart"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Grid power",
+        "de": "Netzleistung",
+        "nl": "Netvermogen"
+      },
+      "example": -500
+    }
+  ]
 }

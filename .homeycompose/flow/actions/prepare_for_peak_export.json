@@ -1,10 +1,42 @@
 {
   "id": "prepare_for_peak_export",
-  "title": { "en": "Prepare for peak / export" },
-  "titleFormatted": { "en": "Prepare for peak export (reserve [[reserve]]%)" },
-  "hint": { "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window." },
+  "title": {
+    "en": "Prepare for peak / export",
+    "de": "Für Spitzenpreis / Einspeisung vorbereiten",
+    "nl": "Voorbereiden op piek / teruglevering"
+  },
+  "titleFormatted": {
+    "en": "Prepare for peak export (reserve [[reserve]]%)",
+    "de": "Für Spitzenpreis-Einspeisung vorbereiten (Reserve [[reserve]]%)",
+    "nl": "Voorbereiden op piekteruglevering (reserve [[reserve]]%)"
+  },
+  "hint": {
+    "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window.",
+    "de": "Senkt die Notstromreserve, damit die Batterie entladen kann, und aktiviert die Netzeinspeisung für ein Hochpreis-Zeitfenster.",
+    "nl": "Verlaagt de back-upreserve zodat de batterij kan ontladen en schakelt teruglevering aan het net in tijdens een duur tariefvenster."
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "reserve", "title": { "en": "Reserve level" }, "min": 3, "max": 100, "step": 1, "placeholder": { "en": "%" } }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
+    {
+      "type": "number",
+      "name": "reserve",
+      "title": {
+        "en": "Reserve level",
+        "de": "Reservelevel",
+        "nl": "Reserveniveau"
+      },
+      "min": 3,
+      "max": 100,
+      "step": 1,
+      "placeholder": {
+        "en": "%",
+        "de": "%",
+        "nl": "%"
+      }
+    }
   ]
 }

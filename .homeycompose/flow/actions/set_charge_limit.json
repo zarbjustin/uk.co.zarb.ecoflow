@@ -1,13 +1,29 @@
 {
   "id": "set_charge_limit",
-  "title": { "en": "Set charge limit" },
-  "titleFormatted": { "en": "Set charge limit to [[level]]%" },
+  "title": {
+    "en": "Set charge limit",
+    "de": "Ladegrenze festlegen",
+    "nl": "Laadlimiet instellen"
+  },
+  "titleFormatted": {
+    "en": "Set charge limit to [[level]]%",
+    "de": "Ladegrenze auf [[level]]% setzen",
+    "nl": "Laadlimiet instellen op [[level]]%"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
     {
       "type": "range",
       "name": "level",
-      "title": { "en": "Charge limit" },
+      "title": {
+        "en": "Charge limit",
+        "de": "Ladegrenze",
+        "nl": "Laadlimiet"
+      },
       "min": 50,
       "max": 100,
       "step": 1,

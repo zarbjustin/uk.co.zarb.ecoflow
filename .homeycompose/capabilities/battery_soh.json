@@ -1,7 +1,15 @@
 {
   "type": "number",
-  "title": { "en": "Battery health" },
-  "units": { "en": "%" },
+  "title": {
+    "en": "Battery health",
+    "de": "Batteriezustand",
+    "nl": "Batterijconditie"
+  },
+  "units": {
+    "en": "%",
+    "de": "%",
+    "nl": "%"
+  },
   "decimals": 0,
   "getable": true,
   "setable": false,

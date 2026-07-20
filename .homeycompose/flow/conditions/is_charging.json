@@ -1,5 +1,15 @@
 {
   "id": "is_charging",
-  "title": { "en": "Battery !{{is|is not}} charging" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+  "title": {
+    "en": "Battery !{{is|is not}} charging",
+    "de": "Batterie !{{is|is not}} am Laden",
+    "nl": "Batterij !{{is|is not}} aan het opladen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ]
 }

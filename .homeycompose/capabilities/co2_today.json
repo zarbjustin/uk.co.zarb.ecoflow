@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "CO₂ avoided today" }, "units": { "en": "kg" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/solar.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "CO₂ avoided today",
+    "de": "Heute vermiedenes CO₂",
+    "nl": "Vandaag vermeden CO₂"
+  },
+  "units": {
+    "en": "kg",
+    "de": "kg",
+    "nl": "kg"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/solar.svg",
+  "insights": true
+}

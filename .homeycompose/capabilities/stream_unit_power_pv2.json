@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "PV input 2" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/pv-input.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "PV input 2",
+    "de": "PV-Eingang 2",
+    "nl": "PV-ingang 2"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/pv-input.svg",
+  "insights": true
+}

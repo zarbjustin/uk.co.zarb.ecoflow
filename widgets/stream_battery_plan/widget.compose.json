@@ -1,13 +1,22 @@
 {
-  "name": { "en": "STREAM Battery Plan" },
+  "name": {
+    "en": "STREAM Battery Plan",
+    "de": "STREAM-Batterieplan",
+    "nl": "STREAM-batterijplan"
+  },
   "devices": {
     "type": "app",
     "singular": true,
-    "filter": { "capabilities": "alarm_generic,measure_battery" }
+    "filter": {
+      "capabilities": "alarm_generic,measure_battery"
+    }
   },
   "settings": [],
   "height": 254,
   "api": {
-    "getBatteryPlan": { "method": "GET", "path": "/" }
+    "getBatteryPlan": {
+      "method": "GET",
+      "path": "/"
+    }
   }
 }

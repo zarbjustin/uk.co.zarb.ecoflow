@@ -1,6 +1,10 @@
 {
   "type": "boolean",
-  "title": { "en": "Self-heating" },
+  "title": {
+    "en": "Self-heating",
+    "de": "Selbstheizung",
+    "nl": "Zelfverwarming"
+  },
   "getable": true,
   "setable": false,
   "uiComponent": "sensor",

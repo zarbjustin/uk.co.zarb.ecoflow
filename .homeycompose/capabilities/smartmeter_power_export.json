@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Grid export" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/grid-export.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Grid export",
+    "de": "Netzeinspeisung",
+    "nl": "Teruglevering aan net"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/grid-export.svg",
+  "insights": true
+}

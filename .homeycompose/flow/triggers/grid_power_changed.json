@@ -1,9 +1,32 @@
 {
   "id": "grid_power_changed",
-  "title": { "en": "Grid power changed" },
-  "titleFormatted": { "en": "Grid power changed" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
+  "title": {
+    "en": "Grid power changed",
+    "de": "Netzleistung geändert",
+    "nl": "Netvermogen gewijzigd"
+  },
+  "titleFormatted": {
+    "en": "Grid power changed",
+    "de": "Netzleistung geändert",
+    "nl": "Netvermogen gewijzigd"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ],
   "tokens": [
-    { "name": "power", "type": "number", "title": { "en": "Grid power" }, "example": -800 }
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Grid power",
+        "de": "Netzleistung",
+        "nl": "Netvermogen"
+      },
+      "example": -800
+    }
   ]
 }

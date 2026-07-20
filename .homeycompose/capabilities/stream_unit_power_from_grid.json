@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "House from grid" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/house-from-grid.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "House from grid",
+    "de": "Haus aus Netz",
+    "nl": "Huis uit net"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/house-from-grid.svg",
+  "insights": true
+}

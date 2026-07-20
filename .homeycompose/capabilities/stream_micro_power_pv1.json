@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Solar PV1" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/pv-input.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Solar PV1",
+    "de": "Solar PV1",
+    "nl": "Zonne-PV1"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/pv-input.svg",
+  "insights": true
+}

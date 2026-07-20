@@ -1,6 +1,27 @@
 {
   "id": "discharging_started",
-  "title": { "en": "Battery started discharging" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }],
-  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Battery power" }, "example": -600 }]
+  "title": {
+    "en": "Battery started discharging",
+    "de": "Batterie entlädt jetzt",
+    "nl": "Batterij is begonnen met ontladen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Battery power",
+        "de": "Batterieleistung",
+        "nl": "Batterijvermogen"
+      },
+      "example": -600
+    }
+  ]
 }

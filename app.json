@@ -9,10 +9,14 @@
     "local"
   ],
   "name": {
-    "en": "EcoFlow STREAM Series"
+    "en": "EcoFlow STREAM Series",
+    "de": "EcoFlow STREAM Series",
+    "nl": "EcoFlow STREAM Series"
   },
   "description": {
-    "en": "Turn balcony sunlight into smarter home energy"
+    "en": "Turn balcony sunlight into smarter home energy",
+    "de": "Balkonsonne in smartere Hausenergie verwandeln",
+    "nl": "Maak van balkonzon slimme energie voor thuis"
   },
   "category": [
     "energy"
@@ -58,10 +62,14 @@
       {
         "id": "battery_level_crossed",
         "title": {
-          "en": "Battery level crossed"
+          "en": "Battery level crossed",
+          "de": "Batteriestand überschritten",
+          "nl": "Batterijniveau gepasseerd"
         },
         "titleFormatted": {
-          "en": "Battery level goes [[direction]] [[level]]%"
+          "en": "Battery level goes [[direction]] [[level]]%",
+          "de": "Batteriestand geht [[direction]] [[level]]%",
+          "nl": "Batterijniveau gaat [[direction]] [[level]]%"
         },
         "args": [
           {
@@ -73,19 +81,25 @@
             "type": "dropdown",
             "name": "direction",
             "title": {
-              "en": "Direction"
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
             },
             "values": [
               {
                 "id": "above",
                 "title": {
-                  "en": "above"
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
                 }
               },
               {
                 "id": "below",
                 "title": {
-                  "en": "below"
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
                 }
               }
             ]
@@ -94,13 +108,17 @@
             "type": "number",
             "name": "level",
             "title": {
-              "en": "Battery level"
+              "en": "Battery level",
+              "de": "Batteriestand",
+              "nl": "Batterijniveau"
             },
             "min": 0,
             "max": 100,
             "step": 1,
             "placeholder": {
-              "en": "%"
+              "en": "%",
+              "de": "%",
+              "nl": "%"
             }
           }
         ],
@@ -109,7 +127,9 @@
             "name": "battery",
             "type": "number",
             "title": {
-              "en": "Battery"
+              "en": "Battery",
+              "de": "Batterie",
+              "nl": "Batterij"
             },
             "example": 20
           }
@@ -118,7 +138,9 @@
       {
         "id": "charging_started",
         "title": {
-          "en": "Battery started charging"
+          "en": "Battery started charging",
+          "de": "Batterie lädt jetzt",
+          "nl": "Batterij is begonnen met opladen"
         },
         "args": [
           {
@@ -132,7 +154,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Battery power"
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
             },
             "example": 800
           }
@@ -141,7 +165,9 @@
       {
         "id": "device_came_online",
         "title": {
-          "en": "Device came online"
+          "en": "Device came online",
+          "de": "Gerät ist online gegangen",
+          "nl": "Apparaat is online gekomen"
         },
         "args": [
           {
@@ -154,7 +180,9 @@
       {
         "id": "device_went_offline",
         "title": {
-          "en": "Device went offline"
+          "en": "Device went offline",
+          "de": "Gerät ist offline gegangen",
+          "nl": "Apparaat is offline gegaan"
         },
         "args": [
           {
@@ -167,7 +195,9 @@
       {
         "id": "discharging_started",
         "title": {
-          "en": "Battery started discharging"
+          "en": "Battery started discharging",
+          "de": "Batterie entlädt jetzt",
+          "nl": "Batterij is begonnen met ontladen"
         },
         "args": [
           {
@@ -181,7 +211,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Battery power"
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
             },
             "example": -600
           }
@@ -190,7 +222,9 @@
       {
         "id": "fault_cleared",
         "title": {
-          "en": "A fault was cleared"
+          "en": "A fault was cleared",
+          "de": "Eine Störung wurde behoben",
+          "nl": "Een storing is verholpen"
         },
         "args": [
           {
@@ -203,7 +237,9 @@
       {
         "id": "fault_raised",
         "title": {
-          "en": "A fault was raised"
+          "en": "A fault was raised",
+          "de": "Eine Störung wurde gemeldet",
+          "nl": "Er is een storing gemeld"
         },
         "args": [
           {
@@ -217,7 +253,9 @@
             "name": "source",
             "type": "string",
             "title": {
-              "en": "Source"
+              "en": "Source",
+              "de": "Quelle",
+              "nl": "Bron"
             },
             "example": "inverter"
           },
@@ -225,7 +263,9 @@
             "name": "code",
             "type": "number",
             "title": {
-              "en": "Code"
+              "en": "Code",
+              "de": "Code",
+              "nl": "Code"
             },
             "example": 4096
           }
@@ -234,10 +274,14 @@
       {
         "id": "grid_export_above",
         "title": {
-          "en": "Grid export rises above"
+          "en": "Grid export rises above",
+          "de": "Netzeinspeisung steigt über",
+          "nl": "Teruglevering aan net stijgt boven"
         },
         "titleFormatted": {
-          "en": "Grid export rises above [[watts]] W"
+          "en": "Grid export rises above [[watts]] W",
+          "de": "Netzeinspeisung steigt über [[watts]] W",
+          "nl": "Teruglevering aan net stijgt boven [[watts]] W"
         },
         "args": [
           {
@@ -252,7 +296,9 @@
             "max": 15000,
             "step": 50,
             "placeholder": {
-              "en": "W"
+              "en": "W",
+              "de": "W",
+              "nl": "W"
             }
           }
         ],
@@ -261,7 +307,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Grid export"
+              "en": "Grid export",
+              "de": "Netzeinspeisung",
+              "nl": "Teruglevering aan net"
             },
             "example": 800
           }
@@ -270,7 +318,9 @@
       {
         "id": "grid_export_started",
         "title": {
-          "en": "Started exporting to grid"
+          "en": "Started exporting to grid",
+          "de": "Einspeisung ins Netz gestartet",
+          "nl": "Teruglevering aan net gestart"
         },
         "args": [
           {
@@ -284,7 +334,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Grid power"
+              "en": "Grid power",
+              "de": "Netzleistung",
+              "nl": "Netvermogen"
             },
             "example": -500
           }
@@ -293,10 +345,14 @@
       {
         "id": "grid_import_above",
         "title": {
-          "en": "Grid import rises above"
+          "en": "Grid import rises above",
+          "de": "Netzbezug steigt über",
+          "nl": "Netafname stijgt boven"
         },
         "titleFormatted": {
-          "en": "Grid import rises above [[watts]] W"
+          "en": "Grid import rises above [[watts]] W",
+          "de": "Netzbezug steigt über [[watts]] W",
+          "nl": "Netafname stijgt boven [[watts]] W"
         },
         "args": [
           {
@@ -311,7 +367,9 @@
             "max": 15000,
             "step": 50,
             "placeholder": {
-              "en": "W"
+              "en": "W",
+              "de": "W",
+              "nl": "W"
             }
           }
         ],
@@ -320,7 +378,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Grid import"
+              "en": "Grid import",
+              "de": "Netzbezug",
+              "nl": "Netafname"
             },
             "example": 1200
           }
@@ -329,7 +389,9 @@
       {
         "id": "grid_import_started",
         "title": {
-          "en": "Started importing from grid"
+          "en": "Started importing from grid",
+          "de": "Netzbezug gestartet",
+          "nl": "Netafname gestart"
         },
         "args": [
           {
@@ -343,7 +405,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Grid power"
+              "en": "Grid power",
+              "de": "Netzleistung",
+              "nl": "Netvermogen"
             },
             "example": 700
           }
@@ -352,10 +416,14 @@
       {
         "id": "grid_power_changed",
         "title": {
-          "en": "Grid power changed"
+          "en": "Grid power changed",
+          "de": "Netzleistung geändert",
+          "nl": "Netvermogen gewijzigd"
         },
         "titleFormatted": {
-          "en": "Grid power changed"
+          "en": "Grid power changed",
+          "de": "Netzleistung geändert",
+          "nl": "Netvermogen gewijzigd"
         },
         "args": [
           {
@@ -369,7 +437,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Grid power"
+              "en": "Grid power",
+              "de": "Netzleistung",
+              "nl": "Netvermogen"
             },
             "example": -800
           }
@@ -378,7 +448,9 @@
       {
         "id": "operating_mode_changed",
         "title": {
-          "en": "Operating mode changed"
+          "en": "Operating mode changed",
+          "de": "Betriebsmodus geändert",
+          "nl": "Bedrijfsmodus gewijzigd"
         },
         "args": [
           {
@@ -392,7 +464,9 @@
             "name": "mode",
             "type": "string",
             "title": {
-              "en": "Mode"
+              "en": "Mode",
+              "de": "Modus",
+              "nl": "Modus"
             },
             "example": "self_powered"
           }
@@ -401,10 +475,14 @@
       {
         "id": "solar_power_changed",
         "title": {
-          "en": "Solar power changed"
+          "en": "Solar power changed",
+          "de": "Solarleistung geändert",
+          "nl": "Zonnevermogen gewijzigd"
         },
         "titleFormatted": {
-          "en": "Solar power changed"
+          "en": "Solar power changed",
+          "de": "Solarleistung geändert",
+          "nl": "Zonnevermogen gewijzigd"
         },
         "args": [
           {
@@ -418,7 +496,9 @@
             "name": "power",
             "type": "number",
             "title": {
-              "en": "Solar power"
+              "en": "Solar power",
+              "de": "Solarleistung",
+              "nl": "Zonnevermogen"
             },
             "example": 450
           }
@@ -429,10 +509,14 @@
       {
         "id": "battery_soc",
         "title": {
-          "en": "Battery level is above/below"
+          "en": "Battery level is above/below",
+          "de": "Batteriestand ist über/unter",
+          "nl": "Batterijniveau is boven/onder"
         },
         "titleFormatted": {
-          "en": "Battery level is [[direction]] [[level]]%"
+          "en": "Battery level is [[direction]] [[level]]%",
+          "de": "Batteriestand ist [[direction]] [[level]]%",
+          "nl": "Batterijniveau is [[direction]] [[level]]%"
         },
         "args": [
           {
@@ -444,19 +528,25 @@
             "type": "dropdown",
             "name": "direction",
             "title": {
-              "en": "Direction"
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
             },
             "values": [
               {
                 "id": "above",
                 "title": {
-                  "en": "above"
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
                 }
               },
               {
                 "id": "below",
                 "title": {
-                  "en": "below"
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
                 }
               }
             ]
@@ -465,13 +555,17 @@
             "type": "number",
             "name": "level",
             "title": {
-              "en": "Battery level"
+              "en": "Battery level",
+              "de": "Batteriestand",
+              "nl": "Batterijniveau"
             },
             "min": 0,
             "max": 100,
             "step": 1,
             "placeholder": {
-              "en": "%"
+              "en": "%",
+              "de": "%",
+              "nl": "%"
             }
           }
         ]
@@ -479,13 +573,19 @@
       {
         "id": "charging_from_solar",
         "title": {
-          "en": "Battery !{{is|is not}} charging from solar"
+          "en": "Battery !{{is|is not}} charging from solar",
+          "de": "Batterie !{{is|is not}} per Solar am Laden",
+          "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
         },
         "titleFormatted": {
-          "en": "Battery !{{is|is not}} charging from solar"
+          "en": "Battery !{{is|is not}} charging from solar",
+          "de": "Batterie !{{is|is not}} per Solar am Laden",
+          "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
         },
         "hint": {
-          "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid)."
+          "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid).",
+          "de": "Wahr, wenn die Batterie lädt und die Solarerzeugung die aktuelle Hauslast übersteigt (die Ladung kommt aus Solarüberschuss, nicht aus dem Netz).",
+          "nl": "Waar wanneer de batterij oplaadt en de zonne-opwek hoger is dan de huidige huisbelasting (de lading komt uit zonnestroomoverschot, niet uit het net)."
         },
         "args": [
           {
@@ -498,7 +598,9 @@
       {
         "id": "feed_in_enabled",
         "title": {
-          "en": "Grid feed-in !{{is|is not}} enabled"
+          "en": "Grid feed-in !{{is|is not}} enabled",
+          "de": "Netzeinspeisung !{{is|is not}} aktiviert",
+          "nl": "Teruglevering aan net !{{is|is not}} ingeschakeld"
         },
         "args": [
           {
@@ -511,7 +613,9 @@
       {
         "id": "is_charging",
         "title": {
-          "en": "Battery !{{is|is not}} charging"
+          "en": "Battery !{{is|is not}} charging",
+          "de": "Batterie !{{is|is not}} am Laden",
+          "nl": "Batterij !{{is|is not}} aan het opladen"
         },
         "args": [
           {
@@ -524,7 +628,9 @@
       {
         "id": "is_exporting",
         "title": {
-          "en": "!{{Is|Is not}} exporting to grid"
+          "en": "!{{Is|Is not}} exporting to grid",
+          "de": "!{{Is|Is not}} Einspeisung ins Netz aktiv",
+          "nl": "!{{Is|Is not}} aan het terugleveren aan het net"
         },
         "args": [
           {
@@ -537,10 +643,14 @@
       {
         "id": "operating_mode_is",
         "title": {
-          "en": "Operating mode !{{is|is not}}"
+          "en": "Operating mode !{{is|is not}}",
+          "de": "Betriebsmodus !{{is|is not}}",
+          "nl": "Bedrijfsmodus !{{is|is not}}"
         },
         "titleFormatted": {
-          "en": "Operating mode !{{is|is not}} [[mode]]"
+          "en": "Operating mode !{{is|is not}} [[mode]]",
+          "de": "Betriebsmodus !{{is|is not}} [[mode]]",
+          "nl": "Bedrijfsmodus !{{is|is not}} [[mode]]"
         },
         "args": [
           {
@@ -552,31 +662,41 @@
             "type": "dropdown",
             "name": "mode",
             "title": {
-              "en": "Operating mode"
+              "en": "Operating mode",
+              "de": "Betriebsmodus",
+              "nl": "Bedrijfsmodus"
             },
             "values": [
               {
                 "id": "self_powered",
                 "title": {
-                  "en": "Self-powered"
+                  "en": "Self-powered",
+                  "de": "Eigenversorgung",
+                  "nl": "Zelfvoorzienend"
                 }
               },
               {
                 "id": "ai",
                 "title": {
-                  "en": "AI / Smart scheduling"
+                  "en": "AI / Smart scheduling",
+                  "de": "KI / intelligente Planung",
+                  "nl": "AI / slimme planning"
                 }
               },
               {
                 "id": "scheduled",
                 "title": {
-                  "en": "Scheduled"
+                  "en": "Scheduled",
+                  "de": "Geplant",
+                  "nl": "Gepland"
                 }
               },
               {
                 "id": "tou",
                 "title": {
-                  "en": "Time-of-use"
+                  "en": "Time-of-use",
+                  "de": "Zeitabhängiger Tarif",
+                  "nl": "Tijdafhankelijk tarief"
                 }
               }
             ]
@@ -586,10 +706,14 @@
       {
         "id": "solar_power_above",
         "title": {
-          "en": "Solar power !{{is|is not}} above"
+          "en": "Solar power !{{is|is not}} above",
+          "de": "Solarleistung !{{is|is not}} über",
+          "nl": "Zonnevermogen !{{is|is not}} boven"
         },
         "titleFormatted": {
-          "en": "Solar power !{{is|is not}} above [[watts]] W"
+          "en": "Solar power !{{is|is not}} above [[watts]] W",
+          "de": "Solarleistung !{{is|is not}} über [[watts]] W",
+          "nl": "Zonnevermogen !{{is|is not}} boven [[watts]] W"
         },
         "args": [
           {
@@ -601,13 +725,17 @@
             "type": "number",
             "name": "watts",
             "title": {
-              "en": "Solar power"
+              "en": "Solar power",
+              "de": "Solarleistung",
+              "nl": "Zonnevermogen"
             },
             "min": 0,
             "max": 10000,
             "step": 10,
             "placeholder": {
-              "en": "W"
+              "en": "W",
+              "de": "W",
+              "nl": "W"
             }
           }
         ]
@@ -615,10 +743,14 @@
       {
         "id": "solar_power_below",
         "title": {
-          "en": "Solar power !{{is|is not}} below"
+          "en": "Solar power !{{is|is not}} below",
+          "de": "Solarleistung !{{is|is not}} unter",
+          "nl": "Zonnevermogen !{{is|is not}} onder"
         },
         "titleFormatted": {
-          "en": "Solar power !{{is|is not}} below [[watts]] W"
+          "en": "Solar power !{{is|is not}} below [[watts]] W",
+          "de": "Solarleistung !{{is|is not}} unter [[watts]] W",
+          "nl": "Zonnevermogen !{{is|is not}} onder [[watts]] W"
         },
         "args": [
           {
@@ -633,7 +765,9 @@
             "max": 10000,
             "step": 10,
             "placeholder": {
-              "en": "W"
+              "en": "W",
+              "de": "W",
+              "nl": "W"
             }
           }
         ]
@@ -643,13 +777,19 @@
       {
         "id": "prepare_for_cheap_import",
         "title": {
-          "en": "Prepare for cheap grid import"
+          "en": "Prepare for cheap grid import",
+          "de": "Für günstigen Netzbezug vorbereiten",
+          "nl": "Voorbereiden op goedkope netafname"
         },
         "titleFormatted": {
-          "en": "Prepare for cheap import (charge to [[reserve]]%)"
+          "en": "Prepare for cheap import (charge to [[reserve]]%)",
+          "de": "Für günstigen Bezug vorbereiten (auf [[reserve]]% laden)",
+          "nl": "Voorbereiden op goedkope afname (laden tot [[reserve]]%)"
         },
         "hint": {
-          "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile)."
+          "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile).",
+          "de": "Hebt die Ladegrenze auf 100 % an und setzt das Ziel für die Notstromreserve, damit die Batterie während eines günstigen Zeitfensters aus dem Netz lädt (z. B. Octopus Agile).",
+          "nl": "Verhoogt de laadlimiet naar 100% en stelt de back-upreserve in, zodat de batterij tijdens een goedkoop tariefvenster via het net laadt (bijv. Octopus Agile)."
         },
         "args": [
           {
@@ -661,13 +801,17 @@
             "type": "number",
             "name": "reserve",
             "title": {
-              "en": "Reserve level"
+              "en": "Reserve level",
+              "de": "Reservelevel",
+              "nl": "Reserveniveau"
             },
             "min": 3,
             "max": 100,
             "step": 1,
             "placeholder": {
-              "en": "%"
+              "en": "%",
+              "de": "%",
+              "nl": "%"
             }
           }
         ]
@@ -675,13 +819,19 @@
       {
         "id": "prepare_for_peak_export",
         "title": {
-          "en": "Prepare for peak / export"
+          "en": "Prepare for peak / export",
+          "de": "Für Spitzenpreis / Einspeisung vorbereiten",
+          "nl": "Voorbereiden op piek / teruglevering"
         },
         "titleFormatted": {
-          "en": "Prepare for peak export (reserve [[reserve]]%)"
+          "en": "Prepare for peak export (reserve [[reserve]]%)",
+          "de": "Für Spitzenpreis-Einspeisung vorbereiten (Reserve [[reserve]]%)",
+          "nl": "Voorbereiden op piekteruglevering (reserve [[reserve]]%)"
         },
         "hint": {
-          "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window."
+          "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window.",
+          "de": "Senkt die Notstromreserve, damit die Batterie entladen kann, und aktiviert die Netzeinspeisung für ein Hochpreis-Zeitfenster.",
+          "nl": "Verlaagt de back-upreserve zodat de batterij kan ontladen en schakelt teruglevering aan het net in tijdens een duur tariefvenster."
         },
         "args": [
           {
@@ -693,13 +843,17 @@
             "type": "number",
             "name": "reserve",
             "title": {
-              "en": "Reserve level"
+              "en": "Reserve level",
+              "de": "Reservelevel",
+              "nl": "Reserveniveau"
             },
             "min": 3,
             "max": 100,
             "step": 1,
             "placeholder": {
-              "en": "%"
+              "en": "%",
+              "de": "%",
+              "nl": "%"
             }
           }
         ]
@@ -707,7 +861,9 @@
       {
         "id": "refresh_now",
         "title": {
-          "en": "Refresh data now"
+          "en": "Refresh data now",
+          "de": "Daten jetzt aktualisieren",
+          "nl": "Gegevens nu verversen"
         },
         "args": [
           {
@@ -720,13 +876,19 @@
       {
         "id": "release_for_export",
         "title": {
-          "en": "Release battery for export now"
+          "en": "Release battery for export now",
+          "de": "Batterie jetzt für Einspeisung freigeben",
+          "nl": "Batterij nu vrijgeven voor teruglevering"
         },
         "titleFormatted": {
-          "en": "Release battery for export now"
+          "en": "Release battery for export now",
+          "de": "Batterie jetzt für Einspeisung freigeben",
+          "nl": "Batterij nu vrijgeven voor teruglevering"
         },
         "hint": {
-          "en": "Lowers the discharge limit and backup reserve to the minimum (in the correct order, avoiding EcoFlow error 8524) and enables grid feed-in, so the battery discharges/exports immediately — e.g. at the start of a peak-price window."
+          "en": "Lowers the discharge limit and backup reserve to the minimum (in the correct order, avoiding EcoFlow error 8524) and enables grid feed-in, so the battery discharges/exports immediately — e.g. at the start of a peak-price window.",
+          "de": "Senkt Entladegrenze und Notstromreserve auf das Minimum (in der richtigen Reihenfolge, um EcoFlow-Fehler 8524 zu vermeiden) und aktiviert die Netzeinspeisung, damit die Batterie sofort entlädt/einspeist – z. B. zu Beginn eines Spitzenpreis-Zeitfensters.",
+          "nl": "Verlaagt de ontlaadlimiet en back-upreserve naar het minimum (in de juiste volgorde, om EcoFlow-fout 8524 te vermijden) en schakelt teruglevering aan het net in, zodat de batterij direct ontlaadt/teruglevert — bijv. aan het begin van een piektariefvenster."
         },
         "args": [
           {
@@ -739,10 +901,14 @@
       {
         "id": "set_backup_reserve",
         "title": {
-          "en": "Set backup reserve level"
+          "en": "Set backup reserve level",
+          "de": "Notstromreserve einstellen",
+          "nl": "Back-upreserveniveau instellen"
         },
         "titleFormatted": {
-          "en": "Set backup reserve to [[level]]%"
+          "en": "Set backup reserve to [[level]]%",
+          "de": "Notstromreserve auf [[level]]% setzen",
+          "nl": "Back-upreserve instellen op [[level]]%"
         },
         "args": [
           {
@@ -754,13 +920,17 @@
             "type": "number",
             "name": "level",
             "title": {
-              "en": "Reserve level"
+              "en": "Reserve level",
+              "de": "Reservelevel",
+              "nl": "Reserveniveau"
             },
             "min": 3,
             "max": 100,
             "step": 1,
             "placeholder": {
-              "en": "%"
+              "en": "%",
+              "de": "%",
+              "nl": "%"
             }
           }
         ]
@@ -768,10 +938,14 @@
       {
         "id": "set_charge_limit",
         "title": {
-          "en": "Set charge limit"
+          "en": "Set charge limit",
+          "de": "Ladegrenze festlegen",
+          "nl": "Laadlimiet instellen"
         },
         "titleFormatted": {
-          "en": "Set charge limit to [[level]]%"
+          "en": "Set charge limit to [[level]]%",
+          "de": "Ladegrenze auf [[level]]% setzen",
+          "nl": "Laadlimiet instellen op [[level]]%"
         },
         "args": [
           {
@@ -783,7 +957,9 @@
             "type": "range",
             "name": "level",
             "title": {
-              "en": "Charge limit"
+              "en": "Charge limit",
+              "de": "Ladegrenze",
+              "nl": "Laadlimiet"
             },
             "min": 50,
             "max": 100,
@@ -796,10 +972,14 @@
       {
         "id": "set_discharge_limit",
         "title": {
-          "en": "Set discharge limit"
+          "en": "Set discharge limit",
+          "de": "Entladegrenze festlegen",
+          "nl": "Ontlaadlimiet instellen"
         },
         "titleFormatted": {
-          "en": "Set discharge limit to [[level]]%"
+          "en": "Set discharge limit to [[level]]%",
+          "de": "Entladegrenze auf [[level]]% setzen",
+          "nl": "Ontlaadlimiet instellen op [[level]]%"
         },
         "args": [
           {
@@ -811,7 +991,9 @@
             "type": "range",
             "name": "level",
             "title": {
-              "en": "Discharge limit"
+              "en": "Discharge limit",
+              "de": "Entladegrenze",
+              "nl": "Ontlaadlimiet"
             },
             "min": 0,
             "max": 30,
@@ -824,10 +1006,14 @@
       {
         "id": "set_feed_in",
         "title": {
-          "en": "Set grid feed-in"
+          "en": "Set grid feed-in",
+          "de": "Netzeinspeisung einstellen",
+          "nl": "Teruglevering aan net instellen"
         },
         "titleFormatted": {
-          "en": "Turn grid feed-in [[state]]"
+          "en": "Turn grid feed-in [[state]]",
+          "de": "Netzeinspeisung [[state]] schalten",
+          "nl": "Teruglevering aan net [[state]] zetten"
         },
         "args": [
           {
@@ -839,19 +1025,25 @@
             "type": "dropdown",
             "name": "state",
             "title": {
-              "en": "Feed-in state"
+              "en": "Feed-in state",
+              "de": "Einspeisestatus",
+              "nl": "Terugleverstatus"
             },
             "values": [
               {
                 "id": "on",
                 "title": {
-                  "en": "on"
+                  "en": "on",
+                  "de": "ein",
+                  "nl": "aan"
                 }
               },
               {
                 "id": "off",
                 "title": {
-                  "en": "off"
+                  "en": "off",
+                  "de": "aus",
+                  "nl": "uit"
                 }
               }
             ]
@@ -861,10 +1053,14 @@
       {
         "id": "set_operating_mode",
         "title": {
-          "en": "Set operating mode"
+          "en": "Set operating mode",
+          "de": "Betriebsmodus festlegen",
+          "nl": "Bedrijfsmodus instellen"
         },
         "titleFormatted": {
-          "en": "Set operating mode to [[mode]]"
+          "en": "Set operating mode to [[mode]]",
+          "de": "Betriebsmodus auf [[mode]] setzen",
+          "nl": "Bedrijfsmodus instellen op [[mode]]"
         },
         "args": [
           {
@@ -876,31 +1072,41 @@
             "type": "dropdown",
             "name": "mode",
             "title": {
-              "en": "Operating mode"
+              "en": "Operating mode",
+              "de": "Betriebsmodus",
+              "nl": "Bedrijfsmodus"
             },
             "values": [
               {
                 "id": "self_powered",
                 "title": {
-                  "en": "Self-powered"
+                  "en": "Self-powered",
+                  "de": "Eigenversorgung",
+                  "nl": "Zelfvoorzienend"
                 }
               },
               {
                 "id": "ai",
                 "title": {
-                  "en": "AI / Smart scheduling"
+                  "en": "AI / Smart scheduling",
+                  "de": "KI / intelligente Planung",
+                  "nl": "AI / slimme planning"
                 }
               },
               {
                 "id": "scheduled",
                 "title": {
-                  "en": "Scheduled"
+                  "en": "Scheduled",
+                  "de": "Geplant",
+                  "nl": "Gepland"
                 }
               },
               {
                 "id": "tou",
                 "title": {
-                  "en": "Time-of-use"
+                  "en": "Time-of-use",
+                  "de": "Zeitabhängiger Tarif",
+                  "nl": "Tijdafhankelijk tarief"
                 }
               }
             ]
@@ -912,7 +1118,9 @@
   "drivers": [
     {
       "name": {
-        "en": "Smart Meter"
+        "en": "Smart Meter",
+        "de": "Smart Meter",
+        "nl": "Smart Meter"
       },
       "class": "sensor",
       "platforms": [
@@ -932,17 +1140,23 @@
       "capabilitiesOptions": {
         "measure_power": {
           "title": {
-            "en": "Grid power"
+            "en": "Grid power",
+            "de": "Netzleistung",
+            "nl": "Netvermogen"
           }
         },
         "meter_power.imported": {
           "title": {
-            "en": "Imported"
+            "en": "Imported",
+            "de": "Bezogen",
+            "nl": "Afgenomen"
           }
         },
         "meter_power.exported": {
           "title": {
-            "en": "Exported"
+            "en": "Exported",
+            "de": "Eingespeist",
+            "nl": "Teruggeleverd"
           }
         }
       },
@@ -956,38 +1170,50 @@
           "id": "meter_source",
           "type": "dropdown",
           "label": {
-            "en": "Energy meter shows"
+            "en": "Energy meter shows",
+            "de": "Energiezähler zeigt",
+            "nl": "Energiemeter toont"
           },
           "value": "grid",
           "values": [
             {
               "id": "grid",
               "label": {
-                "en": "Grid power (import / export)"
+                "en": "Grid power (import / export)",
+                "de": "Netzleistung (Bezug / Einspeisung)",
+                "nl": "Netvermogen (afname / teruglevering)"
               }
             },
             {
               "id": "load",
               "label": {
-                "en": "Home load (total consumption)"
+                "en": "Home load (total consumption)",
+                "de": "Hauslast (Gesamtverbrauch)",
+                "nl": "Huisbelasting (totaalverbruik)"
               }
             }
           ],
           "hint": {
-            "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive)."
+            "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive).",
+            "de": "Netz = Nettofluss zum/vom Netz (Import positiv, Export negativ). Hauslast = Gesamtleistung, die dein Zuhause gerade verbraucht (immer positiv).",
+            "nl": "Net = nettostroom van/naar het net (import positief, export negatief). Huisbelasting = het totale vermogen dat je huis nu gebruikt (altijd positief)."
           }
         },
         {
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval (seconds)"
+            "en": "Polling interval (seconds)",
+            "de": "Abfrageintervall (Sekunden)",
+            "nl": "Poll-interval (seconden)"
           },
           "value": 15,
           "min": 10,
           "max": 600,
           "hint": {
-            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+            "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+            "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
           }
         }
       ],
@@ -1016,7 +1242,9 @@
     },
     {
       "name": {
-        "en": "STREAM Home Battery"
+        "en": "STREAM Home Battery",
+        "de": "STREAM-Hausbatterie",
+        "nl": "STREAM-thuisbatterij"
       },
       "class": "battery",
       "platforms": [
@@ -1059,147 +1287,205 @@
       "capabilitiesOptions": {
         "measure_battery": {
           "title": {
-            "en": "Battery"
+            "en": "Battery",
+            "de": "Batterie",
+            "nl": "Batterij"
           }
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery state"
+            "en": "Battery state",
+            "de": "Batteriestatus",
+            "nl": "Batterijstatus"
           }
         },
         "operating_mode": {
           "title": {
-            "en": "Mode"
+            "en": "Mode",
+            "de": "Modus",
+            "nl": "Modus"
           }
         },
         "backup_reserve_soc": {
           "title": {
-            "en": "Backup reserve"
+            "en": "Backup reserve",
+            "de": "Notstromreserve",
+            "nl": "Back-upreserve"
           }
         },
         "charge_limit": {
           "title": {
-            "en": "Charge limit"
+            "en": "Charge limit",
+            "de": "Ladegrenze",
+            "nl": "Laadlimiet"
           }
         },
         "discharge_limit": {
           "title": {
-            "en": "Discharge limit"
+            "en": "Discharge limit",
+            "de": "Entladegrenze",
+            "nl": "Ontlaadlimiet"
           }
         },
         "feed_in_control": {
           "title": {
-            "en": "Grid feed-in"
+            "en": "Grid feed-in",
+            "de": "Netzeinspeisung",
+            "nl": "Teruglevering aan net"
           }
         },
         "measure_power.load": {
           "title": {
-            "en": "Home consumption"
+            "en": "Home consumption",
+            "de": "Hausverbrauch",
+            "nl": "Thuisverbruik"
           }
         },
         "measure_power.pv": {
           "title": {
-            "en": "Solar generation"
+            "en": "Solar generation",
+            "de": "Solarerzeugung",
+            "nl": "Zonnestroomopwekking"
           }
         },
         "measure_power.grid": {
           "title": {
-            "en": "Grid import/export"
+            "en": "Grid import/export",
+            "de": "Netzbezug/-einspeisung",
+            "nl": "Netafname/-teruglevering"
           }
         },
         "measure_power": {
           "title": {
-            "en": "Battery flow"
+            "en": "Battery flow",
+            "de": "Batteriefluss",
+            "nl": "Batterijstroom"
           }
         },
         "charge_remaining": {
           "title": {
-            "en": "Time to full"
+            "en": "Time to full",
+            "de": "Zeit bis voll",
+            "nl": "Tijd tot vol"
           }
         },
         "discharge_remaining": {
           "title": {
-            "en": "Time to empty"
+            "en": "Time to empty",
+            "de": "Zeit bis leer",
+            "nl": "Tijd tot leeg"
           }
         },
         "meter_power.charged": {
           "title": {
-            "en": "Charged total"
+            "en": "Charged total",
+            "de": "Insgesamt geladen",
+            "nl": "Totaal geladen"
           }
         },
         "meter_power.discharged": {
           "title": {
-            "en": "Discharged total"
+            "en": "Discharged total",
+            "de": "Insgesamt entladen",
+            "nl": "Totaal ontladen"
           }
         },
         "measure_power.pv1": {
           "title": {
-            "en": "PV input 1"
+            "en": "PV input 1",
+            "de": "PV-Eingang 1",
+            "nl": "PV-ingang 1"
           }
         },
         "measure_power.pv2": {
           "title": {
-            "en": "PV input 2"
+            "en": "PV input 2",
+            "de": "PV-Eingang 2",
+            "nl": "PV-ingang 2"
           }
         },
         "measure_power.pv3": {
           "title": {
-            "en": "PV input 3"
+            "en": "PV input 3",
+            "de": "PV-Eingang 3",
+            "nl": "PV-ingang 3"
           }
         },
         "measure_power.pv4": {
           "title": {
-            "en": "PV input 4"
+            "en": "PV input 4",
+            "de": "PV-Eingang 4",
+            "nl": "PV-ingang 4"
           }
         },
         "measure_power.schuko1": {
           "title": {
-            "en": "AC output 1"
+            "en": "AC output 1",
+            "de": "AC-Ausgang 1",
+            "nl": "AC-uitgang 1"
           }
         },
         "measure_power.schuko2": {
           "title": {
-            "en": "AC output 2"
+            "en": "AC output 2",
+            "de": "AC-Ausgang 2",
+            "nl": "AC-uitgang 2"
           }
         },
         "measure_power.from_pv": {
           "title": {
-            "en": "Home from solar"
+            "en": "Home from solar",
+            "de": "Haus aus Solar",
+            "nl": "Thuis uit zonne-energie"
           }
         },
         "measure_power.from_battery": {
           "title": {
-            "en": "Home from battery"
+            "en": "Home from battery",
+            "de": "Haus aus Batterie",
+            "nl": "Thuis uit batterij"
           }
         },
         "measure_power.from_grid": {
           "title": {
-            "en": "Home from grid"
+            "en": "Home from grid",
+            "de": "Haus aus Netz",
+            "nl": "Thuis uit net"
           }
         },
         "measure_temperature": {
           "title": {
-            "en": "Battery temperature"
+            "en": "Battery temperature",
+            "de": "Batterietemperatur",
+            "nl": "Batterijtemperatuur"
           }
         },
         "measure_voltage": {
           "title": {
-            "en": "Battery voltage"
+            "en": "Battery voltage",
+            "de": "Batteriespannung",
+            "nl": "Batterijspanning"
           }
         },
         "battery_soh": {
           "title": {
-            "en": "Battery health"
+            "en": "Battery health",
+            "de": "Batteriezustand",
+            "nl": "Batterijconditie"
           }
         },
         "battery_cycles": {
           "title": {
-            "en": "Battery cycles"
+            "en": "Battery cycles",
+            "de": "Batteriezyklen",
+            "nl": "Batterijcycli"
           }
         },
         "alarm_generic": {
           "title": {
-            "en": "Fault"
+            "en": "Fault",
+            "de": "Störung",
+            "nl": "Storing"
           }
         }
       },
@@ -1218,35 +1504,47 @@
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval (seconds)"
+            "en": "Polling interval (seconds)",
+            "de": "Abfrageintervall (Sekunden)",
+            "nl": "Poll-interval (seconden)"
           },
           "value": 30,
           "min": 10,
           "max": 600,
           "hint": {
-            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+            "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+            "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
           }
         },
         {
           "id": "enable_history",
           "type": "checkbox",
           "label": {
-            "en": "Daily energy statistics"
+            "en": "Daily energy statistics",
+            "de": "Tägliche Energiestatistik",
+            "nl": "Dagelijkse energiestatistieken"
           },
           "value": true,
           "hint": {
-            "en": "Fetch daily solar/grid/savings/CO₂ totals from EcoFlow's history API."
+            "en": "Fetch daily solar/grid/savings/CO₂ totals from EcoFlow's history API.",
+            "de": "Tägliche Solar-, Netz-, Ersparnis- und CO₂-Summen aus der Verlaufs-API von EcoFlow abrufen.",
+            "nl": "Haal dagelijkse totalen voor zonne-energie, net, besparing en CO₂ op uit EcoFlows historie-API."
           }
         },
         {
           "id": "history_prefix",
           "type": "text",
           "label": {
-            "en": "History model code"
+            "en": "History model code",
+            "de": "Verlaufsmodellcode",
+            "nl": "Historiemodelcode"
           },
           "value": "BK621",
           "hint": {
-            "en": "EcoFlow history metric prefix for your STREAM model (default BK621). Change if daily stats stay empty."
+            "en": "EcoFlow history metric prefix for your STREAM model (default BK621). Change if daily stats stay empty.",
+            "de": "EcoFlow-Verlaufsmetrik-Präfix für dein STREAM-Modell (Standard BK621). Ändere ihn, wenn die Tagesstatistik leer bleibt.",
+            "nl": "EcoFlow-prefix voor historische meetwaarden van je STREAM-model (standaard BK621). Wijzig dit als dagstatistieken leeg blijven."
           }
         }
       ],
@@ -1270,7 +1568,9 @@
     },
     {
       "name": {
-        "en": "STREAM Microinverter"
+        "en": "STREAM Microinverter",
+        "de": "STREAM-Mikrowechselrichter",
+        "nl": "STREAM-micro-omvormer"
       },
       "class": "solarpanel",
       "platforms": [
@@ -1293,27 +1593,37 @@
       "capabilitiesOptions": {
         "measure_power": {
           "title": {
-            "en": "Solar power"
+            "en": "Solar power",
+            "de": "Solarleistung",
+            "nl": "Zonnevermogen"
           }
         },
         "meter_power": {
           "title": {
-            "en": "Solar generated"
+            "en": "Solar generated",
+            "de": "Solar erzeugt",
+            "nl": "Opgewekte zonne-energie"
           }
         },
         "measure_power.pv1": {
           "title": {
-            "en": "Solar PV1"
+            "en": "Solar PV1",
+            "de": "Solar PV1",
+            "nl": "Zonne-PV1"
           }
         },
         "measure_power.pv2": {
           "title": {
-            "en": "Solar PV2"
+            "en": "Solar PV2",
+            "de": "Solar PV2",
+            "nl": "Zonne-PV2"
           }
         },
         "measure_power.grid": {
           "title": {
-            "en": "Grid feed"
+            "en": "Grid feed",
+            "de": "Netzeinspeisung",
+            "nl": "Netteruglevering"
           }
         }
       },
@@ -1330,13 +1640,17 @@
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval (seconds)"
+            "en": "Polling interval (seconds)",
+            "de": "Abfrageintervall (Sekunden)",
+            "nl": "Poll-interval (seconden)"
           },
           "value": 30,
           "min": 10,
           "max": 600,
           "hint": {
-            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+            "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+            "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
           }
         }
       ],
@@ -1360,7 +1674,9 @@
     },
     {
       "name": {
-        "en": "STREAM Socket"
+        "en": "STREAM Socket",
+        "de": "STREAM-Steckdose",
+        "nl": "STREAM-stopcontact"
       },
       "class": "socket",
       "platforms": [
@@ -1383,13 +1699,17 @@
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval (seconds)"
+            "en": "Polling interval (seconds)",
+            "de": "Abfrageintervall (Sekunden)",
+            "nl": "Poll-interval (seconden)"
           },
           "value": 30,
           "min": 10,
           "max": 600,
           "hint": {
-            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+            "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+            "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
           }
         }
       ],
@@ -1413,7 +1733,9 @@
     },
     {
       "name": {
-        "en": "STREAM Solar"
+        "en": "STREAM Solar",
+        "de": "STREAM Solar",
+        "nl": "STREAM Solar"
       },
       "class": "solarpanel",
       "platforms": [
@@ -1429,12 +1751,16 @@
       "capabilitiesOptions": {
         "measure_power": {
           "title": {
-            "en": "System solar power"
+            "en": "System solar power",
+            "de": "System-Solarleistung",
+            "nl": "Systeem-zonnevermogen"
           }
         },
         "meter_power": {
           "title": {
-            "en": "System solar generated"
+            "en": "System solar generated",
+            "de": "System-Solarerzeugung",
+            "nl": "Systeem-zonnestroom opgewekt"
           }
         }
       },
@@ -1451,35 +1777,47 @@
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval (seconds)"
+            "en": "Polling interval (seconds)",
+            "de": "Abfrageintervall (Sekunden)",
+            "nl": "Poll-interval (seconden)"
           },
           "value": 30,
           "min": 10,
           "max": 600,
           "hint": {
-            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls."
+            "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+            "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+            "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
           }
         },
         {
           "id": "aggregation_source",
           "type": "text",
           "label": {
-            "en": "Aggregation source"
+            "en": "Aggregation source",
+            "de": "Aggregationsquelle",
+            "nl": "Aggregatiebron"
           },
           "value": "STREAM system total",
           "hint": {
-            "en": "This solar device represents the whole STREAM system, not one physical unit."
+            "en": "This solar device represents the whole STREAM system, not one physical unit.",
+            "de": "Dieses Solargerät repräsentiert das gesamte STREAM-System, nicht eine einzelne physische Einheit.",
+            "nl": "Dit zonne-apparaat vertegenwoordigt het hele STREAM-systeem, niet één fysieke unit."
           }
         },
         {
           "id": "pv_attribution",
           "type": "text",
           "label": {
-            "en": "PV attribution"
+            "en": "PV attribution",
+            "de": "PV-Zuordnung",
+            "nl": "PV-toewijzing"
           },
           "value": "Refreshes after the device starts.",
           "hint": {
-            "en": "Shows each STREAM unit's PV inputs that contribute to this aggregate solar total."
+            "en": "Shows each STREAM unit's PV inputs that contribute to this aggregate solar total.",
+            "de": "Zeigt die PV-Eingänge jeder STREAM-Einheit, die zu dieser aggregierten Solarsumme beitragen.",
+            "nl": "Toont de PV-ingangen van elke STREAM-unit die bijdragen aan dit geaggregeerde zonnetotaal."
           }
         }
       ],
@@ -1503,7 +1841,9 @@
     },
     {
       "name": {
-        "en": "STREAM Unit"
+        "en": "STREAM Unit",
+        "de": "STREAM-Einheit",
+        "nl": "STREAM-unit"
       },
       "class": "battery",
       "platforms": [
@@ -1544,77 +1884,107 @@
       "capabilitiesOptions": {
         "measure_battery": {
           "title": {
-            "en": "Battery"
+            "en": "Battery",
+            "de": "Batterie",
+            "nl": "Batterij"
           }
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery state"
+            "en": "Battery state",
+            "de": "Batteriestatus",
+            "nl": "Batterijstatus"
           }
         },
         "operating_mode": {
           "title": {
-            "en": "Mode"
+            "en": "Mode",
+            "de": "Modus",
+            "nl": "Modus"
           }
         },
         "measure_power.load": {
           "title": {
-            "en": "House consumption"
+            "en": "House consumption",
+            "de": "Hausverbrauch",
+            "nl": "Huisverbruik"
           }
         },
         "onoff.ac1": {
           "title": {
-            "en": "AC output 1"
+            "en": "AC output 1",
+            "de": "AC-Ausgang 1",
+            "nl": "AC-uitgang 1"
           }
         },
         "onoff.ac2": {
           "title": {
-            "en": "AC output 2"
+            "en": "AC output 2",
+            "de": "AC-Ausgang 2",
+            "nl": "AC-uitgang 2"
           }
         },
         "backup_reserve_soc": {
           "title": {
-            "en": "Backup reserve"
+            "en": "Backup reserve",
+            "de": "Notstromreserve",
+            "nl": "Back-upreserve"
           }
         },
         "charge_limit": {
           "title": {
-            "en": "Charge limit"
+            "en": "Charge limit",
+            "de": "Ladegrenze",
+            "nl": "Laadlimiet"
           }
         },
         "discharge_limit": {
           "title": {
-            "en": "Discharge limit"
+            "en": "Discharge limit",
+            "de": "Entladegrenze",
+            "nl": "Ontlaadlimiet"
           }
         },
         "feed_in_control": {
           "title": {
-            "en": "Grid feed-in"
+            "en": "Grid feed-in",
+            "de": "Netzeinspeisung",
+            "nl": "Teruglevering aan net"
           }
         },
         "charge_remaining": {
           "title": {
-            "en": "Time to full"
+            "en": "Time to full",
+            "de": "Zeit bis voll",
+            "nl": "Tijd tot vol"
           }
         },
         "discharge_remaining": {
           "title": {
-            "en": "Time to empty"
+            "en": "Time to empty",
+            "de": "Zeit bis leer",
+            "nl": "Tijd tot leeg"
           }
         },
         "measure_temperature": {
           "title": {
-            "en": "Battery temperature"
+            "en": "Battery temperature",
+            "de": "Batterietemperatur",
+            "nl": "Batterijtemperatuur"
           }
         },
         "battery_soh": {
           "title": {
-            "en": "Battery health"
+            "en": "Battery health",
+            "de": "Batteriezustand",
+            "nl": "Batterijconditie"
           }
         },
         "battery_cycles": {
           "title": {
-            "en": "Battery cycles"
+            "en": "Battery cycles",
+            "de": "Batteriezyklen",
+            "nl": "Batterijcycli"
           }
         }
       },
@@ -1632,62 +2002,84 @@
         {
           "type": "group",
           "label": {
-            "en": "Device information"
+            "en": "Device information",
+            "de": "Geräteinformationen",
+            "nl": "Apparaatinformatie"
           },
           "children": [
             {
               "id": "model",
               "type": "label",
               "label": {
-                "en": "Model"
+                "en": "Model",
+                "de": "Modell",
+                "nl": "Model"
               },
               "value": "—",
               "hint": {
-                "en": "The specific STREAM product this unit is, detected from its serial number."
+                "en": "The specific STREAM product this unit is, detected from its serial number.",
+                "de": "Das genaue STREAM-Produkt dieser Einheit, erkannt anhand der Seriennummer.",
+                "nl": "Het specifieke STREAM-product van deze unit, gedetecteerd via het serienummer."
               }
             },
             {
               "id": "serial_number",
               "type": "label",
               "label": {
-                "en": "Serial number"
+                "en": "Serial number",
+                "de": "Seriennummer",
+                "nl": "Serienummer"
               },
               "value": "—",
               "hint": {
-                "en": "This physical unit's EcoFlow serial number."
+                "en": "This physical unit's EcoFlow serial number.",
+                "de": "Die EcoFlow-Seriennummer dieser physischen Einheit.",
+                "nl": "Het EcoFlow-serienummer van deze fysieke unit."
               }
             },
             {
               "id": "system_role",
               "type": "label",
               "label": {
-                "en": "Role in system"
+                "en": "Role in system",
+                "de": "Rolle im System",
+                "nl": "Rol in systeem"
               },
               "value": "—",
               "hint": {
-                "en": "Whether this unit is the system's main unit (which reports whole-home totals and system controls) or a member unit."
+                "en": "Whether this unit is the system's main unit (which reports whole-home totals and system controls) or a member unit.",
+                "de": "Ob diese Einheit die Haupteinheit des Systems ist (meldet Gesamtdaten des Hauses und Systemsteuerungen) oder eine Mitgliedseinheit.",
+                "nl": "Of deze unit de hoofdeenheid van het systeem is (rapporteert totalen voor het hele huis en systeembediening) of een deelnemende unit."
               }
             },
             {
               "id": "power_source",
               "type": "label",
               "label": {
-                "en": "Energy source"
+                "en": "Energy source",
+                "de": "Energiequelle",
+                "nl": "Energiebron"
               },
               "value": "—",
               "hint": {
-                "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input."
+                "en": "How this model is powered. AC-coupled units (e.g. STREAM AC Pro) have no direct solar input.",
+                "de": "Wie dieses Modell mit Energie versorgt wird. AC-gekoppelte Einheiten (z. B. STREAM AC Pro) haben keinen direkten Solareingang.",
+                "nl": "Hoe dit model wordt gevoed. AC-gekoppelde units (bijv. STREAM AC Pro) hebben geen directe zonne-ingang."
               }
             },
             {
               "id": "ac_output",
               "type": "label",
               "label": {
-                "en": "AC output"
+                "en": "AC output",
+                "de": "AC-Ausgang",
+                "nl": "AC-uitgang"
               },
               "value": "—",
               "hint": {
-                "en": "Rated AC output for this model. Ultra/Ultra X support a higher paired (parallel) output when two units are linked."
+                "en": "Rated AC output for this model. Ultra/Ultra X support a higher paired (parallel) output when two units are linked.",
+                "de": "Nennleistung des AC-Ausgangs für dieses Modell. Ultra/Ultra X unterstützen eine höhere gekoppelte (parallele) Leistung, wenn zwei Einheiten verbunden sind.",
+                "nl": "Nominaal AC-uitgangsvermogen voor dit model. Ultra/Ultra X ondersteunen een hoger gekoppeld (parallel) vermogen wanneer twee units zijn gekoppeld."
               }
             }
           ]
@@ -1696,13 +2088,17 @@
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval (seconds)"
+            "en": "Polling interval (seconds)",
+            "de": "Abfrageintervall (Sekunden)",
+            "nl": "Poll-interval (seconden)"
           },
           "value": 30,
           "min": 10,
           "max": 600,
           "hint": {
-            "en": "How often to fetch this unit's data over REST. MQTT delivers realtime updates between polls."
+            "en": "How often to fetch this unit's data over REST. MQTT delivers realtime updates between polls.",
+            "de": "Wie oft die Daten dieser Einheit per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+            "nl": "Hoe vaak gegevens van deze unit via REST worden opgehaald. MQTT levert realtime updates tussen polls."
           }
         }
       ],
@@ -1728,7 +2124,9 @@
   "widgets": {
     "stream_balance": {
       "name": {
-        "en": "STREAM Today Balance"
+        "en": "STREAM Today Balance",
+        "de": "STREAM-Tagesbilanz",
+        "nl": "STREAM-dagbalans"
       },
       "devices": {
         "type": "app",
@@ -1749,7 +2147,9 @@
     },
     "stream_battery_plan": {
       "name": {
-        "en": "STREAM Battery Plan"
+        "en": "STREAM Battery Plan",
+        "de": "STREAM-Batterieplan",
+        "nl": "STREAM-batterijplan"
       },
       "devices": {
         "type": "app",
@@ -1770,7 +2170,9 @@
     },
     "stream_flow": {
       "name": {
-        "en": "STREAM Energy Flow"
+        "en": "STREAM Energy Flow",
+        "de": "STREAM-Energiefluss",
+        "nl": "STREAM-energiestroom"
       },
       "devices": {
         "type": "app",
@@ -1791,7 +2193,9 @@
     },
     "stream_solar_forecast": {
       "name": {
-        "en": "STREAM Solar Target"
+        "en": "STREAM Solar Target",
+        "de": "STREAM-Solarziel",
+        "nl": "STREAM-zonnestroomdoel"
       },
       "devices": {
         "type": "app",
@@ -1805,13 +2209,17 @@
           "id": "target",
           "type": "number",
           "title": {
-            "en": "Daily solar target (kWh)"
+            "en": "Daily solar target (kWh)",
+            "de": "Tägliches Solarziel (kWh)",
+            "nl": "Dagelijks zonnestroomdoel (kWh)"
           },
           "value": 10,
           "min": 1,
           "max": 100,
           "hint": {
-            "en": "Used until a real solar forecast source is added."
+            "en": "Used until a real solar forecast source is added.",
+            "de": "Wird verwendet, bis eine echte Solarprognosequelle hinzugefügt wird.",
+            "nl": "Wordt gebruikt totdat een echte zonneverwachtingsbron is toegevoegd."
           }
         }
       ],
@@ -1826,7 +2234,9 @@
     },
     "stream_tariff_opportunity": {
       "name": {
-        "en": "STREAM Energy Recommendation"
+        "en": "STREAM Energy Recommendation",
+        "de": "STREAM-Energieempfehlung",
+        "nl": "STREAM-energieadvies"
       },
       "devices": {
         "type": "app",
@@ -1850,10 +2260,14 @@
     "backup_reserve_soc": {
       "type": "number",
       "title": {
-        "en": "Backup reserve"
+        "en": "Backup reserve",
+        "de": "Notstromreserve",
+        "nl": "Back-upreserve"
       },
       "units": {
-        "en": "%"
+        "en": "%",
+        "de": "%",
+        "nl": "%"
       },
       "decimals": 0,
       "min": 3,
@@ -1868,7 +2282,9 @@
     "battery_cycles": {
       "type": "number",
       "title": {
-        "en": "Battery cycles"
+        "en": "Battery cycles",
+        "de": "Batteriezyklen",
+        "nl": "Batterijcycli"
       },
       "decimals": 0,
       "getable": true,
@@ -1880,10 +2296,14 @@
     "battery_soh": {
       "type": "number",
       "title": {
-        "en": "Battery health"
+        "en": "Battery health",
+        "de": "Batteriezustand",
+        "nl": "Batterijconditie"
       },
       "units": {
-        "en": "%"
+        "en": "%",
+        "de": "%",
+        "nl": "%"
       },
       "decimals": 0,
       "getable": true,
@@ -1895,10 +2315,14 @@
     "charge_limit": {
       "type": "number",
       "title": {
-        "en": "Charge limit"
+        "en": "Charge limit",
+        "de": "Ladegrenze",
+        "nl": "Laadlimiet"
       },
       "units": {
-        "en": "%"
+        "en": "%",
+        "de": "%",
+        "nl": "%"
       },
       "decimals": 0,
       "min": 50,
@@ -1913,10 +2337,14 @@
     "charge_remaining": {
       "type": "number",
       "title": {
-        "en": "Charge time remaining"
+        "en": "Charge time remaining",
+        "de": "Verbleibende Ladezeit",
+        "nl": "Resterende laadtijd"
       },
       "units": {
-        "en": "min"
+        "en": "min",
+        "de": "Min.",
+        "nl": "min"
       },
       "decimals": 0,
       "getable": true,
@@ -1928,10 +2356,14 @@
     "co2_today": {
       "type": "number",
       "title": {
-        "en": "CO₂ avoided today"
+        "en": "CO₂ avoided today",
+        "de": "Heute vermiedenes CO₂",
+        "nl": "Vandaag vermeden CO₂"
       },
       "units": {
-        "en": "kg"
+        "en": "kg",
+        "de": "kg",
+        "nl": "kg"
       },
       "decimals": 2,
       "getable": true,
@@ -1943,10 +2375,14 @@
     "discharge_limit": {
       "type": "number",
       "title": {
-        "en": "Discharge limit"
+        "en": "Discharge limit",
+        "de": "Entladegrenze",
+        "nl": "Ontlaadlimiet"
       },
       "units": {
-        "en": "%"
+        "en": "%",
+        "de": "%",
+        "nl": "%"
       },
       "decimals": 0,
       "min": 0,
@@ -1961,10 +2397,14 @@
     "discharge_remaining": {
       "type": "number",
       "title": {
-        "en": "Discharge time remaining"
+        "en": "Discharge time remaining",
+        "de": "Verbleibende Entladezeit",
+        "nl": "Resterende ontlaadtijd"
       },
       "units": {
-        "en": "min"
+        "en": "min",
+        "de": "Min.",
+        "nl": "min"
       },
       "decimals": 0,
       "getable": true,
@@ -1976,10 +2416,14 @@
     "energy_consumption_today": {
       "type": "number",
       "title": {
-        "en": "Consumption today (est.)"
+        "en": "Consumption today (est.)",
+        "de": "Verbrauch heute (geschätzt)",
+        "nl": "Verbruik vandaag (geschat)"
       },
       "units": {
-        "en": "kWh"
+        "en": "kWh",
+        "de": "kWh",
+        "nl": "kWh"
       },
       "decimals": 2,
       "getable": true,
@@ -1991,10 +2435,14 @@
     "energy_grid_export_today": {
       "type": "number",
       "title": {
-        "en": "Grid export today"
+        "en": "Grid export today",
+        "de": "Netzeinspeisung heute",
+        "nl": "Vandaag teruggeleverd aan net"
       },
       "units": {
-        "en": "kWh"
+        "en": "kWh",
+        "de": "kWh",
+        "nl": "kWh"
       },
       "decimals": 2,
       "getable": true,
@@ -2006,10 +2454,14 @@
     "energy_grid_import_today": {
       "type": "number",
       "title": {
-        "en": "Grid import today"
+        "en": "Grid import today",
+        "de": "Netzbezug heute",
+        "nl": "Vandaag afgenomen van net"
       },
       "units": {
-        "en": "kWh"
+        "en": "kWh",
+        "de": "kWh",
+        "nl": "kWh"
       },
       "decimals": 2,
       "getable": true,
@@ -2021,10 +2473,14 @@
     "energy_independence": {
       "type": "number",
       "title": {
-        "en": "Energy independence"
+        "en": "Energy independence",
+        "de": "Energieautarkie",
+        "nl": "Energieonafhankelijkheid"
       },
       "units": {
-        "en": "%"
+        "en": "%",
+        "de": "%",
+        "nl": "%"
       },
       "decimals": 0,
       "getable": true,
@@ -2036,7 +2492,9 @@
     "energy_savings_today": {
       "type": "number",
       "title": {
-        "en": "Savings today"
+        "en": "Savings today",
+        "de": "Ersparnis heute",
+        "nl": "Besparing vandaag"
       },
       "decimals": 2,
       "getable": true,
@@ -2048,10 +2506,14 @@
     "energy_solar_today": {
       "type": "number",
       "title": {
-        "en": "Solar today"
+        "en": "Solar today",
+        "de": "Solar heute",
+        "nl": "Zonne-energie vandaag"
       },
       "units": {
-        "en": "kWh"
+        "en": "kWh",
+        "de": "kWh",
+        "nl": "kWh"
       },
       "decimals": 2,
       "getable": true,
@@ -2063,7 +2525,9 @@
     "feed_in_control": {
       "type": "boolean",
       "title": {
-        "en": "Grid feed-in"
+        "en": "Grid feed-in",
+        "de": "Netzeinspeisung",
+        "nl": "Teruglevering aan net"
       },
       "getable": true,
       "setable": true,
@@ -2071,16 +2535,22 @@
       "icon": "/assets/capabilities/feed-in.svg",
       "insights": true,
       "insightsTitleTrue": {
-        "en": "Feed-in enabled"
+        "en": "Feed-in enabled",
+        "de": "Einspeisung aktiviert",
+        "nl": "Teruglevering ingeschakeld"
       },
       "insightsTitleFalse": {
-        "en": "Feed-in disabled"
+        "en": "Feed-in disabled",
+        "de": "Einspeisung deaktiviert",
+        "nl": "Teruglevering uitgeschakeld"
       }
     },
     "operating_mode": {
       "type": "enum",
       "title": {
-        "en": "Operating mode"
+        "en": "Operating mode",
+        "de": "Betriebsmodus",
+        "nl": "Bedrijfsmodus"
       },
       "getable": true,
       "setable": true,
@@ -2090,25 +2560,33 @@
         {
           "id": "self_powered",
           "title": {
-            "en": "Self-powered"
+            "en": "Self-powered",
+            "de": "Eigenversorgung",
+            "nl": "Zelfvoorzienend"
           }
         },
         {
           "id": "ai",
           "title": {
-            "en": "AI / Smart scheduling"
+            "en": "AI / Smart scheduling",
+            "de": "KI / intelligente Planung",
+            "nl": "AI / slimme planning"
           }
         },
         {
           "id": "scheduled",
           "title": {
-            "en": "Scheduled"
+            "en": "Scheduled",
+            "de": "Geplant",
+            "nl": "Gepland"
           }
         },
         {
           "id": "tou",
           "title": {
-            "en": "Time-of-use"
+            "en": "Time-of-use",
+            "de": "Zeitabhängiger Tarif",
+            "nl": "Tijdafhankelijk tarief"
           }
         }
       ]
@@ -2116,7 +2594,9 @@
     "power_factor": {
       "type": "number",
       "title": {
-        "en": "Power factor"
+        "en": "Power factor",
+        "de": "Leistungsfaktor",
+        "nl": "Vermogensfactor"
       },
       "decimals": 2,
       "getable": true,
@@ -2128,7 +2608,9 @@
     "self_heating": {
       "type": "boolean",
       "title": {
-        "en": "Self-heating"
+        "en": "Self-heating",
+        "de": "Selbstheizung",
+        "nl": "Zelfverwarming"
       },
       "getable": true,
       "setable": false,
@@ -2139,10 +2621,14 @@
     "smartmeter_power_export": {
       "type": "number",
       "title": {
-        "en": "Grid export"
+        "en": "Grid export",
+        "de": "Netzeinspeisung",
+        "nl": "Teruglevering aan net"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2154,10 +2640,14 @@
     "smartmeter_power_grid": {
       "type": "number",
       "title": {
-        "en": "Grid power"
+        "en": "Grid power",
+        "de": "Netzleistung",
+        "nl": "Netvermogen"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2169,10 +2659,14 @@
     "smartmeter_power_import": {
       "type": "number",
       "title": {
-        "en": "Grid import"
+        "en": "Grid import",
+        "de": "Netzbezug",
+        "nl": "Netafname"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2184,10 +2678,14 @@
     "stream_micro_power_grid_feed": {
       "type": "number",
       "title": {
-        "en": "Grid feed"
+        "en": "Grid feed",
+        "de": "Netzeinspeisung",
+        "nl": "Netteruglevering"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2199,10 +2697,14 @@
     "stream_micro_power_pv1": {
       "type": "number",
       "title": {
-        "en": "Solar PV1"
+        "en": "Solar PV1",
+        "de": "Solar PV1",
+        "nl": "Zonne-PV1"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2214,10 +2716,14 @@
     "stream_micro_power_pv2": {
       "type": "number",
       "title": {
-        "en": "Solar PV2"
+        "en": "Solar PV2",
+        "de": "Solar PV2",
+        "nl": "Zonne-PV2"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2229,10 +2735,14 @@
     "stream_micro_power_solar": {
       "type": "number",
       "title": {
-        "en": "Solar power"
+        "en": "Solar power",
+        "de": "Solarleistung",
+        "nl": "Zonnevermogen"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2244,10 +2754,14 @@
     "stream_unit_power_ac1": {
       "type": "number",
       "title": {
-        "en": "AC output 1 power"
+        "en": "AC output 1 power",
+        "de": "Leistung AC-Ausgang 1",
+        "nl": "Vermogen AC-uitgang 1"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2259,10 +2773,14 @@
     "stream_unit_power_ac2": {
       "type": "number",
       "title": {
-        "en": "AC output 2 power"
+        "en": "AC output 2 power",
+        "de": "Leistung AC-Ausgang 2",
+        "nl": "Vermogen AC-uitgang 2"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2274,10 +2792,14 @@
     "stream_unit_power_battery_flow": {
       "type": "number",
       "title": {
-        "en": "Battery flow"
+        "en": "Battery flow",
+        "de": "Batteriefluss",
+        "nl": "Batterijstroom"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2289,10 +2811,14 @@
     "stream_unit_power_from_battery": {
       "type": "number",
       "title": {
-        "en": "House from battery"
+        "en": "House from battery",
+        "de": "Haus aus Batterie",
+        "nl": "Huis uit batterij"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2304,10 +2830,14 @@
     "stream_unit_power_from_grid": {
       "type": "number",
       "title": {
-        "en": "House from grid"
+        "en": "House from grid",
+        "de": "Haus aus Netz",
+        "nl": "Huis uit net"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2319,10 +2849,14 @@
     "stream_unit_power_from_solar": {
       "type": "number",
       "title": {
-        "en": "House from solar"
+        "en": "House from solar",
+        "de": "Haus aus Solar",
+        "nl": "Huis uit zonne-energie"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2334,10 +2868,14 @@
     "stream_unit_power_grid": {
       "type": "number",
       "title": {
-        "en": "Grid import/export"
+        "en": "Grid import/export",
+        "de": "Netzbezug/-einspeisung",
+        "nl": "Netafname/-teruglevering"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2349,10 +2887,14 @@
     "stream_unit_power_pv1": {
       "type": "number",
       "title": {
-        "en": "PV input 1"
+        "en": "PV input 1",
+        "de": "PV-Eingang 1",
+        "nl": "PV-ingang 1"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2364,10 +2906,14 @@
     "stream_unit_power_pv2": {
       "type": "number",
       "title": {
-        "en": "PV input 2"
+        "en": "PV input 2",
+        "de": "PV-Eingang 2",
+        "nl": "PV-ingang 2"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2379,10 +2925,14 @@
     "stream_unit_power_pv3": {
       "type": "number",
       "title": {
-        "en": "PV input 3"
+        "en": "PV input 3",
+        "de": "PV-Eingang 3",
+        "nl": "PV-ingang 3"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2394,10 +2944,14 @@
     "stream_unit_power_pv4": {
       "type": "number",
       "title": {
-        "en": "PV input 4"
+        "en": "PV input 4",
+        "de": "PV-Eingang 4",
+        "nl": "PV-ingang 4"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,
@@ -2409,10 +2963,14 @@
     "stream_unit_power_solar": {
       "type": "number",
       "title": {
-        "en": "Solar generation"
+        "en": "Solar generation",
+        "de": "Solarerzeugung",
+        "nl": "Zonnestroomopwekking"
       },
       "units": {
-        "en": "W"
+        "en": "W",
+        "de": "W",
+        "nl": "W"
       },
       "decimals": 2,
       "getable": true,

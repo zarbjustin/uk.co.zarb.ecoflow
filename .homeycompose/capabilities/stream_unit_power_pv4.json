@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "PV input 4" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/pv-input.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "PV input 4",
+    "de": "PV-Eingang 4",
+    "nl": "PV-ingang 4"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/pv-input.svg",
+  "insights": true
+}

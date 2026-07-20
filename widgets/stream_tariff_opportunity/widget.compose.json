@@ -1,13 +1,22 @@
 {
-  "name": { "en": "STREAM Energy Recommendation" },
+  "name": {
+    "en": "STREAM Energy Recommendation",
+    "de": "STREAM-Energieempfehlung",
+    "nl": "STREAM-energieadvies"
+  },
   "devices": {
     "type": "app",
     "singular": true,
-    "filter": { "capabilities": "alarm_generic,measure_battery" }
+    "filter": {
+      "capabilities": "alarm_generic,measure_battery"
+    }
   },
   "settings": [],
   "height": 254,
   "api": {
-    "getTariffOpportunity": { "method": "GET", "path": "/" }
+    "getTariffOpportunity": {
+      "method": "GET",
+      "path": "/"
+    }
   }
 }

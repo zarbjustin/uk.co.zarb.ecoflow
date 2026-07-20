@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Grid import" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/grid-import.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Grid import",
+    "de": "Netzbezug",
+    "nl": "Netafname"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/grid-import.svg",
+  "insights": true
+}

@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "AC output 1 power" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/ac-output.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "AC output 1 power",
+    "de": "Leistung AC-Ausgang 1",
+    "nl": "Vermogen AC-uitgang 1"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/ac-output.svg",
+  "insights": true
+}

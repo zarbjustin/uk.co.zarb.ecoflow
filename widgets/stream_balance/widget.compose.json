@@ -1,13 +1,22 @@
 {
-  "name": { "en": "STREAM Today Balance" },
+  "name": {
+    "en": "STREAM Today Balance",
+    "de": "STREAM-Tagesbilanz",
+    "nl": "STREAM-dagbalans"
+  },
   "devices": {
     "type": "app",
     "singular": true,
-    "filter": { "capabilities": "alarm_generic,measure_battery" }
+    "filter": {
+      "capabilities": "alarm_generic,measure_battery"
+    }
   },
   "settings": [],
   "height": 254,
   "api": {
-    "getBalance": { "method": "GET", "path": "/" }
+    "getBalance": {
+      "method": "GET",
+      "path": "/"
+    }
   }
 }

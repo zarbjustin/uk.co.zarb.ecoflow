@@ -1,9 +1,37 @@
 {
   "id": "set_backup_reserve",
-  "title": { "en": "Set backup reserve level" },
-  "titleFormatted": { "en": "Set backup reserve to [[level]]%" },
+  "title": {
+    "en": "Set backup reserve level",
+    "de": "Notstromreserve einstellen",
+    "nl": "Back-upreserveniveau instellen"
+  },
+  "titleFormatted": {
+    "en": "Set backup reserve to [[level]]%",
+    "de": "Notstromreserve auf [[level]]% setzen",
+    "nl": "Back-upreserve instellen op [[level]]%"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "level", "title": { "en": "Reserve level" }, "min": 3, "max": 100, "step": 1, "placeholder": { "en": "%" } }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
+    {
+      "type": "number",
+      "name": "level",
+      "title": {
+        "en": "Reserve level",
+        "de": "Reservelevel",
+        "nl": "Reserveniveau"
+      },
+      "min": 3,
+      "max": 100,
+      "step": 1,
+      "placeholder": {
+        "en": "%",
+        "de": "%",
+        "nl": "%"
+      }
+    }
   ]
 }

@@ -1,18 +1,62 @@
 {
   "id": "set_operating_mode",
-  "title": { "en": "Set operating mode" },
-  "titleFormatted": { "en": "Set operating mode to [[mode]]" },
+  "title": {
+    "en": "Set operating mode",
+    "de": "Betriebsmodus festlegen",
+    "nl": "Bedrijfsmodus instellen"
+  },
+  "titleFormatted": {
+    "en": "Set operating mode to [[mode]]",
+    "de": "Betriebsmodus auf [[mode]] setzen",
+    "nl": "Bedrijfsmodus instellen op [[mode]]"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
     {
       "type": "dropdown",
       "name": "mode",
-      "title": { "en": "Operating mode" },
+      "title": {
+        "en": "Operating mode",
+        "de": "Betriebsmodus",
+        "nl": "Bedrijfsmodus"
+      },
       "values": [
-        { "id": "self_powered", "title": { "en": "Self-powered" } },
-        { "id": "ai", "title": { "en": "AI / Smart scheduling" } },
-        { "id": "scheduled", "title": { "en": "Scheduled" } },
-        { "id": "tou", "title": { "en": "Time-of-use" } }
+        {
+          "id": "self_powered",
+          "title": {
+            "en": "Self-powered",
+            "de": "Eigenversorgung",
+            "nl": "Zelfvoorzienend"
+          }
+        },
+        {
+          "id": "ai",
+          "title": {
+            "en": "AI / Smart scheduling",
+            "de": "KI / intelligente Planung",
+            "nl": "AI / slimme planning"
+          }
+        },
+        {
+          "id": "scheduled",
+          "title": {
+            "en": "Scheduled",
+            "de": "Geplant",
+            "nl": "Gepland"
+          }
+        },
+        {
+          "id": "tou",
+          "title": {
+            "en": "Time-of-use",
+            "de": "Zeitabhängiger Tarif",
+            "nl": "Tijdafhankelijk tarief"
+          }
+        }
       ]
     }
   ]

@@ -1,9 +1,32 @@
 {
   "id": "solar_power_below",
-  "title": { "en": "Solar power !{{is|is not}} below" },
-  "titleFormatted": { "en": "Solar power !{{is|is not}} below [[watts]] W" },
+  "title": {
+    "en": "Solar power !{{is|is not}} below",
+    "de": "Solarleistung !{{is|is not}} unter",
+    "nl": "Zonnevermogen !{{is|is not}} onder"
+  },
+  "titleFormatted": {
+    "en": "Solar power !{{is|is not}} below [[watts]] W",
+    "de": "Solarleistung !{{is|is not}} unter [[watts]] W",
+    "nl": "Zonnevermogen !{{is|is not}} onder [[watts]] W"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "watts", "min": 0, "max": 10000, "step": 10, "placeholder": { "en": "W" } }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
+    {
+      "type": "number",
+      "name": "watts",
+      "min": 0,
+      "max": 10000,
+      "step": 10,
+      "placeholder": {
+        "en": "W",
+        "de": "W",
+        "nl": "W"
+      }
+    }
   ]
 }

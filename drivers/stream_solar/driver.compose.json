@@ -1,15 +1,35 @@
 {
-  "name": { "en": "STREAM Solar" },
+  "name": {
+    "en": "STREAM Solar",
+    "de": "STREAM Solar",
+    "nl": "STREAM Solar"
+  },
   "class": "solarpanel",
-  "platforms": ["local"],
-  "connectivity": ["cloud"],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
   "capabilities": [
     "measure_power",
     "meter_power"
   ],
   "capabilitiesOptions": {
-    "measure_power": { "title": { "en": "System solar power" } },
-    "meter_power": { "title": { "en": "System solar generated" } }
+    "measure_power": {
+      "title": {
+        "en": "System solar power",
+        "de": "System-Solarleistung",
+        "nl": "Systeem-zonnevermogen"
+      }
+    },
+    "meter_power": {
+      "title": {
+        "en": "System solar generated",
+        "de": "System-Solarerzeugung",
+        "nl": "Systeem-zonnestroom opgewekt"
+      }
+    }
   },
   "energy": {
     "meterPowerExportedCapability": "meter_power"
@@ -23,30 +43,65 @@
     {
       "id": "poll_interval",
       "type": "number",
-      "label": { "en": "Polling interval (seconds)" },
+      "label": {
+        "en": "Polling interval (seconds)",
+        "de": "Abfrageintervall (Sekunden)",
+        "nl": "Poll-interval (seconden)"
+      },
       "value": 30,
       "min": 10,
       "max": 600,
-      "hint": { "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls." }
+      "hint": {
+        "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
+        "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
+        "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
+      }
     },
     {
       "id": "aggregation_source",
       "type": "text",
-      "label": { "en": "Aggregation source" },
+      "label": {
+        "en": "Aggregation source",
+        "de": "Aggregationsquelle",
+        "nl": "Aggregatiebron"
+      },
       "value": "STREAM system total",
-      "hint": { "en": "This solar device represents the whole STREAM system, not one physical unit." }
+      "hint": {
+        "en": "This solar device represents the whole STREAM system, not one physical unit.",
+        "de": "Dieses Solargerät repräsentiert das gesamte STREAM-System, nicht eine einzelne physische Einheit.",
+        "nl": "Dit zonne-apparaat vertegenwoordigt het hele STREAM-systeem, niet één fysieke unit."
+      }
     },
     {
       "id": "pv_attribution",
       "type": "text",
-      "label": { "en": "PV attribution" },
+      "label": {
+        "en": "PV attribution",
+        "de": "PV-Zuordnung",
+        "nl": "PV-toewijzing"
+      },
       "value": "Refreshes after the device starts.",
-      "hint": { "en": "Shows each STREAM unit's PV inputs that contribute to this aggregate solar total." }
+      "hint": {
+        "en": "Shows each STREAM unit's PV inputs that contribute to this aggregate solar total.",
+        "de": "Zeigt die PV-Eingänge jeder STREAM-Einheit, die zu dieser aggregierten Solarsumme beitragen.",
+        "nl": "Toont de PV-ingangen van elke STREAM-unit die bijdragen aan dit geaggregeerde zonnetotaal."
+      }
     }
   ],
   "pair": [
-    { "id": "credentials" },
-    { "id": "list_devices", "template": "list_devices", "navigation": { "next": "add_devices" } },
-    { "id": "add_devices", "template": "add_devices" }
+    {
+      "id": "credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
   ]
 }

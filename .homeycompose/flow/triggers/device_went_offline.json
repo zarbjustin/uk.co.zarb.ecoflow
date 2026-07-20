@@ -1,5 +1,15 @@
 {
   "id": "device_went_offline",
-  "title": { "en": "Device went offline" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+  "title": {
+    "en": "Device went offline",
+    "de": "Gerät ist offline gegangen",
+    "nl": "Apparaat is offline gegaan"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ]
 }

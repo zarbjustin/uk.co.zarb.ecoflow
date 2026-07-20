@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "Grid import today" }, "units": { "en": "kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/grid.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "Grid import today",
+    "de": "Netzbezug heute",
+    "nl": "Vandaag afgenomen van net"
+  },
+  "units": {
+    "en": "kWh",
+    "de": "kWh",
+    "nl": "kWh"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/grid.svg",
+  "insights": true
+}

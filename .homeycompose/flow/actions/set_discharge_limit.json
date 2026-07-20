@@ -1,13 +1,29 @@
 {
   "id": "set_discharge_limit",
-  "title": { "en": "Set discharge limit" },
-  "titleFormatted": { "en": "Set discharge limit to [[level]]%" },
+  "title": {
+    "en": "Set discharge limit",
+    "de": "Entladegrenze festlegen",
+    "nl": "Ontlaadlimiet instellen"
+  },
+  "titleFormatted": {
+    "en": "Set discharge limit to [[level]]%",
+    "de": "Entladegrenze auf [[level]]% setzen",
+    "nl": "Ontlaadlimiet instellen op [[level]]%"
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
     {
       "type": "range",
       "name": "level",
-      "title": { "en": "Discharge limit" },
+      "title": {
+        "en": "Discharge limit",
+        "de": "Entladegrenze",
+        "nl": "Ontlaadlimiet"
+      },
       "min": 0,
       "max": 30,
       "step": 1,

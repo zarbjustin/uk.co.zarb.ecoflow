@@ -1,5 +1,15 @@
 {
   "id": "feed_in_enabled",
-  "title": { "en": "Grid feed-in !{{is|is not}} enabled" },
-  "args": [{ "type": "device", "name": "device", "filter": "driver_id=stream" }]
+  "title": {
+    "en": "Grid feed-in !{{is|is not}} enabled",
+    "de": "Netzeinspeisung !{{is|is not}} aktiviert",
+    "nl": "Teruglevering aan net !{{is|is not}} ingeschakeld"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    }
+  ]
 }

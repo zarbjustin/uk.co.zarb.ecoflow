@@ -1,10 +1,42 @@
 {
   "id": "prepare_for_cheap_import",
-  "title": { "en": "Prepare for cheap grid import" },
-  "titleFormatted": { "en": "Prepare for cheap import (charge to [[reserve]]%)" },
-  "hint": { "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile)." },
+  "title": {
+    "en": "Prepare for cheap grid import",
+    "de": "Für günstigen Netzbezug vorbereiten",
+    "nl": "Voorbereiden op goedkope netafname"
+  },
+  "titleFormatted": {
+    "en": "Prepare for cheap import (charge to [[reserve]]%)",
+    "de": "Für günstigen Bezug vorbereiten (auf [[reserve]]% laden)",
+    "nl": "Voorbereiden op goedkope afname (laden tot [[reserve]]%)"
+  },
+  "hint": {
+    "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile).",
+    "de": "Hebt die Ladegrenze auf 100 % an und setzt das Ziel für die Notstromreserve, damit die Batterie während eines günstigen Zeitfensters aus dem Netz lädt (z. B. Octopus Agile).",
+    "nl": "Verhoogt de laadlimiet naar 100% en stelt de back-upreserve in, zodat de batterij tijdens een goedkoop tariefvenster via het net laadt (bijv. Octopus Agile)."
+  },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
-    { "type": "number", "name": "reserve", "title": { "en": "Reserve level" }, "min": 3, "max": 100, "step": 1, "placeholder": { "en": "%" } }
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
+    {
+      "type": "number",
+      "name": "reserve",
+      "title": {
+        "en": "Reserve level",
+        "de": "Reservelevel",
+        "nl": "Reserveniveau"
+      },
+      "min": 3,
+      "max": 100,
+      "step": 1,
+      "placeholder": {
+        "en": "%",
+        "de": "%",
+        "nl": "%"
+      }
+    }
   ]
 }

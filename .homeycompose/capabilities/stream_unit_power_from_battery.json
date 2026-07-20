@@ -1,1 +1,19 @@
-{ "type": "number", "title": { "en": "House from battery" }, "units": { "en": "W" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/house-from-battery.svg", "insights": true }
+{
+  "type": "number",
+  "title": {
+    "en": "House from battery",
+    "de": "Haus aus Batterie",
+    "nl": "Huis uit batterij"
+  },
+  "units": {
+    "en": "W",
+    "de": "W",
+    "nl": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/house-from-battery.svg",
+  "insights": true
+}
