@@ -1690,7 +1690,7 @@
     },
     "stream_tariff_opportunity": {
       "name": {
-        "en": "STREAM Tariff Opportunity"
+        "en": "STREAM Energy Recommendation"
       },
       "devices": {
         "type": "app",

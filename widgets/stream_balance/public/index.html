@@ -30,7 +30,7 @@
     <div class="head"><div class="title" id="title">Today’s Energy</div><div class="tag" id="tag">—</div></div>
     <div class="rows">
       <div class="metric"><div class="label">Solar</div><div class="value solar" id="solar">—</div></div>
-      <div class="metric"><div class="label">Home</div><div class="value home" id="home">—</div></div>
+      <div class="metric"><div class="label">Home (est.)</div><div class="value home" id="home">—</div></div>
       <div class="metric"><div class="label">Imported</div><div class="value import" id="imported">—</div></div>
       <div class="metric"><div class="label">Exported</div><div class="value export" id="exported">—</div></div>
     </div>
@@ -47,7 +47,7 @@
       Homey.ready();
       async function refresh() {
         const d = await Homey.api('GET', '/?index=' + index + selector, {});
-        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
+        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
         document.getElementById('title').textContent = d.name || 'Today’s Energy';
         document.getElementById('solar').textContent = kwh(d.solarToday);
         document.getElementById('home').textContent = kwh(d.consumptionToday);
@@ -55,7 +55,7 @@
         document.getElementById('exported').textContent = kwh(d.gridExportToday);
         document.getElementById('tag').textContent = pct(d.independence);
         document.getElementById('bar').style.width = (d.independence == null ? 0 : Math.max(0, Math.min(100, d.independence))) + '%';
-        document.getElementById('foot').textContent = d.co2Today == null ? '' : 'CO2 avoided ' + d.co2Today.toFixed(2) + ' kg';
+        document.getElementById('foot').textContent = (d.co2Today == null ? '' : 'CO2 avoided ' + d.co2Today.toFixed(2) + ' kg · ') + 'Home use & independence estimated';
         document.getElementById('card').classList.toggle('muted', d.available === false);
       }
       function scheduledRefresh() {

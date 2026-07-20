@@ -22,14 +22,14 @@
 </head>
 <body>
   <div class="card" id="card">
-    <div class="head"><div class="title" id="title">Solar Forecast</div><div class="pct" id="pct">—</div></div>
+    <div class="head"><div class="title" id="title">Solar Target</div><div class="pct" id="pct">—</div></div>
     <div class="solar" id="solar">—</div>
     <div class="bar"><span id="bar"></span></div>
     <div class="grid">
       <div><div class="label">Target</div><div class="value" id="target">—</div></div>
       <div><div class="label">Now</div><div class="value" id="now">—</div></div>
-      <div><div class="label">Home today</div><div class="value" id="home">—</div></div>
-      <div><div class="label">Independence</div><div class="value" id="independence">—</div></div>
+      <div><div class="label">Home (est.)</div><div class="value" id="home">—</div></div>
+      <div><div class="label">Independ. (est.)</div><div class="value" id="independence">—</div></div>
     </div>
   </div>
   <script>
@@ -45,8 +45,8 @@
       Homey.ready();
       async function refresh() {
         const d = await Homey.api('GET', '/?index=' + index + '&target=' + target + selector, {});
-        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; return; }
-        document.getElementById('title').textContent = d.name || 'Solar Forecast';
+        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
+        document.getElementById('title').textContent = d.name || 'Solar Target';
         document.getElementById('solar').textContent = kwh(d.solarToday);
         document.getElementById('target').textContent = kwh(d.target);
         document.getElementById('now').textContent = power(d.solar);

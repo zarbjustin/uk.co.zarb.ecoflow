@@ -103,6 +103,7 @@
           const d = await Homey.api('GET', '/?index=' + index + selector, {});
           if (!d || !d.ok) {
             set('title', 'No STREAM system found');
+            document.querySelector('.card').classList.add('muted');
             return;
           }
           set('title', d.name || 'STREAM');
@@ -114,7 +115,9 @@
           set('flowSolar', fmtPower(d.solar));
           set('flowHome', fmtPower(d.home));
           set('flowGrid', fmtPower(d.grid == null ? null : Math.abs(d.grid)));
-          set('gridArrow', d.grid == null ? '↔' : (d.grid < -5 ? '←' : (d.grid > 5 ? '→' : '↔')));
+          // Grid arrow points in the real direction of power: import (positive)
+          // flows Grid -> Home (left), export (negative) flows Home -> Grid (right).
+          set('gridArrow', d.grid == null ? '↔' : (d.grid < -5 ? '→' : (d.grid > 5 ? '←' : '↔')));
 
           // Battery power magnitude + state.
           set('battery', fmtPower(d.battery == null ? null : Math.abs(d.battery)));
