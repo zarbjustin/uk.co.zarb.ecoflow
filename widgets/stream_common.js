@@ -72,6 +72,8 @@ function streamData(homey, query = {}) {
     savingsToday: cap(d, 'energy_savings_today'),
     co2Today: cap(d, 'co2_today'),
     independence: cap(d, 'energy_independence'),
+    solarForecastToday: cap(d, 'solar_forecast_today'),
+    solarForecastTomorrow: cap(d, 'solar_forecast_tomorrow'),
     forecastTarget: settingNumber(query.target, null),
   };
 }

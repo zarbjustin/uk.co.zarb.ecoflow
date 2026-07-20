@@ -53,6 +53,10 @@ const fixture = {
   // solar_forecast api.js derives these:
   target: 10,
   progress: 84,
+  forecastToday: 9.2,
+  forecastTomorrow: 7.4,
+  solarForecastToday: 9.2,
+  solarForecastTomorrow: 7.4,
   // tariff/recommendation api.js derives these:
   recommendation: 'Store solar',
   reason: 'Solar is above home load; spare power can charge the battery.',
