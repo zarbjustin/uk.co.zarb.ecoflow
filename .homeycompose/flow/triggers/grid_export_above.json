@@ -1,0 +1,10 @@
+{
+  "id": "grid_export_above",
+  "title": { "en": "Grid export rises above" },
+  "titleFormatted": { "en": "Grid export rises above [[watts]] W" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    { "type": "number", "name": "watts", "min": 0, "max": 15000, "step": 50, "placeholder": { "en": "W" } }
+  ],
+  "tokens": [{ "name": "power", "type": "number", "title": { "en": "Grid export" }, "example": 800 }]
+}

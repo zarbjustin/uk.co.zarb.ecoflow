@@ -22,7 +22,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    */
   private static readonly HISTORY_TITLES: Record<string, string> = {
     energy_solar_today: 'Solar today',
-    energy_consumption_today: 'Consumption today',
+    energy_consumption_today: 'Consumption today (est.)',
     energy_grid_import_today: 'Grid import today',
     energy_grid_export_today: 'Grid export today',
     energy_savings_today: 'Savings today',
@@ -298,6 +298,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     const grid = values['measure_power.grid'];
     if (typeof grid === 'number' && grid !== this.prevGrid) {
       flow.getDeviceTriggerCard('grid_power_changed').trigger(this, { power: grid }).catch(() => {});
+      const prevGrid = this.prevGrid ?? grid;
+      // Threshold-crossing triggers (import positive; export magnitude = -grid).
+      flow.getDeviceTriggerCard('grid_import_above')
+        .trigger(this, { power: Math.max(0, Math.round(grid)) }, { power: grid, prevPower: prevGrid })
+        .catch(() => {});
+      flow.getDeviceTriggerCard('grid_export_above')
+        .trigger(this, { power: Math.max(0, Math.round(-grid)) }, { power: -grid, prevPower: -prevGrid })
+        .catch(() => {});
       const direction = powerDirection(grid);
       const started = startedDirection(this.prevGridDirection, direction);
       if (started !== null) {
@@ -379,6 +387,16 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   isExporting(): boolean {
     return (this.getCapabilityValue('measure_power.grid') as number) < -5;
+  }
+
+  /** True when the battery is charging from surplus solar (PV exceeds home load). */
+  isChargingFromSolar(): boolean {
+    const batt = this.getCapabilityValue('measure_power');
+    const pv = this.getCapabilityValue('measure_power.pv');
+    const load = this.getCapabilityValue('measure_power.load');
+    if (typeof batt !== 'number' || typeof pv !== 'number') return false;
+    const surplus = pv - (typeof load === 'number' ? load : 0);
+    return batt > 5 && surplus > 5;
   }
 
   async flowRefresh(): Promise<void> {

@@ -1,0 +1,9 @@
+{
+  "id": "charging_from_solar",
+  "title": { "en": "Battery !{{is|is not}} charging from solar" },
+  "titleFormatted": { "en": "Battery !{{is|is not}} charging from solar" },
+  "hint": { "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid)." },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" }
+  ]
+}

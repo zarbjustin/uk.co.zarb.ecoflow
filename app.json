@@ -232,6 +232,42 @@
         ]
       },
       {
+        "id": "grid_export_above",
+        "title": {
+          "en": "Grid export rises above"
+        },
+        "titleFormatted": {
+          "en": "Grid export rises above [[watts]] W"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 15000,
+            "step": 50,
+            "placeholder": {
+              "en": "W"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid export"
+            },
+            "example": 800
+          }
+        ]
+      },
+      {
         "id": "grid_export_started",
         "title": {
           "en": "Started exporting to grid"
@@ -251,6 +287,42 @@
               "en": "Grid power"
             },
             "example": -500
+          }
+        ]
+      },
+      {
+        "id": "grid_import_above",
+        "title": {
+          "en": "Grid import rises above"
+        },
+        "titleFormatted": {
+          "en": "Grid import rises above [[watts]] W"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 15000,
+            "step": 50,
+            "placeholder": {
+              "en": "W"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid import"
+            },
+            "example": 1200
           }
         ]
       },
@@ -405,6 +477,25 @@
         ]
       },
       {
+        "id": "charging_from_solar",
+        "title": {
+          "en": "Battery !{{is|is not}} charging from solar"
+        },
+        "titleFormatted": {
+          "en": "Battery !{{is|is not}} charging from solar"
+        },
+        "hint": {
+          "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid)."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
         "id": "feed_in_enabled",
         "title": {
           "en": "Grid feed-in !{{is|is not}} enabled"
@@ -512,6 +603,32 @@
             "title": {
               "en": "Solar power"
             },
+            "min": 0,
+            "max": 10000,
+            "step": 10,
+            "placeholder": {
+              "en": "W"
+            }
+          }
+        ]
+      },
+      {
+        "id": "solar_power_below",
+        "title": {
+          "en": "Solar power !{{is|is not}} below"
+        },
+        "titleFormatted": {
+          "en": "Solar power !{{is|is not}} below [[watts]] W"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
             "min": 0,
             "max": 10000,
             "step": 10,
@@ -1859,7 +1976,7 @@
     "energy_consumption_today": {
       "type": "number",
       "title": {
-        "en": "Consumption today"
+        "en": "Consumption today (est.)"
       },
       "units": {
         "en": "kWh"
