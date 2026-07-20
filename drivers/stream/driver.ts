@@ -25,6 +25,12 @@ module.exports = class StreamDriver extends Homey.Driver {
     flow.getConditionCard('solar_power_above').registerRunListener(
       (args: any) => (args.device.getCapabilityValue('measure_power.pv') as number) > args.watts,
     );
+    flow.getConditionCard('solar_power_below').registerRunListener(
+      (args: any) => (args.device.getCapabilityValue('measure_power.pv') as number) < args.watts,
+    );
+    flow.getConditionCard('charging_from_solar').registerRunListener(
+      (args: any) => args.device.isChargingFromSolar(),
+    );
     flow.getConditionCard('battery_soc').registerRunListener(
       (args: any) => args.device.batterySocIs(args.direction, args.level),
     );
@@ -51,6 +57,17 @@ module.exports = class StreamDriver extends Homey.Driver {
     );
     flow.getActionCard('prepare_for_peak_export').registerRunListener(
       (args: any) => args.device.flowPreparePeakExport(args.reserve),
+    );
+    flow.getActionCard('release_for_export').registerRunListener(
+      (args: any) => args.device.flowReleaseForExport(),
+    );
+
+    // Threshold-crossing triggers: fire only when the value rises through the arg.
+    flow.getDeviceTriggerCard('grid_import_above').registerRunListener(
+      (args: any, state: any) => state.prevPower < args.watts && state.power >= args.watts,
+    );
+    flow.getDeviceTriggerCard('grid_export_above').registerRunListener(
+      (args: any, state: any) => state.prevPower < args.watts && state.power >= args.watts,
     );
 
     // Trigger arg-matching for the battery threshold card
