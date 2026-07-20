@@ -25,6 +25,14 @@ export class EcoFlowApiError extends Error {
   }
 }
 
+/** Delay helper for bounded retry backoff (the timer is fire-and-forget). */
+function sleep(ms: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    // eslint-disable-next-line homey-app/global-timers
+    setTimeout(resolve, ms);
+  });
+}
+
 /**
  * Minimal, dependency-free EcoFlow IoT Open Platform REST client.
  * Handles HMAC-SHA256 request signing and the documented endpoints.
@@ -98,7 +106,36 @@ export class EcoFlowClient {
 
   // ----- Transport ---------------------------------------------------------
 
-  private request(
+  /**
+   * Perform a signed request. Idempotent GETs are retried a couple of times on
+   * transient network/timeout/parse errors (genuine API rejections carry a code
+   * and are never retried) so one-shot flow actions don't fail on a blip.
+   */
+  private async request(
+    method: 'GET' | 'POST' | 'PUT',
+    path: string,
+    opts: { query?: Record<string, any>; body?: Record<string, any> } = {},
+  ): Promise<any> {
+    const maxAttempts = method === 'GET' ? 3 : 1;
+    let lastErr: any;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        return await this.requestOnce(method, path, opts);
+      } catch (e) {
+        if (e instanceof EcoFlowApiError) throw e; // real API rejection — don't retry
+        lastErr = e;
+        if (attempt < maxAttempts) {
+          const backoff = 300 * attempt + Math.floor(Math.random() * 200);
+          // eslint-disable-next-line no-await-in-loop
+          await sleep(backoff);
+        }
+      }
+    }
+    throw lastErr;
+  }
+
+  private requestOnce(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
     opts: { query?: Record<string, any>; body?: Record<string, any> } = {},

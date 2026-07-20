@@ -6,6 +6,7 @@ import { integrateSignedPower, followResettableCounter } from '../../lib/energyI
 import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
+import { powerState, startedTrigger } from '../../lib/triggerState';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 
@@ -20,7 +21,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    */
   private static readonly HISTORY_TITLES: Record<string, string> = {
     energy_solar_today: 'Solar today',
-    energy_consumption_today: 'Consumption today',
+    energy_consumption_today: 'Consumption today (experimental)',
     energy_grid_import_today: 'Grid import today',
     energy_grid_export_today: 'Grid export today',
     energy_savings_today: 'Savings today',
@@ -29,12 +30,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   };
 
   private historyTimer: NodeJS.Timeout | null = null;
+  private historyDay = '';
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
   private prevGrid: number | undefined;
   private prevMode: string | undefined;
-  private prevCharging: boolean | null | undefined;
-  private prevExporting: boolean | undefined;
+  private prevChargeState: import('../../lib/triggerState').PowerState | undefined;
+  private prevGridState: import('../../lib/triggerState').PowerState | undefined;
   private prevOnline: boolean | undefined;
   private faulted = false;
   // Locally-integrated cumulative battery energy (Wh). Prefer the device's own
@@ -106,6 +108,16 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private async refreshHistory(): Promise<void> {
+    // On a calendar-day rollover, zero the existing daily tiles so a broken/empty
+    // history feed can't keep displaying yesterday's totals as "today"; fresh data
+    // then overwrites them as it arrives.
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.historyDay && this.historyDay !== today) {
+      for (const cap of Object.keys(StreamDevice.HISTORY_TITLES)) {
+        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, 0).catch(() => {});
+      }
+    }
+    this.historyDay = today;
     const prefix = (this.getSetting('history_prefix') as string) || 'BK621';
     const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix);
     await this.applyDailyEnergy(daily);
@@ -280,30 +292,18 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     const grid = values['measure_power.grid'];
     if (typeof grid === 'number' && grid !== this.prevGrid) {
       flow.getDeviceTriggerCard('grid_power_changed').trigger(this, { power: grid }).catch(() => {});
-      const exporting = grid < -5;
-      if (this.prevExporting !== undefined && exporting !== this.prevExporting) {
-        const card = exporting ? 'grid_export_started' : 'grid_import_started';
-        flow.getDeviceTriggerCard(card).trigger(this, { power: grid }).catch(() => {});
-      }
-      this.prevExporting = exporting;
+      const gState = powerState(grid);
+      const card = startedTrigger(this.prevGridState, gState, 'grid_import_started', 'grid_export_started');
+      if (card) flow.getDeviceTriggerCard(card).trigger(this, { power: grid }).catch(() => {});
+      this.prevGridState = gState;
       this.prevGrid = grid;
     }
     const battPower = values['measure_power'];
     if (typeof battPower === 'number') {
-      // Resolve charge state including the idle band so the edge is detected
-      // correctly across charging -> idle -> charging transitions.
-      let nowCharging: boolean | null = null;
-      if (battPower > 5) nowCharging = true;
-      else if (battPower < -5) nowCharging = false;
-      if (nowCharging !== null) {
-        if (this.prevCharging !== undefined && this.prevCharging !== null && nowCharging !== this.prevCharging) {
-          const card = nowCharging ? 'charging_started' : 'discharging_started';
-          flow.getDeviceTriggerCard(card).trigger(this, { power: battPower }).catch(() => {});
-        }
-        this.prevCharging = nowCharging;
-      } else {
-        this.prevCharging = null;
-      }
+      const cState = powerState(battPower);
+      const card = startedTrigger(this.prevChargeState, cState, 'charging_started', 'discharging_started');
+      if (card) flow.getDeviceTriggerCard(card).trigger(this, { power: battPower }).catch(() => {});
+      this.prevChargeState = cState;
     }
     const mode = values['operating_mode'];
     if (typeof mode === 'string' && mode !== this.prevMode) {

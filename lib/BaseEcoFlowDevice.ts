@@ -18,6 +18,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   protected client!: EcoFlowClient;
   protected pollTimer: NodeJS.Timeout | null = null;
   protected mqttOffline = false;
+  private pollInFlight: Promise<void> | null = null;
   private quotaHandler?: QuotaHandler;
   private statusHandler?: StatusHandler;
   private subscribedSn?: string;
@@ -93,6 +94,16 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   protected async poll(): Promise<void> {
+    // Coalesce concurrent polls (scheduled timer + post-command refresh) so slow
+    // responses can't overlap and apply out of order.
+    if (this.pollInFlight) return this.pollInFlight;
+    this.pollInFlight = this.doPoll().finally(() => {
+      this.pollInFlight = null;
+    });
+    return this.pollInFlight;
+  }
+
+  private async doPoll(): Promise<void> {
     try {
       const quota = await this.client.getQuotaAll(this.getReadSn());
       await this.applyQuota(quota);
@@ -118,11 +129,46 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     await this.onSettingsChanged(newSettings, changedKeys);
   }
 
+  /**
+   * Rebuild the REST client from the current app credentials/region and refresh.
+   * Called by the app when the global credentials change so a live device picks
+   * up new keys without needing to be re-added.
+   */
+  async refreshCredentials(): Promise<void> {
+    const accessKey = this.homey.settings.get('accessKey') as string;
+    const secretKey = this.homey.settings.get('secretKey') as string;
+    const host = this.homey.settings.get('host') as string | undefined;
+    if (!accessKey || !secretKey) return;
+    this.client = new EcoFlowClient({
+      accessKey, secretKey, host, log: (...a) => this.log(...a),
+    });
+    await this.poll().catch((e) => this.error('refreshCredentials poll', e));
+  }
+
   async onDeleted(): Promise<void> {
+    await this.teardown();
+  }
+
+  async onUninit(): Promise<void> {
+    await this.teardown();
+  }
+
+  /**
+   * Idempotent teardown shared by onDeleted and onUninit. Homey calls onUninit
+   * (not onDeleted) when a device instance is destroyed but not deleted (disable/
+   * enable, single-device re-init), so the shared-MQTT handlers and timers must be
+   * released here too — otherwise stale handlers accumulate and fire on dead
+   * instances.
+   */
+  private async teardown(): Promise<void> {
     if (this.subscribedSn) {
       getApp(this.homey).unsubscribeRealtime(this.subscribedSn, this.quotaHandler, this.statusHandler);
+      this.subscribedSn = undefined;
     }
-    if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+    if (this.pollTimer) {
+      this.homey.clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
     await this.onTeardown();
   }
 }

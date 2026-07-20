@@ -9,6 +9,34 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onInit(): Promise<void> {
     this.log('EcoFlow app initialised');
+    // Apply credential/region/MQTT changes to already-running devices live, so a
+    // key change in App Settings doesn't require re-adding every device.
+    this.homey.settings.on('set', (key: string) => {
+      if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
+        this.onCredentialsChanged().catch((e) => this.error('credentials change', e));
+      }
+    });
+  }
+
+  /** Rebuild every device's REST client and refresh the shared MQTT session. */
+  private async onCredentialsChanged(): Promise<void> {
+    for (const driver of Object.values(this.homey.drivers.getDrivers())) {
+      for (const device of driver.getDevices()) {
+        const d = device as unknown as { refreshCredentials?: () => Promise<void> };
+        if (typeof d.refreshCredentials === 'function') {
+          // eslint-disable-next-line no-await-in-loop
+          await d.refreshCredentials().catch(() => {});
+        }
+      }
+    }
+    if (this.homey.settings.get('mqtt_enabled') === false) {
+      await this.mqtt?.end().catch(() => {});
+      this.mqtt = null;
+      this.mqttCredsKey = '';
+      return;
+    }
+    // getMqtt() reconnects in place with the new credentials when they differ.
+    await this.getMqtt().catch(() => {});
   }
 
   async onUninit(): Promise<void> {

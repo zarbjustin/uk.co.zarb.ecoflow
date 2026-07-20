@@ -2,6 +2,14 @@
 
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { StreamCmd } from '../../lib/streamProtocol';
+import { toFiniteNumber } from '../../lib/quota';
+
+/** Parse a relay on/off field, treating empty/absent values as unknown. */
+function parseRelay(v: unknown): boolean | undefined {
+  if (typeof v === 'boolean') return v;
+  const n = toFiniteNumber(v);
+  return n === undefined ? undefined : n !== 0;
+}
 
 /** A single AC outlet of a STREAM unit, as a Homey smart-plug device. */
 module.exports = class StreamSocketDevice extends BaseEcoFlowDevice {
@@ -28,15 +36,12 @@ module.exports = class StreamSocketDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
-    const relay = quota[this.relayKey];
-    if (relay !== undefined) {
-      const on = typeof relay === 'boolean' ? relay : Number(relay) !== 0;
-      if (this.getCapabilityValue('onoff') !== on) {
-        await this.setCapabilityValue('onoff', on).catch((e) => this.error('onoff', e));
-      }
+    const on = parseRelay(quota[this.relayKey]);
+    if (on !== undefined && this.getCapabilityValue('onoff') !== on) {
+      await this.setCapabilityValue('onoff', on).catch((e) => this.error('onoff', e));
     }
-    const power = Number(quota[this.powerKey]);
-    if (Number.isFinite(power) && this.getCapabilityValue('measure_power') !== power) {
+    const power = toFiniteNumber(quota[this.powerKey]);
+    if (power !== undefined && this.getCapabilityValue('measure_power') !== power) {
       await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
     }
   }
