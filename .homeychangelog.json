@@ -112,5 +112,8 @@
   },
   "1.10.1": {
     "en": "Better App Store discoverability with more search tags, now also in German and Dutch."
+  },
+  "1.10.2": {
+    "en": "Adds the Homey Community support link and German and Dutch App Store descriptions."
   }
 }
