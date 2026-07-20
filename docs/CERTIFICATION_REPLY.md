@@ -56,6 +56,11 @@ dashboard integration and the Octopus-driven Flows working end-to-end.
 
 Thank you for considering this, and for the kind offer to help put me in touch with Marcus.
 
+P.S. On your other note — thank you for spotting that the widget previews were identical. The app
+now ships **five distinct widgets** (Energy Flow, Battery & Reserve, Solar Today, Grid Import/
+Export, and Tariff Status), and each one has its own preview that is rendered directly from the
+real widget, so every preview now matches its actual widget.
+
 Best regards,
 Justin Zarb
 

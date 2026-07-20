@@ -26,6 +26,16 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 - **Tariff automation:** ready-made [Octopus Agile recipes](docs/OCTOPUS_FLOWS.md) for charging in the cheapest window and exporting at peak.
 - **Insights:** all measurements are logged automatically.
 
+### Dashboard widgets
+Five distinct widgets, each bound to a chosen STREAM system:
+- **Energy Flow** — live grid / solar / home / battery power + state of charge.
+- **Battery & Reserve** — SoC ring with backup-reserve and discharge-limit markers, charge state, time-to-full/empty and mode.
+- **Solar Today** — today's solar yield, live PV, per-string bars, CO₂/independence.
+- **Grid Import/Export** — live grid direction with today's imported/exported energy and feed-in state.
+- **Tariff Status** — mode, reserve, charge/discharge limits and feed-in with a derived cheap-charge / peak-export badge.
+
+Previews are rendered from the real widget HTML with `npm run widgets:preview`.
+
 ### Under the hood
 - Signed EcoFlow IoT Open Platform REST client (HMAC-SHA256, validated against the documented test vector).
 - Shared **MQTT** connection for realtime (~2 s) updates, with REST polling as a fallback.

@@ -4,13 +4,37 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Submit Build 7** for certification on the dashboard and **paste the reply** from
-  `docs/CERTIFICATION_REPLY.md` into the Homey review thread (subject: "EcoFlow STREAM Series").
+- [ ] **Version bump to v1.9.0** via the *Update Homey App Version* workflow (minor), using the
+  changelog below, then run *Publish Homey App* to create the next build.
+- [ ] **Submit the new build** for certification and paste the updated `docs/REVIEWER_NOTES.md`
+  (now covers the **5 distinct widgets** + previews) and `docs/CERTIFICATION_REPLY.md` into the
+  review thread.
 - [ ] On hardware: **confirm the self-heating field name** (candidates in
-  `docs/FEATURE_BACKLOG.md`) and the **STREAM Max PV-input count**; adjust
-  `lib/streamMapping.ts` / `lib/streamModels.ts` if needed.
-- [ ] Optional: verify the new v1.8.0 tariff Flows on the live STREAM (cheap-charge /
-  peak-export) and the daily-history tiles populate.
+  `docs/FEATURE_BACKLOG.md`), the **STREAM Max PV-input count** (now set to **2** — verify), and
+  the per-socket `powGetSchuko1/2` fields.
+- [ ] Optional: verify the reserve/discharge **8524-safe sequence** and the new tariff Flows
+  (release-for-export, grid threshold triggers) on the live STREAM.
+
+### Suggested v1.9.0 changelog (for the version workflow)
+> Five redesigned dashboard widgets each with its own accurate preview; more reliable grid/charge
+> Flow triggers; safer backup-reserve control (fixes a silent no-op); accurate energy meters;
+> sturdier realtime connection; new tariff Flow cards; STREAM Max solar-input fix.
+
+## Review & hardening pass (2026-07-20)
+
+A full multi-model review + implementation pass shipped on top of v1.8.0 (unreleased on `master`):
+- **Deliverables:** `docs/PRODUCT_RESEARCH.md`, `docs/CODE_REVIEW_v1.8.0.md` (GPT-5.6 Sol +
+  GPT-5.5 + Opus 4.8), `docs/FEATURE_EVALUATION.md`, `docs/SPECIFICATION.md`, `docs/SPRINTS.md`.
+- **Widgets:** 1 → **5 distinct widgets** with per-widget previews (certification fix); device
+  picker + robust refresh. Regenerate with `npm run widgets:preview`.
+- **High-severity fixes:** backup-reserve 8524 ordering + verify (H1); battery-meter
+  double-count guard (H2); MQTT duplicate-session/uninit races (H3/H4); STREAM Max PV count (H5).
+- **Medium/low fixes:** reliable tri-state Flow triggers (M1/M2); onUninit teardown (M3);
+  coalesced polls (M4); live credential updates (M5); history midnight reset + consumption label
+  (M6); strict socket parsing (L1); REST retry (L3).
+- **New Flow cards:** solar-below, charging-from-solar, grid import/export threshold triggers,
+  release-for-export.
+- **Status:** 48/48 tests pass; lint clean; `homey app validate --level publish` clean.
 
 ## Session log
 

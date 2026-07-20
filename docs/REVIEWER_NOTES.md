@@ -42,7 +42,26 @@ a device the app authenticates but lists no devices.
    - Advanced settings: set **backup reserve**, **charge/discharge limit**.
    - Toggle **grid feed-in** and change **operating mode**.
    - Create a Flow with e.g. *"Solar power is above [W]"* (condition) → *"Set backup reserve"* (action) and run it.
-5. The **STREAM Energy Flow** widget shows live Grid / Solar / Home / Battery.
+5. Widgets: add each of the **five** STREAM widgets to a dashboard and confirm each shows its
+   own distinct view (see below).
+
+## Widgets (addresses the "identical previews" review note)
+
+The app now ships **five distinct widgets**, each with its own layout, data and
+**uniquely-rendered** light/dark preview (the previews are screenshots of the real widgets, so
+they match exactly):
+
+1. **STREAM Energy Flow** — live Grid / Solar / Home / Battery power + state of charge.
+2. **STREAM Battery & Reserve** — SoC ring with backup-reserve and discharge-limit markers,
+   charge state, time-to-full/empty and operating mode.
+3. **STREAM Solar Today** — today's solar yield, live PV, per-string bars, CO₂/independence.
+4. **STREAM Grid Import/Export** — live grid direction with today's imported/exported energy and
+   the feed-in state.
+5. **STREAM Tariff Status** — operating mode, reserve, charge/discharge limits and feed-in with a
+   derived cheap-charge / peak-export badge.
+
+Each widget binds to a chosen STREAM system via the device picker. Previews can be regenerated
+from the real widget HTML with `npm run widgets:preview`.
 
 ## Demo credentials (fill in on the dashboard — leave blank here)
 
