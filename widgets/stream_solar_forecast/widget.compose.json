@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Solar Target",
-    "de": "STREAM-Solarziel",
-    "nl": "STREAM-zonnestroomdoel"
+    "en": "STREAM Solar Forecast",
+    "de": "STREAM-Solarprognose",
+    "nl": "STREAM-zonprognose"
   },
   "devices": {
     "type": "app",
@@ -24,9 +24,9 @@
       "min": 1,
       "max": 100,
       "hint": {
-        "en": "Used until a real solar forecast source is added.",
-        "de": "Wird verwendet, bis eine echte Solarprognosequelle hinzugefügt wird.",
-        "nl": "Wordt gebruikt totdat een echte zonneverwachtingsbron is toegevoegd."
+        "en": "Fallback daily target used only when the weather-based Solar forecast is disabled or unavailable.",
+        "de": "Ausweich-Tagesziel, das nur verwendet wird, wenn die wetterbasierte Solarprognose deaktiviert oder nicht verfügbar ist.",
+        "nl": "Terugvaldoel per dag dat alleen wordt gebruikt als de op weer gebaseerde zonprognose is uitgeschakeld of niet beschikbaar is."
       }
     }
   ],

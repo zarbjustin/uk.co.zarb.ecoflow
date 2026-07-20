@@ -304,6 +304,38 @@
         "de": "EcoFlow-Verlaufsmetrik-Präfix für dein STREAM-Modell (Standard BK621). Ändere ihn, wenn die Tagesstatistik leer bleibt.",
         "nl": "EcoFlow-prefix voor historische meetwaarden van je STREAM-model (standaard BK621). Wijzig dit als dagstatistieken leeg blijven."
       }
+    },
+    {
+      "id": "solar_forecast",
+      "type": "checkbox",
+      "label": {
+        "en": "Solar forecast",
+        "de": "Solarprognose",
+        "nl": "Zonprognose"
+      },
+      "value": true,
+      "hint": {
+        "en": "Estimate today's and tomorrow's solar yield from the local weather forecast (Open-Meteo) at Homey's location.",
+        "de": "Schätzt den heutigen und morgigen Solarertrag anhand der lokalen Wettervorhersage (Open-Meteo) am Standort von Homey.",
+        "nl": "Schat de zonneopbrengst van vandaag en morgen op basis van de lokale weersverwachting (Open-Meteo) op de locatie van Homey."
+      }
+    },
+    {
+      "id": "solar_factor",
+      "type": "number",
+      "label": {
+        "en": "Solar forecast factor (kWh per MJ/m²)",
+        "de": "Solarprognose-Faktor (kWh pro MJ/m²)",
+        "nl": "Zonprognosefactor (kWh per MJ/m²)"
+      },
+      "value": 0.67,
+      "min": 0.05,
+      "max": 5,
+      "hint": {
+        "en": "Tune to your array size: expected kWh per MJ/m² of daily solar radiation. Raise if the forecast reads low versus your actual solar, lower if it reads high.",
+        "de": "An deine Anlagengröße anpassen: erwartete kWh pro MJ/m² täglicher Solarstrahlung. Erhöhen, wenn die Prognose zu niedrig ist, senken, wenn sie zu hoch ist.",
+        "nl": "Stem af op je systeemgrootte: verwachte kWh per MJ/m² dagelijkse zonnestraling. Verhoog als de prognose te laag is, verlaag als deze te hoog is."
+      }
     }
   ],
   "pair": [

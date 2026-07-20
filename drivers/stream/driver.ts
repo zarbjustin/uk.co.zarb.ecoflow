@@ -4,6 +4,12 @@ import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
 
+/** Compare a forecast capability value against an above/below threshold. */
+function forecastCompare(value: unknown, direction: 'above' | 'below', kwh: number): boolean {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false;
+  return direction === 'above' ? value > kwh : value < kwh;
+}
+
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
     this.registerFlowCards();
@@ -30,6 +36,12 @@ module.exports = class StreamDriver extends Homey.Driver {
     );
     flow.getConditionCard('charging_from_solar').registerRunListener(
       (args: any) => args.device.isChargingFromSolar(),
+    );
+    flow.getConditionCard('solar_forecast_today').registerRunListener(
+      (args: any) => forecastCompare(args.device.getCapabilityValue('solar_forecast_today'), args.direction, args.kwh),
+    );
+    flow.getConditionCard('solar_forecast_tomorrow').registerRunListener(
+      (args: any) => forecastCompare(args.device.getCapabilityValue('solar_forecast_tomorrow'), args.direction, args.kwh),
     );
     flow.getConditionCard('battery_soc').registerRunListener(
       (args: any) => args.device.batterySocIs(args.direction, args.level),

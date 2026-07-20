@@ -1,0 +1,1 @@
+{ "type": "number", "title": { "en": "Solar forecast today", "de": "Solarprognose heute", "nl": "Zonprognose vandaag" }, "units": { "en": "kWh" }, "decimals": 2, "getable": true, "setable": false, "uiComponent": "sensor", "icon": "/assets/capabilities/solar.svg", "insights": true }

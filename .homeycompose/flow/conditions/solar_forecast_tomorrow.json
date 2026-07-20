@@ -1,0 +1,26 @@
+{
+  "id": "solar_forecast_tomorrow",
+  "title": {
+    "en": "Solar forecast tomorrow is above/below",
+    "de": "Solarprognose morgen ist über/unter",
+    "nl": "Zonprognose morgen is boven/onder"
+  },
+  "titleFormatted": {
+    "en": "Solar forecast tomorrow is [[direction]] [[kwh]] kWh",
+    "de": "Solarprognose morgen ist [[direction]] [[kwh]] kWh",
+    "nl": "Zonprognose morgen is [[direction]] [[kwh]] kWh"
+  },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": { "en": "Direction", "de": "Richtung", "nl": "Richting" },
+      "values": [
+        { "id": "above", "title": { "en": "above", "de": "über", "nl": "boven" } },
+        { "id": "below", "title": { "en": "below", "de": "unter", "nl": "onder" } }
+      ]
+    },
+    { "type": "number", "name": "kwh", "min": 0, "max": 200, "step": 0.5, "placeholder": { "en": "kWh" } }
+  ]
+}

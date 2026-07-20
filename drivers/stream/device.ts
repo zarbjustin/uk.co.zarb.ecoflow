@@ -6,10 +6,12 @@ import { integrateSignedPower, followResettableCounter, batteryEnergyMode } from
 import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
+import { fetchSolarRadiation, toForecast } from '../../lib/solarForecast';
 import { powerDirection, PowerDirection, startedDirection } from '../../lib/flowStates';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
+const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
@@ -31,6 +33,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   };
 
   private historyTimer: NodeJS.Timeout | null = null;
+  private solarForecastTimer: NodeJS.Timeout | null = null;
   private historyDay = '';
   private prevSoc: number | undefined;
   private prevPv: number | undefined;
@@ -79,6 +82,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.cleanupBlankHistoryCapabilities();
 
     if (this.getSetting('enable_history') !== false) this.startHistory();
+    if (this.getSetting('solar_forecast') !== false) this.startSolarForecast();
   }
 
   /**
@@ -100,6 +104,51 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
     const title = StreamDevice.HISTORY_TITLES[cap];
     if (title) await this.setCapabilityOptions(cap, { title: { en: title } }).catch(() => {});
+  }
+
+  /** Fetch a solar-yield forecast from Open-Meteo for Homey's location. */
+  private startSolarForecast(): void {
+    if (this.solarForecastTimer) this.homey.clearInterval(this.solarForecastTimer);
+    this.refreshSolarForecast().catch((e) => this.error('solar forecast', e));
+    this.solarForecastTimer = this.homey.setInterval(() => {
+      this.refreshSolarForecast().catch((e) => this.error('solar forecast', e));
+    }, SOLAR_FORECAST_INTERVAL_MS);
+  }
+
+  private async refreshSolarForecast(): Promise<void> {
+    let lat: number;
+    let lon: number;
+    try {
+      lat = this.homey.geolocation.getLatitude();
+      lon = this.homey.geolocation.getLongitude();
+    } catch (e) {
+      return; // geolocation unavailable
+    }
+    if (typeof lat !== 'number' || typeof lon !== 'number') return;
+    const radiation = await fetchSolarRadiation(lat, lon);
+    const factor = Number(this.getSetting('solar_factor')) || 0.67;
+    const fc = toForecast(radiation, factor);
+    await this.applyForecastCapability('solar_forecast_today', fc.todayKwh);
+    await this.applyForecastCapability('solar_forecast_tomorrow', fc.tomorrowKwh);
+  }
+
+  /** Add the forecast capability on demand (only when a value exists) and set it. */
+  private async applyForecastCapability(cap: string, value: number | null): Promise<void> {
+    if (value == null) return;
+    if (!this.hasCapability(cap)) await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
+    if (this.hasCapability(cap)) await this.setCapabilityValue(cap, value).catch(() => {});
+  }
+
+  private stopSolarForecast(remove: boolean): void {
+    if (this.solarForecastTimer) {
+      this.homey.clearInterval(this.solarForecastTimer);
+      this.solarForecastTimer = null;
+    }
+    if (remove) {
+      for (const cap of ['solar_forecast_today', 'solar_forecast_tomorrow']) {
+        if (this.hasCapability(cap)) this.removeCapability(cap).catch(() => {});
+      }
+    }
   }
 
   private startHistory(): void {
@@ -493,10 +542,15 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       }
       if (newSettings.enable_history !== false) this.startHistory();
     }
+    if (changedKeys.includes('solar_forecast') || changedKeys.includes('solar_factor')) {
+      if (newSettings.solar_forecast !== false) this.startSolarForecast();
+      else this.stopSolarForecast(true);
+    }
   }
 
   protected async onTeardown(): Promise<void> {
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
+    if (this.solarForecastTimer) this.homey.clearInterval(this.solarForecastTimer);
     await this.energyCheckpoint?.flush();
   }
 };
