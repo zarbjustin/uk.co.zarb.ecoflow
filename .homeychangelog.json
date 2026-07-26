@@ -115,5 +115,8 @@
   },
   "1.10.2": {
     "en": "Adds the Homey Community support link and German and Dutch App Store descriptions."
+  },
+  "1.10.3": {
+    "en": "Rebuilt all five widget preview pairs as text-free, transparent artwork that follows the Homey Widget Preview guidelines."
   }
 }
