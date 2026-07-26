@@ -64,8 +64,8 @@ Plus two SoC settings that gate discharge: **backup reserve** (floor kept for ou
 
 ## 6. Implications for this review
 - **Widgets:** the 5 widgets already exist and are functionally distinct in name/purpose; the
-  certification fix is **accurate per-widget previews** (currently one shared placeholder) and
-  ensuring each layout is visibly its own (Phase 2 + Sprint 1).
+  certification fix is **distinct, simplified per-widget previews** using text-free shapes on
+  transparent canvases, ensuring each preview is visibly its own (Phase 2 + Sprint 1).
 - Build features on **reliable** fields (solar, grid power, SoC, mode); avoid the unreliable
   consumption logs and unavailable earnings/forecast APIs.
 - Model-spec accuracy (BK41 PV count) is a correctness item; the 8524 ordering is the highest-value

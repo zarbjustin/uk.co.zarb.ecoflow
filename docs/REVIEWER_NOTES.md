@@ -47,8 +47,9 @@ a device the app authenticates but lists no devices.
 
 ## Widgets (addresses the "identical previews" review note)
 
-The five widgets now each have their own **uniquely-rendered** light/dark preview (the previews
-are screenshots of the real widgets, so they match exactly, and are no longer identical):
+The five widgets now each have their own **Homey-compliant** light/dark preview. They are
+purpose-built, text-free illustrations made from simple shapes on transparent 1024x1024 canvases;
+they are not screenshots of the widgets:
 
 1. **STREAM Energy Flow** — live Grid / Solar / Home / Battery power + state of charge.
 2. **STREAM Today Balance** — today's solar / consumption (est.) / import / export / independence.
@@ -57,7 +58,7 @@ are screenshots of the real widgets, so they match exactly, and are no longer id
 5. **STREAM Energy Recommendation** — a live recommendation from power/SoC/feed-in state.
 
 Each binds to a chosen STREAM system via the device picker. Previews can be regenerated from the
-real widget HTML with `npm run widgets:preview`.
+dedicated vector artwork with `npm run widgets:preview`.
 
 ## Demo credentials (fill in on the dashboard — leave blank here)
 

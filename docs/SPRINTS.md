@@ -6,17 +6,18 @@
 > Work lands on branch `copilot/review-v1.8.6` → PR. Version/publish stay user-owned.
 
 ## Sprint 1 — Widget quality pass (certification blocker)
-**Goal:** each widget looks like itself and reads correctly.
-- **H5** Generate a **unique, accurate** `preview-light.png` + `preview-dark.png` per widget by
-  rendering each real `public/index.html` with fixture data via Playwright → PNG (replace the shared
-  placeholder). Add `scripts/generate-widget-previews.mjs` + `npm run widgets:preview`.
+**Goal:** each widget is recognisable at a glance and its App Store preview follows Homey's rules.
+- **H5** Generate a **unique, simplified** `preview-light.png` + `preview-dark.png` per widget from
+  purpose-built, text-free vector artwork. Export at 1024x1024 with a transparent canvas; do not
+  render or screenshot the real widget HTML. Add `scripts/generate-widget-previews.mjs` +
+  `npm run widgets:preview`.
 - **M2** Fix the Energy Flow grid arrow direction (import = Grid→Home).
 - **M3** Rename "Solar Forecast" UI/api → "Solar Target/Progress" (match the compose name).
 - **M4** Rename "Tariff Opportunity" → "Energy Recommendation" (or gate behind real price data).
 - **M5** Qualify/omit the unreliable consumption & independence values in widgets.
 - **L1** On no-device/error, clear or mute all values (not just the title).
-- **Acceptance:** 5 distinct previews each matching its widget; validate publish-clean; widgets
-  render correctly with fixture data.
+- **Acceptance:** 5 distinct preview pairs using simple shapes, no text or screenshots, transparent
+  canvases and mode-appropriate colours; validate publish-clean; widgets render correctly.
 
 ## Sprint 2 — High-severity fixes
 **Goal:** trustworthy energy + reliable control, with tests.

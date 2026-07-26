@@ -7,12 +7,12 @@ Run before submitting a new build for App Store certification.
 - [ ] `npm test` — all unit tests pass (currently 51).
 - [ ] `npm run lint` — clean.
 - [ ] `npx homey app validate --level publish` — validates clean.
-- [ ] `npm run widgets:preview` — previews regenerated if any widget HTML changed, and each
-      `preview-light.png` / `preview-dark.png` visually matches its widget and differs from the
-      others.
+- [ ] `npm run widgets:preview` — regenerate previews from the dedicated vector artwork.
+- [ ] Every `preview-light.png` / `preview-dark.png` is 1024x1024 PNG with alpha transparency,
+      contains no text or screenshot content, uses simple shapes, and differs from the others.
 
 ## Certification items
-- [ ] All **5 widgets** have **distinct** previews (fixes the "identical previews" note).
+- [ ] All **5 widgets** have **distinct, Homey-compliant** preview pairs.
 - [ ] Widget content is accurate: Energy Flow arrow direction correct; "Solar Target" and "Energy
       Recommendation" named for what they actually do; consumption/independence marked estimated.
 - [ ] No permanently-empty capabilities/tiles (BK41 PV count fixed; history tiles on-demand).

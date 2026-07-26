@@ -51,8 +51,9 @@ A full multi-model review + implementation pass on the current release (branch
   GPT-5.5 + Opus 4.8), `docs/FEATURE_EVALUATION.md`, `docs/SPECIFICATION.md`, `docs/SPRINTS.md`,
   `docs/PRE_SUBMISSION_CHECKLIST.md`.
 - **Widgets (Sprint 1, certification fix):** replaced the shared placeholder with a **distinct,
-  accurate preview per widget** (`npm run widgets:preview`); fixed the reversed Energy-Flow grid
-  arrow; renamed "Solar Forecast" → "Solar Target" and "Tariff Opportunity" → "Energy
+  simplified, text-free preview pair per widget** (`npm run widgets:preview`), exported on
+  transparent 1024x1024 canvases; fixed the reversed Energy-Flow grid arrow; renamed "Solar
+  Forecast" → "Solar Target" and "Tariff Opportunity" → "Energy
   Recommendation"; qualified the estimated consumption/independence values; mute on no-device.
 - **High fixes (Sprint 2):** H1 backup-reserve 8524 ordering + verify (+ `Release battery for
   export now`); H2 `onUninit` flushes `EnergyCheckpoint` so meters stay monotonic across restarts;
@@ -65,7 +66,7 @@ A full multi-model review + implementation pass on the current release (branch
   parsing, poll/MQTT serialization, `getId()` binding, signing/SSRF security, 3–100% reserve.
 
 ## Suggested v1.9.0 changelog (for the version workflow)
-> Five dashboard widgets now each have their own accurate preview; safer backup-reserve control
+> Five dashboard widgets now each have their own Homey-compliant preview; safer backup-reserve control
 > (fixes a silent no-op); trustworthy energy meters across restarts; sturdier realtime connection;
 > new tariff/grid Flow cards; STREAM Max solar-input fix.
 

@@ -23,7 +23,7 @@
 The 5 widgets are enough; the work is **quality**, and it maps directly to review findings:
 | Item | Action | Source |
 |---|---|---|
-| Identical previews | Render a distinct, accurate light/dark preview from each real widget HTML (Playwright → PNG) | H5 |
+| Identical previews | Generate a distinct light/dark preview from dedicated text-free vector artwork on a transparent 1024x1024 canvas | H5 |
 | Energy Flow arrows | Fix reversed grid direction (import = Grid→Home) | M2 |
 | "Solar Forecast" naming | Rename UI/api to "Solar Target/Progress" (matches compose) or add a real forecast (🟡) | M3 |
 | "Tariff Opportunity" naming | Rename to "Energy Recommendation" or feed price/window data (🟡) | M4 |

@@ -87,8 +87,9 @@ conditions `solar_power_below`, `charging_from_solar`; threshold triggers `grid_
 
 ## 7. Widget specifications (5 widgets)
 Common: device picker (`device.getId()`), shared `stream_common.js` data provider, serialized
-in-flight-guarded refresh, clear/mute all values on error/no-device (L1), and a **unique preview
-rendered from the real HTML** (H5). Per widget:
+in-flight-guarded refresh, clear/mute all values on error/no-device (L1), and a **unique simplified
+preview generated from dedicated text-free vector artwork** (H5). Preview canvases are transparent;
+the live widget HTML is never used as preview artwork. Per widget:
 1. **Energy Flow** — live grid/solar/home/battery topology + SoC (fix arrow direction — M2).
 2. **Today Balance** — daily solar/consumption/import/export/independence (qualify unreliable — M5).
 3. **Battery Plan** — SoC, reserve/limit markers, mode, time-to-full/empty.
@@ -109,5 +110,5 @@ hardware-gated: BK41 PV count, self-heating field, per-socket fields.
 
 ## 10. Quality gates
 Every change: `npm run build` → `npm run lint` → `npm test` → `homey app validate --level publish`.
-Regenerate widget previews whenever a widget's HTML changes. Version/publish via GitHub workflows
-only. Land via PR from `copilot/review-v1.8.6`.
+Regenerate widget previews whenever the dedicated preview artwork changes. Version/publish via
+GitHub workflows only. Land via PR from `copilot/review-v1.8.6`.

@@ -101,8 +101,8 @@ share one SHA-1) — verified. The 5 widgets' layouts genuinely differ (see the 
 below), so the shared generic placeholder both reproduces the reviewer's complaint and
 misrepresents 4–5 widgets.
 **Impact:** Exactly the reviewer note: "all the widget previews are identical." Resubmission blocker.
-**Fix (Sprint 1):** Render a distinct light/dark preview from each real widget HTML populated with
-representative data (Playwright → PNG).
+**Fix (Sprint 1):** Generate a distinct light/dark preview from dedicated text-free vector artwork.
+Export each as a transparent 1024x1024 PNG; do not screenshot the real widget HTML.
 
 ---
 
