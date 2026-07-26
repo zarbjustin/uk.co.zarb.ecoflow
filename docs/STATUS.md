@@ -4,20 +4,19 @@
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **Monitor Build 16 (v1.10.1) certification** on the dashboard
-  (<https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/16>). The build is under
-  review; respond with `docs/REVIEWER_NOTES.md` + `docs/CERTIFICATION_REPLY.md` if requested.
 - [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:
   confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
   `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
 
-## Release state (2026-07-20)
+## Release state (2026-07-26)
 
-- **Latest version:** **v1.10.1** — **Build ID 16** submitted to the App Store and currently under
-  certification review. Also installed on **Justin's Homey Pro** via `homey app install`.
-- v1.10.1 = v1.9.0 (multi-model review + widget-preview fixes) **plus** the fit-and-finish sprints
-  (retry/hardening, de/nl i18n, real solar forecast, provider-agnostic tariff, docs + hardware
-  tooling) **plus** enriched App Store tags (en/de/nl) + `bugs` URL. PayPal donate = `zarbie`.
+- **Latest version:** **v1.10.3** — **Build ID 18** is **live in the Homey App Store**.
+- v1.10.3 replaces all five light/dark widget preview pairs with deterministic, text-free,
+  transparent 1024x1024 artwork that follows Homey's Widget Preview guidelines.
+- The release is tagged as `v1.10.3`; the public Homey Apps API reports `liveVersion: 1.10.3`,
+  `liveBuild.id: 18`, and `liveBuild.state: live`.
+- v1.10.1 was the previously certified feature release containing the multi-model review,
+  fit-and-finish sprints, enriched App Store tags, and `bugs` URL. PayPal donate = `zarbie`.
 
 ## Fit-and-finish sprints (2026-07-20, after v1.9.0 / Build 14)
 
@@ -72,6 +71,10 @@ A full multi-model review + implementation pass on the current release (branch
 
 ## Session log
 
+- **2026-07-26** — Rebuilt all ten widget preview assets as distinct, deterministic SVG-derived
+  illustrations with transparent canvases and no text or screenshots. Added preview compliance
+  tests, updated reviewer documentation, released **v1.10.3**, and published **Build 18** live in
+  the Homey App Store.
 - **2026-06-25** — Cloned repo; renamed app **"EcoFlow - Stream Systems" → "EcoFlow STREAM Series"**;
   set app icon to white EF monogram on black (`brandColor #000000`). Drafted the standalone-app
   certification reply + refreshed reviewer notes. Implemented recommendation sets **A/B/C**
@@ -127,7 +130,7 @@ Grounded in the EcoFlow STREAM product line + the app's own backlog:
   conditions. Core use case: drive STREAM charge/discharge from **Octopus Agile** prices
   via Homey Flow.
 
-## App Store certification — open item
+## App Store certification — resolved
 
 The Homey reviewer flagged device overlap with **Marcus Valk's** app
 **"EcoFlow - Portable power stations"** (`com.ecoflow.ecoflowpro`,
@@ -140,8 +143,11 @@ standalone app.
   design** + **Octopus tariff automation** — not device exclusivity (the overlap is real).
 - **Drafted reply + evidence table:** [`docs/CERTIFICATION_REPLY.md`](./CERTIFICATION_REPLY.md).
 - **Reviewer test notes:** [`docs/REVIEWER_NOTES.md`](./REVIEWER_NOTES.md).
-- **Next action (manual):** paste the reply into the Homey review thread and resubmit.
-  Fallback if rejected: contribute the Energy integration upstream to Marcus's app via PR.
+- **Outcome:** the standalone STREAM-focused app was approved. The widget-preview correction
+  shipped in **v1.10.3 / Build 18**, which is live in the Homey App Store.
+- Keep the reply and reviewer notes as evidence for future certification questions. If device
+  overlap is raised again, continue to ground the response in focus, Energy-native integration,
+  and tariff automation rather than device exclusivity.
 
 ## Release process (verified this session)
 
