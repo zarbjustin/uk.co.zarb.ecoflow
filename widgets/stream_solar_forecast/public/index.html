@@ -37,6 +37,7 @@
     function power(w) { return w == null ? '—' : Math.round(w) + ' W'; }
     function pct(v) { return v == null ? '—' : Math.round(v) + '%'; }
     function onHomeyReady(Homey) {
+      function tr(key) { return Homey.__(key); }
       const settings = Homey.getSettings() || {};
       const index = Number(settings.index) || 1;
       const target = Number(settings.target) || 10;
@@ -45,7 +46,7 @@
       Homey.ready();
       async function refresh() {
         const d = await Homey.api('GET', '/?index=' + index + '&target=' + target + selector, {});
-        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
+        if (!d || !d.ok) { document.getElementById('title').textContent = tr('widgets.common.pair_home_battery'); document.getElementById('card').classList.add('muted'); return; }
         document.getElementById('title').textContent = d.name || 'Solar Forecast';
         document.getElementById('solar').textContent = kwh(d.solarToday);
         document.getElementById('forecastToday').textContent = kwh(d.forecastToday != null ? d.forecastToday : d.target);
@@ -61,7 +62,7 @@
         if (busy) return;
         busy = true;
         refresh().catch(function () {
-          document.getElementById('title').textContent = 'STREAM data unavailable';
+          document.getElementById('title').textContent = tr('widgets.common.data_unavailable');
           document.getElementById('card').classList.add('muted');
         }).finally(function () { busy = false; });
       }

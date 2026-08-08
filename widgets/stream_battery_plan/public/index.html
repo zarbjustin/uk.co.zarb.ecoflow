@@ -7,35 +7,47 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #EEF4F7; }
-    .card { height: 226px; padding: 14px 16px; border-radius: 16px; background: #17252E; display: flex; flex-direction: column; gap: 12px; }
+    .card { height: 226px; padding: 14px 16px; border-radius: 16px; background: #17252E; display: flex; flex-direction: column; gap: 8px; }
     .head { display: flex; justify-content: space-between; gap: 10px; }
     .title { font-size: 13px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .mode { font-size: 11px; color: #A9BAC1; white-space: nowrap; }
-    .soc { font-size: 42px; line-height: 1; font-weight: 800; }
+    .soc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .soc { font-size: 38px; line-height: 1; font-weight: 800; }
+    .energy { font-size: 11px; line-height: 1.35; color: #A9BAC1; text-align: right; }
+    .energy strong { color: #EEF4F7; }
     .bar { height: 10px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
     .bar span { display: block; height: 100%; width: 0%; background: #62D39A; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
     .label { font-size: 10px; color: #A9BAC1; text-transform: uppercase; letter-spacing: .35px; }
-    .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+    .value { font-size: 15px; font-weight: 700; margin-top: 1px; }
+    .source { min-height: 10px; font-size: 9px; color: #A9BAC1; }
     .muted { opacity: .55; }
   </style>
 </head>
 <body>
   <div class="card" id="card">
-    <div class="head"><div class="title" id="title">Battery Plan</div><div class="mode" id="mode">—</div></div>
-    <div class="soc" id="soc">—</div>
+    <div class="head"><div class="title" id="title" data-i18n="widgets.battery_plan.title">Battery Plan</div><div class="mode" id="mode">—</div></div>
+    <div class="soc-row">
+      <div class="soc" id="soc">—</div>
+      <div class="energy" id="energy"></div>
+    </div>
     <div class="bar"><span id="bar"></span></div>
     <div class="grid">
-      <div><div class="label">Reserve</div><div class="value" id="reserve">—</div></div>
-      <div><div class="label">State</div><div class="value" id="state">—</div></div>
-      <div><div class="label">Charge limit</div><div class="value" id="charge">—</div></div>
-      <div><div class="label">Discharge limit</div><div class="value" id="discharge">—</div></div>
-      <div><div class="label">Full in</div><div class="value" id="full">—</div></div>
-      <div><div class="label">Empty in</div><div class="value" id="empty">—</div></div>
+      <div><div class="label" data-i18n="widgets.battery_plan.reserve">Reserve</div><div class="value" id="reserve">—</div></div>
+      <div><div class="label" data-i18n="widgets.battery_plan.usable_floor">Usable floor</div><div class="value" id="floor">—</div></div>
+      <div><div class="label" data-i18n="widgets.battery_plan.state">State</div><div class="value" id="state">—</div></div>
+      <div><div class="label" data-i18n="widgets.battery_plan.charge_limit">Charge limit</div><div class="value" id="charge">—</div></div>
+      <div><div class="label" data-i18n="widgets.battery_plan.full_in">Full in</div><div class="value" id="full">—</div></div>
+      <div>
+        <div class="label" data-i18n="widgets.battery_plan.empty_in">Empty in</div>
+        <div class="value" id="empty">—</div>
+        <div class="source" id="emptySource"></div>
+      </div>
     </div>
   </div>
   <script>
     function pct(v) { return v == null ? '—' : Math.round(v) + '%'; }
+    function kwh(v) { return v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(2) + ' kWh'; }
     function duration(v) {
       if (v == null || !Number.isFinite(Number(v))) return '—';
       const total = Math.max(0, Math.round(Number(v)));
@@ -47,23 +59,38 @@
     }
     function label(v) { return v ? v.replace(/_/g, ' ') : '—'; }
     function onHomeyReady(Homey) {
+      function tr(key) { return Homey.__(key); }
       const index = Number((Homey.getSettings() || {}).index) || 1;
       const deviceId = (Homey.getDeviceIds && Homey.getDeviceIds()[0]) || '';
       const selector = deviceId ? '&deviceId=' + encodeURIComponent(deviceId) : '';
       Homey.ready();
       async function refresh() {
         const d = await Homey.api('GET', '/?index=' + index + selector, {});
-        if (!d || !d.ok) { document.getElementById('title').textContent = 'No STREAM system'; document.getElementById('card').classList.add('muted'); return; }
-        document.getElementById('title').textContent = d.name || 'Battery Plan';
+        if (!d || !d.ok) {
+          document.getElementById('title').textContent = tr('widgets.common.pair_home_battery');
+          document.getElementById('energy').textContent = tr('widgets.common.aggregate_required');
+          document.getElementById('card').classList.add('muted');
+          return;
+        }
+        document.getElementById('title').textContent = d.name || tr('widgets.battery_plan.title');
         document.getElementById('mode').textContent = label(d.mode);
         document.getElementById('soc').textContent = pct(d.soc);
         document.getElementById('bar').style.width = (d.soc == null ? 0 : Math.max(0, Math.min(100, d.soc))) + '%';
+        document.getElementById('energy').innerHTML = d.capacityKwh == null
+          ? tr('widgets.battery_plan.set_capacity')
+          : '<strong>' + tr('widgets.battery_plan.stored') + '</strong> ' + kwh(d.storedEnergyKwh)
+            + '<br><strong>' + tr('widgets.battery_plan.usable') + '</strong> ' + kwh(d.usableEnergyKwh);
         document.getElementById('reserve').textContent = pct(d.backupReserve);
+        document.getElementById('floor').textContent = pct(d.effectiveFloorSoc);
         document.getElementById('state').textContent = label(d.state);
         document.getElementById('charge').textContent = pct(d.chargeLimit);
-        document.getElementById('discharge').textContent = pct(d.dischargeLimit);
         document.getElementById('full').textContent = duration(d.chargeRemaining);
-        document.getElementById('empty').textContent = duration(d.dischargeRemaining);
+        document.getElementById('empty').textContent = duration(d.timeToEmpty);
+        document.getElementById('emptySource').textContent = d.timeToEmptySource === 'calculated'
+          ? tr('widgets.battery_plan.calculated_estimate')
+          : (d.timeToEmptySource === 'device_reported'
+            ? tr('widgets.battery_plan.device_reported')
+            : tr('widgets.battery_plan.unavailable'));
         document.getElementById('card').classList.toggle('muted', d.available === false);
       }
       var busy = false;
@@ -71,7 +98,7 @@
         if (busy) return;
         busy = true;
         refresh().catch(function () {
-          document.getElementById('title').textContent = 'STREAM data unavailable';
+          document.getElementById('title').textContent = tr('widgets.common.data_unavailable');
           document.getElementById('card').classList.add('muted');
         }).finally(function () { busy = false; });
       }

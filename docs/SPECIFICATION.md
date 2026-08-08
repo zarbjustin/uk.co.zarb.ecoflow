@@ -88,11 +88,15 @@ conditions `solar_power_below`, `charging_from_solar`; threshold triggers `grid_
 ## 7. Widget specifications (5 widgets)
 Common: device picker (`device.getId()`), shared `stream_common.js` data provider, serialized
 in-flight-guarded refresh, clear/mute all values on error/no-device (L1), and a **unique simplified
-preview generated from dedicated text-free vector artwork** (H5). Preview canvases are transparent;
+preview generated from dedicated text-free vector artwork** (H5). Selectors are restricted to the
+aggregate `stream` Home Battery through its unique `measure_power.from_battery` capability; physical
+`stream_unit` devices never resolve in the backend. Preview canvases are transparent;
 the live widget HTML is never used as preview artwork. Per widget:
 1. **Energy Flow** — live grid/solar/home/battery topology + SoC (fix arrow direction — M2).
 2. **Today Balance** — daily solar/consumption/import/export/independence (qualify unreliable — M5).
-3. **Battery Plan** — SoC, reserve/limit markers, mode, time-to-full/empty.
+3. **Battery Plan** — SoC, stored/usable kWh from optional user-entered system capacity, effective
+   reserve/discharge floor, mode, time-to-full, and calculated or EcoFlow-reported time-to-empty
+   with explicit provenance.
 4. **Solar Target** — today's solar vs a user target/progress (rename away from "Forecast" — M3).
 5. **Energy Recommendation** (rename of "Tariff Opportunity") — live recommendation from
    power/SoC/feed-in (not tariff-aware — M4).

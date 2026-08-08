@@ -8,7 +8,7 @@
     "type": "app",
     "singular": true,
     "filter": {
-      "capabilities": "alarm_generic,measure_battery"
+      "capabilities": "measure_power.from_battery"
     }
   },
   "settings": [],

@@ -1531,9 +1531,9 @@
     },
     {
       "name": {
-        "en": "STREAM Home Battery",
-        "de": "STREAM-Hausbatterie",
-        "nl": "STREAM-thuisbatterij"
+        "en": "STREAM Home Battery (installation)",
+        "de": "STREAM-Hausbatterie (Anlage)",
+        "nl": "STREAM-thuisbatterij (installatie)"
       },
       "class": "battery",
       "platforms": [
@@ -1882,6 +1882,39 @@
             "de": "Anzeigeeinheit für den Strompreis, den du über die Flow-Aktion 'Strompreis festlegen' einspeist (z. B. ct/kWh). Speise den Preis aus einer beliebigen Tarif-App ein (Tibber, aWATTar, Octopus, …).",
             "nl": "Weergave-eenheid voor de stroomprijs die je invoert via de Flow-actie 'Stroomprijs instellen' (bijv. ct/kWh). Voer de prijs in vanuit elke tarief-app (Tibber, aWATTar, Octopus, …)."
           }
+        },
+        {
+          "id": "installed_capacity_kwh",
+          "type": "number",
+          "label": {
+            "en": "Installed system capacity (kWh)",
+            "de": "Installierte Systemkapazität (kWh)",
+            "nl": "Geïnstalleerde systeemcapaciteit (kWh)"
+          },
+          "min": 0.1,
+          "max": 200,
+          "hint": {
+            "en": "Optional total usable capacity of all batteries in this installation. EcoFlow's public API does not report this reliably. Used only for stored-energy and runtime estimates.",
+            "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Die öffentliche EcoFlow-API meldet sie nicht zuverlässig. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
+            "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. De openbare EcoFlow-API meldt dit niet betrouwbaar. Alleen gebruikt voor energie- en looptijdschattingen."
+          }
+        },
+        {
+          "id": "discharge_efficiency_percent",
+          "type": "number",
+          "label": {
+            "en": "Discharge efficiency (%)",
+            "de": "Entladewirkungsgrad (%)",
+            "nl": "Ontlaadrendement (%)"
+          },
+          "value": 92,
+          "min": 50,
+          "max": 100,
+          "hint": {
+            "en": "Efficiency applied to the calculated time-to-empty estimate. The default is 92%.",
+            "de": "Wirkungsgrad für die berechnete Restlaufzeitschätzung. Standardwert: 92 %.",
+            "nl": "Rendement voor de berekende schatting van de resterende looptijd. Standaard: 92%."
+          }
         }
       ],
       "pair": [
@@ -1901,6 +1934,207 @@
         }
       ],
       "id": "stream"
+    },
+    {
+      "name": {
+        "en": "STREAM AC 5000 (experimental)",
+        "de": "STREAM AC 5000 (experimentell)",
+        "nl": "STREAM AC 5000 (experimenteel)"
+      },
+      "class": "battery",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_battery",
+        "battery_charging_state",
+        "measure_power",
+        "measure_power.load",
+        "measure_power.grid",
+        "measure_power.grid_import",
+        "measure_power.grid_export",
+        "measure_temperature",
+        "battery_soh"
+      ],
+      "capabilitiesOptions": {
+        "measure_battery": {
+          "title": {
+            "en": "Battery",
+            "de": "Batterie",
+            "nl": "Batterij"
+          }
+        },
+        "battery_charging_state": {
+          "title": {
+            "en": "Battery state",
+            "de": "Batteriestatus",
+            "nl": "Batterijstatus"
+          }
+        },
+        "measure_power": {
+          "title": {
+            "en": "Battery power",
+            "de": "Batterieleistung",
+            "nl": "Batterijvermogen"
+          }
+        },
+        "measure_power.load": {
+          "title": {
+            "en": "House consumption",
+            "de": "Hausverbrauch",
+            "nl": "Huisverbruik"
+          }
+        },
+        "measure_power.grid": {
+          "title": {
+            "en": "Grid import/export",
+            "de": "Netzbezug/-einspeisung",
+            "nl": "Netafname/-teruglevering"
+          }
+        },
+        "measure_power.grid_import": {
+          "title": {
+            "en": "Grid import",
+            "de": "Netzbezug",
+            "nl": "Netafname"
+          }
+        },
+        "measure_power.grid_export": {
+          "title": {
+            "en": "Grid export",
+            "de": "Netzeinspeisung",
+            "nl": "Netteruglevering"
+          }
+        },
+        "measure_temperature": {
+          "title": {
+            "en": "Battery temperature",
+            "de": "Batterietemperatur",
+            "nl": "Batterijtemperatuur"
+          }
+        },
+        "battery_soh": {
+          "title": {
+            "en": "Battery health",
+            "de": "Batteriezustand",
+            "nl": "Batterijconditie"
+          }
+        }
+      },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
+      "images": {
+        "small": "/drivers/stream_ac5000/assets/images/small.png",
+        "large": "/drivers/stream_ac5000/assets/images/large.png",
+        "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Device information",
+            "de": "Geräteinformationen",
+            "nl": "Apparaatinformatie"
+          },
+          "children": [
+            {
+              "id": "model",
+              "type": "label",
+              "label": {
+                "en": "Model",
+                "de": "Modell",
+                "nl": "Model"
+              },
+              "value": "—",
+              "hint": {
+                "en": "Detected from the serial number prefix (ES22).",
+                "de": "Erkannt anhand des Seriennummern-Präfixes (ES22).",
+                "nl": "Gedetecteerd via het serienummervoorvoegsel (ES22)."
+              }
+            },
+            {
+              "id": "serial_number",
+              "type": "label",
+              "label": {
+                "en": "Serial number",
+                "de": "Seriennummer",
+                "nl": "Serienummer"
+              },
+              "value": "—",
+              "hint": {
+                "en": "This unit's EcoFlow serial number.",
+                "de": "Die EcoFlow-Seriennummer dieser Einheit.",
+                "nl": "Het EcoFlow-serienummer van deze unit."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Experimental connection",
+            "de": "Experimentelle Verbindung",
+            "nl": "Experimentele verbinding"
+          },
+          "children": [
+            {
+              "id": "unavailable_after",
+              "type": "number",
+              "label": {
+                "en": "Report offline after (minutes)",
+                "de": "Als offline melden nach (Minuten)",
+                "nl": "Als offline melden na (minuten)"
+              },
+              "value": 20,
+              "min": 5,
+              "max": 240,
+              "hint": {
+                "en": "This device is monitored over EcoFlow's app connection only — there is no REST polling. If no data arrives within this many minutes the device is shown as unavailable.",
+                "de": "Dieses Gerät wird ausschließlich über die App-Verbindung von EcoFlow überwacht — es gibt kein REST-Polling. Treffen innerhalb dieser Minutenzahl keine Daten ein, wird das Gerät als nicht verfügbar angezeigt.",
+                "nl": "Dit apparaat wordt alleen via de app-verbinding van EcoFlow gevolgd — er is geen REST-polling. Komen er binnen dit aantal minuten geen gegevens binnen, dan wordt het apparaat als niet beschikbaar getoond."
+              }
+            },
+            {
+              "id": "experimental_notice",
+              "type": "label",
+              "label": {
+                "en": "Status",
+                "de": "Status",
+                "nl": "Status"
+              },
+              "value": "Experimental · monitoring only · controls intentionally disabled",
+              "hint": {
+                "en": "EcoFlow publishes no supported API for the STREAM AC 5000, so this integration signs in with your EcoFlow account and only reads data. Controls are deliberately not implemented until the read path is validated on hardware.",
+                "de": "EcoFlow bietet keine unterstützte API für den STREAM AC 5000, daher meldet sich diese Integration mit deinem EcoFlow-Konto an und liest ausschließlich Daten. Steuerbefehle sind bewusst nicht implementiert, bis der Lesepfad an Hardware validiert ist.",
+                "nl": "EcoFlow biedt geen ondersteunde API voor de STREAM AC 5000, dus deze integratie logt in met je EcoFlow-account en leest alleen gegevens. Bediening is bewust niet geïmplementeerd totdat het leespad op hardware is gevalideerd."
+              }
+            }
+          ]
+        }
+      ],
+      "pair": [
+        {
+          "id": "app_credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "stream_ac5000"
     },
     {
       "name": {
@@ -2177,9 +2411,9 @@
     },
     {
       "name": {
-        "en": "STREAM Unit",
-        "de": "STREAM-Einheit",
-        "nl": "STREAM-unit"
+        "en": "Physical STREAM Unit",
+        "de": "Physische STREAM-Einheit",
+        "nl": "Fysieke STREAM-unit"
       },
       "class": "battery",
       "platforms": [
@@ -2468,7 +2702,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "alarm_generic,measure_battery"
+          "capabilities": "measure_power.from_battery"
         }
       },
       "settings": [],
@@ -2491,7 +2725,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "alarm_generic,measure_battery"
+          "capabilities": "measure_power.from_battery"
         }
       },
       "settings": [],
@@ -2514,7 +2748,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "alarm_generic,measure_battery"
+          "capabilities": "measure_power.from_battery"
         }
       },
       "settings": [],
@@ -2537,7 +2771,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "alarm_generic,measure_battery"
+          "capabilities": "measure_power.from_battery"
         }
       },
       "settings": [
@@ -2578,7 +2812,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "alarm_generic,measure_battery"
+          "capabilities": "measure_power.from_battery"
         }
       },
       "settings": [],

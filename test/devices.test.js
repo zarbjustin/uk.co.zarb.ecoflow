@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  classifyDevice, isStreamUnit, isSmartMeter, quotaIsStreamUnit,
+  classifyDevice, isStreamUnit, isSmartMeter, isStreamAc5000, quotaIsStreamUnit,
 } = require('../.homeybuild/lib/ecoflowDevices.js');
 
 test('classifies real STREAM serial prefixes', () => {
@@ -42,4 +42,20 @@ test('isStreamUnit / isSmartMeter helpers', () => {
   assert.strictEqual(isStreamUnit({ sn: 'BK61ZK1B2H720041' }), true);
   assert.strictEqual(isSmartMeter({ sn: 'BK21Z1BB7H414289' }), true);
   assert.strictEqual(isStreamUnit({ sn: 'BK21Z1BB7H414289' }), false);
+});
+
+test('the STREAM AC 5000 (ES22) is its own role, never a BK-series unit', () => {
+  const es22 = { sn: 'ES22ZEB1ABCD0001', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' };
+  assert.strictEqual(classifyDevice(es22), 'stream_ac5000');
+  assert.strictEqual(isStreamAc5000(es22), true);
+  // Must not be picked up by any of the BK-series/Smart-Meter drivers.
+  assert.strictEqual(isStreamUnit(es22), false);
+  assert.strictEqual(isSmartMeter(es22), false);
+  // A STREAM-shaped quota must not promote it either — the prefix is decisive.
+  const richQuota = { cmsBattSoc: 20, powGetSysLoad: 3969, relay2Onoff: true };
+  assert.strictEqual(classifyDevice(es22, richQuota), 'stream_ac5000');
+  // The name alone still classifies as a BK-series unit; only the prefix is ES22.
+  assert.strictEqual(classifyDevice({ sn: 'ZZ99AAAA', productName: 'STREAM AC 5000' }), 'stream_unit');
+  // A BK-series unit is never mistaken for an ES22.
+  assert.strictEqual(isStreamAc5000({ sn: 'BK51AAAA' }), false);
 });

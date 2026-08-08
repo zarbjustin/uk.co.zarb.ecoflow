@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Home Battery",
-    "de": "STREAM-Hausbatterie",
-    "nl": "STREAM-thuisbatterij"
+    "en": "STREAM Home Battery (installation)",
+    "de": "STREAM-Hausbatterie (Anlage)",
+    "nl": "STREAM-thuisbatterij (installatie)"
   },
   "class": "battery",
   "platforms": [
@@ -350,6 +350,39 @@
         "en": "Display unit for the electricity price you feed in via the 'Set electricity price' Flow action (e.g. p/kWh, ct/kWh). Feed the price from any tariff app (Octopus, Tibber, aWATTar, …).",
         "de": "Anzeigeeinheit für den Strompreis, den du über die Flow-Aktion 'Strompreis festlegen' einspeist (z. B. ct/kWh). Speise den Preis aus einer beliebigen Tarif-App ein (Tibber, aWATTar, Octopus, …).",
         "nl": "Weergave-eenheid voor de stroomprijs die je invoert via de Flow-actie 'Stroomprijs instellen' (bijv. ct/kWh). Voer de prijs in vanuit elke tarief-app (Tibber, aWATTar, Octopus, …)."
+      }
+    },
+    {
+      "id": "installed_capacity_kwh",
+      "type": "number",
+      "label": {
+        "en": "Installed system capacity (kWh)",
+        "de": "Installierte Systemkapazität (kWh)",
+        "nl": "Geïnstalleerde systeemcapaciteit (kWh)"
+      },
+      "min": 0.1,
+      "max": 200,
+      "hint": {
+        "en": "Optional total usable capacity of all batteries in this installation. EcoFlow's public API does not report this reliably. Used only for stored-energy and runtime estimates.",
+        "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Die öffentliche EcoFlow-API meldet sie nicht zuverlässig. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
+        "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. De openbare EcoFlow-API meldt dit niet betrouwbaar. Alleen gebruikt voor energie- en looptijdschattingen."
+      }
+    },
+    {
+      "id": "discharge_efficiency_percent",
+      "type": "number",
+      "label": {
+        "en": "Discharge efficiency (%)",
+        "de": "Entladewirkungsgrad (%)",
+        "nl": "Ontlaadrendement (%)"
+      },
+      "value": 92,
+      "min": 50,
+      "max": 100,
+      "hint": {
+        "en": "Efficiency applied to the calculated time-to-empty estimate. The default is 92%.",
+        "de": "Wirkungsgrad für die berechnete Restlaufzeitschätzung. Standardwert: 92 %.",
+        "nl": "Rendement voor de berekende schatting van de resterende looptijd. Standaard: 92%."
       }
     }
   ],

@@ -1,1 +1,34 @@
-{}
+{
+  "pair": {
+    "stream_home_battery": {
+      "title": "Pair a STREAM Home Battery",
+      "intro": "This represents one complete STREAM installation and provides whole-system totals for Homey Energy and widgets. Pair one per main system serial."
+    },
+    "stream_unit": {
+      "title": "Pair a physical STREAM Unit",
+      "intro": "This adds one inverter or battery as physical hardware. It does not provide whole-installation totals and cannot be used by STREAM widgets."
+    }
+  },
+  "widgets": {
+    "common": {
+      "pair_home_battery": "Pair a STREAM Home Battery",
+      "aggregate_required": "Widgets use the complete installation, not a physical Unit.",
+      "data_unavailable": "STREAM Home Battery data unavailable"
+    },
+    "battery_plan": {
+      "title": "Battery Plan",
+      "stored": "Stored",
+      "usable": "Usable",
+      "set_capacity": "Set installed capacity in device settings",
+      "reserve": "Reserve",
+      "usable_floor": "Usable floor",
+      "state": "State",
+      "charge_limit": "Charge limit",
+      "full_in": "Full in",
+      "empty_in": "Empty in",
+      "calculated_estimate": "Calculated estimate",
+      "device_reported": "Reported by EcoFlow",
+      "unavailable": "Unavailable"
+    }
+  }
+}

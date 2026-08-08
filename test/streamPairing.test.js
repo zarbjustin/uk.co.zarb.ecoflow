@@ -17,6 +17,7 @@ function stubClient() {
         { sn: 'BK31ZK1A4H4R0186', deviceName: 'STREAM AC Pro 1.2' },
         { sn: 'BK21Z1BB7H414289', deviceName: 'Smart Meter' },
         { sn: 'BK01Z11ACH4P0489', deviceName: 'STREAM Microinverter' },
+        { sn: 'ES22ZEB1ABCD0001', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' },
       ];
     },
     async getQuotaAll() { return {}; },
@@ -31,10 +32,27 @@ test('collectStreamUnits keeps only STREAM units and resolves the main SN', asyn
   // Smart Meter (BK21) and Microinverter (BK01) excluded.
   assert.ok(!sns.includes('BK21Z1BB7H414289'));
   assert.ok(!sns.includes('BK01Z11ACH4P0489'));
+  // The STREAM AC 5000 (ES22) is a different product line and protocol; it is
+  // served by the experimental stream_ac5000 driver, never by these.
+  assert.ok(!sns.includes('ES22ZEB1ABCD0001'));
   for (const u of units) {
     assert.strictEqual(u.mainSn, MAIN);
     assert.ok(u.quota && typeof u.quota === 'object');
   }
+});
+
+test('an ES22 is never probed for a quota during BK-series pairing', async () => {
+  const probed = [];
+  const client = {
+    ...stubClient(),
+    async getQuotaAll(sn) {
+      probed.push(sn);
+      return {};
+    },
+  };
+  await collectStreamUnits(client);
+  assert.ok(probed.length > 0);
+  assert.ok(!probed.includes('ES22ZEB1ABCD0001'));
 });
 
 test('groupByMainSn groups all units of a system together', async () => {

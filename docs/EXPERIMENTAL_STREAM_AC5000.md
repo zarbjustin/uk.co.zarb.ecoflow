@@ -1,0 +1,204 @@
+# EXPERIMENTAL: EcoFlow STREAM AC 5000 (ES22)
+
+> **Status: experimental · monitoring only · unsupported by EcoFlow.**
+> Everything in this document applies **only** to the `stream_ac5000` driver.
+> The STREAM Ultra / Pro / AC / AC Pro / Max / Ultra X (BK-series) and the Smart
+> Meter are unaffected and keep using the official EcoFlow Developer API.
+
+## Why this exists
+
+The STREAM AC 5000 (serial prefix `ES22`) is not exposed through EcoFlow's
+public IoT Developer API. Every `quota` call for an ES22 returns API code
+**1006**, so there is no supported way to read the device — with Developer keys
+or otherwise. EcoFlow support was asked and provided no information or timeline.
+
+The only working route is the private connection EcoFlow's own mobile app uses.
+This app implements a **read-only** subset of it, behind its own driver, so
+owners of an ES22 can at least monitor the unit from Homey.
+
+## What it does
+
+| Step | Endpoint / transport | Notes |
+| --- | --- | --- |
+| Sign in | `POST /auth/login` | Email + base64-encoded password, `scene: IOT_APP`, `userType: ECOFLOW`. Returns a token and a `userId`. |
+| Discover devices | `GET /iot-service/user/device` | Bearer token. Only `ES22…` serials are offered for pairing. |
+| Broker credentials | `GET /iot-auth/enterprise-development/user/certification` | Bearer token. The response body is base64 **AES-256-CFB** encrypted: key `SHA-256(token)`, constant IV `ojsajkqjwk1w2dfg`, PKCS#7 padding. |
+| Telemetry | `wss://mqtt-e.ecoflow.com:8084/mqtt` | Subscribes to `/app/device/property/{sn}` and `/app/{userId}/{sn}/thing/property/get_reply`. Protobuf frames. |
+
+Only the two approved EcoFlow API origins (`api.ecoflow.com`, `api-e.ecoflow.com`)
+and EcoFlow's own MQTT brokers are ever contacted; the region you pick is tried
+first and the other is used as a fallback — including when the first one rejects
+the sign-in, because an account only exists in one region.
+
+### Capabilities exposed
+
+| Homey capability | Source |
+| --- | --- |
+| `measure_battery` | `254/39 f11.5`, refined by `f33.6` when present |
+| `battery_soh` | `32/50 f15` (BMS heartbeat) |
+| `measure_power` | Signed battery power derived from the `254/39 f12` flow matrix; **positive = charging** |
+| `battery_charging_state` | Derived from the signed battery power (±5 W deadband) |
+| `measure_power.load` | `254/39 f11.1` (half-watt units) |
+| `measure_power.grid` | Signed meter net: `f15.3` (Tibber Pulse) or `f16.16` (EcoFlow P1); **positive = importing** |
+| `measure_power.grid_import` / `.grid_export` | Derived from the flow-matrix edges, so both are non-negative |
+| `measure_temperature` | `32/50 f9` (battery temperature) |
+
+Fields the reference implementation flags as unverified or ambiguous
+(`f12.8` solar→home, `f50.1.4`, `f38`/`f44`, the `254/40 f22` limits, `50/2`
+thresholds) are deliberately **not** mapped. Nothing here is guessed.
+
+Solar power, the SoC limits, pack voltage and BMS current are parsed but not yet
+surfaced as capabilities — they are kept for a later increment once the read
+path has been validated against live hardware.
+
+### Diagnostics and live validation
+
+Homey's submitted app diagnostic includes bounded ES22 parser-health entries:
+
+* total frames, parsed/unparsed frames, received bytes and observed command IDs;
+* the topic **kind** (`device_property` or `get_reply`), never the account ID;
+* up to three distinct unparsed-frame samples, capped at 192 bytes;
+* the ES22 serial is replaced before a sample is encoded, and credentials,
+  tokens and MQTT certificates are never captured.
+
+The samples are intentionally emitted only for previously unseen unparsed frame
+shapes. This provides enough evidence to extend the parser after a live test
+without continuously writing binary telemetry into Homey's log.
+
+## What it deliberately does **not** do
+
+* **No control writes.** The MQTT session never publishes — not a `set`, not a
+  `get`, not a keep-alive. Operating mode, charge/discharge limits, backup
+  reserve and scheduled tasks are intentionally deferred until the read path is
+  validated on real hardware. A wrong write to a 5 kWh battery is not a bug you
+  want to find in production.
+* **No REST polling.** An ES22 answers 1006, so polling would only consume the
+  account's rate limit. All data arrives over MQTT.
+* **No Flow cards, no Energy-dashboard totals.** Cumulative kWh counters are not
+  derived in this increment.
+
+## Availability behaviour
+
+Because there is no REST fallback, availability is based purely on the age of
+the last MQTT frame:
+
+* a frame arrives → the device is available;
+* no frame for longer than **Report offline after** (device setting, default 20
+  minutes) → the device is shown as unavailable, **once** — the state is only
+  applied on a transition, so a quiet device does not produce repeated
+  notifications;
+* on app start there is a 5-minute grace window before silence counts;
+* if the app-auth session cannot be established at all, the device says so and
+  retries every 5 minutes.
+
+## Security and privacy implications
+
+Read this before you use it.
+
+* This flow needs your **EcoFlow account email and password** — not a Developer
+  Access/Secret key. That is a full-access credential for your EcoFlow account.
+* The email and password are stored in this app's Homey settings (encrypted at
+  rest on the Homey) under `appAuthEmail` / `appAuthPassword`, and are only ever
+  sent to EcoFlow's own API. They are **never** written to device data or store,
+  never logged, and never included in an error message or diagnostic.
+* Nothing is written until you actually add an ES22 device: the sign-in is held
+  in memory for the duration of the pairing session, so cancelling it, finding no
+  ES22 on the account, or a failure part-way through leaves no account stored. If
+  the device is never created after all, the account is removed again.
+* Tokens and the decrypted MQTT certificate live in memory only. The app logs a
+  region and a connection state, never a credential.
+* Using the app API is **not sanctioned by EcoFlow's terms**. EcoFlow may change
+  or block it at any time, and may treat the sign-in as an unusual login. Use it
+  knowingly, and prefer a dedicated/shared EcoFlow account if that matters to
+  you.
+* If you have two-factor authentication enabled on your EcoFlow account, this
+  flow will not work.
+
+## Setup
+
+1. In Homey, add a device → **EcoFlow STREAM Series** → **STREAM AC 5000
+   (experimental)**.
+2. Read the warning on the first pairing screen, then enter your **EcoFlow app**
+   email address, password and region.
+3. Pick your ES22 unit(s) from the list. Multiple ES22 units on one account are
+   supported and share a single MQTT session. Your account is only saved once a
+   unit is actually being added.
+
+The account is asked for once. Adding a second ES22 later skips straight to the
+device list.
+
+## Removing it / re-pairing
+
+* **Remove one unit:** delete the device in Homey. The MQTT subscription is
+  released immediately, and once the last ES22 device is gone the shared MQTT
+  session is closed too.
+* **Remove the stored account:** deleting the **last** STREAM AC 5000 device
+  automatically clears the stored EcoFlow email, password and region — nothing
+  else uses them. You can also clear them at any time from the app's **Settings**
+  page (*STREAM AC 5000 (experimental)* → *Remove stored EcoFlow account*). The
+  Developer API keys used by the other drivers are separate and are not touched.
+* **Re-pair after a password change:** delete the ES22 device(s) — which clears
+  the stored account — then pair again. The app also re-logs in automatically
+  whenever EcoFlow rejects a cached token.
+
+Changing your EcoFlow password invalidates the stored one; the device will go
+unavailable until you re-pair.
+
+## Attribution
+
+The app-auth flow, the AES-CFB certification decoding, the WSS ClientID scheme
+and the ES22 protobuf field map are adapted from the MIT-licensed
+**[shuette42/ecoflow-energy-ha](https://github.com/shuette42/ecoflow-energy-ha)**
+Home Assistant integration — specifically `ecoflow/enhanced_auth.py`,
+`ecoflow/app_api.py`, `ecoflow/clientid.py`, `ecoflow/cloud_mqtt.py` and
+`ecoflow/parsers/stream_ac5000_proto.py`. That project derived the ES22 field
+map from captures of live hardware; only the fields it verified are mapped here.
+The TypeScript implementation in `lib/` is original work, but the protocol
+knowledge is theirs.
+
+```
+MIT License
+
+Copyright (c) shuette42 and the ecoflow-energy-ha contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Not affiliated with EcoFlow.
+
+## Code map
+
+| File | Purpose |
+| --- | --- |
+| `lib/EcoFlowAppAuthClient.ts` | App-auth HTTP client: login, device list, MQTT credentials, regional fallback, token refresh |
+| `lib/appAuthCrypto.ts` | AES-256-CFB + PKCS#7 certification decoding |
+| `lib/appDevices.ts` | App device-list normalization, ES22 detection and naming |
+| `lib/appAuthPairing.ts` | Credential lifecycle (stored on device add only) and pairing handlers for the experimental flow |
+| `lib/appMqttClientId.ts` | WSS ClientID generator (fresh per connect) |
+| `lib/EcoFlowAppMqtt.ts` | Listen-only WSS MQTT session, multi-device, reconnect + credential refresh |
+| `lib/streamAc5000Protocol.ts` | Frame header decoder + ES22 field map → typed telemetry |
+| `lib/streamAc5000Mapping.ts` | Telemetry → Homey capability values |
+| `lib/streamAc5000Diagnostics.ts` | Bounded, serial-redacted parser diagnostics for submitted Homey logs |
+| `drivers/stream_ac5000/` | Driver, device, pairing view and assets |
+
+Tests: `test/appAuthCrypto.test.js`, `test/appAuthClient.test.js`,
+`test/appAuthPairing.test.js`, `test/appDevices.test.js`,
+`test/streamAc5000Protocol.test.js`, `test/settingsPage.test.js`, plus the ES22
+exclusion assertions in `test/devices.test.js` and `test/streamPairing.test.js`.
+All network access is mocked; no real credential appears in any fixture.

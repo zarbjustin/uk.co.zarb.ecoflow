@@ -41,6 +41,19 @@
   <button id="save" type="button">Save</button>
   <div class="saved" id="saved"></div>
 
+  <hr style="margin:28px 0;border:0;border-top:1px solid #e3e3e3;" />
+
+  <h1 style="font-size:17px;">STREAM AC 5000 (experimental)</h1>
+  <p class="help">
+    The STREAM AC 5000 (serial <code>ES22&hellip;</code>) has no official EcoFlow API, so it is read
+    through an unofficial connection that needs your EcoFlow <em>account</em> sign-in. That account is
+    entered when you add the device and is stored separately from the keys above. It is monitoring
+    only &mdash; no commands are ever sent. Removing the last STREAM AC 5000 device also clears it.
+  </p>
+  <p class="help" id="appAuthState" style="color:#555;">Checking&hellip;</p>
+  <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
+  <div class="saved" id="appAuthSaved"></div>
+
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
@@ -49,9 +62,29 @@
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
       Homey.get('mqtt_enabled', function (err, v) { if (!err && v === false) document.getElementById('mqtt').checked = false; });
 
+      // The stored account password is never read back into this page.
+      function refreshAppAuthState() {
+        Homey.get('appAuthEmail', function (err, v) {
+          document.getElementById('appAuthState').textContent = (!err && v)
+            ? 'Signed in as ' + v + '.'
+            : 'No EcoFlow account stored.';
+        });
+      }
+      refreshAppAuthState();
+
       function saveSetting(Homey, key, value) {
         return new Promise(function (resolve, reject) {
           Homey.set(key, value, function (err) { if (err) reject(err); else resolve(); });
+        });
+      }
+
+      function clearSetting(Homey, key) {
+        return new Promise(function (resolve, reject) {
+          if (typeof Homey.unset === 'function') {
+            Homey.unset(key, function (err) { if (err) reject(err); else resolve(); });
+            return;
+          }
+          Homey.set(key, null, function (err) { if (err) reject(err); else resolve(); });
         });
       }
 
@@ -62,6 +95,23 @@
           });
         });
       }
+
+      document.getElementById('clearAppAuth').addEventListener('click', async function () {
+        var status = document.getElementById('appAuthSaved');
+        status.textContent = 'Removing...';
+        try {
+          // The password goes first: if a later key fails, no usable account is left behind.
+          await clearSetting(Homey, 'appAuthPassword');
+          await clearSetting(Homey, 'appAuthEmail');
+          await clearSetting(Homey, 'appAuthHost');
+          status.textContent = 'Removed. Any STREAM AC 5000 device will go unavailable until you re-pair it.';
+        } catch (err) {
+          status.textContent = 'Could not remove the stored EcoFlow account: '
+            + ((err && err.message) ? err.message : err)
+            + ' Please try again.';
+        }
+        refreshAppAuthState();
+      });
 
       document.getElementById('save').addEventListener('click', async function () {
         var a = document.getElementById('accessKey').value.trim();

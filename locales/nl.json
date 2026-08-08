@@ -1,1 +1,34 @@
-{}
+{
+  "pair": {
+    "stream_home_battery": {
+      "title": "Koppel een STREAM-thuisbatterij",
+      "intro": "Deze vertegenwoordigt één volledige STREAM-installatie en levert systeemtotalen voor Homey Energy en widgets. Koppel er één per serienummer van het hoofdsysteem."
+    },
+    "stream_unit": {
+      "title": "Koppel een fysieke STREAM-unit",
+      "intro": "Dit voegt één omvormer of batterij toe als fysiek apparaat. Deze levert geen totalen voor de hele installatie en kan niet door STREAM-widgets worden gebruikt."
+    }
+  },
+  "widgets": {
+    "common": {
+      "pair_home_battery": "Koppel een STREAM-thuisbatterij",
+      "aggregate_required": "Widgets gebruiken de volledige installatie, niet een fysieke unit.",
+      "data_unavailable": "Gegevens van STREAM-thuisbatterij niet beschikbaar"
+    },
+    "battery_plan": {
+      "title": "Batterijplan",
+      "stored": "Opgeslagen",
+      "usable": "Bruikbaar",
+      "set_capacity": "Stel de geïnstalleerde capaciteit in bij apparaatinstellingen",
+      "reserve": "Reserve",
+      "usable_floor": "Bruikbare ondergrens",
+      "state": "Status",
+      "charge_limit": "Laadlimiet",
+      "full_in": "Vol over",
+      "empty_in": "Leeg over",
+      "calculated_estimate": "Berekende schatting",
+      "device_reported": "Gemeld door EcoFlow",
+      "unavailable": "Niet beschikbaar"
+    }
+  }
+}

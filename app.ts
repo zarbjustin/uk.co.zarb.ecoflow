@@ -2,23 +2,45 @@
 
 import Homey from 'homey';
 import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
+import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
+import {
+  APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
+  appAuthClientFromSettings, getSavedAppAuthCreds,
+} from './lib/appAuthPairing';
+
+const APP_AUTH_SETTINGS = [APP_AUTH_EMAIL_SETTING, APP_AUTH_PASSWORD_SETTING, APP_AUTH_HOST_SETTING];
 
 module.exports = class EcoFlowApp extends Homey.App {
   private mqtt: EcoFlowMqtt | null = null;
   private mqttCredsKey = '';
+  private appMqtt: EcoFlowAppMqtt | null = null;
+  private appMqttCredsKey = '';
   private settingsTimer: NodeJS.Timeout | null = null;
+  private appSettingsTimer: NodeJS.Timeout | null = null;
 
   async onInit(): Promise<void> {
-    this.homey.settings.on('set', (key: string) => {
-      if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
-        if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
-        this.settingsTimer = this.homey.setTimeout(() => {
-          this.settingsTimer = null;
-          this.applyConnectionSettings().catch((e) => this.error('Apply connection settings', e));
-        }, 250);
-      }
-    });
+    this.homey.settings.on('set', (key: string) => this.onSettingChanged(key));
+    // Removing the experimental account is an 'unset', not a 'set' — the
+    // app-auth session must be torn down for that too.
+    this.homey.settings.on('unset', (key: string) => this.onSettingChanged(key));
     this.log('EcoFlow app initialised');
+  }
+
+  private onSettingChanged(key: string): void {
+    if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
+      if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
+      this.settingsTimer = this.homey.setTimeout(() => {
+        this.settingsTimer = null;
+        this.applyConnectionSettings().catch((e) => this.error('Apply connection settings', e));
+      }, 250);
+    }
+    if (APP_AUTH_SETTINGS.includes(key)) {
+      if (this.appSettingsTimer) this.homey.clearTimeout(this.appSettingsTimer);
+      this.appSettingsTimer = this.homey.setTimeout(() => {
+        this.appSettingsTimer = null;
+        this.applyAppAuthSettings().catch((e) => this.error('Apply app-auth settings', e?.message || e));
+      }, 250);
+    }
   }
 
   private async applyConnectionSettings(): Promise<void> {
@@ -43,8 +65,12 @@ module.exports = class EcoFlowApp extends Homey.App {
     // Close the shared MQTT session cleanly so EcoFlow's broker (one session per
     // account) doesn't reject the next start with a stale ghost connection.
     if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
+    if (this.appSettingsTimer) this.homey.clearTimeout(this.appSettingsTimer);
     await this.mqtt?.end().catch(() => {});
     this.mqtt = null;
+    await this.appMqtt?.end().catch(() => {});
+    this.appMqtt = null;
+    this.appMqttCredsKey = '';
   }
 
   private getCredentials(): { accessKey?: string; secretKey?: string; host?: string } {
@@ -101,5 +127,88 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   unsubscribeRealtime(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void {
     this.mqtt?.unsubscribe(sn, onQuota, onStatus);
+  }
+
+  // ----- EXPERIMENTAL app-auth realtime (STREAM AC 5000 only) ---------------
+
+  /** Identity of the saved EcoFlow account, without exposing the password. */
+  private appAuthCredsKey(): string {
+    const { email, password, host } = getSavedAppAuthCreds(this.homey);
+    if (!email || !password) return '';
+    // Length only: enough to notice a change, useless to anyone reading a log.
+    return `${email}:${password.length}:${host || ''}`;
+  }
+
+  private async applyAppAuthSettings(): Promise<void> {
+    const credsKey = this.appAuthCredsKey();
+    if (!credsKey) {
+      await this.appMqtt?.end().catch(() => {});
+      this.appMqtt = null;
+      this.appMqttCredsKey = '';
+      return;
+    }
+    if (!this.appMqtt || credsKey === this.appMqttCredsKey) return;
+    const client = appAuthClientFromSettings(this.homey, (...a) => this.log('[app-mqtt]', ...a));
+    if (!client) return;
+    this.appMqtt.updateClient(client);
+    this.appMqttCredsKey = credsKey;
+    await this.appMqtt.reconnect();
+  }
+
+  /**
+   * Lazily create and connect the experimental app-auth (WSS) MQTT session.
+   * Returns null when no EcoFlow account is configured or the connect failed —
+   * there is no REST fallback for this path, so devices simply stay stale.
+   */
+  private async getAppMqtt(): Promise<EcoFlowAppMqtt | null> {
+    const credsKey = this.appAuthCredsKey();
+    if (!credsKey) return null;
+
+    if (this.appMqtt && credsKey !== this.appMqttCredsKey) {
+      const refreshed = appAuthClientFromSettings(this.homey, (...a) => this.log('[app-mqtt]', ...a));
+      if (!refreshed) return null;
+      this.appMqtt.updateClient(refreshed);
+      this.appMqttCredsKey = credsKey;
+      try {
+        await this.appMqtt.reconnect();
+        return this.appMqtt;
+      } catch (e: any) {
+        this.error('App-auth MQTT reconnect failed', e?.message || 'unknown error');
+        return null;
+      }
+    }
+    if (!this.appMqtt) {
+      const client = appAuthClientFromSettings(this.homey, (...a) => this.log('[app-mqtt]', ...a));
+      if (!client) return null;
+      this.appMqtt = new EcoFlowAppMqtt({ client, log: (...a) => this.log('[app-mqtt]', ...a) });
+      this.appMqttCredsKey = credsKey;
+    }
+    try {
+      await this.appMqtt.connect();
+      return this.appMqtt;
+    } catch (e: any) {
+      this.error('App-auth MQTT connect failed', e?.message || 'unknown error');
+      return null;
+    }
+  }
+
+  /** Subscribe an ES22 SN to the experimental app-auth telemetry feed. */
+  async subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean> {
+    const mqtt = await this.getAppMqtt();
+    if (!mqtt) return false;
+    mqtt.subscribe(sn, onFrame);
+    return true;
+  }
+
+  unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void {
+    if (!this.appMqtt) return;
+    this.appMqtt.unsubscribe(sn, onFrame);
+    // The last ES22 device just went: drop the session rather than hold an
+    // idle authenticated WSS connection open.
+    if (this.appMqtt.hasSubscribers) return;
+    const mqtt = this.appMqtt;
+    this.appMqtt = null;
+    this.appMqttCredsKey = '';
+    mqtt.end().catch((e) => this.error('App-auth MQTT teardown', e?.message || 'unknown error'));
   }
 };

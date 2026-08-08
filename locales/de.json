@@ -1,1 +1,34 @@
-{}
+{
+  "pair": {
+    "stream_home_battery": {
+      "title": "STREAM-Hausbatterie koppeln",
+      "intro": "Sie steht für eine vollständige STREAM-Anlage und liefert Gesamtdaten für Homey Energy und Widgets. Kopple eine pro Hauptsystem-Seriennummer."
+    },
+    "stream_unit": {
+      "title": "Physische STREAM-Einheit koppeln",
+      "intro": "Dies fügt einen einzelnen Wechselrichter oder Akku als physisches Gerät hinzu. Er liefert keine Gesamtwerte der Anlage und kann nicht mit STREAM-Widgets verwendet werden."
+    }
+  },
+  "widgets": {
+    "common": {
+      "pair_home_battery": "STREAM-Hausbatterie koppeln",
+      "aggregate_required": "Widgets verwenden die gesamte Anlage, nicht eine physische Einheit.",
+      "data_unavailable": "Daten der STREAM-Hausbatterie nicht verfügbar"
+    },
+    "battery_plan": {
+      "title": "Batterieplan",
+      "stored": "Gespeichert",
+      "usable": "Nutzbar",
+      "set_capacity": "Installierte Kapazität in den Geräteeinstellungen festlegen",
+      "reserve": "Reserve",
+      "usable_floor": "Nutzgrenze",
+      "state": "Status",
+      "charge_limit": "Ladegrenze",
+      "full_in": "Voll in",
+      "empty_in": "Leer in",
+      "calculated_estimate": "Berechnete Schätzung",
+      "device_reported": "Von EcoFlow gemeldet",
+      "unavailable": "Nicht verfügbar"
+    }
+  }
+}

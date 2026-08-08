@@ -90,6 +90,7 @@
     }
 
     function onHomeyReady(Homey) {
+      function tr(key) { return Homey.__(key); }
       const settings = Homey.getSettings() || {};
       const index = Number(settings.index) || 1;
       const deviceId = (Homey.getDeviceIds && Homey.getDeviceIds()[0]) || '';
@@ -102,7 +103,7 @@
         try {
           const d = await Homey.api('GET', '/?index=' + index + selector, {});
           if (!d || !d.ok) {
-            set('title', 'No STREAM system found');
+            set('title', tr('widgets.common.pair_home_battery'));
             document.querySelector('.card').classList.add('muted');
             return;
           }
@@ -133,7 +134,7 @@
 
           document.querySelector('.card').classList.toggle('muted', d.available === false);
         } catch (e) {
-          set('title', 'STREAM data unavailable');
+          set('title', tr('widgets.common.data_unavailable'));
           document.querySelector('.card').classList.add('muted');
         }
       }

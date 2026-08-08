@@ -14,6 +14,14 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 - **Control:** settable charge/discharge limits, backup-reserve level (3–100%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
 - Devices are classified by serial prefix (BK11 Ultra, BK12 Pro, BK31 AC Pro, BK41 Max, BK51 AC, BK61 Ultra X), so all current STREAM models are discovered; the Microinverter (BK01) is skipped as it exposes no telemetry.
 
+Pair **STREAM Home Battery (installation)** for one aggregate device per main system serial. It is
+the whole-installation device used by Homey Energy and the STREAM widgets. Pair **Physical STREAM
+Unit** only when you also want a separate monitor for one inverter or battery; unit devices do not
+contain reliable whole-system totals.
+
+### STREAM AC 5000 (ES22) — experimental, monitoring only
+EcoFlow exposes **no** public API for the STREAM AC 5000: every Developer-API quota call for an `ES22…` serial returns code 1006. A separate **STREAM AC 5000 (experimental)** driver reads the unit over the private connection the EcoFlow mobile app uses, which requires signing in with your **EcoFlow account email and password**. It is read-only — battery level & health, signed battery power, house consumption, grid import/export and temperature — and **sends no commands at all**. It is isolated from the supported Developer-API path used by every other device here, and ES22 units are never offered to the BK-series drivers. Read [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md) before enabling it: it covers the security implications, the limitations and how to remove or re-pair it.
+
 ### Smart Meter (CT_EF_01)
 - Added as a **Homey Energy meter**. A device setting lets it show either **Grid power** (import/export) or **Home load** (total consumption).
 - When the meter is part of a STREAM system its own serial returns no data, so the reading is taken from the system's main SN (`powGetSysGrid` / `powGetSysLoad`) automatically.
@@ -30,7 +38,12 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 ### Dashboard widgets
 Five distinct widgets (each with its own accurate preview), bound to a chosen STREAM system:
 **Energy Flow**, **Today Balance**, **Battery Plan**, **Solar Forecast**, and **Energy
-Recommendation**. Regenerate previews from the real widget HTML with `npm run widgets:preview`.
+Recommendation**. Widget selectors only offer aggregate **STREAM Home Battery** devices. In that
+device's settings, optionally enter the installed system capacity; Battery Plan then shows stored
+and usable kWh and estimates time to empty while discharge is above 50 W. The estimate respects the
+higher of backup reserve and discharge limit and applies the configurable discharge efficiency
+(92% by default). Without capacity or active discharge, the widget clearly labels EcoFlow's
+device-reported fallback. Regenerate previews from the real widget HTML with `npm run widgets:preview`.
 
 ### Languages
 English, **German** and **Dutch**.
@@ -42,8 +55,11 @@ English, **German** and **Dutch**.
 
 ## Setup
 1. Create an **Access Key** and **Secret Key** at [developer.ecoflow.com](https://developer.ecoflow.com) → *IoT Background*.
-2. In Homey, add an **EcoFlow STREAM** (or **Smart Meter**) device and enter the keys + region.
+2. In Homey, add **STREAM Home Battery (installation)** for system totals and widgets. Add
+   **Physical STREAM Unit** only for per-device monitoring. Enter the keys + region when prompted.
 3. Manage credentials later under the app's **Settings** page.
+
+> **STREAM AC 5000 owners:** that model is not covered by the Developer API and uses a separate, experimental sign-in — see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
 
 ## Development
 ```sh
@@ -68,7 +84,12 @@ See [`docs/STATUS.md`](docs/STATUS.md) for the full handoff. In short:
 - Per-phase Smart Meter values are only available on standalone meters; a meter integrated into a STREAM system reports a single whole-home grid figure.
 - Per-unit STREAM devices mainly expose their own grid feed and AC-output relays — full battery/solar/load aggregates are only reported on the system (main) device.
 - Power values use EcoFlow's documented public-API units (STREAM reports Watts directly).
+- The **STREAM AC 5000 (ES22)** integration is experimental and monitoring-only. It relies on an unofficial, undocumented EcoFlow endpoint that can break or be blocked without notice, needs your EcoFlow account password, has no REST fallback (availability follows the MQTT data age), and exposes no controls, Flow cards or cumulative energy totals in this increment.
 
 ## Credits
 Field/command mappings cross-referenced against the community
-[tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud) integration. Not affiliated with EcoFlow.
+[tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud) integration.
+The experimental STREAM AC 5000 (ES22) app-auth flow and protobuf field map are adapted from the MIT-licensed
+[shuette42/ecoflow-energy-ha](https://github.com/shuette42/ecoflow-energy-ha) — full attribution in
+[`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
+Not affiliated with EcoFlow.
