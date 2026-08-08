@@ -18,7 +18,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm run lint
-      - run: npm audit
+      - run: npm audit --omit=dev
       - uses: athombv/github-action-homey-app-validate@0f3b42c15d26aab79d7c48cde4d2805524da910e
         with:
           level: verified
