@@ -26,6 +26,11 @@
         "en": "W",
         "de": "W",
         "nl": "W"
+      },
+      "title": {
+        "en": "Import power threshold",
+        "de": "Netzbezugsleistungsschwelle",
+        "nl": "Drempel voor netafnamevermogen"
       }
     }
   ],
