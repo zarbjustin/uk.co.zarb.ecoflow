@@ -16,16 +16,52 @@
     "nl": "Gebruikt de prijs die is ingesteld via de actie 'Huidige stroomprijs instellen'."
   },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" },
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream"
+    },
     {
       "type": "dropdown",
       "name": "direction",
-      "title": { "en": "Direction", "de": "Richtung", "nl": "Richting" },
+      "title": {
+        "en": "Direction",
+        "de": "Richtung",
+        "nl": "Richting"
+      },
       "values": [
-        { "id": "above", "title": { "en": "above", "de": "über", "nl": "boven" } },
-        { "id": "below", "title": { "en": "below", "de": "unter", "nl": "onder" } }
+        {
+          "id": "above",
+          "title": {
+            "en": "above",
+            "de": "über",
+            "nl": "boven"
+          }
+        },
+        {
+          "id": "below",
+          "title": {
+            "en": "below",
+            "de": "unter",
+            "nl": "onder"
+          }
+        }
       ]
     },
-    { "type": "number", "name": "price", "min": -1000, "max": 1000, "step": 0.01, "placeholder": { "en": "price/kWh" } }
+    {
+      "type": "number",
+      "name": "price",
+      "min": -1000,
+      "max": 1000,
+      "step": 0.01,
+      "placeholder": {
+        "en": "price/kWh"
+      },
+      "title": {
+        "en": "Electricity price threshold",
+        "de": "Strompreisschwelle",
+        "nl": "Drempel voor stroomprijs"
+      }
+    }
   ]
 }
