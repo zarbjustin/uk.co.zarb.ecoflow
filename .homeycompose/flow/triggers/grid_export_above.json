@@ -26,6 +26,11 @@
         "en": "W",
         "de": "W",
         "nl": "W"
+      },
+      "title": {
+        "en": "Export power threshold",
+        "de": "Einspeiseleistungsschwelle",
+        "nl": "Drempel voor terugleververmogen"
       }
     }
   ],
