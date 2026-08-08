@@ -16,6 +16,49 @@ The only working route is the private connection EcoFlow's own mobile app uses.
 This app implements a **read-only** subset of it, behind its own driver, so
 owners of an ES22 can at least monitor the unit from Homey.
 
+## Relationship to the new 5 kWh STREAM family
+
+EcoFlow's UK and German launch pages describe several products in the same new
+generation. Marketing names are not sufficient evidence that they share a
+serial family or protobuf layout, so only the model verified from live captures
+is routed to this parser.
+
+| Product | Officially published information | Protocol confidence |
+| --- | --- | --- |
+| STREAM AC 5000 | 5,024 Wh; 3,000 W AC input/output; no direct PV input | **Confirmed:** serial prefix `ES22`, separate parser implemented here |
+| STREAM 5000 | 5,024 Wh; 3,000 W AC input/output; 4,000 W PV across four MPPT inputs | Product confirmed, but serial prefix and telemetry layout are unknown |
+| STREAM Expansion Battery 5000 | 5,024 Wh expansion module for the new platform | Unknown whether it appears as an independent cloud device or as a nested pack under its host |
+| STREAM Gateway | EcoFlow describes it as enabling later system expansion without rewiring | Product confirmed, but discovery identity, topics and telemetry are unknown |
+| STREAM 3000 | Not listed as a distinct product on the referenced launch pages | The pages advertise 3,000 W output; STREAM Ultra X is listed separately at 3,084 Wh |
+
+The existing BK-series remains a different protocol family: `BK01` STREAM
+Micro, `BK11` Ultra, `BK31` AC Pro, `BK41` Max, `BK51` AC and `BK61` Ultra X.
+Do not route a new product to either the BK parser or the ES22 parser based on
+the word "STREAM" alone.
+
+### Evidence needed for additional models
+
+Support for the other new-generation products should proceed through explicit,
+privacy-safe discovery rather than guessed aliases:
+
+1. Capture the app-auth device-list entry: product name/type and a redacted
+   serial prefix.
+2. Subscribe to that device's app MQTT topics and record bounded command IDs
+   and serial-redacted samples.
+3. Compare values with the EcoFlow app before exposing Homey capabilities.
+4. For an Expansion Battery, compare captures from the same host with and
+   without the pack attached to determine whether it is nested or independent.
+5. Keep all new models monitoring-only until their read path is verified.
+
+The current build offers only `ES22` devices during experimental pairing.
+Unknown products are not subscribed or parsed yet; widening discovery is a
+future diagnostic increment.
+
+Official product references, accessed 9 August 2026:
+
+* [EcoFlow UK STREAM Series](https://www.ecoflow.com/uk/stream-series-solar-battery-storage)
+* [EcoFlow Germany STREAM Series](https://www.ecoflow.com/de/stream-series-balkonkraftwerk-mit-speicher)
+
 ## What it does
 
 | Step | Endpoint / transport | Notes |

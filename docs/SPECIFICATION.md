@@ -1,29 +1,32 @@
-# EcoFlow STREAM Series — Full Specification (v1.8.6 basis)
+# EcoFlow STREAM Series — Full Specification (v1.10.3 basis)
 
-> Phase 3 deliverable and single source of truth, describing the **current** architecture
-> (`origin/master`, v1.8.6) and the target end-state after this review's sprints. When code and this
+> Single source of truth describing the **current** architecture
+> (`origin/master`, v1.10.3) and the target end-state after review sprints. When code and this
 > spec disagree, reconcile. App: `uk.co.zarb.ecoflow` · Homey SDK v3 · TypeScript.
 
 ## 1. Purpose & scope
 A focused, **Energy-native** Homey Pro integration for the EcoFlow **STREAM** balcony-solar/battery
 line + the EcoFlow **Smart Meter**, whose core use case is **tariff-driven charge/discharge
 automation** (e.g. Octopus Agile) via Homey Flow and Energy. In scope: STREAM Ultra/Pro/AC Pro/Max/
-AC/Ultra X, the Microinverter (as a solar device), the Smart Meter. Out of scope: PowerStream and
-portable stations (`disabled-drivers/`, not shipped).
+AC/Ultra X, the Microinverter (as a solar device), the Smart Meter, and experimental monitoring of
+the STREAM AC 5000. Out of scope: PowerStream and portable stations (`disabled-drivers/`, not
+shipped).
 
 ## 2. Architecture (current)
 ```
-App (app.ts) — shared EcoFlowMqtt (one session/account); app settings: accessKey/secretKey/host/mqtt_enabled
- Drivers (6) → Devices (extend BaseEcoFlowDevice):
+App (app.ts) — shared Developer API EcoFlowMqtt plus an isolated app-auth WSS MQTT session;
+ app settings: accessKey/secretKey/host/mqtt_enabled and experimental app account credentials
+ Drivers (7) → Devices:
    stream (battery) · stream_unit (battery) · stream_solar (solarpanel) · stream_micro (solarpanel)
-   · stream_socket (socket) · smartmeter (sensor)
+   · stream_socket (socket) · smartmeter (sensor) · stream_ac5000 (experimental battery)
  Widgets (5): stream_flow, stream_balance, stream_battery_plan, stream_solar_forecast,
    stream_tariff_opportunity (+ shared widgets/stream_common.js)
  lib/: EcoFlowClient (signed REST, cached, retry), EcoFlowMqtt (realtime), sign (HMAC-SHA256),
    apiHost (region/origin allow-list), BaseEcoFlowDevice, energyIntegration + EnergyCheckpoint
    (energy accounting/persistence), flowStates (trigger state machine), quota, streamMapping/
    streamModels/streamProtocol/streamPairing/streamHistory, smartMeterMapping, ecoflowDevices,
-   appApi, pairing, types.
+   appApi, pairing, types; plus EcoFlowAppAuthClient, EcoFlowAppMqtt, appAuthCrypto,
+   appAuthPairing, appDevices and streamAc5000Protocol/Mapping/Diagnostics.
 ```
 
 ### 2.1 Data flow
@@ -50,7 +53,30 @@ across restarts).
 | BK51 | STREAM AC | yes | 0 | 800 W |
 | BK61 | STREAM Ultra X | no | 4 | 1200 W (2300 paired) |
 | BK01 | Microinverter | — | 2 (MQTT only) | 800 W |
+| ES22 | STREAM AC 5000 | yes | 0 | 3000 W (installation and regional limits apply) |
 | CT_EF_01 | Smart Meter | — | — | — |
+
+### 3.1 New 5 kWh generation: confirmed and unknown
+
+The official 2026 launch pages list a broader new-generation family. Only
+STREAM AC 5000 (`ES22`) currently has a verified serial prefix and captured
+protobuf layout.
+
+| Product | Published specification | Integration position |
+| --- | --- | --- |
+| STREAM AC 5000 | 5,024 Wh; 3,000 W AC; no direct PV | Dedicated `ES22` monitoring driver |
+| STREAM 5000 | 5,024 Wh; 3,000 W AC; 4,000 W PV / four MPPT | Do not classify until serial and frames are captured |
+| STREAM Expansion Battery 5000 | 5,024 Wh expansion module | Determine whether nested under a host or separately discoverable |
+| STREAM Gateway | Expansion component; EcoFlow states no rewiring is needed when expanding | Discovery identity and protocol unknown |
+
+There is no distinct **STREAM 3000** product in the referenced UK/German launch
+comparison. The pages advertise 3,000 W output, while STREAM Ultra X is listed
+separately with 3,084 Wh capacity.
+
+Future support must first add opt-in, privacy-safe app-auth discovery for unknown
+new-generation products. Capture only product metadata, redacted serial prefixes,
+observed command IDs and bounded serial-redacted frame samples. Never route an
+unknown model to the BK or ES22 parser based on its marketing name.
 
 ## 4. Capability catalogue
 Custom (`.homeycompose/capabilities/`, each with an `icon` from `assets/capabilities/*.svg`):
