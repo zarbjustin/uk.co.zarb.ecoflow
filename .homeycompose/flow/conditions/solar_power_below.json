@@ -26,6 +26,11 @@
         "en": "W",
         "de": "W",
         "nl": "W"
+      },
+      "title": {
+        "en": "Solar power threshold",
+        "de": "Solarleistungsschwelle",
+        "nl": "Drempel voor zonnevermogen"
       }
     }
   ]
