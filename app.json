@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.3",
+  "version": "1.10.4",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -352,6 +352,11 @@
               "en": "W",
               "de": "W",
               "nl": "W"
+            },
+            "title": {
+              "en": "Export power threshold",
+              "de": "Einspeiseleistungsschwelle",
+              "nl": "Drempel voor terugleververmogen"
             }
           }
         ],
@@ -423,6 +428,11 @@
               "en": "W",
               "de": "W",
               "nl": "W"
+            },
+            "title": {
+              "en": "Import power threshold",
+              "de": "Netzbezugsleistungsschwelle",
+              "nl": "Drempel voor netafnamevermogen"
             }
           }
         ],
@@ -706,6 +716,11 @@
             "step": 0.01,
             "placeholder": {
               "en": "price/kWh"
+            },
+            "title": {
+              "en": "Electricity price threshold",
+              "de": "Strompreisschwelle",
+              "nl": "Drempel voor stroomprijs"
             }
           }
         ]
@@ -896,6 +911,11 @@
             "step": 0.5,
             "placeholder": {
               "en": "kWh"
+            },
+            "title": {
+              "en": "Solar energy threshold",
+              "de": "Solarenergieschwelle",
+              "nl": "Drempel voor zonne-energie"
             }
           }
         ]
@@ -953,6 +973,11 @@
             "step": 0.5,
             "placeholder": {
               "en": "kWh"
+            },
+            "title": {
+              "en": "Solar energy threshold",
+              "de": "Solarenergieschwelle",
+              "nl": "Drempel voor zonne-energie"
             }
           }
         ]
@@ -1022,6 +1047,11 @@
               "en": "W",
               "de": "W",
               "nl": "W"
+            },
+            "title": {
+              "en": "Solar power threshold",
+              "de": "Solarleistungsschwelle",
+              "nl": "Drempel voor zonnevermogen"
             }
           }
         ]
@@ -1288,6 +1318,11 @@
             "step": 0.01,
             "placeholder": {
               "en": "price/kWh"
+            },
+            "title": {
+              "en": "Current electricity price",
+              "de": "Aktueller Strompreis",
+              "nl": "Huidige stroomprijs"
             }
           }
         ]

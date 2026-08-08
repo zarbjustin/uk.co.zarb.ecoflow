@@ -118,5 +118,8 @@
   },
   "1.10.3": {
     "en": "Rebuilt all five widget preview pairs as text-free, transparent artwork that follows the Homey Widget Preview guidelines."
+  },
+  "1.10.4": {
+    "en": "Adds experimental monitoring-only STREAM AC 5000 support. Improves STREAM Home Battery widgets with aggregate-only selection, configurable capacity, stored/usable kWh, and more accurate runtime estimates. Includes reliability and security updates."
   }
 }
