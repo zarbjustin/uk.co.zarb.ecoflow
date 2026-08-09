@@ -121,5 +121,8 @@
   },
   "1.10.4": {
     "en": "Adds experimental monitoring-only STREAM AC 5000 support. Improves STREAM Home Battery widgets with aggregate-only selection, configurable capacity, stored/usable kWh, and more accurate runtime estimates. Includes reliability and security updates."
+  },
+  "1.10.5": {
+    "en": "Updated the STREAM AC 5000 driver icon and app store images."
   }
 }
