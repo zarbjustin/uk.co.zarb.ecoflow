@@ -11,6 +11,8 @@ import {
   Stream5000TelemetryAdapter,
 } from './stream5000Adapters';
 import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
+import { integrateTimedSignedPower } from './energyIntegration';
+import { EnergyCheckpoint } from './EnergyCheckpoint';
 
 /**
  * Shared monitoring lifecycle for verified STREAM 5000-family units.
@@ -37,6 +39,7 @@ const MONITORING_ONLY_FALLBACK = 'Monitoring only · controls intentionally disa
 
 const UNAVAILABLE_MESSAGE = 'No data from EcoFlow\'s app connection. Check the EcoFlow account in the app settings.';
 const NOT_CONNECTED_MESSAGE = 'EcoFlow app connection unavailable — delete and re-add this device to sign in again.';
+const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as const;
 
 export class Stream5000UnitDevice extends Homey.Device {
   private telemetryAdapter!: Stream5000TelemetryAdapter;
@@ -61,6 +64,10 @@ export class Stream5000UnitDevice extends Homey.Device {
   private sampleGate!: ReturnType<Stream5000TelemetryAdapter['createSampleGate']>;
   private readonly commandKeys = new Set<string>();
   private readonly commandStats = new Map<string, { frames: number; parsed: number; unparsed: number }>();
+  private chargedWh = 0;
+  private dischargedWh = 0;
+  private lastEnergySampleAt = 0;
+  private energyCheckpoint?: EnergyCheckpoint;
 
   async onInit(): Promise<void> {
     this.startedAt = Date.now();
@@ -74,6 +81,10 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
     this.sampleGate = this.telemetryAdapter.createSampleGate();
+    this.chargedWh = this.storedEnergyWh('chargedWh');
+    this.dischargedWh = this.storedEnergyWh('dischargedWh');
+    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
+    await this.initialiseEnergyCapabilities();
     const localizedStatus = this.homey.__('device.stream_5000_unit.monitoring_only');
 
     await this.setSettings({
@@ -85,6 +96,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     }).catch(() => {});
 
     this.frameHandler = (payload, topic) => {
+      if (this.subscriptionState === 'stopped') return;
       this.framesReceived += 1;
       this.bytesReceived += payload.length;
       this.lastFrameAt = Date.now();
@@ -98,13 +110,14 @@ export class Stream5000UnitDevice extends Homey.Device {
         return;
       }
       this.parsedFrames += 1;
-      this.lastTelemetryAt = Date.now();
+      const receivedAt = Date.now();
+      this.lastTelemetryAt = receivedAt;
       const values = this.telemetryAdapter.map(telemetry);
       Object.assign(this.lastValues, values);
       this.recordCommands(diagnostic, true);
       this.captureRequestedSnapshot(diagnostic, topic);
       this.maybeLogDiagnosticSummary(topic);
-      this.queueTelemetry(values).catch((e) => this.error('apply telemetry', e?.message || e));
+      this.queueTelemetry(values, receivedAt).catch((e) => this.error('apply telemetry', e?.message || e));
     };
 
     await this.subscribe();
@@ -145,22 +158,68 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
   }
 
-  private queueTelemetry(values: Stream5000CapabilityValues): Promise<void> {
+  private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
     const run = async () => {
-      await this.applyTelemetry(values);
+      await this.applyTelemetry(values, receivedAt);
       await this.setOnline();
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
   }
 
-  private async applyTelemetry(values: Stream5000CapabilityValues): Promise<void> {
+  private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
     for (const [capability, value] of Object.entries(values)) {
       if (!this.hasCapability(capability)) continue;
       if (this.lastValues[capability] === value && this.getCapabilityValue(capability) === value) continue;
       this.lastValues[capability] = value;
       await this.setCapabilityValue(capability, value).catch((e) => this.error(capability, e));
     }
+    const batteryPowerW = values.measure_power;
+    if (typeof batteryPowerW === 'number') await this.updateEnergy(batteryPowerW, receivedAt);
+  }
+
+  private storedEnergyWh(key: string): number {
+    const value = this.getStoreValue(key);
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+  }
+
+  /** Add the meters defensively so devices paired with an older manifest migrate in place. */
+  private async initialiseEnergyCapabilities(): Promise<void> {
+    for (const capability of ENERGY_CAPABILITIES) {
+      if (!this.hasCapability(capability)) {
+        await this.addCapability(capability).catch((e) => this.error(`add ${capability}`, e));
+      }
+    }
+    if (this.hasCapability('meter_power.charged')) {
+      await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+    }
+    if (this.hasCapability('meter_power.discharged')) {
+      await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+    }
+  }
+
+  private async updateEnergy(batteryPowerW: number, sampleAt: number): Promise<void> {
+    const next = integrateTimedSignedPower({
+      posWh: this.chargedWh,
+      negWh: this.dischargedWh,
+      lastSampleAt: this.lastEnergySampleAt,
+    }, batteryPowerW, sampleAt);
+    this.lastEnergySampleAt = next.lastSampleAt;
+    if (next.posWh === this.chargedWh && next.negWh === this.dischargedWh) return;
+    this.chargedWh = next.posWh;
+    this.dischargedWh = next.negWh;
+    this.energyCheckpoint?.mark();
+    if (this.hasCapability('meter_power.charged')) {
+      await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+    }
+    if (this.hasCapability('meter_power.discharged')) {
+      await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+    }
+  }
+
+  private async persistEnergy(): Promise<void> {
+    await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
+    await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
   }
 
   private recordCommands(diagnostic: Stream5000FrameDiagnostic, parsed: boolean): void {
@@ -298,6 +357,8 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.homey.clearInterval(this.resubscribeTimer);
       this.resubscribeTimer = null;
     }
+    await this.applyChain.catch(() => {});
+    await this.energyCheckpoint?.flush();
   }
 
   private hasOtherFamilyDevices(): boolean {
