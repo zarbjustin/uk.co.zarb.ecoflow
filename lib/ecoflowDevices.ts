@@ -36,7 +36,7 @@ function nameRole(name: string): EcoFlowRole | undefined {
   // includes compound catalogue names such as "STREAM Expansion Battery
   // 5000" as well as the platform gateway. A name alone never proves that a
   // device speaks the older BK-series Developer API protocol.
-  if (/stream/.test(n) && (/\b5000\b/.test(n) || /\bgateway\b/.test(n))) {
+  if (/stream/.test(n) && (/(?:^|\D)5000(?:\D|$)/.test(n) || /\bgateway\b/.test(n))) {
     return 'unsupported_stream_5000';
   }
   if (/stream/.test(n)) return 'stream_unit';
