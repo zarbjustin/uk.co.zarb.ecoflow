@@ -36,7 +36,13 @@ test('the replacement driver represents the STREAM 5000 unit family', () => {
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
-  assert.deepStrictEqual(familyCompose.energy, { homeBattery: true });
+  assert.deepStrictEqual(familyCompose.energy, {
+    homeBattery: true,
+    meterPowerImportedCapability: 'meter_power.charged',
+    meterPowerExportedCapability: 'meter_power.discharged',
+  });
+  assert.ok(familyCompose.capabilities.includes('meter_power.charged'));
+  assert.ok(familyCompose.capabilities.includes('meter_power.discharged'));
 
   const familyDriver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_5000_unit');
   assert.ok(familyDriver, 'generated app.json has no stream_5000_unit driver');
@@ -70,13 +76,20 @@ test('the generated app manifest has clean public copy and monitoring-only discl
 
 test('STREAM AC 5000 is classified as a Homey Energy home battery', () => {
   assert.strictEqual(compose.class, 'battery');
-  assert.deepStrictEqual(compose.energy, { homeBattery: true });
+  const expectedEnergy = {
+    homeBattery: true,
+    meterPowerImportedCapability: 'meter_power.charged',
+    meterPowerExportedCapability: 'meter_power.discharged',
+  };
+  assert.deepStrictEqual(compose.energy, expectedEnergy);
   assert.ok(compose.capabilities.includes('measure_battery'));
   assert.ok(compose.capabilities.includes('measure_power'));
+  assert.ok(compose.capabilities.includes('meter_power.charged'));
+  assert.ok(compose.capabilities.includes('meter_power.discharged'));
 
   const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
-  assert.deepStrictEqual(driver.energy, { homeBattery: true });
-  assert.deepStrictEqual(familyCompose.energy, { homeBattery: true });
+  assert.deepStrictEqual(driver.energy, expectedEnergy);
+  assert.deepStrictEqual(familyCompose.energy, expectedEnergy);
 });
 
 test('STREAM AC 5000 offers an automatically-resetting diagnostic capture setting', () => {
