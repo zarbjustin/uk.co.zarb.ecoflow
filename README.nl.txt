@@ -4,4 +4,4 @@ Daarna kan je huis slim reageren op zijn eigen energie. Laad de batterij wanneer
 
 Koppel de STREAM-thuisbatterij voor één volledige installatie en gebruik deze voor Homey Energy en widgets. Een fysieke STREAM-unit is slechts één omvormer of batterij en levert geen totalen voor de hele installatie. Voer optioneel de geïnstalleerde capaciteit in bij de instellingen van de thuisbatterij om opgeslagen en bruikbare kWh en een duidelijk gemarkeerde looptijdschatting te tonen.
 
-STREAM AC 5000 is alleen voor monitoring, omdat EcoFlow voor dit model geen ondersteunde openbare API aanbiedt. Het gebruikt de EcoFlow-appverbinding; bediening is bewust uitgeschakeld.
+STREAM AC 5000 is een thuisbatterij voor alleen monitoring in Homey Energy, omdat EcoFlow voor dit model geen ondersteunde openbare API aanbiedt. Via de EcoFlow-appverbinding worden batterijniveau, vermogen, temperatuur, conditie en netstroom gemeld; bediening is bewust uitgeschakeld.

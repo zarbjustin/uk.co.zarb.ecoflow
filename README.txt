@@ -4,4 +4,4 @@ From there, your home can act on its own power. Charge the battery while the sun
 
 Pair STREAM Home Battery for one complete installation and use it for Homey Energy and widgets. A Physical STREAM Unit is one inverter or battery and does not provide whole-system totals. Optionally enter the installation capacity in the Home Battery settings to show stored and usable kWh and a clearly labelled runtime estimate.
 
-STREAM AC 5000 is monitoring only because EcoFlow provides no supported public API for this model. It uses EcoFlow's app connection, and controls are intentionally disabled.
+STREAM AC 5000 is a monitoring-only Homey Energy home battery because EcoFlow provides no supported public API for this model. It uses EcoFlow's app connection to report battery level, power, temperature, health and grid flow; controls are intentionally disabled.

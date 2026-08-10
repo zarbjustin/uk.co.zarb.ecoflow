@@ -72,6 +72,7 @@ Justin Zarb
 | --- | --- |
 | STREAM-only scope | Drivers: `stream`, `stream_unit`, `stream_solar`, `stream_micro`, `stream_socket`, `smartmeter`. PowerStream sits in `disabled-drivers/powerstream/` (not shipped). |
 | Home battery in Energy | `drivers/stream/driver.compose.json` → `energy.homeBattery: true` + `meter_power.charged/.discharged`. |
+| STREAM AC 5000 in Energy | `drivers/stream_ac5000/driver.compose.json` → `energy.homeBattery: true`; cumulative meters remain hidden until verified. |
 | Per-unit battery | `drivers/stream_unit` → `energy.batteries: ['INTERNAL']`. |
 | Grid meter in Energy | `drivers/smartmeter` → `energy.cumulative` + `meter_power.imported/.exported`. |
 | Solar production in Energy | `drivers/stream_solar` & `drivers/stream_micro` → `meterPowerExportedCapability`. |

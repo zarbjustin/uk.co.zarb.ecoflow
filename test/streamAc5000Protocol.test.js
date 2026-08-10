@@ -94,6 +94,38 @@ test('254/39 decodes node totals, the flow matrix and the meter', () => {
   assert.strictEqual(t.battDischargePowerW, 300);
 });
 
+test('254/39 decodes the V1.1.4.35 SoC fallback from a live redacted frame', () => {
+  // Submitted by an ES22 tester. The serial was replaced with asterisks before
+  // the frame entered the diagnostic log; the two fallback fields both read 99.
+  const captured = Buffer.from(
+    'CoABCl9yBijEBjjDBuICCRDYBSiG+BI4CZIDKgooChAqKioqKioqKioqKioqKioqFQAAxkIlvFPRQygCNWTPz8M9vFPRw7IDGwoZChAqKioqKioqKioqKioqKioqEGMYACDEBhACGCAgASgBOANA/gFIJ1BfWAFw4crtAXiBmAKAAQM=',
+    'base64',
+  );
+  assert.deepStrictEqual(parseStreamAc5000Frame(captured), { socPct: 99 });
+  assert.strictEqual(mapStreamAc5000(parseStreamAc5000Frame(captured)).measure_battery, 99);
+});
+
+test('original and precise SoC fields retain precedence over firmware fallbacks', () => {
+  const fallbackBlocks = Buffer.concat([
+    lField(50, lField(1, fField(2, 81))),
+    lField(54, lField(1, vField(2, 82))),
+  ]);
+  assert.strictEqual(
+    parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata: fallbackBlocks }])).socPct,
+    81,
+  );
+
+  const withOriginal = Buffer.concat([
+    lField(11, vField(5, 77)),
+    fallbackBlocks,
+    lField(33, fField(6, 75.4)),
+  ]);
+  const telemetry = parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata: withOriginal }]));
+  assert.strictEqual(telemetry.socPct, 77);
+  assert.ok(Math.abs(telemetry.socPrecisePct - 75.4) < 0.001);
+  assert.strictEqual(mapStreamAc5000(telemetry).measure_battery, 75);
+});
+
 test('254/39 derives a positive battery power while charging, including solar', () => {
   const pdata = lField(12, Buffer.concat([
     vField(4, 0), // home from battery
@@ -254,10 +286,37 @@ test('mapStreamAc5000 omits capabilities the frame did not carry', () => {
   assert.deepStrictEqual(mapStreamAc5000({}), {});
 });
 
-test('mapStreamAc5000 prefers the precise SoC and clamps it', () => {
+test('mapStreamAc5000 prefers precise SoC and rejects impossible telemetry', () => {
   assert.strictEqual(mapStreamAc5000({ socPct: 60, socPrecisePct: 62.6 }).measure_battery, 63);
-  assert.strictEqual(mapStreamAc5000({ socPrecisePct: 120 }).measure_battery, 100);
-  assert.strictEqual(mapStreamAc5000({ socPrecisePct: -5 }).measure_battery, 0);
+  assert.strictEqual(mapStreamAc5000({ socPrecisePct: 120 }).measure_battery, undefined);
+  assert.strictEqual(mapStreamAc5000({ socPrecisePct: -5 }).measure_battery, undefined);
+  assert.strictEqual(mapStreamAc5000({ bmsSohPct: 101 }).battery_soh, undefined);
+  assert.strictEqual(mapStreamAc5000({ battTempC: 900 }).measure_temperature, undefined);
+  assert.strictEqual(mapStreamAc5000({ battW: 50000 }).measure_power, undefined);
+  assert.strictEqual(mapStreamAc5000({ gridImportPowerW: -1 })['measure_power.grid_import'], undefined);
+});
+
+test('the tester discharging snapshot reconciles across EcoFlow and Homey', () => {
+  assert.deepStrictEqual(mapStreamAc5000({
+    socPct: 81,
+    battW: -381,
+    homeW: 380,
+    gridW: -1,
+    gridImportPowerW: 0,
+    gridExportPowerW: 1,
+    battTempC: 36,
+    bmsSohPct: 100,
+  }), {
+    measure_battery: 81,
+    battery_soh: 100,
+    measure_temperature: 36,
+    measure_power: -381,
+    battery_charging_state: 'discharging',
+    'measure_power.load': 380,
+    'measure_power.grid': -1,
+    'measure_power.grid_import': 0,
+    'measure_power.grid_export': 1,
+  });
 });
 
 test('chargingState applies a deadband around zero', () => {

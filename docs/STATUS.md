@@ -4,16 +4,19 @@
 
 ## Outstanding / next actions (resume here)
 
+- [ ] **STREAM AC 5000 live gate** — install the next Test build and complete the
+  charging/discharging/idle plus 24–48-hour soak matrix in
+  `docs/STREAM_AC5000_SPRINTS.md`. Code-side Sprint 1–4 work is complete.
 - [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:
   confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
   `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
 
 ## Suggested next-release changelog (for the version workflow)
 
-> Fixes STREAM AC 5000 devices showing no data: unsupported Developer API
-> polling now stops automatically with clear guidance. If an affected device was
-> previously added as STREAM Home Battery, delete it and add it again as
-> **STREAM AC 5000**. Also strengthens discovery for future STREAM models.
+> STREAM AC 5000 now reports battery percentage on firmware V1.1.4.35 and is
+> recognised as a home battery by Homey Energy. Diagnostics now provide safe,
+> time-aligned telemetry snapshots and clearer connection/parser health while
+> preserving the verified battery, house and grid power calculations.
 
 ## Release state (2026-07-26)
 
