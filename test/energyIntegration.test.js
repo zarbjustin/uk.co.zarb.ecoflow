@@ -2,7 +2,12 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { integrateSignedPower, integratePositivePower, followResettableCounter } = require('../.homeybuild/lib/energyIntegration.js');
+const {
+  integrateSignedPower,
+  integrateTimedSignedPower,
+  integratePositivePower,
+  followResettableCounter,
+} = require('../.homeybuild/lib/energyIntegration.js');
 
 test('integrateSignedPower splits charge/import (pos) and discharge/export (neg)', () => {
   let s = { posWh: 0, negWh: 0 };
@@ -20,6 +25,24 @@ test('integrateSignedPower rejects invalid/oversized intervals', () => {
   assert.deepStrictEqual(integrateSignedPower(base, 1000, -1), base);
   assert.deepStrictEqual(integrateSignedPower(base, 1000, 2 * 60 * 60 * 1000), base);
   assert.deepStrictEqual(integrateSignedPower(base, NaN, 1000), base);
+});
+
+test('integrateTimedSignedPower anchors first, accumulates Patrick snapshot, and ignores stale gaps', () => {
+  let state = { posWh: 0, negWh: 0, lastSampleAt: 0 };
+  state = integrateTimedSignedPower(state, -249, 1_000);
+  assert.deepStrictEqual(state, { posWh: 0, negWh: 0, lastSampleAt: 1_000 });
+
+  state = integrateTimedSignedPower(state, -249, 901_000); // 15 minutes at 249 W
+  assert.ok(Math.abs(state.negWh - 62.25) < 1e-9);
+  assert.strictEqual(state.posWh, 0);
+
+  const beforeGap = state.negWh;
+  state = integrateTimedSignedPower(state, -249, 901_000 + (2 * 60 * 60 * 1000));
+  assert.strictEqual(state.negWh, beforeGap, 'a two-hour telemetry gap must not invent energy');
+
+  state = integrateTimedSignedPower(state, 500, state.lastSampleAt + (30 * 60 * 1000));
+  assert.ok(Math.abs(state.posWh - 250) < 1e-9);
+  assert.strictEqual(state.negWh, beforeGap);
 });
 
 test('integratePositivePower only accumulates positive power', () => {
