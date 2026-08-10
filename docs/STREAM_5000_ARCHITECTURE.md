@@ -50,6 +50,27 @@ reusing the ES22 parser for an unverified product is not permitted.
 - App-auth products remain monitoring-only until both command payloads and safe
   state verification are demonstrated on real hardware.
 
+## Homey Energy accounting
+
+Every supported physical battery follows Homey's home-battery contract:
+
+- `measure_power` is positive while charging and negative while discharging.
+- `measure_battery` is the current state of charge.
+- `meter_power.charged` and `meter_power.discharged` are separate, cumulative
+  kWh totals and are mapped through `meterPowerImportedCapability` and
+  `meterPowerExportedCapability`.
+
+When a verified telemetry adapter does not expose native lifetime counters, the
+shared lifecycle derives both totals by integrating signed battery power. The
+first sample only establishes a timestamp, totals are checkpointed in Homey's
+device store and flushed during teardown, and intervals longer than the shared
+maximum are ignored and re-anchored. This deliberately favours a small
+undercount after an outage over inventing energy from a stale reading.
+
+If a future product exposes native cumulative charged/discharged counters, its
+adapter should surface and follow those counters with reset protection instead
+of also integrating power. Never combine both sources for the same interval.
+
 ## Adding a product safely
 
 Complete all of the following before exposing another model:
