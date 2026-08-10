@@ -130,5 +130,8 @@
   },
   "1.10.7": {
     "en": "Improved STREAM AC 5000 battery percentage, Homey Energy integration, telemetry resilience, and diagnostics."
+  },
+  "1.10.8": {
+    "en": "Add a durable STREAM 5000 Series Unit driver with verified STREAM AC 5000 support, preserving existing devices through the legacy compatibility driver."
   }
 }
