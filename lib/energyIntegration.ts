@@ -40,6 +40,11 @@ export interface SignedTotals {
   negWh: number;
 }
 
+export interface TimedSignedTotals extends SignedTotals {
+  /** Timestamp of the most recent valid power sample. Runtime-only; never persisted. */
+  lastSampleAt: number;
+}
+
 /**
  * Integrate a signed power sample into two monotonic buckets:
  *  - positive power → `posWh` (e.g. grid import, battery charge)
@@ -51,6 +56,25 @@ export function integrateSignedPower(prev: SignedTotals, powerW: number, dtMs: n
   return powerW >= 0
     ? { posWh: prev.posWh + wh, negWh: prev.negWh }
     : { posWh: prev.posWh, negWh: prev.negWh + wh };
+}
+
+/**
+ * Integrate a timestamped signed-power sample and always re-anchor after a long
+ * gap or backwards clock adjustment. The first sample establishes the anchor
+ * without inventing energy for time before the app observed the device.
+ */
+export function integrateTimedSignedPower(
+  prev: TimedSignedTotals,
+  powerW: number,
+  sampleAt: number,
+): TimedSignedTotals {
+  if (!Number.isFinite(powerW) || !Number.isFinite(sampleAt) || sampleAt <= 0) return { ...prev };
+  if (prev.lastSampleAt <= 0 || sampleAt < prev.lastSampleAt) {
+    return { ...prev, lastSampleAt: sampleAt };
+  }
+  if (sampleAt === prev.lastSampleAt) return { ...prev };
+  const next = integrateSignedPower(prev, powerW, sampleAt - prev.lastSampleAt);
+  return { ...next, lastSampleAt: sampleAt };
 }
 
 /**
