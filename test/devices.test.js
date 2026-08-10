@@ -47,14 +47,14 @@ test('isStreamUnit / isSmartMeter helpers', () => {
 
 test('the STREAM AC 5000 (ES22) is its own role, never a BK-series unit', () => {
   const es22 = { sn: 'ES22ZE1B2J6W0110', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' };
-  assert.strictEqual(classifyDevice(es22), 'stream_ac5000');
+  assert.strictEqual(classifyDevice(es22), 'stream_5000_unit');
   assert.strictEqual(isStreamAc5000(es22), true);
   // Must not be picked up by any of the BK-series/Smart-Meter drivers.
   assert.strictEqual(isStreamUnit(es22), false);
   assert.strictEqual(isSmartMeter(es22), false);
   // A STREAM-shaped quota must not promote it either — the prefix is decisive.
   const richQuota = { cmsBattSoc: 20, powGetSysLoad: 3969, relay2Onoff: true };
-  assert.strictEqual(classifyDevice(es22, richQuota), 'stream_ac5000');
+  assert.strictEqual(classifyDevice(es22, richQuota), 'stream_5000_unit');
   // New-generation names are explicitly unsupported by the Developer path.
   assert.strictEqual(
     classifyDevice({ sn: 'ZZ99AAAA', productName: 'STREAM AC 5000' }),
@@ -62,6 +62,14 @@ test('the STREAM AC 5000 (ES22) is its own role, never a BK-series unit', () => 
   );
   assert.strictEqual(
     classifyDevice({ sn: 'ZZ99BBBB', productName: 'EcoFlow STREAM 5000' }),
+    'unsupported_stream_5000',
+  );
+  assert.strictEqual(
+    classifyDevice({ sn: 'ZZ99BBBC', productName: 'STREAM Expansion Battery 5000' }),
+    'unsupported_stream_5000',
+  );
+  assert.strictEqual(
+    classifyDevice({ sn: 'ZZ99BBBD', productName: 'EcoFlow STREAM Gateway' }),
     'unsupported_stream_5000',
   );
   for (const productName of ['STREAM AC5000', 'STREAM-AC-5000', 'Stream5000']) {

@@ -71,7 +71,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     if (quarantineReason) {
       await this.quarantineDeveloperApi(
         quarantineReason,
-        'ES22 device quarantined from the Developer API; delete and add it again as STREAM AC 5000.',
+        'ES22 device quarantined from the Developer API; delete and add it again as STREAM 5000 Series Unit.',
         false,
       );
       return;

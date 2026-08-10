@@ -28,7 +28,7 @@ function loadWithHomeyMock(modulePath) {
 
 const { BaseEcoFlowDevice } = loadWithHomeyMock('../.homeybuild/lib/BaseEcoFlowDevice.js');
 const StreamDevice = loadWithHomeyMock('../.homeybuild/drivers/stream/device.js');
-const LOCALIZED_ES22_MESSAGE = 'Delete this device and add it again as STREAM AC 5000.';
+const LOCALIZED_ES22_MESSAGE = 'Delete this device and add it again as STREAM 5000 Series Unit.';
 const LOCALIZED_UNSUPPORTED_MESSAGE = 'Delete this unsupported device and add its dedicated type.';
 
 class TestDevice extends BaseEcoFlowDevice {

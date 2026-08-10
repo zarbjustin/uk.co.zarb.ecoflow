@@ -1,6 +1,10 @@
 'use strict';
 
 import { isStreamAc5000Sn } from './deviceIdentity';
+import {
+  isSupportedStream5000Sn,
+  stream5000DeviceName,
+} from './stream5000Models';
 
 export { isStreamAc5000Sn, STREAM_AC5000_PREFIX } from './deviceIdentity';
 
@@ -9,9 +13,9 @@ export { isStreamAc5000Sn, STREAM_AC5000_PREFIX } from './deviceIdentity';
  * the EcoFlow **app** API (`GET /iot-service/user/device`).
  *
  * This is deliberately separate from `lib/ecoflowDevices.ts`, which classifies
- * the Developer/Open API device list. Only the STREAM AC 5000 (serial prefix
- * `ES22`) is consumed from the app API today; every other product keeps using
- * the supported Developer API path.
+ * the Developer/Open API device list. Only products admitted by the STREAM 5000
+ * model registry are consumed from this path; ES22 is the sole verified model
+ * today and every other product remains excluded.
  *
  * The response shape and the ES22 prefix mapping are adapted from the
  * MIT-licensed https://github.com/shuette42/ecoflow-energy-ha
@@ -19,7 +23,7 @@ export { isStreamAc5000Sn, STREAM_AC5000_PREFIX } from './deviceIdentity';
  */
 
 /** Product name shown when EcoFlow's app API returns an empty productName. */
-export const STREAM_AC5000_MODEL = 'STREAM AC 5000';
+export { STREAM_AC5000_MODEL } from './stream5000Models';
 
 export interface AppDevice {
   sn: string;
@@ -39,10 +43,7 @@ export interface AppDevice {
  * the same convention the reference implementation applies.
  */
 export function streamAc5000Name(sn: string, productName?: string, deviceName?: string): string {
-  const explicit = (deviceName || '').trim() || (productName || '').trim();
-  if (explicit) return explicit;
-  const tail = (sn || '').slice(-4);
-  return /^\d{4}$/.test(tail) ? `${STREAM_AC5000_MODEL} (${tail})` : STREAM_AC5000_MODEL;
+  return stream5000DeviceName(sn, productName, deviceName);
 }
 
 function toOnline(value: unknown): number {
@@ -66,8 +67,8 @@ function pushDevice(
   const deviceName = String(raw.deviceName || raw.name || '').trim();
   out.push({
     sn,
-    name: isStreamAc5000Sn(sn)
-      ? streamAc5000Name(sn, productName, deviceName)
+    name: isSupportedStream5000Sn(sn)
+      ? stream5000DeviceName(sn, productName, deviceName)
       : (deviceName || productName || sn),
     productName,
     online: toOnline(raw.online ?? raw.deviceStatus),
@@ -112,4 +113,9 @@ export function normalizeAppDeviceList(data: unknown): AppDevice[] {
 /** The ES22 devices on the account, in a stable order. */
 export function streamAc5000Devices(devices: AppDevice[]): AppDevice[] {
   return devices.filter((d) => isStreamAc5000Sn(d.sn)).sort((a, b) => a.sn.localeCompare(b.sn));
+}
+
+/** All verified STREAM 5000-family units on the account, in a stable order. */
+export function stream5000Devices(devices: AppDevice[]): AppDevice[] {
+  return devices.filter((d) => isSupportedStream5000Sn(d.sn)).sort((a, b) => a.sn.localeCompare(b.sn));
 }

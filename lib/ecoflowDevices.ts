@@ -10,9 +10,9 @@ import { EcoFlowDevice, Quota } from './types';
  *  - stream_unit:  a controllable STREAM inverter/battery (Ultra/Pro/AC/AC Pro/Max/Ultra X)
  *  - smart_meter:  an EcoFlow Smart Meter (CT_EF_01)
  *  - microinverter: a STREAM Microinverter (no quota of its own via the open API)
- *  - stream_ac5000: a STREAM AC 5000 (ES22) — a different product line and a
- *    different protocol from the BK-series STREAM, only reachable through the
- *    experimental app-auth path. Never handled by the BK-series drivers.
+ *  - stream_5000_unit: a verified STREAM 5000-family physical unit — a
+ *    different protocol from the BK-series STREAM, reachable through the
+ *    app-auth path. Never handled by the BK-series drivers.
  *  - unsupported_stream_5000: a new-generation STREAM AC 5000 / STREAM 5000
  *    identified by name but without the confirmed ES22 serial prefix. It must
  *    not be offered through the Developer API drivers.
@@ -22,7 +22,7 @@ export type EcoFlowRole =
   | 'stream_unit'
   | 'smart_meter'
   | 'microinverter'
-  | 'stream_ac5000'
+  | 'stream_5000_unit'
   | 'unsupported_stream_5000'
   | 'other';
 
@@ -32,7 +32,13 @@ function nameRole(name: string): EcoFlowRole | undefined {
   if (/smart\s*meter/.test(n)) return 'smart_meter';
   if (/microinverter/.test(n)) return 'microinverter';
   if (/powerstream/.test(n)) return 'other';
-  if (/\bstream[\s-]*(?:ac[\s-]*)?5000\b/.test(n)) return 'unsupported_stream_5000';
+  // Quarantine the new 5 kWh platform before the broad STREAM fallback. This
+  // includes compound catalogue names such as "STREAM Expansion Battery
+  // 5000" as well as the platform gateway. A name alone never proves that a
+  // device speaks the older BK-series Developer API protocol.
+  if (/stream/.test(n) && (/\b5000\b/.test(n) || /\bgateway\b/.test(n))) {
+    return 'unsupported_stream_5000';
+  }
   if (/stream/.test(n)) return 'stream_unit';
   return undefined;
 }
@@ -69,7 +75,7 @@ export function classifyDevice(d: EcoFlowDevice, quota?: Quota): EcoFlowRole {
   // The serial prefix is exact evidence and a product name is a substring
   // guess, so an ES22 is settled before any name matching: "STREAM AC 5000"
   // contains "stream" and would otherwise be treated as a BK-series unit.
-  if (isStreamAc5000Sn(d.sn)) return 'stream_ac5000';
+  if (isStreamAc5000Sn(d.sn)) return 'stream_5000_unit';
 
   const byName = nameRole(d.productName || '') || nameRole(d.deviceName || '');
   if (byName) return byName;

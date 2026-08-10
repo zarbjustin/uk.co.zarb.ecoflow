@@ -8,8 +8,8 @@ export interface EcoFlowAppApi {
   subscribeRealtime(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): Promise<boolean>;
   unsubscribeRealtime(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void;
   /**
-   * EXPERIMENTAL app-auth (WSS) realtime feed, used only by the STREAM AC 5000
-   * driver. Separate from the supported `/open` MQTT surface above.
+   * App-auth (WSS) realtime feed for verified STREAM 5000-family monitoring
+   * adapters. Separate from the supported `/open` MQTT surface above.
    */
   subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean>;
   unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void;

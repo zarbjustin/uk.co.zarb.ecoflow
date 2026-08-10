@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  normalizeAppDeviceList, streamAc5000Devices, isStreamAc5000Sn, streamAc5000Name,
+  normalizeAppDeviceList, streamAc5000Devices, stream5000Devices, isStreamAc5000Sn, streamAc5000Name,
   STREAM_AC5000_MODEL,
 } = require('../.homeybuild/lib/appDevices.js');
 
@@ -101,6 +101,10 @@ test('streamAc5000Devices keeps only ES22 units, sorted by serial', () => {
   });
   assert.deepStrictEqual(
     streamAc5000Devices(devices).map((d) => d.sn),
+    ['ES22ZEB1ABCD0001', 'ES22ZEB1ABCD0002'],
+  );
+  assert.deepStrictEqual(
+    stream5000Devices(devices).map((d) => d.sn),
     ['ES22ZEB1ABCD0001', 'ES22ZEB1ABCD0002'],
   );
 });

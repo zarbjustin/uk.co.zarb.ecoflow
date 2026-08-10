@@ -11,6 +11,27 @@
   confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
   `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
 
+## Current development state (2026-08-10)
+
+- Source version: **v1.10.7**; this working change has not been versioned or
+  published yet.
+- New pairing entry: `stream_5000_unit` (**STREAM 5000 Series Unit**).
+- Current verified product: STREAM AC 5000 with serial prefix `ES22`, using the
+  dedicated `es22` monitoring adapter.
+- Legacy `stream_ac5000` is deprecated but remains operational for existing
+  Homey devices; both drivers share one lifecycle and credential scope.
+- STREAM 5000, STREAM Expansion Battery 5000 and STREAM Gateway remain hidden
+  until a serial prefix and product-specific telemetry adapter are verified.
+- Future-product policy and admission checklist:
+  `docs/STREAM_5000_ARCHITECTURE.md`.
+
+## Suggested next-release changelog (family-driver architecture)
+
+> Adds the future-ready STREAM 5000 Series Unit pairing entry, with verified
+> STREAM AC 5000 monitoring today. Existing AC 5000 devices keep working through
+> the deprecated compatibility entry. New 5000-series hardware is only exposed
+> after its serial prefix and telemetry protocol have been verified.
+
 ## Suggested next-release changelog (for the version workflow)
 
 > STREAM AC 5000 now reports battery percentage on firmware V1.1.4.35 and is
@@ -127,7 +148,8 @@ Grounded in the EcoFlow STREAM product line + the app's own backlog:
 - PowerStream and portable power stations are **intentionally excluded** — PowerStream
   lives in `disabled-drivers/powerstream/` and is not shipped.
 - Shipped drivers: `stream`, `stream_unit`, `stream_solar`, `stream_micro`,
-  `stream_socket`, `smartmeter`.
+  `stream_socket`, `smartmeter`, `stream_5000_unit`, plus deprecated
+  compatibility driver `stream_ac5000`.
 
 ## Homey Energy integration (the differentiator)
 

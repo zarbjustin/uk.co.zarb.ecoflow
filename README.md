@@ -19,8 +19,8 @@ the whole-installation device used by Homey Energy and the STREAM widgets. Pair 
 Unit** only when you also want a separate monitor for one inverter or battery; unit devices do not
 contain reliable whole-system totals.
 
-### STREAM AC 5000 (ES22) — monitoring only
-EcoFlow exposes **no supported public API** for the STREAM AC 5000: every Developer-API quota call for an `ES22…` serial returns code 1006. A separate **STREAM AC 5000** driver reads the unit through EcoFlow's app connection, which requires signing in with your **EcoFlow account email and password**. It is read-only — Homey Energy home-battery status, battery level & health, signed battery power, house consumption, grid import/export and temperature — and **sends no commands at all**. It is isolated from the supported Developer-API path used by every other device here, and ES22 units are never offered to the BK-series drivers. Read [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md) before enabling it: it covers the security implications, the limitations and how to remove or re-pair it.
+### STREAM 5000 Series Unit — AC 5000 monitoring
+EcoFlow exposes **no supported public API** for the currently verified STREAM AC 5000: every Developer-API quota call for an `ES22…` serial returns code 1006. The family-level **STREAM 5000 Series Unit** driver reads verified units through EcoFlow's app connection, which requires signing in with your **EcoFlow account email and password**. Today only the ES22 AC 5000 adapter is enabled. It is read-only — Homey Energy home-battery status, battery level & health, signed battery power, house consumption, grid import/export and temperature — and **sends no commands at all**. Unverified STREAM 5000, Expansion Battery 5000 and Gateway serials are not offered merely because their product names match. Read [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md) for connection/security details and [`docs/STREAM_5000_ARCHITECTURE.md`](docs/STREAM_5000_ARCHITECTURE.md) for the future-model admission policy.
 
 ### Smart Meter (CT_EF_01)
 - Added as a **Homey Energy meter**. A device setting lets it show either **Grid power** (import/export) or **Home load** (total consumption).
@@ -59,7 +59,7 @@ English, **German** and **Dutch**.
    **Physical STREAM Unit** only for per-device monitoring. Enter the keys + region when prompted.
 3. Manage credentials later under the app's **Settings** page.
 
-> **STREAM AC 5000 owners:** that model is not covered by the Developer API and uses a separate EcoFlow app sign-in for monitoring only — see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
+> **STREAM AC 5000 owners:** add it through **STREAM 5000 Series Unit**. It is not covered by the Developer API and uses a separate EcoFlow app sign-in for monitoring only — see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
 
 ## Development
 ```sh
@@ -89,7 +89,7 @@ See [`docs/STATUS.md`](docs/STATUS.md) for the full handoff. In short:
 ## Credits
 Field/command mappings cross-referenced against the community
 [tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud) integration.
-The STREAM AC 5000 (ES22) app-auth flow and protobuf field map are adapted from the MIT-licensed
+The STREAM AC 5000 (ES22) adapter, app-auth flow and protobuf field map are adapted from the MIT-licensed
 [shuette42/ecoflow-energy-ha](https://github.com/shuette42/ecoflow-energy-ha) — full attribution in
 [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
 Not affiliated with EcoFlow.

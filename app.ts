@@ -20,7 +20,7 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onInit(): Promise<void> {
     this.homey.settings.on('set', (key: string) => this.onSettingChanged(key));
-    // Removing the experimental account is an 'unset', not a 'set' — the
+    // Removing the app-connected STREAM account is an 'unset', not a 'set' — the
     // app-auth session must be torn down for that too.
     this.homey.settings.on('unset', (key: string) => this.onSettingChanged(key));
     this.log('EcoFlow app initialised');
@@ -129,7 +129,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     this.mqtt?.unsubscribe(sn, onQuota, onStatus);
   }
 
-  // ----- EXPERIMENTAL app-auth realtime (STREAM AC 5000 only) ---------------
+  // ----- App-auth realtime (verified STREAM 5000-family adapters) ------------
 
   /** Identity of the saved EcoFlow account, without exposing the password. */
   private appAuthCredsKey(): string {
@@ -156,7 +156,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   /**
-   * Lazily create and connect the experimental app-auth (WSS) MQTT session.
+   * Lazily create and connect the app-auth (WSS) MQTT session.
    * Returns null when no EcoFlow account is configured or the connect failed —
    * there is no REST fallback for this path, so devices simply stay stale.
    */
@@ -192,7 +192,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     }
   }
 
-  /** Subscribe an ES22 SN to the experimental app-auth telemetry feed. */
+  /** Subscribe a verified STREAM 5000-family SN to the app-auth telemetry feed. */
   async subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean> {
     const mqtt = await this.getAppMqtt();
     if (!mqtt) return false;
@@ -203,7 +203,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void {
     if (!this.appMqtt) return;
     this.appMqtt.unsubscribe(sn, onFrame);
-    // The last ES22 device just went: drop the session rather than hold an
+    // The last app-connected STREAM device just went: drop the session rather than hold an
     // idle authenticated WSS connection open.
     if (this.appMqtt.hasSubscribers) return;
     const mqtt = this.appMqtt;

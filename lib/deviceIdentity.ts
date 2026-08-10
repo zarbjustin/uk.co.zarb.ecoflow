@@ -1,7 +1,8 @@
 'use strict';
 
-/** Serial-number prefix of the STREAM AC 5000. */
-export const STREAM_AC5000_PREFIX = 'ES22';
+import { STREAM_AC5000_PREFIX } from './stream5000Models';
+
+export { STREAM_AC5000_PREFIX } from './stream5000Models';
 
 export type KnownDeveloperApiRole = 'stream_unit' | 'smart_meter' | 'microinverter';
 

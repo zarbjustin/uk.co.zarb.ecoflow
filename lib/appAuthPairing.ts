@@ -3,7 +3,7 @@
 import { AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
 
 /**
- * EXPERIMENTAL — app-auth account handling for the STREAM AC 5000 driver.
+ * App-auth account handling for verified STREAM 5000-family drivers.
  *
  * Mirrors `lib/pairing.ts` (the supported Developer-API flow) but keeps its
  * credentials under separate settings keys so the two paths never mix and the
@@ -52,7 +52,7 @@ export function hasSavedAppAuthCreds(homey: any): boolean {
   return Boolean(email && password);
 }
 
-/** Remove the stored EcoFlow account. Called when the last ES22 device goes. */
+/** Remove the stored EcoFlow account. Called when the last family device goes. */
 export function clearSavedAppAuthCreds(homey: any): void {
   homey.settings.unset(APP_AUTH_EMAIL_SETTING);
   homey.settings.unset(APP_AUTH_PASSWORD_SETTING);
@@ -108,11 +108,11 @@ function scheduleOn(homey: any, fn: () => void, ms: number): void {
 }
 
 /**
- * Register the pairing handlers for the experimental app-auth flow.
+ * Register the pairing handlers for the app-auth monitoring flow.
  *
  * - `check_app_credentials` → the view skips the form when an account is known.
  * - `app_login` → validates the account against EcoFlow and holds it in memory.
- * - `add_device` → the user is really adding an ES22, so store the account.
+ * - `add_device` → the user is adding a verified family unit, so store the account.
  * - `disconnect` → forget an unused account; remove it again if it was stored
  *   for a device that never materialised.
  *
@@ -146,7 +146,7 @@ export function registerAppAuthHandlers(
       driver.homey.settings.set(APP_AUTH_PASSWORD_SETTING, password);
       driver.homey.settings.set(APP_AUTH_HOST_SETTING, host);
       committed = true;
-      log('EcoFlow account stored for the STREAM AC 5000 being added');
+      log('EcoFlow account stored for the STREAM 5000-family unit being added');
     },
 
     dispose() {

@@ -12,8 +12,8 @@ import { appMqttClientId } from './appMqttClientId';
  * (`/app/...`) and a binary protobuf payload. Keeping it apart means the
  * supported `/open` MQTT path used by every other device cannot regress.
  *
- * This client NEVER publishes. Control writes for the STREAM AC 5000 are
- * intentionally out of scope until the read path is validated on hardware.
+ * This client NEVER publishes. Control writes for STREAM 5000-family adapters
+ * remain out of scope until verified independently on each product.
  *
  * Topic/transport details adapted from the MIT-licensed
  * https://github.com/shuette42/ecoflow-energy-ha (`ecoflow/cloud_mqtt.py`).

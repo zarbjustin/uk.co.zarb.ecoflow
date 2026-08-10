@@ -10,8 +10,8 @@ import { AppDevice, normalizeAppDeviceList } from './appDevices';
  * EXPERIMENTAL — EcoFlow **app** (mobile/portal) authentication client.
  *
  * This is NOT the documented Developer/Open API used by every other device in
- * this app. It exists only because the STREAM AC 5000 (ES22) answers `1006` to
- * every public quota call, so there is no supported way to read it. Using it
+ * this app. It exists because verified STREAM 5000-family units such as the
+ * STREAM AC 5000 (ES22) answer `1006` to every public quota call. Using it
  * means signing in with your EcoFlow account, which EcoFlow does not sanction —
  * see docs/EXPERIMENTAL_STREAM_AC5000.md.
  *

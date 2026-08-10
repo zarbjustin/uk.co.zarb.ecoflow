@@ -34,7 +34,7 @@ test('collectStreamUnits keeps only STREAM units and resolves the main SN', asyn
   assert.ok(!sns.includes('BK21Z1BB7H414289'));
   assert.ok(!sns.includes('BK01Z11ACH4P0489'));
   // The STREAM AC 5000 (ES22) is a different product line and protocol; it is
-  // served by the experimental stream_ac5000 driver, never by these.
+  // served by the STREAM 5000-family app-auth driver, never by these.
   assert.ok(!sns.includes('ES22ZE1B2J6W0110'));
   for (const u of units) {
     assert.strictEqual(u.mainSn, MAIN);

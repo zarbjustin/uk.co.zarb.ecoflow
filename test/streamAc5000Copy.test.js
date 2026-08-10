@@ -7,6 +7,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const compose = require('../drivers/stream_ac5000/driver.compose.json');
+const familyCompose = require('../drivers/stream_5000_unit/driver.compose.json');
 const generatedApp = require('../app.json');
 
 test('the public STREAM AC 5000 driver name has no experimental qualifier', () => {
@@ -24,6 +25,23 @@ test('the public STREAM AC 5000 driver name has no experimental qualifier', () =
     nl: 'EcoFlow-appverbinding',
   });
   assert.match(connectionGroup.children.find((child) => child.id === 'experimental_notice').value, /^Monitoring only/);
+  assert.strictEqual(compose.deprecated, true);
+});
+
+test('the replacement driver represents the STREAM 5000 unit family', () => {
+  assert.deepStrictEqual(familyCompose.name, {
+    en: 'STREAM 5000 Series Unit',
+    de: 'STREAM-5000-Serieneinheit',
+    nl: 'STREAM 5000-serie-unit',
+  });
+  assert.strictEqual(familyCompose.deprecated, undefined);
+  assert.strictEqual(familyCompose.class, 'battery');
+  assert.deepStrictEqual(familyCompose.energy, { homeBattery: true });
+
+  const familyDriver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_5000_unit');
+  assert.ok(familyDriver, 'generated app.json has no stream_5000_unit driver');
+  assert.deepStrictEqual(familyDriver.name, familyCompose.name);
+  assert.strictEqual(familyDriver.deprecated, undefined);
 });
 
 test('the generated app manifest has clean public copy and monitoring-only disclosure', () => {
@@ -34,6 +52,7 @@ test('the generated app manifest has clean public copy and monitoring-only discl
     de: 'STREAM AC 5000',
     nl: 'STREAM AC 5000',
   });
+  assert.strictEqual(driver.deprecated, true);
 
   const connectionGroup = driver.settings.find((setting) => setting.type === 'group'
     && setting.children?.some((child) => child.id === 'experimental_notice'));
@@ -57,6 +76,7 @@ test('STREAM AC 5000 is classified as a Homey Energy home battery', () => {
 
   const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
   assert.deepStrictEqual(driver.energy, { homeBattery: true });
+  assert.deepStrictEqual(familyCompose.energy, { homeBattery: true });
 });
 
 test('STREAM AC 5000 offers an automatically-resetting diagnostic capture setting', () => {
@@ -78,6 +98,14 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   assert.match(html, /no supported public API/i);
   assert.match(html, /Monitoring only/i);
   assert.match(html, /controls are intentionally disabled/i);
+
+  const familyHtml = fs.readFileSync(
+    path.join(root, 'drivers', 'stream_5000_unit', 'pair', 'app_credentials.html'),
+    'utf8',
+  );
+  assert.match(familyHtml, /STREAM 5000 Series/);
+  assert.match(familyHtml, /verified serial prefixes and telemetry/i);
+  assert.match(familyHtml, /Monitoring only/i);
 });
 
 test('wrong-device and monitoring-only copy is localized without driver terminology', () => {
@@ -87,14 +115,19 @@ test('wrong-device and monitoring-only copy is localized without driver terminol
     assert.ok(!/driver|Treiber|stuurprogramma/i.test(messages.errors.es22_wrong_driver));
     assert.ok(messages.errors.developer_api_unsupported_device);
     assert.ok(messages.device.stream_ac5000.monitoring_only);
+    assert.ok(messages.device.stream_5000_unit.monitoring_only);
   }
 });
 
-test('the STREAM AC 5000 device writes the localized monitoring status on init', () => {
+test('both drivers use the shared STREAM 5000 family device lifecycle', () => {
   const source = fs.readFileSync(
-    path.join(root, 'drivers', 'stream_ac5000', 'device.ts'),
+    path.join(root, 'lib', 'Stream5000UnitDevice.ts'),
     'utf8',
   );
-  assert.match(source, /device\.stream_ac5000\.monitoring_only/);
+  assert.match(source, /device\.stream_5000_unit\.monitoring_only/);
   assert.match(source, /experimental_notice:\s*localizedStatus/);
+  for (const driverId of ['stream_ac5000', 'stream_5000_unit']) {
+    const wrapper = fs.readFileSync(path.join(root, 'drivers', driverId, 'device.ts'), 'utf8');
+    assert.match(wrapper, /Stream5000UnitDevice/);
+  }
 });

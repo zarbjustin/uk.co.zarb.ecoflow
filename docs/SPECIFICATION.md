@@ -15,10 +15,11 @@ shipped).
 ## 2. Architecture (current)
 ```
 App (app.ts) — shared Developer API EcoFlowMqtt plus an isolated app-auth WSS MQTT session;
- app settings: accessKey/secretKey/host/mqtt_enabled and experimental app account credentials
- Drivers (7) → Devices:
+ app settings: accessKey/secretKey/host/mqtt_enabled and separate app-auth account credentials
+ Drivers (8, including one compatibility entry) → Devices:
    stream (battery) · stream_unit (battery) · stream_solar (solarpanel) · stream_micro (solarpanel)
-   · stream_socket (socket) · smartmeter (sensor) · stream_ac5000 (monitoring-only home battery)
+   · stream_socket (socket) · smartmeter (sensor) · stream_5000_unit (monitoring-only home battery)
+   · stream_ac5000 (deprecated compatibility driver)
  Widgets (5): stream_flow, stream_balance, stream_battery_plan, stream_solar_forecast,
    stream_tariff_opportunity (+ shared widgets/stream_common.js)
  lib/: EcoFlowClient (signed REST, cached, retry), EcoFlowMqtt (realtime), sign (HMAC-SHA256),
@@ -26,7 +27,8 @@ App (app.ts) — shared Developer API EcoFlowMqtt plus an isolated app-auth WSS 
    (energy accounting/persistence), flowStates (trigger state machine), quota, streamMapping/
    streamModels/streamProtocol/streamPairing/streamHistory, smartMeterMapping, ecoflowDevices,
    appApi, pairing, types; plus EcoFlowAppAuthClient, EcoFlowAppMqtt, appAuthCrypto,
-   appAuthPairing, appDevices and streamAc5000Protocol/Mapping/Diagnostics.
+   appAuthPairing, appDevices, stream5000Models/Adapters/Pairing and the
+   model-specific streamAc5000Protocol/Mapping/Diagnostics implementation.
 ```
 
 ### 2.1 Data flow
@@ -92,7 +94,8 @@ per-unit/meter power capabilities (`stream_unit_power_*`, `smartmeter_power_*`,
 `alarm_generic`.
 
 ## 5. Homey Energy contract
-`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_ac5000`:
+`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_5000_unit`
+(and the deprecated `stream_ac5000` compatibility driver):
 `homeBattery` without cumulative meters until its counters are verified. `stream_unit`:
 `batteries:['INTERNAL']`. `smartmeter`: `cumulative` import/export. Solar devices: exported
 production. **Invariant:** cumulative meters must be **monotonic** and **single-sourced** — flush on

@@ -41,8 +41,8 @@ export async function collectStreamUnits(client: EcoFlowClient): Promise<StreamU
   const discovered = await mapWithConcurrency(devices, 4, async (d): Promise<StreamUnit | null> => {
     const metadataKind = classifyDevice(d);
     // A STREAM AC 5000 (ES22) shares the STREAM name but neither the protocol
-    // nor the API surface; it belongs to the experimental stream_ac5000 driver.
-    if (metadataKind === 'stream_ac5000' || metadataKind === 'unsupported_stream_5000') return null;
+    // nor the API surface; it belongs to the app-auth STREAM 5000 family path.
+    if (metadataKind === 'stream_5000_unit' || metadataKind === 'unsupported_stream_5000') return null;
     if (metadataKind !== 'stream_unit' && metadataKind !== 'other') return null;
     const knownStreamPrefix = hasKnownStreamUnitPrefix(d.sn);
     let quota: Record<string, any> = {};

@@ -43,13 +43,13 @@
 
   <hr style="margin:28px 0;border:0;border-top:1px solid #e3e3e3;" />
 
-  <h1 style="font-size:17px;">STREAM AC 5000</h1>
+  <h1 style="font-size:17px;">STREAM 5000 Series</h1>
   <p class="help">
-    The STREAM AC 5000 (serial <code>ES22&hellip;</code>) has no supported public EcoFlow API, so it
-    is monitored through EcoFlow's app connection using your EcoFlow <em>account</em> sign-in. That
-    account is entered when you add the device and is stored separately from the keys above.
-    Monitoring only &mdash; controls are intentionally disabled and no commands are sent. Removing
-    the last STREAM AC 5000 device also clears it.
+    Verified STREAM 5000-family units use EcoFlow's app connection because they are not available
+    through the supported public API. Today this supports the STREAM AC 5000
+    (<code>ES22&hellip;</code>). Your EcoFlow <em>account</em> sign-in is stored separately from the
+    keys above. Monitoring only &mdash; controls are intentionally disabled and no commands are sent.
+    Removing the last STREAM 5000-family unit also clears it.
   </p>
   <p class="help" id="appAuthState" style="color:#555;">Checking&hellip;</p>
   <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
@@ -105,7 +105,7 @@
           await clearSetting(Homey, 'appAuthPassword');
           await clearSetting(Homey, 'appAuthEmail');
           await clearSetting(Homey, 'appAuthHost');
-          status.textContent = 'Removed. Any STREAM AC 5000 device will go unavailable until you re-pair it.';
+          status.textContent = 'Removed. Any STREAM 5000-family unit will go unavailable until you re-pair it.';
         } catch (err) {
           status.textContent = 'Could not remove the stored EcoFlow account: '
             + ((err && err.message) ? err.message : err)

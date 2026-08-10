@@ -1976,6 +1976,7 @@
         "de": "STREAM AC 5000",
         "nl": "STREAM AC 5000"
       },
+      "deprecated": true,
       "class": "battery",
       "platforms": [
         "local"
@@ -2183,6 +2184,220 @@
         }
       ],
       "id": "stream_ac5000"
+    },
+    {
+      "name": {
+        "en": "STREAM 5000 Series Unit",
+        "de": "STREAM-5000-Serieneinheit",
+        "nl": "STREAM 5000-serie-unit"
+      },
+      "class": "battery",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_battery",
+        "battery_charging_state",
+        "measure_power",
+        "measure_power.load",
+        "measure_power.grid",
+        "measure_power.grid_import",
+        "measure_power.grid_export",
+        "measure_temperature",
+        "battery_soh"
+      ],
+      "capabilitiesOptions": {
+        "measure_battery": {
+          "title": {
+            "en": "Battery",
+            "de": "Batterie",
+            "nl": "Batterij"
+          }
+        },
+        "battery_charging_state": {
+          "title": {
+            "en": "Battery state",
+            "de": "Batteriestatus",
+            "nl": "Batterijstatus"
+          }
+        },
+        "measure_power": {
+          "title": {
+            "en": "Battery power",
+            "de": "Batterieleistung",
+            "nl": "Batterijvermogen"
+          }
+        },
+        "measure_power.load": {
+          "title": {
+            "en": "House consumption",
+            "de": "Hausverbrauch",
+            "nl": "Huisverbruik"
+          }
+        },
+        "measure_power.grid": {
+          "title": {
+            "en": "Grid import/export",
+            "de": "Netzbezug/-einspeisung",
+            "nl": "Netafname/-teruglevering"
+          }
+        },
+        "measure_power.grid_import": {
+          "title": {
+            "en": "Grid import",
+            "de": "Netzbezug",
+            "nl": "Netafname"
+          }
+        },
+        "measure_power.grid_export": {
+          "title": {
+            "en": "Grid export",
+            "de": "Netzeinspeisung",
+            "nl": "Netteruglevering"
+          }
+        },
+        "measure_temperature": {
+          "title": {
+            "en": "Battery temperature",
+            "de": "Batterietemperatur",
+            "nl": "Batterijtemperatuur"
+          }
+        },
+        "battery_soh": {
+          "title": {
+            "en": "Battery health",
+            "de": "Batteriezustand",
+            "nl": "Batterijconditie"
+          }
+        }
+      },
+      "energy": {
+        "homeBattery": true
+      },
+      "images": {
+        "small": "/drivers/stream_ac5000/assets/images/small.png",
+        "large": "/drivers/stream_ac5000/assets/images/large.png",
+        "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Device information",
+            "de": "Geräteinformationen",
+            "nl": "Apparaatinformatie"
+          },
+          "children": [
+            {
+              "id": "model",
+              "type": "label",
+              "label": {
+                "en": "Model",
+                "de": "Modell",
+                "nl": "Model"
+              },
+              "value": "—",
+              "hint": {
+                "en": "Detected from a verified serial-number prefix in the STREAM 5000 model registry.",
+                "de": "Erkannt anhand eines verifizierten Seriennummern-Präfixes in der STREAM-5000-Modellregistrierung.",
+                "nl": "Gedetecteerd via een geverifieerd serienummervoorvoegsel in het STREAM 5000-modelregister."
+              }
+            },
+            {
+              "id": "serial_number",
+              "type": "label",
+              "label": {
+                "en": "Serial number",
+                "de": "Seriennummer",
+                "nl": "Serienummer"
+              },
+              "value": "—",
+              "hint": {
+                "en": "This unit's EcoFlow serial number.",
+                "de": "Die EcoFlow-Seriennummer dieser Einheit.",
+                "nl": "Het EcoFlow-serienummer van deze unit."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "EcoFlow app connection",
+            "de": "EcoFlow-App-Verbindung",
+            "nl": "EcoFlow-appverbinding"
+          },
+          "children": [
+            {
+              "id": "unavailable_after",
+              "type": "number",
+              "label": {
+                "en": "Report offline after (minutes)",
+                "de": "Als offline melden nach (Minuten)",
+                "nl": "Als offline melden na (minuten)"
+              },
+              "value": 20,
+              "min": 5,
+              "max": 240,
+              "hint": {
+                "en": "This device is monitored over EcoFlow's app connection only — there is no REST polling. If no data arrives within this many minutes the device is shown as unavailable.",
+                "de": "Dieses Gerät wird ausschließlich über die App-Verbindung von EcoFlow überwacht — es gibt kein REST-Polling. Treffen innerhalb dieser Minutenzahl keine Daten ein, wird das Gerät als nicht verfügbar angezeigt.",
+                "nl": "Dit apparaat wordt alleen via de app-verbinding van EcoFlow gevolgd — er is geen REST-polling. Komen er binnen dit aantal minuten geen gegevens binnen, dan wordt het apparaat als niet beschikbaar getoond."
+              }
+            },
+            {
+              "id": "diagnostic_capture_next",
+              "type": "checkbox",
+              "label": {
+                "en": "Capture next telemetry snapshot",
+                "de": "Nächsten Telemetrie-Snapshot erfassen",
+                "nl": "Volgende telemetrie-snapshot vastleggen"
+              },
+              "value": false,
+              "hint": {
+                "en": "Enable this immediately before taking comparison screenshots. The next supported telemetry cycle is added to the diagnostic log without credentials or a complete serial number, then this option switches off automatically.",
+                "de": "Aktivieren Sie dies unmittelbar vor Vergleichs-Screenshots. Der nächste unterstützte Telemetriezyklus wird ohne Zugangsdaten oder vollständige Seriennummer zum Diagnoseprotokoll hinzugefügt; danach schaltet sich diese Option automatisch aus.",
+                "nl": "Schakel dit direct voor vergelijkende screenshots in. De volgende ondersteunde telemetriecyclus wordt zonder inloggegevens of volledig serienummer aan het diagnoselogboek toegevoegd; daarna schakelt deze optie automatisch uit."
+              }
+            },
+            {
+              "id": "experimental_notice",
+              "type": "label",
+              "label": {
+                "en": "Status",
+                "de": "Status",
+                "nl": "Status"
+              },
+              "value": "Monitoring only · controls intentionally disabled",
+              "hint": {
+                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This integration signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
+                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Integration meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
+                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze integratie meldt zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
+              }
+            }
+          ]
+        }
+      ],
+      "pair": [
+        {
+          "id": "app_credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "stream_5000_unit"
     },
     {
       "name": {

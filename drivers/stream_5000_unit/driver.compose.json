@@ -1,10 +1,9 @@
 {
   "name": {
-    "en": "STREAM AC 5000",
-    "de": "STREAM AC 5000",
-    "nl": "STREAM AC 5000"
+    "en": "STREAM 5000 Series Unit",
+    "de": "STREAM-5000-Serieneinheit",
+    "nl": "STREAM 5000-serie-unit"
   },
-  "deprecated": true,
   "class": "battery",
   "platforms": [
     "local"
@@ -115,9 +114,9 @@
           },
           "value": "—",
           "hint": {
-            "en": "Detected from the serial number prefix (ES22).",
-            "de": "Erkannt anhand des Seriennummern-Präfixes (ES22).",
-            "nl": "Gedetecteerd via het serienummervoorvoegsel (ES22)."
+            "en": "Detected from a verified serial-number prefix in the STREAM 5000 model registry.",
+            "de": "Erkannt anhand eines verifizierten Seriennummern-Präfixes in der STREAM-5000-Modellregistrierung.",
+            "nl": "Gedetecteerd via een geverifieerd serienummervoorvoegsel in het STREAM 5000-modelregister."
           }
         },
         {
@@ -172,9 +171,9 @@
           },
           "value": false,
           "hint": {
-            "en": "Enable this immediately before taking comparison screenshots. The next AC 5000 telemetry cycle is added to the diagnostic log without credentials or a complete serial number, then this option switches off automatically.",
-            "de": "Aktivieren Sie dies unmittelbar vor Vergleichs-Screenshots. Der nächste AC-5000-Telemetriezyklus wird ohne Zugangsdaten oder vollständige Seriennummer zum Diagnoseprotokoll hinzugefügt; danach schaltet sich diese Option automatisch aus.",
-            "nl": "Schakel dit direct voor vergelijkende screenshots in. De volgende AC 5000-telemetriecyclus wordt zonder inloggegevens of volledig serienummer aan het diagnoselogboek toegevoegd; daarna wordt deze optie automatisch uitgeschakeld."
+            "en": "Enable this immediately before taking comparison screenshots. The next supported telemetry cycle is added to the diagnostic log without credentials or a complete serial number, then this option switches off automatically.",
+            "de": "Aktivieren Sie dies unmittelbar vor Vergleichs-Screenshots. Der nächste unterstützte Telemetriezyklus wird ohne Zugangsdaten oder vollständige Seriennummer zum Diagnoseprotokoll hinzugefügt; danach schaltet sich diese Option automatisch aus.",
+            "nl": "Schakel dit direct voor vergelijkende screenshots in. De volgende ondersteunde telemetriecyclus wordt zonder inloggegevens of volledig serienummer aan het diagnoselogboek toegevoegd; daarna schakelt deze optie automatisch uit."
           }
         },
         {
@@ -187,9 +186,9 @@
           },
           "value": "Monitoring only · controls intentionally disabled",
           "hint": {
-            "en": "EcoFlow provides no supported public API for the STREAM AC 5000, so this integration signs in through EcoFlow's app connection and only reads data. Controls are intentionally disabled.",
-            "de": "EcoFlow bietet keine unterstützte öffentliche API für den STREAM AC 5000. Daher meldet sich diese Integration über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle sind bewusst deaktiviert.",
-            "nl": "EcoFlow biedt geen ondersteunde openbare API voor de STREAM AC 5000. Daarom meldt deze integratie zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening is bewust uitgeschakeld."
+            "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This integration signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
+            "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Integration meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
+            "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze integratie meldt zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
           }
         }
       ]
@@ -212,3 +211,4 @@
     }
   ]
 }
+
