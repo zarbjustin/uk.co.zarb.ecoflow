@@ -124,5 +124,8 @@
   },
   "1.10.5": {
     "en": "Updated the STREAM AC 5000 driver icon and app store images."
+  },
+  "1.10.6": {
+    "en": "Prevents unsupported STREAM devices from polling or accepting controls through the Developer API, improves dedicated-driver guidance, and clarifies the monitoring-only STREAM AC 5000 connection."
   }
 }
