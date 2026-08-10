@@ -2060,9 +2060,7 @@
         }
       },
       "energy": {
-        "batteries": [
-          "INTERNAL"
-        ]
+        "homeBattery": true
       },
       "images": {
         "small": "/drivers/stream_ac5000/assets/images/small.png",
@@ -2133,6 +2131,21 @@
                 "en": "This device is monitored over EcoFlow's app connection only — there is no REST polling. If no data arrives within this many minutes the device is shown as unavailable.",
                 "de": "Dieses Gerät wird ausschließlich über die App-Verbindung von EcoFlow überwacht — es gibt kein REST-Polling. Treffen innerhalb dieser Minutenzahl keine Daten ein, wird das Gerät als nicht verfügbar angezeigt.",
                 "nl": "Dit apparaat wordt alleen via de app-verbinding van EcoFlow gevolgd — er is geen REST-polling. Komen er binnen dit aantal minuten geen gegevens binnen, dan wordt het apparaat als niet beschikbaar getoond."
+              }
+            },
+            {
+              "id": "diagnostic_capture_next",
+              "type": "checkbox",
+              "label": {
+                "en": "Capture next telemetry snapshot",
+                "de": "Nächsten Telemetrie-Snapshot erfassen",
+                "nl": "Volgende telemetrie-snapshot vastleggen"
+              },
+              "value": false,
+              "hint": {
+                "en": "Enable this immediately before taking comparison screenshots. The next AC 5000 telemetry cycle is added to the diagnostic log without credentials or a complete serial number, then this option switches off automatically.",
+                "de": "Aktivieren Sie dies unmittelbar vor Vergleichs-Screenshots. Der nächste AC-5000-Telemetriezyklus wird ohne Zugangsdaten oder vollständige Seriennummer zum Diagnoseprotokoll hinzugefügt; danach schaltet sich diese Option automatisch aus.",
+                "nl": "Schakel dit direct voor vergelijkende screenshots in. De volgende AC 5000-telemetriecyclus wordt zonder inloggegevens of volledig serienummer aan het diagnoselogboek toegevoegd; daarna wordt deze optie automatisch uitgeschakeld."
               }
             },
             {

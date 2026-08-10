@@ -49,6 +49,26 @@ test('the generated app manifest has clean public copy and monitoring-only discl
   assert.match(publicCopy, /no supported public API/);
 });
 
+test('STREAM AC 5000 is classified as a Homey Energy home battery', () => {
+  assert.strictEqual(compose.class, 'battery');
+  assert.deepStrictEqual(compose.energy, { homeBattery: true });
+  assert.ok(compose.capabilities.includes('measure_battery'));
+  assert.ok(compose.capabilities.includes('measure_power'));
+
+  const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
+  assert.deepStrictEqual(driver.energy, { homeBattery: true });
+});
+
+test('STREAM AC 5000 offers an automatically-resetting diagnostic capture setting', () => {
+  const setting = compose.settings
+    .flatMap((group) => group.children || [])
+    .find((candidate) => candidate.id === 'diagnostic_capture_next');
+  assert.ok(setting);
+  assert.strictEqual(setting.type, 'checkbox');
+  assert.strictEqual(setting.value, false);
+  assert.match(setting.hint.en, /switches off automatically/);
+});
+
 test('pairing clearly explains the monitoring-only app connection', () => {
   const html = fs.readFileSync(
     path.join(root, 'drivers', 'stream_ac5000', 'pair', 'app_credentials.html'),

@@ -77,7 +77,7 @@ the sign-in, because an account only exists in one region.
 
 | Homey capability | Source |
 | --- | --- |
-| `measure_battery` | `254/39 f11.5`, refined by `f33.6` when present |
+| `measure_battery` | `254/39 f11.5`, refined by `f33.6`; V1.1.4.35 fallback from serial-keyed `f50.1.2`, then `f54.1.2` |
 | `battery_soh` | `32/50 f15` (BMS heartbeat) |
 | `measure_power` | Signed battery power derived from the `254/39 f12` flow matrix; **positive = charging** |
 | `battery_charging_state` | Derived from the signed battery power (±5 W deadband) |
@@ -98,15 +98,18 @@ path has been validated against live hardware.
 
 Homey's submitted app diagnostic includes bounded ES22 parser-health entries:
 
-* total frames, parsed/unparsed frames, received bytes and observed command IDs;
+* total frames, parsed/unparsed frames, received bytes and per-command counts;
+* subscription state, usable-telemetry age and an allow-listed capability snapshot;
 * the topic **kind** (`device_property` or `get_reply`), never the account ID;
-* up to three distinct unparsed-frame samples, capped at 192 bytes;
+* a rolling set of up to eight unparsed command/payload shapes, each sample capped at 192 bytes,
+  refreshed no more than every 15 minutes with a hard 24-sample session budget;
 * the ES22 serial is replaced before a sample is encoded, and credentials,
   tokens and MQTT certificates are never captured.
 
-The samples are intentionally emitted only for previously unseen unparsed frame
-shapes. This provides enough evidence to extend the parser after a live test
-without continuously writing binary telemetry into Homey's log.
+For a time-aligned comparison, enable **Capture next telemetry snapshot** in the
+device settings immediately before taking EcoFlow and Homey screenshots. The
+next `254/39` capability projection is written to the diagnostic log and the
+switch resets automatically. No raw parsed payload is logged by this option.
 
 ## What it deliberately does **not** do
 

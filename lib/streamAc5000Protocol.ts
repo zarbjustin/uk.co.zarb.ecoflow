@@ -69,6 +69,12 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
     'f16.16': { key: '_meterNetW', type: 'float', scale: 1 },
     // --- precise state of charge ---
     'f33.6': { key: 'socPrecisePct', type: 'float', scale: 1 },
+    // Firmware V1.1.4.35 also sends SoC in its serial-keyed unit blocks. These
+    // paths were verified from a redacted ES22 diagnostic: both read 99 in the
+    // same frame, while the EcoFlow device screen later showed 81%. Keep them
+    // as fallbacks so the original f11/f33 layout retains precedence.
+    'f50.1.2': { key: '_packSocPct', type: 'float', scale: 1 },
+    'f54.1.2': { key: '_systemSocPct', type: 'int', scale: 1 },
   },
   '32/2': {
     'f1.7': { key: 'maxChargeSocPct', type: 'int', scale: 1 },
@@ -347,6 +353,15 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   for (const key of copy) {
     const value = raw[key as string];
     if (typeof value === 'number') (out as Record<string, number>)[key as string] = value;
+  }
+
+  // Some ES22 firmware omits both original SoC locations and only publishes
+  // these serial-keyed unit summaries. Prefer the float value that travels
+  // with the unit's signed battery power; the integer copy remains a fallback.
+  // Neither may replace the original system SoC when that is present.
+  if (out.socPct === undefined) {
+    const fallbackSoc = raw._packSocPct ?? raw._systemSocPct;
+    if (typeof fallbackSoc === 'number') out.socPct = fallbackSoc;
   }
 
   if (typeof raw._battVoltageMv === 'number') out.battVoltageV = raw._battVoltageMv / 1000;

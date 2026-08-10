@@ -3,11 +3,18 @@
 import Homey from 'homey';
 import { getApp } from '../../lib/appApi';
 import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
-import { Es22Telemetry, parseStreamAc5000Frame } from '../../lib/streamAc5000Protocol';
-import { mapStreamAc5000 } from '../../lib/streamAc5000Mapping';
+import { parseStreamAc5000Frame } from '../../lib/streamAc5000Protocol';
+import { Es22CapabilityValues, mapStreamAc5000 } from '../../lib/streamAc5000Mapping';
 import { STREAM_AC5000_MODEL } from '../../lib/appDevices';
 import { clearSavedAppAuthCreds, hasSavedAppAuthCreds } from '../../lib/appAuthPairing';
-import { describeEs22Frame, es22TopicKind } from '../../lib/streamAc5000Diagnostics';
+import {
+  describeEs22Frame,
+  Es22FrameDiagnostic,
+  Es22SampleGate,
+  es22FrameShape,
+  es22TopicKind,
+  formatEs22CapabilitySnapshot,
+} from '../../lib/streamAc5000Diagnostics';
 
 /**
  * EXPERIMENTAL — STREAM AC 5000 (ES22) monitoring device.
@@ -16,9 +23,9 @@ import { describeEs22Frame, es22TopicKind } from '../../lib/streamAc5000Diagnost
  * never publishes. It also never polls the Developer/Open REST API — an ES22
  * answers code 1006 there, so polling would only burn the account's rate limit.
  *
- * Availability is therefore derived purely from the age of the last MQTT frame,
- * and the unavailable state is applied at most once per transition so a quiet
- * device does not produce a stream of notifications.
+ * Availability is therefore derived from the age of the last usable parsed
+ * MQTT telemetry. Unknown frames alone cannot keep stale readings online, and
+ * the unavailable state is applied at most once per transition.
  */
 
 /** How often the data-age watchdog runs. */
@@ -29,7 +36,6 @@ const DEFAULT_UNAVAILABLE_AFTER_MIN = 20;
 const STARTUP_GRACE_MS = 5 * 60 * 1000;
 /** Retry cadence while the app-auth session cannot be established. */
 const RESUBSCRIBE_INTERVAL_MS = 5 * 60 * 1000;
-const DIAGNOSTIC_SAMPLE_LIMIT = 3;
 const DIAGNOSTIC_SUMMARY_EVERY_FRAMES = 100;
 const MONITORING_ONLY_FALLBACK = 'Monitoring only · controls intentionally disabled';
 
@@ -40,6 +46,7 @@ module.exports = class StreamAc5000Device extends Homey.Device {
   private frameHandler?: AppFrameHandler;
   private subscribedSn?: string;
   private lastFrameAt = 0;
+  private lastTelemetryAt = 0;
   private startedAt = 0;
   private watchdog: NodeJS.Timeout | null = null;
   private resubscribeTimer: NodeJS.Timeout | null = null;
@@ -50,11 +57,17 @@ module.exports = class StreamAc5000Device extends Homey.Device {
   private parsedFrames = 0;
   private unparsedFrames = 0;
   private bytesReceived = 0;
-  private readonly sampledFrameHashes = new Set<string>();
+  private diagnosticCaptureNext = false;
+  private subscriptionState: 'starting' | 'active' | 'waiting' | 'stopped' = 'starting';
+  private subscriptionAttempts = 0;
+  private resubscribeCount = 0;
+  private readonly sampleGate = new Es22SampleGate();
   private readonly commandKeys = new Set<string>();
+  private readonly commandStats = new Map<string, { frames: number; parsed: number; unparsed: number }>();
 
   async onInit(): Promise<void> {
     this.startedAt = Date.now();
+    this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
     const sn = this.getData().sn as string;
     const localizedStatus = this.homey.__('device.stream_ac5000.monitoring_only');
 
@@ -69,16 +82,24 @@ module.exports = class StreamAc5000Device extends Homey.Device {
     this.frameHandler = (payload, topic) => {
       this.framesReceived += 1;
       this.bytesReceived += payload.length;
+      this.lastFrameAt = Date.now();
       const telemetry = parseStreamAc5000Frame(payload);
+      const diagnostic = describeEs22Frame(payload, sn, telemetry ? 0 : undefined);
       if (!telemetry) {
         this.unparsedFrames += 1;
-        this.captureUnparsedFrame(payload, topic, sn);
+        this.recordCommands(diagnostic, false);
+        this.captureUnparsedFrame(diagnostic, topic);
+        this.maybeLogDiagnosticSummary(topic);
         return;
       }
       this.parsedFrames += 1;
-      this.lastFrameAt = Date.now();
-      this.recordParsedFrame(payload, topic, sn);
-      this.queueTelemetry(telemetry).catch((e) => this.error('apply telemetry', e?.message || e));
+      this.lastTelemetryAt = Date.now();
+      const values = mapStreamAc5000(telemetry);
+      Object.assign(this.lastValues, values);
+      this.recordCommands(diagnostic, true);
+      this.captureRequestedSnapshot(diagnostic, topic);
+      this.maybeLogDiagnosticSummary(topic);
+      this.queueTelemetry(values).catch((e) => this.error('apply telemetry', e?.message || e));
     };
 
     await this.subscribe();
@@ -92,6 +113,8 @@ module.exports = class StreamAc5000Device extends Homey.Device {
   private async subscribe(): Promise<void> {
     const sn = this.getData().sn as string;
     let subscribed = false;
+    this.subscriptionState = 'starting';
+    this.subscriptionAttempts += 1;
     try {
       subscribed = await getApp(this.homey).subscribeAppRealtime(sn, this.frameHandler!);
     } catch (e: any) {
@@ -99,12 +122,15 @@ module.exports = class StreamAc5000Device extends Homey.Device {
     }
     if (subscribed) {
       this.subscribedSn = sn;
+      this.subscriptionState = 'active';
+      this.log(`[diag] ES22 subscription state=active attempts=${this.subscriptionAttempts} reconnects=${this.resubscribeCount}`);
       if (this.resubscribeTimer) {
         this.homey.clearInterval(this.resubscribeTimer);
         this.resubscribeTimer = null;
       }
       return;
     }
+    this.subscriptionState = 'waiting';
     await this.setOffline(NOT_CONNECTED_MESSAGE);
     if (!this.resubscribeTimer) {
       this.resubscribeTimer = this.homey.setInterval(() => {
@@ -114,17 +140,16 @@ module.exports = class StreamAc5000Device extends Homey.Device {
     }
   }
 
-  private queueTelemetry(telemetry: Es22Telemetry): Promise<void> {
+  private queueTelemetry(values: Es22CapabilityValues): Promise<void> {
     const run = async () => {
-      await this.applyTelemetry(telemetry);
+      await this.applyTelemetry(values);
       await this.setOnline();
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
   }
 
-  private async applyTelemetry(telemetry: Es22Telemetry): Promise<void> {
-    const values = mapStreamAc5000(telemetry);
+  private async applyTelemetry(values: Es22CapabilityValues): Promise<void> {
     for (const [capability, value] of Object.entries(values)) {
       if (!this.hasCapability(capability)) continue;
       if (this.lastValues[capability] === value && this.getCapabilityValue(capability) === value) continue;
@@ -133,36 +158,60 @@ module.exports = class StreamAc5000Device extends Homey.Device {
     }
   }
 
-  private recordParsedFrame(payload: Buffer, topic: string, sn: string): void {
-    const diagnostic = describeEs22Frame(payload, sn, 0);
-    for (const command of diagnostic.commands) this.commandKeys.add(command);
-    if (this.parsedFrames === 1 || this.framesReceived % DIAGNOSTIC_SUMMARY_EVERY_FRAMES === 0) {
-      this.log(
-        `[diag] ES22 telemetry frames=${this.framesReceived} parsed=${this.parsedFrames} `
-        + `unparsed=${this.unparsedFrames} bytes=${this.bytesReceived} `
-        + `topic=${es22TopicKind(topic)} commands=${[...this.commandKeys].sort().join(',') || 'none'}`,
-      );
+  private recordCommands(diagnostic: Es22FrameDiagnostic, parsed: boolean): void {
+    const commands = diagnostic.commands.length > 0 ? diagnostic.commands : ['none'];
+    for (const command of commands) {
+      this.commandKeys.add(command);
+      const current = this.commandStats.get(command) || { frames: 0, parsed: 0, unparsed: 0 };
+      current.frames += 1;
+      if (parsed) current.parsed += 1;
+      else current.unparsed += 1;
+      this.commandStats.set(command, current);
     }
   }
 
-  private captureUnparsedFrame(payload: Buffer, topic: string, sn: string): void {
-    const diagnostic = describeEs22Frame(payload, sn);
-    for (const command of diagnostic.commands) this.commandKeys.add(command);
-    if (this.sampledFrameHashes.has(diagnostic.sha256)) return;
-    if (this.sampledFrameHashes.size >= DIAGNOSTIC_SAMPLE_LIMIT) return;
-    this.sampledFrameHashes.add(diagnostic.sha256);
+  private captureUnparsedFrame(diagnostic: Es22FrameDiagnostic, topic: string): void {
+    const shape = es22FrameShape(diagnostic);
+    if (!this.sampleGate.shouldCapture(diagnostic)) return;
     this.log(
-      `[diag] ES22 unparsed frame topic=${es22TopicKind(topic)} bytes=${diagnostic.bytes} `
+      `[diag] ES22 unparsed frame shape=${shape} topic=${es22TopicKind(topic)} bytes=${diagnostic.bytes} `
           + `sha256=${diagnostic.sha256} commands=${diagnostic.commands.join(',') || 'none'} `
           + `truncated=${diagnostic.truncated} sample=${diagnostic.sampleBase64}`,
     );
   }
 
+  private captureRequestedSnapshot(diagnostic: Es22FrameDiagnostic, topic: string): void {
+    if (!this.diagnosticCaptureNext || !diagnostic.commands.includes('254/39')) return;
+    this.diagnosticCaptureNext = false;
+    this.log(
+      `[diag] ES22 requested snapshot topic=${es22TopicKind(topic)} `
+      + `values=${formatEs22CapabilitySnapshot(this.lastValues)}`,
+    );
+    this.setSettings({ diagnostic_capture_next: false }).catch(() => {});
+  }
+
+  private maybeLogDiagnosticSummary(topic: string): void {
+    if (this.framesReceived !== 1 && this.framesReceived % DIAGNOSTIC_SUMMARY_EVERY_FRAMES !== 0) return;
+    const now = Date.now();
+    const frameAgeSec = this.lastFrameAt > 0 ? Math.round((now - this.lastFrameAt) / 1000) : -1;
+    const telemetryAgeSec = this.lastTelemetryAt > 0 ? Math.round((now - this.lastTelemetryAt) / 1000) : -1;
+    const commandStats = [...this.commandStats.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([command, count]) => `${command}:${count.frames}/${count.parsed}/${count.unparsed}`)
+      .join(',') || 'none';
+    this.log(
+      `[diag] ES22 telemetry frames=${this.framesReceived} parsed=${this.parsedFrames} `
+      + `unparsed=${this.unparsedFrames} bytes=${this.bytesReceived} topic=${es22TopicKind(topic)} `
+      + `subscription=${this.subscriptionState} frame_age_s=${frameAgeSec} telemetry_age_s=${telemetryAgeSec} `
+      + `command_frames=${commandStats} values=${formatEs22CapabilitySnapshot(this.lastValues)}`,
+    );
+  }
+
   private async checkAvailability(): Promise<void> {
     const limitMs = this.unavailableAfterMs();
-    const reference = this.lastFrameAt || this.startedAt;
+    const reference = this.lastTelemetryAt || this.startedAt;
     const age = Date.now() - reference;
-    if (this.lastFrameAt === 0 && Date.now() - this.startedAt < STARTUP_GRACE_MS) return;
+    if (this.lastTelemetryAt === 0 && Date.now() - this.startedAt < STARTUP_GRACE_MS) return;
     if (age <= limitMs) return;
     await this.setOffline(UNAVAILABLE_MESSAGE);
     // A subscribed-but-silent device usually means the WSS session died or the
@@ -174,11 +223,20 @@ module.exports = class StreamAc5000Device extends Homey.Device {
   }
 
   private async resubscribe(): Promise<void> {
+    this.resubscribeCount += 1;
     if (this.subscribedSn && this.frameHandler) {
       getApp(this.homey).unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
       this.subscribedSn = undefined;
     }
     await this.subscribe();
+  }
+
+  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (!changedKeys.includes('diagnostic_capture_next')) return;
+    this.diagnosticCaptureNext = Boolean(newSettings.diagnostic_capture_next);
+    if (this.diagnosticCaptureNext) {
+      this.log('[diag] ES22 next 254/39 telemetry snapshot requested');
+    }
   }
 
   private unavailableAfterMs(): number {
@@ -214,11 +272,13 @@ module.exports = class StreamAc5000Device extends Homey.Device {
   }
 
   private async teardown(): Promise<void> {
+    this.subscriptionState = 'stopped';
     if (this.framesReceived > 0) {
       this.log(
         `[diag] ES22 session summary frames=${this.framesReceived} parsed=${this.parsedFrames} `
         + `unparsed=${this.unparsedFrames} bytes=${this.bytesReceived} `
-        + `commands=${[...this.commandKeys].sort().join(',') || 'none'}`,
+        + `commands=${[...this.commandKeys].sort().join(',') || 'none'} `
+        + `values=${formatEs22CapabilitySnapshot(this.lastValues)}`,
       );
     }
     if (this.subscribedSn && this.frameHandler) {

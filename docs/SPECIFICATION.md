@@ -18,7 +18,7 @@ App (app.ts) — shared Developer API EcoFlowMqtt plus an isolated app-auth WSS 
  app settings: accessKey/secretKey/host/mqtt_enabled and experimental app account credentials
  Drivers (7) → Devices:
    stream (battery) · stream_unit (battery) · stream_solar (solarpanel) · stream_micro (solarpanel)
-   · stream_socket (socket) · smartmeter (sensor) · stream_ac5000 (experimental battery)
+   · stream_socket (socket) · smartmeter (sensor) · stream_ac5000 (monitoring-only home battery)
  Widgets (5): stream_flow, stream_balance, stream_battery_plan, stream_solar_forecast,
    stream_tariff_opportunity (+ shared widgets/stream_common.js)
  lib/: EcoFlowClient (signed REST, cached, retry), EcoFlowMqtt (realtime), sign (HMAC-SHA256),
@@ -92,8 +92,9 @@ per-unit/meter power capabilities (`stream_unit_power_*`, `smartmeter_power_*`,
 `alarm_generic`.
 
 ## 5. Homey Energy contract
-`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_unit`:
-`batteries:['INTERNAL']`. `smartmeter`: `cumulative` import/export. solar devices: exported
+`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_ac5000`:
+`homeBattery` without cumulative meters until its counters are verified. `stream_unit`:
+`batteries:['INTERNAL']`. `smartmeter`: `cumulative` import/export. Solar devices: exported
 production. **Invariant:** cumulative meters must be **monotonic** and **single-sourced** — flush on
 `onUninit` (H2) and latch off power-integration once device counters are seen (H3).
 
