@@ -127,5 +127,8 @@
   },
   "1.10.6": {
     "en": "Prevents unsupported STREAM devices from polling or accepting controls through the Developer API, improves dedicated-driver guidance, and clarifies the monitoring-only STREAM AC 5000 connection."
+  },
+  "1.10.7": {
+    "en": "Improved STREAM AC 5000 battery percentage, Homey Energy integration, telemetry resilience, and diagnostics."
   }
 }
