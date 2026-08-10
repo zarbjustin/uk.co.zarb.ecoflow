@@ -1,5 +1,9 @@
 'use strict';
 
+import { isStreamAc5000Sn } from './deviceIdentity';
+
+export { isStreamAc5000Sn, STREAM_AC5000_PREFIX } from './deviceIdentity';
+
 /**
  * EXPERIMENTAL — normalization and classification for devices discovered through
  * the EcoFlow **app** API (`GET /iot-service/user/device`).
@@ -14,9 +18,6 @@
  * (`ecoflow/app_api.py`, `ecoflow/const.py`).
  */
 
-/** Serial-number prefix of the STREAM AC 5000. */
-export const STREAM_AC5000_PREFIX = 'ES22';
-
 /** Product name shown when EcoFlow's app API returns an empty productName. */
 export const STREAM_AC5000_MODEL = 'STREAM AC 5000';
 
@@ -30,15 +31,6 @@ export interface AppDevice {
   online: number;
   /** True when the device is shared with (rather than bound to) this account. */
   shared: boolean;
-}
-
-function snPrefix(sn: string): string {
-  return (sn || '').slice(0, 4).toUpperCase();
-}
-
-/** True for a STREAM AC 5000 (ES22). Never true for a BK-series STREAM. */
-export function isStreamAc5000Sn(sn: string | undefined): boolean {
-  return snPrefix(sn || '') === STREAM_AC5000_PREFIX;
 }
 
 /**

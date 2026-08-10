@@ -3,3 +3,5 @@ Je EcoFlow STREAM verandert een zonnig balkon in een echte energiecentrale voor 
 Daarna kan je huis slim reageren op zijn eigen energie. Laad de batterij wanneer de zon volop schijnt, bewaar energie voor de avondpiek, wissel van bedrijfsmodus, bedien elke AC-uitgang en ontvang direct een melding wanneer iets aandacht nodig heeft - allemaal via Homey Flows, zonder voortdurend tussen apps te hoeven wisselen.
 
 Koppel de STREAM-thuisbatterij voor één volledige installatie en gebruik deze voor Homey Energy en widgets. Een fysieke STREAM-unit is slechts één omvormer of batterij en levert geen totalen voor de hele installatie. Voer optioneel de geïnstalleerde capaciteit in bij de instellingen van de thuisbatterij om opgeslagen en bruikbare kWh en een duidelijk gemarkeerde looptijdschatting te tonen.
+
+STREAM AC 5000 is alleen voor monitoring, omdat EcoFlow voor dit model geen ondersteunde openbare API aanbiedt. Het gebruikt de EcoFlow-appverbinding; bediening is bewust uitgeschakeld.

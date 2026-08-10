@@ -3,7 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  classifyDevice, isStreamUnit, isSmartMeter, isStreamAc5000, quotaIsStreamUnit,
+  classifyDevice, hasKnownStreamUnitPrefix, isStreamUnit, isSmartMeter,
+  isStreamAc5000, quotaIsStreamUnit,
 } = require('../.homeybuild/lib/ecoflowDevices.js');
 
 test('classifies real STREAM serial prefixes', () => {
@@ -45,7 +46,7 @@ test('isStreamUnit / isSmartMeter helpers', () => {
 });
 
 test('the STREAM AC 5000 (ES22) is its own role, never a BK-series unit', () => {
-  const es22 = { sn: 'ES22ZEB1ABCD0001', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' };
+  const es22 = { sn: 'ES22ZE1B2J6W0110', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' };
   assert.strictEqual(classifyDevice(es22), 'stream_ac5000');
   assert.strictEqual(isStreamAc5000(es22), true);
   // Must not be picked up by any of the BK-series/Smart-Meter drivers.
@@ -54,8 +55,29 @@ test('the STREAM AC 5000 (ES22) is its own role, never a BK-series unit', () => 
   // A STREAM-shaped quota must not promote it either — the prefix is decisive.
   const richQuota = { cmsBattSoc: 20, powGetSysLoad: 3969, relay2Onoff: true };
   assert.strictEqual(classifyDevice(es22, richQuota), 'stream_ac5000');
-  // The name alone still classifies as a BK-series unit; only the prefix is ES22.
-  assert.strictEqual(classifyDevice({ sn: 'ZZ99AAAA', productName: 'STREAM AC 5000' }), 'stream_unit');
+  // New-generation names are explicitly unsupported by the Developer path.
+  assert.strictEqual(
+    classifyDevice({ sn: 'ZZ99AAAA', productName: 'STREAM AC 5000' }),
+    'unsupported_stream_5000',
+  );
+  assert.strictEqual(
+    classifyDevice({ sn: 'ZZ99BBBB', productName: 'EcoFlow STREAM 5000' }),
+    'unsupported_stream_5000',
+  );
+  for (const productName of ['STREAM AC5000', 'STREAM-AC-5000', 'Stream5000']) {
+    assert.strictEqual(
+      classifyDevice({ sn: 'ZZ99CCCC', productName }),
+      'unsupported_stream_5000',
+      productName,
+    );
+  }
   // A BK-series unit is never mistaken for an ES22.
   assert.strictEqual(isStreamAc5000({ sn: 'BK51AAAA' }), false);
+});
+
+test('known STREAM prefixes are explicit evidence independent of names', () => {
+  assert.strictEqual(hasKnownStreamUnitPrefix('BK11AAAA'), true);
+  assert.strictEqual(hasKnownStreamUnitPrefix('BK61AAAA'), true);
+  assert.strictEqual(hasKnownStreamUnitPrefix('ES22ZE1B2J6W0110'), false);
+  assert.strictEqual(hasKnownStreamUnitPrefix('ZZ99AAAA'), false);
 });

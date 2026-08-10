@@ -9,6 +9,7 @@ import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 import { fetchSolarRadiation, toForecast } from '../../lib/solarForecast';
 import { powerDirection, PowerDirection, startedDirection } from '../../lib/flowStates';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
+import { DeveloperApiQuarantineError } from '../../lib/developerApiCompatibility';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -205,7 +206,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Send a STREAM set command and refresh state shortly after. */
   private async send(payload: Record<string, any>): Promise<void> {
-    await this.client.setQuota(payload);
+    await this.writeQuota(payload);
     this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
   }
 
@@ -534,12 +535,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     let completed = 0;
     try {
       for (const payload of payloads) {
-        await this.client.setQuota(payload);
+        await this.writeQuota(payload);
         completed += 1;
       }
       await this.setWarning(null).catch(() => {});
       this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
     } catch (e: any) {
+      if (e instanceof DeveloperApiQuarantineError) throw e;
       const message = `${label} partly applied (${completed}/${payloads.length} commands). Check device state.`;
       await this.setWarning(message).catch(() => {});
       this.homey.setTimeout(() => this.poll().catch((pollError) => this.error('post-set poll', pollError)), 1500);

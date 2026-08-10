@@ -167,3 +167,11 @@ test('the stored password is never read back into the page', () => {
   assert.ok(!html.includes("Homey.get('appAuthPassword'"));
   assert.ok(!html.includes('Homey.get("appAuthPassword"'));
 });
+
+test('the STREAM AC 5000 settings copy is monitoring-only without a beta label', () => {
+  const html = fs.readFileSync(SETTINGS_HTML, 'utf8');
+  assert.ok(!/STREAM AC 5000 \(experimental\)/i.test(html));
+  assert.match(html, /no supported public EcoFlow API/i);
+  assert.match(html, /Monitoring only/i);
+  assert.match(html, /controls are intentionally disabled/i);
+});

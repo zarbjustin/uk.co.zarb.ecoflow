@@ -161,7 +161,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
   /** Send a STREAM set command and refresh state shortly after. */
   private async send(payload: Record<string, any>): Promise<void> {
-    await this.client.setQuota(payload);
+    await this.writeQuota(payload);
     this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
   }
 
@@ -176,7 +176,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const seq = backupReserveSequence(this.mainSn, targetSoc, currentLimit);
     for (const cmd of seq.commands) {
       // eslint-disable-next-line no-await-in-loop
-      await this.client.setQuota(cmd);
+      await this.writeQuota(cmd);
     }
     if (seq.newDischargeLimit !== undefined) {
       await this.setCapabilityValue('discharge_limit', seq.newDischargeLimit).catch(() => {});

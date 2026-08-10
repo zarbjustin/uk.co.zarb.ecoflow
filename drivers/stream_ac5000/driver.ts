@@ -13,7 +13,7 @@ import { registerAppAuthHandlers } from '../../lib/appAuthPairing';
  */
 module.exports = class StreamAc5000Driver extends Homey.Driver {
   async onInit(): Promise<void> {
-    this.log('STREAM AC 5000 driver initialised (experimental, monitoring only)');
+    this.log('STREAM AC 5000 driver initialised (monitoring only)');
   }
 
   async onPair(session: any): Promise<void> {
@@ -23,7 +23,7 @@ module.exports = class StreamAc5000Driver extends Homey.Driver {
       // The account signed in during this session is used before it is stored:
       // nothing is persisted until the user actually adds one of these devices.
       const client = appAuth.getClient();
-      if (!client) throw new Error('No EcoFlow account is configured for the experimental STREAM AC 5000 flow.');
+      if (!client) throw new Error('No EcoFlow account is configured for the STREAM AC 5000 pairing flow.');
       const devices = streamAc5000Devices(await client.getDeviceList());
       return devices.map((d) => ({
         name: d.name,

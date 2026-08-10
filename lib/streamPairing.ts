@@ -1,7 +1,9 @@
 'use strict';
 
 import { EcoFlowClient } from './EcoFlowClient';
-import { classifyDevice } from './ecoflowDevices';
+import {
+  classifyDevice, hasKnownStreamUnitPrefix, quotaIsStreamUnit,
+} from './ecoflowDevices';
 import { EcoFlowDevice } from './types';
 
 export interface StreamUnit {
@@ -40,14 +42,19 @@ export async function collectStreamUnits(client: EcoFlowClient): Promise<StreamU
     const metadataKind = classifyDevice(d);
     // A STREAM AC 5000 (ES22) shares the STREAM name but neither the protocol
     // nor the API surface; it belongs to the experimental stream_ac5000 driver.
-    if (metadataKind === 'stream_ac5000') return null;
+    if (metadataKind === 'stream_ac5000' || metadataKind === 'unsupported_stream_5000') return null;
     if (metadataKind !== 'stream_unit' && metadataKind !== 'other') return null;
+    const knownStreamPrefix = hasKnownStreamUnitPrefix(d.sn);
     let quota: Record<string, any> = {};
     try {
       quota = await client.getQuotaAll(d.sn);
     } catch {
       quota = {};
     }
+    // Known BK products remain pairable through transient API failures. An
+    // unknown prefix, however, needs positive STREAM quota evidence: a product
+    // name alone must never turn an API 1006 into a false-positive pairing.
+    if (!knownStreamPrefix && !quotaIsStreamUnit(quota)) return null;
     if (classifyDevice(d, quota) !== 'stream_unit') return null;
     let mainSn = d.sn;
     try {

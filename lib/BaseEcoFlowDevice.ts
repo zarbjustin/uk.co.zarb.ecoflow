@@ -1,12 +1,23 @@
 'use strict';
 
 import Homey from 'homey';
-import { EcoFlowClient } from './EcoFlowClient';
+import { EcoFlowApiError, EcoFlowClient } from './EcoFlowClient';
 import { getApp } from './appApi';
 import { QuotaHandler, StatusHandler } from './EcoFlowMqtt';
+import {
+  DEVELOPER_API_UNSUPPORTED_FALLBACK,
+  DEVELOPER_API_UNSUPPORTED_MESSAGE_KEY,
+  developerApiQuarantineMessageKey,
+  DeveloperApiQuarantineError,
+  ES22_WRONG_DRIVER_FALLBACK,
+} from './developerApiCompatibility';
+import {
+  hasKnownDeveloperApiPrefix, isStreamAc5000Sn,
+} from './deviceIdentity';
 
 const DEFAULT_POLL_MS = 30000;
 const REALTIME_GRACE_MS = 90000;
+const UNSUPPORTED_API_FAILURE_LIMIT = 3;
 
 /**
  * Shared lifecycle for all EcoFlow devices: credential read + client creation,
@@ -26,6 +37,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private applyChain: Promise<void> = Promise.resolve();
   private pollPromise: Promise<void> | null = null;
   private lastRealtimeAt = 0;
+  private developerApiQuarantineReason: string | null = null;
+  private consecutiveUnsupportedApiFailures = 0;
 
   /** The SN whose quota this device reads/polls and subscribes to over MQTT. */
   protected abstract getReadSn(): string;
@@ -54,6 +67,16 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    const quarantineReason = this.getDeveloperApiQuarantineReason();
+    if (quarantineReason) {
+      await this.quarantineDeveloperApi(
+        quarantineReason,
+        'ES22 device quarantined from the Developer API; delete and add it again as STREAM AC 5000.',
+        false,
+      );
+      return;
+    }
+
     const accessKey = this.homey.settings.get('accessKey') as string;
     const secretKey = this.homey.settings.get('secretKey') as string;
     const host = this.homey.settings.get('host') as string | undefined;
@@ -79,6 +102,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     };
     if (this.handlesStatus()) {
       this.statusHandler = (online) => {
+        if (this.developerApiQuarantineReason) return;
         this.mqttOffline = !online;
         this.setOnlineState(online).catch(() => {});
       };
@@ -93,6 +117,10 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
 
   protected startPollTimer(): void {
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
+    if (this.getDeveloperApiQuarantineReason()) {
+      this.pollTimer = null;
+      return;
+    }
     const interval = (((this.getSetting('poll_interval') as number) || 30) * 1000) || DEFAULT_POLL_MS;
     this.pollTimer = this.homey.setInterval(() => {
       this.poll().catch((e) => this.error('poll failed', e));
@@ -100,6 +128,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   protected async poll(): Promise<void> {
+    this.assertDeveloperApiSupported();
     if (this.pollPromise) {
       await this.pollPromise;
       return;
@@ -117,10 +146,31 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     try {
       this.refreshClientCredentials();
       const quota = await this.client.getQuotaAll(this.getReadSn());
+      this.consecutiveUnsupportedApiFailures = 0;
       if (this.lastRealtimeAt <= requestedAt) await this.queueQuota(quota, 'rest');
       // Don't override a realtime MQTT "offline" with a possibly-stale REST 200.
       if (!this.mqttOffline) await this.setOnlineState(true);
     } catch (e: any) {
+      if (this.isUnknownUnsupportedApiFailure(e)) {
+        this.consecutiveUnsupportedApiFailures += 1;
+        if (this.consecutiveUnsupportedApiFailures >= UNSUPPORTED_API_FAILURE_LIMIT) {
+          await this.quarantineDeveloperApi(
+            this.localize(
+              DEVELOPER_API_UNSUPPORTED_MESSAGE_KEY,
+              DEVELOPER_API_UNSUPPORTED_FALLBACK,
+            ),
+            'Device quarantined after repeated Developer API 1006 responses; automatic calls stopped.',
+            true,
+          );
+        } else {
+          this.error(
+            'Developer API 1006 for an unrecognized device '
+            + `(${this.consecutiveUnsupportedApiFailures}/${UNSUPPORTED_API_FAILURE_LIMIT}); retrying before quarantine.`,
+          );
+        }
+        return;
+      }
+      this.consecutiveUnsupportedApiFailures = 0;
       this.error('quota poll error', e?.message || e);
       const realtimeHealthy = Date.now() - this.lastRealtimeAt <= REALTIME_GRACE_MS;
       if (!realtimeHealthy) await this.setOnlineState(false, e?.message || 'EcoFlow API error');
@@ -129,6 +179,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
 
   private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest'): Promise<void> {
     const run = async () => {
+      if (this.developerApiQuarantineReason) return;
       await this.applyQuota(quota);
       if (source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
     };
@@ -149,8 +200,73 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.clientCredentialsKey = key;
   }
 
+  /** All supported STREAM control writes pass through this compatibility gate. */
+  protected async writeQuota(payload: Record<string, any>): Promise<Record<string, any>> {
+    const targetSn = typeof payload.sn === 'string' ? payload.sn : undefined;
+    this.assertDeveloperApiSupported(targetSn);
+    return this.client.setQuota(payload);
+  }
+
+  private getDeveloperApiQuarantineReason(): string | null {
+    if (this.developerApiQuarantineReason) return this.developerApiQuarantineReason;
+    return this.getSerialQuarantineReason(this.getReadSn());
+  }
+
+  private getSerialQuarantineReason(sn: string | undefined): string | null {
+    const messageKey = developerApiQuarantineMessageKey(sn);
+    if (!messageKey) return null;
+    return this.localize(messageKey, ES22_WRONG_DRIVER_FALLBACK);
+  }
+
+  private localize(messageKey: string, fallback: string): string {
+    if (typeof this.homey?.__ !== 'function') return fallback;
+    const localized = this.homey.__(messageKey);
+    return localized && localized !== messageKey ? localized : fallback;
+  }
+
+  private assertDeveloperApiSupported(targetSn?: string): void {
+    const reason = this.getDeveloperApiQuarantineReason() || this.getSerialQuarantineReason(targetSn);
+    if (reason) throw new DeveloperApiQuarantineError(reason);
+  }
+
+  private isUnknownUnsupportedApiFailure(error: unknown): boolean {
+    const code = error instanceof EcoFlowApiError ? error.code : (error as any)?.code;
+    const readSn = this.getReadSn();
+    return String(code) === '1006'
+      && !isStreamAc5000Sn(readSn)
+      && !hasKnownDeveloperApiPrefix(readSn);
+  }
+
+  private async quarantineDeveloperApi(
+    reason: string,
+    logMessage: string,
+    stopSubclassWork: boolean,
+  ): Promise<void> {
+    if (this.developerApiQuarantineReason) return;
+    this.developerApiQuarantineReason = reason;
+    if (this.pollTimer) {
+      this.homey.clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+    this.unsubscribeSupportedRealtime();
+    if (stopSubclassWork) {
+      await this.onTeardown().catch((e) => this.error('quarantine teardown failed', e));
+    }
+    await this.setUnavailable(reason).catch(() => {});
+    this.log(logMessage);
+  }
+
+  private unsubscribeSupportedRealtime(): void {
+    if (!this.subscribedSn) return;
+    getApp(this.homey).unsubscribeRealtime(this.subscribedSn, this.quotaHandler, this.statusHandler);
+    this.subscribedSn = undefined;
+    this.quotaHandler = undefined;
+    this.statusHandler = undefined;
+  }
+
   /** Apply availability. Subclasses can override to add flow triggers etc. */
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {
+    if (this.developerApiQuarantineReason) return;
     if (online) {
       if (!this.getAvailable()) await this.setAvailable().catch(() => {});
     } else {
@@ -159,6 +275,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (this.getDeveloperApiQuarantineReason()) return;
     if (changedKeys.includes('poll_interval')) this.startPollTimer();
     await this.onSettingsChanged(newSettings, changedKeys);
   }
@@ -179,10 +296,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
    * (non-monotonic) across restarts, corrupting the Homey Energy dashboard.
    */
   private async teardown(): Promise<void> {
-    if (this.subscribedSn) {
-      getApp(this.homey).unsubscribeRealtime(this.subscribedSn, this.quotaHandler, this.statusHandler);
-      this.subscribedSn = undefined;
-    }
+    this.unsubscribeSupportedRealtime();
     if (this.pollTimer) {
       this.homey.clearInterval(this.pollTimer);
       this.pollTimer = null;

@@ -22,7 +22,7 @@ module.exports = class StreamSocketDevice extends BaseEcoFlowDevice {
       // Per-unit relays are reported per unit, so socket control targets the
       // unit's own SN (not the system main SN). Verify on hardware for members.
       const cmd = this.outlet === 2 ? StreamCmd.ac2(this.getReadSn(), on) : StreamCmd.ac1(this.getReadSn(), on);
-      await this.client.setQuota(cmd);
+      await this.writeQuota(cmd);
       this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
     });
   }

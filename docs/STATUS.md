@@ -8,6 +8,13 @@
   confirm the self-heating field, STREAM Max (BK41) 2-PV count, and per-socket fields; then adjust
   `lib/streamModels.ts` / `lib/streamMapping.ts` if needed.
 
+## Suggested next-release changelog (for the version workflow)
+
+> Fixes STREAM AC 5000 devices showing no data: unsupported Developer API
+> polling now stops automatically with clear guidance. If an affected device was
+> previously added as STREAM Home Battery, delete it and add it again as
+> **STREAM AC 5000**. Also strengthens discovery for future STREAM models.
+
 ## Release state (2026-07-26)
 
 - **Latest version:** **v1.10.3** — **Build ID 18** is **live in the Homey App Store**.

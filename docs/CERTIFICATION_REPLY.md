@@ -76,3 +76,17 @@ Justin Zarb
 | Grid meter in Energy | `drivers/smartmeter` → `energy.cumulative` + `meter_power.imported/.exported`. |
 | Solar production in Energy | `drivers/stream_solar` & `drivers/stream_micro` → `meterPowerExportedCapability`. |
 | Energy-decision Flow cards | Actions: `set_operating_mode`, `set_backup_reserve`, `set_charge_limit`, `set_discharge_limit`, `set_feed_in`. Triggers/conditions: `grid_import_started`, `grid_export_started`, `grid_power_changed`, `is_charging`, `is_exporting`, `operating_mode_is`, `solar_power_above`. |
+
+---
+
+## STREAM AC 5000 label feedback
+
+The original `STREAM AC 5000 (experimental)` label distinguished its
+unsupported, read-only EcoFlow app connection from the supported Developer API
+used by the other drivers.
+
+Following Athom's advice, the user-facing experimental label and its translated
+equivalents have been removed. The driver is now named **STREAM AC 5000**. Its
+pairing warning and device settings clearly state that EcoFlow provides no
+supported public API for this model, that the connection is monitoring only,
+and that controls are intentionally disabled.

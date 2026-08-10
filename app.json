@@ -1972,9 +1972,9 @@
     },
     {
       "name": {
-        "en": "STREAM AC 5000 (experimental)",
-        "de": "STREAM AC 5000 (experimentell)",
-        "nl": "STREAM AC 5000 (experimenteel)"
+        "en": "STREAM AC 5000",
+        "de": "STREAM AC 5000",
+        "nl": "STREAM AC 5000"
       },
       "class": "battery",
       "platforms": [
@@ -2113,9 +2113,9 @@
         {
           "type": "group",
           "label": {
-            "en": "Experimental connection",
-            "de": "Experimentelle Verbindung",
-            "nl": "Experimentele verbinding"
+            "en": "EcoFlow app connection",
+            "de": "EcoFlow-App-Verbindung",
+            "nl": "EcoFlow-appverbinding"
           },
           "children": [
             {
@@ -2143,11 +2143,11 @@
                 "de": "Status",
                 "nl": "Status"
               },
-              "value": "Experimental · monitoring only · controls intentionally disabled",
+              "value": "Monitoring only · controls intentionally disabled",
               "hint": {
-                "en": "EcoFlow publishes no supported API for the STREAM AC 5000, so this integration signs in with your EcoFlow account and only reads data. Controls are deliberately not implemented until the read path is validated on hardware.",
-                "de": "EcoFlow bietet keine unterstützte API für den STREAM AC 5000, daher meldet sich diese Integration mit deinem EcoFlow-Konto an und liest ausschließlich Daten. Steuerbefehle sind bewusst nicht implementiert, bis der Lesepfad an Hardware validiert ist.",
-                "nl": "EcoFlow biedt geen ondersteunde API voor de STREAM AC 5000, dus deze integratie logt in met je EcoFlow-account en leest alleen gegevens. Bediening is bewust niet geïmplementeerd totdat het leespad op hardware is gevalideerd."
+                "en": "EcoFlow provides no supported public API for the STREAM AC 5000, so this integration signs in through EcoFlow's app connection and only reads data. Controls are intentionally disabled.",
+                "de": "EcoFlow bietet keine unterstützte öffentliche API für den STREAM AC 5000. Daher meldet sich diese Integration über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle sind bewusst deaktiviert.",
+                "nl": "EcoFlow biedt geen ondersteunde openbare API voor de STREAM AC 5000. Daarom meldt deze integratie zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening is bewust uitgeschakeld."
               }
             }
           ]

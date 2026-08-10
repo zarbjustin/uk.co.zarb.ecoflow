@@ -31,9 +31,10 @@ const STARTUP_GRACE_MS = 5 * 60 * 1000;
 const RESUBSCRIBE_INTERVAL_MS = 5 * 60 * 1000;
 const DIAGNOSTIC_SAMPLE_LIMIT = 3;
 const DIAGNOSTIC_SUMMARY_EVERY_FRAMES = 100;
+const MONITORING_ONLY_FALLBACK = 'Monitoring only · controls intentionally disabled';
 
-const UNAVAILABLE_MESSAGE = 'No data from EcoFlow (experimental app connection). Check the EcoFlow account in the app settings.';
-const NOT_CONNECTED_MESSAGE = 'Experimental EcoFlow app connection unavailable — re-pair this device to sign in again.';
+const UNAVAILABLE_MESSAGE = 'No data from EcoFlow\'s app connection. Check the EcoFlow account in the app settings.';
+const NOT_CONNECTED_MESSAGE = 'EcoFlow app connection unavailable — delete and re-add this device to sign in again.';
 
 module.exports = class StreamAc5000Device extends Homey.Device {
   private frameHandler?: AppFrameHandler;
@@ -55,10 +56,14 @@ module.exports = class StreamAc5000Device extends Homey.Device {
   async onInit(): Promise<void> {
     this.startedAt = Date.now();
     const sn = this.getData().sn as string;
+    const localizedStatus = this.homey.__('device.stream_ac5000.monitoring_only');
 
     await this.setSettings({
       model: STREAM_AC5000_MODEL,
       serial_number: sn,
+      experimental_notice: localizedStatus && localizedStatus !== 'device.stream_ac5000.monitoring_only'
+        ? localizedStatus
+        : MONITORING_ONLY_FALLBACK,
     }).catch(() => {});
 
     this.frameHandler = (payload, topic) => {
@@ -81,7 +86,7 @@ module.exports = class StreamAc5000Device extends Homey.Device {
       this.checkAvailability().catch((e) => this.error('availability check', e?.message || e));
     }, WATCHDOG_INTERVAL_MS);
 
-    this.log(`STREAM AC 5000 ${sn.slice(0, 4)}… initialised (experimental, monitoring only)`);
+    this.log(`STREAM AC 5000 ${sn.slice(0, 4)}… initialised (monitoring only)`);
   }
 
   private async subscribe(): Promise<void> {

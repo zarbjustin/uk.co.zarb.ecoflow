@@ -1,6 +1,6 @@
-# EXPERIMENTAL: EcoFlow STREAM AC 5000 (ES22)
+# EcoFlow STREAM AC 5000 (ES22): monitoring-only app connection
 
-> **Status: experimental · monitoring only · unsupported by EcoFlow.**
+> **Status: monitoring only. EcoFlow provides no supported public API for this model.**
 > Everything in this document applies **only** to the `stream_ac5000` driver.
 > The STREAM Ultra / Pro / AC / AC Pro / Max / Ultra X (BK-series) and the Smart
 > Meter are unaffected and keep using the official EcoFlow Developer API.
@@ -12,7 +12,7 @@ public IoT Developer API. Every `quota` call for an ES22 returns API code
 **1006**, so there is no supported way to read the device — with Developer keys
 or otherwise. EcoFlow support was asked and provided no information or timeline.
 
-The only working route is the private connection EcoFlow's own mobile app uses.
+The only working route is the app connection EcoFlow's own mobile app uses.
 This app implements a **read-only** subset of it, behind its own driver, so
 owners of an ES22 can at least monitor the unit from Homey.
 
@@ -50,7 +50,7 @@ privacy-safe discovery rather than guessed aliases:
    without the pack attached to determine whether it is nested or independent.
 5. Keep all new models monitoring-only until their read path is verified.
 
-The current build offers only `ES22` devices during experimental pairing.
+The current build offers only `ES22` devices during STREAM AC 5000 pairing.
 Unknown products are not subscribed or parsed yet; widening discovery is a
 future diagnostic increment.
 
@@ -159,8 +159,7 @@ Read this before you use it.
 
 ## Setup
 
-1. In Homey, add a device → **EcoFlow STREAM Series** → **STREAM AC 5000
-   (experimental)**.
+1. In Homey, add a device → **EcoFlow STREAM Series** → **STREAM AC 5000**.
 2. Read the warning on the first pairing screen, then enter your **EcoFlow app**
    email address, password and region.
 3. Pick your ES22 unit(s) from the list. Multiple ES22 units on one account are
@@ -172,13 +171,18 @@ device list.
 
 ## Removing it / re-pairing
 
+* **Previously paired as a STREAM Home Battery:** older app versions could offer
+  an ES22 through the wrong Developer-API driver. The device is now quarantined
+  without polling and shows an unavailable message. Delete that device, then add
+  it again using the **STREAM AC 5000** driver; the driver binding and required
+  EcoFlow app credentials cannot be migrated safely.
 * **Remove one unit:** delete the device in Homey. The MQTT subscription is
   released immediately, and once the last ES22 device is gone the shared MQTT
   session is closed too.
 * **Remove the stored account:** deleting the **last** STREAM AC 5000 device
   automatically clears the stored EcoFlow email, password and region — nothing
   else uses them. You can also clear them at any time from the app's **Settings**
-  page (*STREAM AC 5000 (experimental)* → *Remove stored EcoFlow account*). The
+  page (*STREAM AC 5000* → *Remove stored EcoFlow account*). The
   Developer API keys used by the other drivers are separate and are not touched.
 * **Re-pair after a password change:** delete the ES22 device(s) — which clears
   the stored account — then pair again. The app also re-logs in automatically
@@ -232,7 +236,7 @@ Not affiliated with EcoFlow.
 | `lib/EcoFlowAppAuthClient.ts` | App-auth HTTP client: login, device list, MQTT credentials, regional fallback, token refresh |
 | `lib/appAuthCrypto.ts` | AES-256-CFB + PKCS#7 certification decoding |
 | `lib/appDevices.ts` | App device-list normalization, ES22 detection and naming |
-| `lib/appAuthPairing.ts` | Credential lifecycle (stored on device add only) and pairing handlers for the experimental flow |
+| `lib/appAuthPairing.ts` | Credential lifecycle (stored on device add only) and pairing handlers for the app connection |
 | `lib/appMqttClientId.ts` | WSS ClientID generator (fresh per connect) |
 | `lib/EcoFlowAppMqtt.ts` | Listen-only WSS MQTT session, multi-device, reconnect + credential refresh |
 | `lib/streamAc5000Protocol.ts` | Frame header decoder + ES22 field map → typed telemetry |
