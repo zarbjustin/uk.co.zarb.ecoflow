@@ -133,5 +133,8 @@
   },
   "1.10.8": {
     "en": "Add a durable STREAM 5000 Series Unit driver with verified STREAM AC 5000 support, preserving existing devices through the legacy compatibility driver."
+  },
+  "1.10.9": {
+    "en": "Adds Homey-recommended cumulative charged and discharged energy tracking for STREAM 5000 Series and AC 5000 devices, with persistent totals, restart safety, and stale-data protection."
   }
 }
