@@ -86,7 +86,8 @@ test('the STREAM 5000 family driver uses the AC 5000 product artwork as its icon
 
   assert.strictEqual(familyIcon, ac5000Icon);
   assert.strictEqual(systemIcon, ac5000Icon);
-  assert.match(familyIcon, /viewBox=\"0 0 960\.000000 960\.000000\"/);
+  assert.match(familyIcon, /viewBox=\"0 0 1000 1000\"/);
+  assert.match(familyIcon, /<path fill=\"#15171A\"/);
 });
 
 test('the generated app manifest has clean public copy and monitoring-only disclosure', () => {
