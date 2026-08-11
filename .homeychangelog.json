@@ -145,5 +145,8 @@
   },
   "1.10.12": {
     "en": "Added opt-in STREAM 5000 beta pairing with unsupported-API warnings, Beta-labelled devices, cumulative charged/discharged unit meters, and guidance to prevent duplicate Homey Energy totals."
+  },
+  "1.10.13": {
+    "en": "Added standalone STREAM Unit Homey Energy support with individual live power, charged/discharged meters, and safe aggregate widget filtering."
   }
 }
