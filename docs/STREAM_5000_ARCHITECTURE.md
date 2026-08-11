@@ -5,7 +5,7 @@
 EcoFlow's 5 kWh STREAM platform contains multiple products. Homey devices are
 therefore split by energy role rather than launch SKU: `stream_5000_system` is
 the installation-level Home Battery and `stream_5000_unit` is a physical-unit
-monitor. The deprecated `stream_ac5000` ID has the same non-Energy unit role.
+monitor. The deprecated `stream_ac5000` ID has the same optional physical-unit role.
 
 Current verified support is deliberately narrower than the product catalogue:
 
@@ -110,9 +110,10 @@ Complete all of the following before exposing another model:
 Homey identifies a device using its immutable `data` object together with its
 driver ID. The role split was made before STREAM 5000 support reached general
 availability, so no permanent Energy-compatibility layer is carried forward.
-An earlier app-connected test device is migrated in place to the non-Energy
-physical-monitor role. Test installations then pair the new Home Battery
-aggregate and may keep or delete the older monitor as preferred.
+An earlier app-connected test device is migrated in place to the physical-monitor
+role with cumulative charged/discharged meters. Test installations then pair the
+new Home Battery aggregate and may keep or delete the older monitor as preferred;
+when keeping both, they must exclude the physical monitor from Homey Energy.
 
 All three app-auth driver IDs share one account lifecycle. Stored EcoFlow
 credentials are removed only after the last aggregate or unit device is deleted.

@@ -1971,7 +1971,6 @@
       "id": "stream"
     },
     {
-      "id": "stream_5000_system",
       "name": {
         "en": "STREAM Home Battery (5000 Beta)",
         "de": "STREAM-Hausbatterie (5000 Beta)",
@@ -2236,10 +2235,10 @@
           "id": "add_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "stream_5000_system"
     },
     {
-      "id": "stream_5000_unit",
       "name": {
         "en": "STREAM 5000 Series Unit (Beta)",
         "de": "STREAM-5000-Serieneinheit (Beta)",
@@ -2466,10 +2465,10 @@
           "id": "add_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "stream_5000_unit"
     },
     {
-      "id": "stream_ac5000",
       "name": {
         "en": "STREAM AC 5000",
         "de": "STREAM AC 5000",
@@ -2694,7 +2693,8 @@
           "id": "add_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "stream_ac5000"
     },
     {
       "name": {

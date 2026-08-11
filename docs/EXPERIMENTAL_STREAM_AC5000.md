@@ -189,12 +189,13 @@ device list.
 
 * **Previously paired as a STREAM Home Battery:** older app versions could offer
   an ES22 through the wrong Developer-API driver. The device is now quarantined
-  without polling and shows an unavailable message. Delete that device, then add
-  enable beta pairing and add it again using **STREAM Home Battery (5000 Beta)**.
+  without polling and shows an unavailable message. Enable beta pairing, delete
+  that device and add it again using **STREAM Home Battery (5000 Beta)**.
 * **Previously paired through the app-connected AC 5000 test driver:** the app
-  automatically removes its Energy-facing power and meter capabilities and
-  keeps it as a physical monitor. Add **STREAM Home Battery (5000 Beta)**
-  for Homey Energy; delete the older monitor if you do not want both roles.
+  removes its standard instantaneous Energy power and keeps it as a physical
+  monitor with cumulative charged/discharged meters. Add **STREAM Home Battery
+  (5000 Beta)** for Homey Energy; delete the older monitor, or exclude it from
+  Energy, if you do not want both roles contributing cumulative totals.
 * **Remove one unit:** delete the device in Homey. The MQTT subscription is
   released immediately, and once the last app-connected STREAM 5000-family
   unit is gone the shared MQTT session is closed too.

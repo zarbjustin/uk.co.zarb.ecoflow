@@ -156,7 +156,9 @@ Grounded in the EcoFlow STREAM product line + the app's own backlog:
 - `stream` → `energy.homeBattery: true` + `meter_power.charged/.discharged` (home storage).
 - `stream_unit` → `energy.batteries: ['INTERNAL']`.
 - `stream_5000_system` → app-auth installation Home Battery with charged/discharged meters.
-- `stream_5000_unit` / deprecated `stream_ac5000` → physical monitors, excluded from Energy.
+- `stream_5000_unit` / deprecated `stream_ac5000` → optional physical monitors
+  with cumulative charged/discharged meters; exclude them from Energy when the
+  installation Home Battery is also paired.
 - `smartmeter` → `energy.cumulative` + `meter_power.imported/.exported` (grid meter).
 - `stream_solar` / `stream_micro` → `meterPowerExportedCapability` (solar production).
 - Energy-decision Flow cards: `set_operating_mode`, `set_backup_reserve`,
