@@ -136,5 +136,8 @@
   },
   "1.10.9": {
     "en": "Adds Homey-recommended cumulative charged and discharged energy tracking for STREAM 5000 Series and AC 5000 devices, with persistent totals, restart safety, and stale-data protection."
+  },
+  "1.10.10": {
+    "en": "Added a dedicated STREAM Home Battery for 5000-series installations, kept physical 5000 units as separate monitors to prevent duplicate Homey Energy accounting, expanded Energy Flow and Battery Plan widget support, and improved pairing and migration guidance."
   }
 }
