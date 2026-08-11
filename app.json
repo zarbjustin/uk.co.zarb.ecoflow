@@ -2987,6 +2987,9 @@
         "battery_charging_state",
         "operating_mode",
         "stream_unit_power_battery_flow",
+        "measure_power",
+        "meter_power.charged",
+        "meter_power.discharged",
         "measure_power.load",
         "stream_unit_power_grid",
         "stream_unit_power_solar",
@@ -3024,6 +3027,28 @@
             "en": "Battery state",
             "de": "Batteriestatus",
             "nl": "Batterijstatus"
+          }
+        },
+        "measure_power": {
+          "title": {
+            "en": "Battery power (Homey Energy)",
+            "de": "Batterieleistung (Homey Energy)",
+            "nl": "Batterijvermogen (Homey Energy)"
+          },
+          "uiComponent": null
+        },
+        "meter_power.charged": {
+          "title": {
+            "en": "Energy charged",
+            "de": "Geladene Energie",
+            "nl": "Geladen energie"
+          }
+        },
+        "meter_power.discharged": {
+          "title": {
+            "en": "Energy discharged",
+            "de": "Entladene Energie",
+            "nl": "Ontladen energie"
           }
         },
         "operating_mode": {
@@ -3119,9 +3144,9 @@
         }
       },
       "energy": {
-        "batteries": [
-          "INTERNAL"
-        ]
+        "homeBattery": true,
+        "meterPowerImportedCapability": "meter_power.charged",
+        "meterPowerExportedCapability": "meter_power.discharged"
       },
       "images": {
         "small": "/drivers/stream_unit/assets/images/small.png",
@@ -3129,6 +3154,31 @@
         "xlarge": "/drivers/stream_unit/assets/images/xlarge.png"
       },
       "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Homey Energy",
+            "de": "Homey Energy",
+            "nl": "Homey Energy"
+          },
+          "children": [
+            {
+              "id": "energy_role",
+              "type": "label",
+              "label": {
+                "en": "Energy role",
+                "de": "Energierolle",
+                "nl": "Energierol"
+              },
+              "value": "Individual battery",
+              "hint": {
+                "en": "Use this unit directly for a standalone battery. When a STREAM Home Battery aggregate is also paired, enable Homey's Exclude from Energy advanced setting on this unit to avoid counting the same energy twice.",
+                "de": "Verwende diese Einheit direkt als eigenständigen Akku. Wenn auch eine aggregierte STREAM-Hausbatterie gekoppelt ist, aktiviere für diese Einheit in den erweiterten Einstellungen von Homey „Von Energie ausschließen“, damit dieselbe Energie nicht doppelt gezählt wird.",
+                "nl": "Gebruik deze unit rechtstreeks als zelfstandige batterij. Als ook een geaggregeerde STREAM-thuisbatterij is gekoppeld, schakel dan voor deze unit Homey's geavanceerde instelling ‘Uitsluiten van Energie’ in om te voorkomen dat dezelfde energie dubbel wordt geteld."
+              }
+            }
+          ]
+        },
         {
           "type": "group",
           "label": {
@@ -3285,7 +3335,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "measure_power"
+          "capabilities": "measure_power,measure_power.grid"
         }
       },
       "settings": [],
@@ -3308,7 +3358,7 @@
         "type": "app",
         "singular": true,
         "filter": {
-          "capabilities": "measure_power"
+          "capabilities": "measure_power,measure_power.grid"
         }
       },
       "settings": [],

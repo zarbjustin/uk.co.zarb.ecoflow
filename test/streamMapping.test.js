@@ -43,6 +43,12 @@ test('unit grid falls back to powGetSysGrid when no own feed is present', () => 
   assert.strictEqual(v['measure_power.grid'], 100);
 });
 
+test('unit scope maps per-unit cumulative charge and discharge counters', () => {
+  const v = mapStreamQuota({ accuChgEnergy: 12345, accuDsgEnergy: '6789' }, 'unit');
+  assert.strictEqual(v['meter_power.charged'], 12.345);
+  assert.strictEqual(v['meter_power.discharged'], 6.789);
+});
+
 test('unit scope reads per-unit SoC and ignores system cmsBattSoc', () => {
   // Member MQTT BMS: the unit's own SoC.
   assert.strictEqual(mapStreamQuota({ f32ShowSoc: 28.2, soc: 28 }, 'unit')['measure_battery'], 28.2);

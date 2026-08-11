@@ -9,15 +9,17 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 ### STREAM (Ultra / Pro / AC Pro / Max / Ultra X)
 - **Home Battery device:** one per STREAM installation (main SN) — battery level & health, battery/solar/grid/home power, temperature, voltage, charge/discharge limits, backup reserve and operating mode. Appears in **Homey Energy** as home storage with charged/discharged meters.
 - **Solar device:** a `solarpanel` device per system showing PV generation + cumulative solar energy.
-- **Per-unit monitors:** each physical inverter (Ultra X Left/Right, AC Pro 1.1–1.4) is available as its own device showing its grid feed.
+- **Per-unit batteries:** each physical inverter/battery (Ultra X Left/Right, AC Pro 1.1–1.4) is available as its own Homey Energy battery with per-unit telemetry and cumulative charged/discharged energy.
 - **AC sockets:** each AC outlet on AC Pro / Ultra X is its own **smart-plug device** (on/off + live power) — clearer than generic toggles.
 - **Control:** settable charge/discharge limits, backup-reserve level (3–100%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
 - Devices are classified by serial prefix (BK11 Ultra, BK12 Pro, BK31 AC Pro, BK41 Max, BK51 AC, BK61 Ultra X), so all current STREAM models are discovered; the Microinverter (BK01) is skipped as it exposes no telemetry.
 
-Pair **STREAM Home Battery (installation)** for one aggregate device per main system serial. It is
-the whole-installation device used by Homey Energy and the STREAM widgets. Pair **Physical STREAM
-Unit** only when you also want a separate monitor for one inverter or battery; unit devices do not
-contain reliable whole-system totals.
+For a simple one-unit installation, pair **Physical STREAM Unit** and use it directly in Homey
+Energy. For a multi-unit installation, pair **STREAM Home Battery (installation)** for one
+aggregate device per main system serial and for the STREAM widgets. You may also pair the physical
+units for per-device telemetry, but enable Homey's **Exclude from Energy** advanced setting on
+those units so their energy is not counted again alongside the aggregate. Physical units do not
+contain reliable whole-installation totals and remain unavailable to aggregate widgets.
 
 ### STREAM 5000 Series Beta — AC 5000 monitoring
 EcoFlow exposes **no supported public API** for the currently verified STREAM AC 5000: every Developer-API quota call for an `ES22…` serial returns code 1006. Support is disabled by default; acknowledge the warning and enable **STREAM 5000 beta pairing** in the app settings before adding a device. Pair **STREAM Home Battery (5000 Beta)** once for Homey Energy, including battery level and health, signed power, charged/discharged energy, house consumption, grid import/export and temperature. Pair **STREAM 5000 Series Unit (Beta)** only when you also want a physical monitor. The optional unit exposes cumulative charged/discharged meters; if both roles are paired, use Homey's **Exclude from Energy** advanced setting on the unit to avoid counting the same energy twice. Both roles use EcoFlow's app connection and require your **EcoFlow account email and password**. Today only the ES22 AC 5000 adapter is enabled and it is read-only—no commands are sent. The device model, capabilities, Homey Energy behaviour, credentials and pairing may change, and re-pairing may be required, when EcoFlow releases its official API. Unverified STREAM 5000, Expansion Battery 5000 and Gateway serials are not offered merely because their product names match. Read [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md) for connection/security details and [`docs/STREAM_5000_ARCHITECTURE.md`](docs/STREAM_5000_ARCHITECTURE.md) for the future-model admission policy.
@@ -57,8 +59,9 @@ English, **German** and **Dutch**.
 
 ## Setup
 1. Create an **Access Key** and **Secret Key** at [developer.ecoflow.com](https://developer.ecoflow.com) → *IoT Background*.
-2. In Homey, add **STREAM Home Battery (installation)** for system totals and widgets. Add
-   **Physical STREAM Unit** only for per-device monitoring. Enter the keys + region when prompted.
+2. For a standalone battery, add **Physical STREAM Unit**. For system totals and widgets, add
+   **STREAM Home Battery (installation)**. If both roles are paired, exclude the physical unit
+   from Homey Energy to prevent duplicate totals. Enter the keys + region when prompted.
 3. Manage credentials later under the app's **Settings** page.
 
 > **STREAM AC 5000 beta testers:** enable beta pairing in the app settings, add **STREAM Home Battery (5000 Beta)** for Homey Energy, then optionally add **STREAM 5000 Series Unit (Beta)** for physical telemetry. If both are paired, exclude the optional unit from Energy to prevent duplicate cumulative totals. These use a separate EcoFlow app sign-in and are monitoring only—see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).

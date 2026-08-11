@@ -97,11 +97,12 @@ per-unit/meter power capabilities (`stream_unit_power_*`, `smartmeter_power_*`,
 ## 5. Homey Energy contract
 `stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_5000_system`:
 the app-auth 5000-family installation aggregate with the same Homey Energy contract.
-`stream_unit`, `stream_5000_unit` and deprecated `stream_ac5000`:
-`batteries:['INTERNAL']` and custom power capabilities, so physical monitors are
-never counted twice. `smartmeter`: `cumulative` import/export. Solar devices: exported
-production. **Invariant:** cumulative meters must be **monotonic** and **single-sourced** — flush on
-`onUninit` (H2) and latch off power-integration once device counters are seen (H3).
+`stream_unit`: an individual `homeBattery` with `meter_power.charged/.discharged`, suitable for a
+standalone unit. If the installation aggregate is also paired, the user excludes physical units
+from Homey Energy to prevent double counting. `stream_5000_unit` and deprecated `stream_ac5000`
+use the same optional-monitor rule. `smartmeter`: `cumulative` import/export. Solar devices:
+exported production. **Invariant:** cumulative meters must be **monotonic** and **single-sourced**
+— flush on `onUninit` (H2) and latch off power-integration once device counters are seen (H3).
 
 ## 6. Flow-card catalogue
 **Current** — Actions: `set_operating_mode`, `set_backup_reserve`, `set_charge_limit`,
@@ -123,7 +124,8 @@ in-flight-guarded refresh, clear/mute all values on error/no-device (L1), and a 
 preview generated from dedicated text-free vector artwork** (H5). Energy Flow and Battery Plan
 accept either aggregate transport through `measure_power`; richer history, solar-forecast and
 tariff widgets remain restricted to the BK aggregate through `measure_power.from_battery`.
-Physical unit devices expose neither marker and never resolve in the backend. Preview canvases are transparent;
+Physical unit devices do not expose the aggregate capability pair (`measure_power` plus
+`measure_power.grid`) and never resolve in the backend. Preview canvases are transparent;
 the live widget HTML is never used as preview artwork. Per widget:
 1. **Energy Flow** — live grid/solar/home/battery topology + SoC (fix arrow direction — M2).
 2. **Today Balance** — daily solar/consumption/import/export/independence (qualify unreliable — M5).

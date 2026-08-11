@@ -65,16 +65,19 @@ test('streamData resolves a STREAM 5000 installation aggregate alongside BK syst
 });
 
 test('widget manifests admit STREAM 5000 only where its aggregate telemetry is sufficient', () => {
-  const commonAggregateMarker = 'measure_power';
+  const commonAggregateMarker = 'measure_power,measure_power.grid';
   const bkRichAggregateMarker = 'measure_power.from_battery';
   const streamManifest = require('../drivers/stream/driver.compose.json');
   const unitManifest = require('../drivers/stream_unit/driver.compose.json');
   const stream5000Manifest = require('../drivers/stream_5000_system/driver.compose.json');
   const stream5000UnitManifest = require('../drivers/stream_5000_unit/driver.compose.json');
-  assert.ok(streamManifest.capabilities.includes(commonAggregateMarker));
-  assert.equal(unitManifest.capabilities.includes(commonAggregateMarker), false);
-  assert.ok(stream5000Manifest.capabilities.includes(commonAggregateMarker));
-  assert.equal(stream5000UnitManifest.capabilities.includes(commonAggregateMarker), false);
+  for (const capability of commonAggregateMarker.split(',')) {
+    assert.ok(streamManifest.capabilities.includes(capability));
+    assert.ok(stream5000Manifest.capabilities.includes(capability));
+  }
+  assert.ok(unitManifest.capabilities.includes('measure_power'));
+  assert.equal(unitManifest.capabilities.includes('measure_power.grid'), false);
+  assert.equal(stream5000UnitManifest.capabilities.includes('measure_power'), false);
   const capacity = streamManifest.settings.find((item) => item.id === 'installed_capacity_kwh');
   const efficiency = streamManifest.settings.find((item) => item.id === 'discharge_efficiency_percent');
   assert.equal(Object.hasOwn(capacity, 'value'), false);

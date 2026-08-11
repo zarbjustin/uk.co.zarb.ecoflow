@@ -8,7 +8,7 @@
     "type": "app",
     "singular": true,
     "filter": {
-      "capabilities": "measure_power"
+      "capabilities": "measure_power,measure_power.grid"
     }
   },
   "settings": [],

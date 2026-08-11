@@ -19,6 +19,12 @@ MQTT** on the account. Each item notes data availability:
 ---
 
 ## Sprint outcomes (after the live spike)
+- 🟨 **Standalone-unit widget follow-up:** physical STREAM Units now participate
+  directly in Homey Energy, but aggregate widgets remain restricted to STREAM
+  Home Battery. Consider allowing only the Battery Plan widget to accept a unit
+  after verifying per-unit capacity/reserve/time inputs and adding an explicit
+  “individual unit” presentation. Do not expose units to whole-system widgets;
+  those widgets deliberately require both `measure_power` and `measure_power.grid`.
 - ✅ **G — Per-unit richness** (v1.5.0): each STREAM Unit now shows its own Solar
   (+PV1–4) and charge/discharge **time-to-full/empty**. PV mapping is scope-aware
   (unit = own strings; system = firmware total `powGetPvSum`).
