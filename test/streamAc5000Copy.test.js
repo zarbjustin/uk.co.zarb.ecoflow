@@ -8,6 +8,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const compose = require('../drivers/stream_ac5000/driver.compose.json');
 const familyCompose = require('../drivers/stream_5000_unit/driver.compose.json');
+const systemCompose = require('../drivers/stream_5000_system/driver.compose.json');
 const generatedApp = require('../app.json');
 
 test('the public STREAM AC 5000 driver name has no experimental qualifier', () => {
@@ -36,18 +37,56 @@ test('the replacement driver represents the STREAM 5000 unit family', () => {
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
-  assert.deepStrictEqual(familyCompose.energy, {
-    homeBattery: true,
-    meterPowerImportedCapability: 'meter_power.charged',
-    meterPowerExportedCapability: 'meter_power.discharged',
-  });
-  assert.ok(familyCompose.capabilities.includes('meter_power.charged'));
-  assert.ok(familyCompose.capabilities.includes('meter_power.discharged'));
+  assert.deepStrictEqual(familyCompose.energy, { batteries: ['INTERNAL'] });
+  assert.ok(familyCompose.capabilities.includes('stream_unit_power_battery_flow'));
+  assert.ok(!familyCompose.capabilities.includes('measure_power'));
+  assert.ok(!familyCompose.capabilities.includes('meter_power.charged'));
+  assert.ok(!familyCompose.capabilities.includes('meter_power.discharged'));
 
   const familyDriver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_5000_unit');
   assert.ok(familyDriver, 'generated app.json has no stream_5000_unit driver');
   assert.deepStrictEqual(familyDriver.name, familyCompose.name);
   assert.strictEqual(familyDriver.deprecated, undefined);
+});
+
+test('the STREAM 5000 installation aggregate is the sole Homey Energy battery', () => {
+  const expectedEnergy = {
+    homeBattery: true,
+    meterPowerImportedCapability: 'meter_power.charged',
+    meterPowerExportedCapability: 'meter_power.discharged',
+  };
+  assert.deepStrictEqual(systemCompose.name, {
+    en: 'STREAM Home Battery (5000 installation)',
+    de: 'STREAM-Hausbatterie (5000-Anlage)',
+    nl: 'STREAM-thuisbatterij (5000-installatie)',
+  });
+  assert.deepStrictEqual(systemCompose.energy, expectedEnergy);
+  assert.ok(systemCompose.capabilities.includes('measure_power'));
+  assert.ok(systemCompose.capabilities.includes('meter_power.charged'));
+  assert.ok(systemCompose.capabilities.includes('meter_power.discharged'));
+
+  const systemDriver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_5000_system');
+  assert.ok(systemDriver, 'generated app.json has no stream_5000_system driver');
+  assert.deepStrictEqual(systemDriver.energy, expectedEnergy);
+});
+
+test('the STREAM 5000 family driver uses the AC 5000 product artwork as its icon', () => {
+  const familyIcon = fs.readFileSync(
+    path.join(root, 'drivers', 'stream_5000_unit', 'assets', 'icon.svg'),
+    'utf8',
+  );
+  const ac5000Icon = fs.readFileSync(
+    path.join(root, 'drivers', 'stream_ac5000', 'assets', 'icon.svg'),
+    'utf8',
+  );
+  const systemIcon = fs.readFileSync(
+    path.join(root, 'drivers', 'stream_5000_system', 'assets', 'icon.svg'),
+    'utf8',
+  );
+
+  assert.strictEqual(familyIcon, ac5000Icon);
+  assert.strictEqual(systemIcon, ac5000Icon);
+  assert.match(familyIcon, /viewBox=\"0 0 960\.000000 960\.000000\"/);
 });
 
 test('the generated app manifest has clean public copy and monitoring-only disclosure', () => {
@@ -74,18 +113,15 @@ test('the generated app manifest has clean public copy and monitoring-only discl
   assert.match(publicCopy, /no supported public API/);
 });
 
-test('STREAM AC 5000 is classified as a Homey Energy home battery', () => {
+test('physical STREAM 5000 devices are excluded from Homey Energy accounting', () => {
   assert.strictEqual(compose.class, 'battery');
-  const expectedEnergy = {
-    homeBattery: true,
-    meterPowerImportedCapability: 'meter_power.charged',
-    meterPowerExportedCapability: 'meter_power.discharged',
-  };
+  const expectedEnergy = { batteries: ['INTERNAL'] };
   assert.deepStrictEqual(compose.energy, expectedEnergy);
   assert.ok(compose.capabilities.includes('measure_battery'));
-  assert.ok(compose.capabilities.includes('measure_power'));
-  assert.ok(compose.capabilities.includes('meter_power.charged'));
-  assert.ok(compose.capabilities.includes('meter_power.discharged'));
+  assert.ok(compose.capabilities.includes('stream_unit_power_battery_flow'));
+  assert.ok(!compose.capabilities.includes('measure_power'));
+  assert.ok(!compose.capabilities.includes('meter_power.charged'));
+  assert.ok(!compose.capabilities.includes('meter_power.discharged'));
 
   const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
   assert.deepStrictEqual(driver.energy, expectedEnergy);
@@ -119,6 +155,13 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   assert.match(familyHtml, /STREAM 5000 Series/);
   assert.match(familyHtml, /verified serial prefixes and telemetry/i);
   assert.match(familyHtml, /Monitoring only/i);
+
+  const systemHtml = fs.readFileSync(
+    path.join(root, 'drivers', 'stream_5000_system', 'pair', 'app_credentials.html'),
+    'utf8',
+  );
+  assert.match(systemHtml, /STREAM 5000 Home Battery/);
+  assert.match(systemHtml, /Homey Energy Home Battery/);
 });
 
 test('wrong-device and monitoring-only copy is localized without driver terminology', () => {
@@ -129,18 +172,25 @@ test('wrong-device and monitoring-only copy is localized without driver terminol
     assert.ok(messages.errors.developer_api_unsupported_device);
     assert.ok(messages.device.stream_ac5000.monitoring_only);
     assert.ok(messages.device.stream_5000_unit.monitoring_only);
+    assert.ok(messages.device.stream_5000_system.monitoring_only);
   }
 });
 
-test('both drivers use the shared STREAM 5000 family device lifecycle', () => {
+test('aggregate and physical drivers use the shared STREAM 5000 lifecycle with distinct roles', () => {
   const source = fs.readFileSync(
     path.join(root, 'lib', 'Stream5000UnitDevice.ts'),
     'utf8',
   );
   assert.match(source, /device\.stream_5000_unit\.monitoring_only/);
   assert.match(source, /experimental_notice:\s*localizedStatus/);
+  assert.match(source, /class Stream5000PhysicalUnitDevice/);
   for (const driverId of ['stream_ac5000', 'stream_5000_unit']) {
     const wrapper = fs.readFileSync(path.join(root, 'drivers', driverId, 'device.ts'), 'utf8');
-    assert.match(wrapper, /Stream5000UnitDevice/);
+    assert.match(wrapper, /Stream5000PhysicalUnitDevice/);
   }
+  const aggregateWrapper = fs.readFileSync(
+    path.join(root, 'drivers', 'stream_5000_system', 'device.ts'),
+    'utf8',
+  );
+  assert.match(aggregateWrapper, /Stream5000UnitDevice/);
 });

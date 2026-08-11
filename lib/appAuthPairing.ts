@@ -146,7 +146,7 @@ export function registerAppAuthHandlers(
       driver.homey.settings.set(APP_AUTH_PASSWORD_SETTING, password);
       driver.homey.settings.set(APP_AUTH_HOST_SETTING, host);
       committed = true;
-      log('EcoFlow account stored for the STREAM 5000-family unit being added');
+      log('EcoFlow account stored for the STREAM 5000-family device being added');
     },
 
     dispose() {

@@ -8,15 +8,19 @@ Status: code complete for the next test build. Live validation remains a release
   fixture. The serial-keyed float `f50.1.2` is preferred, with integer
   `f54.1.2` as its fallback; the original `f11.5` and precise `f33.6` values
   retain precedence.
-- The AC 5000 is declared as a Homey Energy home battery instead of as a device
-  powered by an internal replaceable battery.
-- Existing paired devices receive the manifest energy update automatically;
-  removal and re-pairing is not required.
+- The AC 5000 installation is declared through `stream_5000_system` as a Homey
+  Energy home battery with persistent charged/discharged meters.
+- `stream_5000_unit` is an optional physical monitor using custom power
+  capabilities, so pairing both roles cannot duplicate Homey Energy.
+- This role split predates general availability. Existing app-connected test
+  devices migrate to physical monitors; users add the new aggregate separately,
+  without carrying a permanent Energy-compatibility layer.
 
 Acceptance evidence to collect on the test build:
 
 1. EcoFlow device percentage equals Homey's `measure_battery` value.
-2. The device appears in Homey Energy as a home battery.
+2. The installation aggregate appears in Homey Energy as a home battery; its
+   optional physical-unit monitor does not appear as a second battery.
 3. The verified discharge case remains unchanged: 381 W discharge is `-381 W`
    in Homey, split into 380 W home use and 1 W export.
 
@@ -50,8 +54,8 @@ Live test matrix:
 
 | State | EcoFlow evidence | Homey expectation |
 | --- | --- | --- |
-| Charging | positive charging watts and SoC | positive `measure_power`, `charging` |
-| Discharging | positive EcoFlow discharge magnitude | negative `measure_power`, `discharging` |
+| Charging | positive charging watts and SoC | aggregate: positive `measure_power`; unit: positive custom battery flow; both `charging` |
+| Discharging | positive EcoFlow discharge magnitude | aggregate: negative `measure_power`; unit: negative custom battery flow; both `discharging` |
 | Idle | zero or near-zero battery power | `idle` inside the 5 W deadband |
 | Connection loss | no current telemetry | unavailable after the configured age |
 | Reconnection | new MQTT telemetry | available with fresh values |
@@ -61,11 +65,12 @@ Live test matrix:
 Before promotion beyond Test:
 
 - Run build, lint, unit tests and `homey app validate --level publish`.
-- Install the Test build without deleting the existing AC 5000 device.
+- Remove the pre-split test device and pair the installation aggregate, then
+  optionally pair its physical-unit monitor.
 - Complete the state matrix above and submit one requested diagnostic snapshot.
 - Complete a 24–48-hour soak including at least one MQTT reconnect.
 - Confirm English, German and Dutch setting copy on-device.
 
-Controls and cumulative charged/discharged energy remain deferred. EcoFlow has
-no supported public API for this model, and neither write fields nor cumulative
-energy counters have been verified on the tester's hardware.
+Controls remain deferred. EcoFlow has no supported public API for this model;
+charged/discharged totals are therefore derived from signed battery power with
+persistent checkpoints and stale-gap protection.

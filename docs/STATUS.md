@@ -148,13 +148,15 @@ Grounded in the EcoFlow STREAM product line + the app's own backlog:
 - PowerStream and portable power stations are **intentionally excluded** — PowerStream
   lives in `disabled-drivers/powerstream/` and is not shipped.
 - Shipped drivers: `stream`, `stream_unit`, `stream_solar`, `stream_micro`,
-  `stream_socket`, `smartmeter`, `stream_5000_unit`, plus deprecated
+  `stream_socket`, `smartmeter`, `stream_5000_system`, `stream_5000_unit`, plus deprecated
   compatibility driver `stream_ac5000`.
 
 ## Homey Energy integration (the differentiator)
 
 - `stream` → `energy.homeBattery: true` + `meter_power.charged/.discharged` (home storage).
 - `stream_unit` → `energy.batteries: ['INTERNAL']`.
+- `stream_5000_system` → app-auth installation Home Battery with charged/discharged meters.
+- `stream_5000_unit` / deprecated `stream_ac5000` → physical monitors, excluded from Energy.
 - `smartmeter` → `energy.cumulative` + `meter_power.imported/.exported` (grid meter).
 - `stream_solar` / `stream_micro` → `meterPowerExportedCapability` (solar production).
 - Energy-decision Flow cards: `set_operating_mode`, `set_backup_reserve`,

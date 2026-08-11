@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM 5000 Series Unit",
-    "de": "STREAM-5000-Serieneinheit",
-    "nl": "STREAM 5000-serie-unit"
+    "en": "STREAM Home Battery (5000 installation)",
+    "de": "STREAM-Hausbatterie (5000-Anlage)",
+    "nl": "STREAM-thuisbatterij (5000-installatie)"
   },
   "class": "battery",
   "platforms": [
@@ -14,7 +14,9 @@
   "capabilities": [
     "measure_battery",
     "battery_charging_state",
-    "stream_unit_power_battery_flow",
+    "measure_power",
+    "meter_power.charged",
+    "meter_power.discharged",
     "measure_power.load",
     "measure_power.grid",
     "measure_power.grid_import",
@@ -35,6 +37,27 @@
         "en": "Battery state",
         "de": "Batteriestatus",
         "nl": "Batterijstatus"
+      }
+    },
+    "measure_power": {
+      "title": {
+        "en": "Battery power",
+        "de": "Batterieleistung",
+        "nl": "Batterijvermogen"
+      }
+    },
+    "meter_power.charged": {
+      "title": {
+        "en": "Charged total",
+        "de": "Insgesamt geladen",
+        "nl": "Totaal geladen"
+      }
+    },
+    "meter_power.discharged": {
+      "title": {
+        "en": "Discharged total",
+        "de": "Insgesamt entladen",
+        "nl": "Totaal ontladen"
       }
     },
     "measure_power.load": {
@@ -81,9 +104,9 @@
     }
   },
   "energy": {
-    "batteries": [
-      "INTERNAL"
-    ]
+    "homeBattery": true,
+    "meterPowerImportedCapability": "meter_power.charged",
+    "meterPowerExportedCapability": "meter_power.discharged"
   },
   "images": {
     "small": "/drivers/stream_ac5000/assets/images/small.png",
@@ -91,6 +114,39 @@
     "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
   },
   "settings": [
+    {
+      "id": "installed_capacity_kwh",
+      "type": "number",
+      "label": {
+        "en": "Installed system capacity (kWh)",
+        "de": "Installierte Systemkapazität (kWh)",
+        "nl": "Geïnstalleerde systeemcapaciteit (kWh)"
+      },
+      "min": 0.1,
+      "max": 200,
+      "hint": {
+        "en": "Optional total usable capacity of all batteries in this installation. Used only for stored-energy and runtime estimates.",
+        "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
+        "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen gebruikt voor energie- en looptijdschattingen."
+      }
+    },
+    {
+      "id": "discharge_efficiency_percent",
+      "type": "number",
+      "label": {
+        "en": "Discharge efficiency (%)",
+        "de": "Entladewirkungsgrad (%)",
+        "nl": "Ontlaadrendement (%)"
+      },
+      "value": 92,
+      "min": 50,
+      "max": 100,
+      "hint": {
+        "en": "Efficiency applied to the calculated time-to-empty estimate. The default is 92%.",
+        "de": "Wirkungsgrad für die berechnete Restlaufzeitschätzung. Standardwert: 92 %.",
+        "nl": "Rendement voor de berekende schatting van de resterende looptijd. Standaard: 92%."
+      }
+    },
     {
       "type": "group",
       "label": {
@@ -124,9 +180,9 @@
           },
           "value": "—",
           "hint": {
-            "en": "This unit's EcoFlow serial number.",
-            "de": "Die EcoFlow-Seriennummer dieser Einheit.",
-            "nl": "Het EcoFlow-serienummer van deze unit."
+            "en": "The representative EcoFlow serial number for this installation.",
+            "de": "Die repräsentative EcoFlow-Seriennummer dieser Anlage.",
+            "nl": "Het representatieve EcoFlow-serienummer voor deze installatie."
           }
         }
       ]
@@ -181,9 +237,9 @@
           },
           "value": "Monitoring only · controls intentionally disabled",
           "hint": {
-            "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This integration signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
-            "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Integration meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
-            "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze integratie meldt zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
+            "en": "This verified STREAM 5000 installation is not available through EcoFlow's supported public API. This Home Battery signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
+            "de": "Diese verifizierte STREAM-5000-Anlage ist nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Hausbatterie meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
+            "nl": "Deze geverifieerde STREAM 5000-installatie is niet beschikbaar via EcoFlows ondersteunde openbare API. Deze thuisbatterij meldt zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
           }
         }
       ]

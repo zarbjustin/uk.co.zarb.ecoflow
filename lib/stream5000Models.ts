@@ -29,12 +29,21 @@ export const STREAM_AC5000_MODEL_ID = 'stream_ac_5000';
 export const STREAM_AC5000_MODEL = 'STREAM AC 5000';
 export const STREAM_AC5000_PREFIX = 'ES22';
 
-/** Driver IDs sharing one app-auth account and physical-device namespace. */
+/** Driver IDs sharing one app-auth account. */
+export const STREAM_5000_SYSTEM_DRIVER_ID = 'stream_5000_system';
 export const STREAM_5000_DRIVER_ID = 'stream_5000_unit';
 export const LEGACY_STREAM_AC5000_DRIVER_ID = 'stream_ac5000';
-export const STREAM_5000_DRIVER_IDS = Object.freeze([
+/** Pairing identity is role-scoped: one aggregate and, optionally, one unit monitor. */
+export const STREAM_5000_SYSTEM_DRIVER_IDS = Object.freeze([
+  STREAM_5000_SYSTEM_DRIVER_ID,
+] as const);
+export const STREAM_5000_UNIT_DRIVER_IDS = Object.freeze([
   STREAM_5000_DRIVER_ID,
   LEGACY_STREAM_AC5000_DRIVER_ID,
+] as const);
+export const STREAM_5000_DRIVER_IDS = Object.freeze([
+  ...STREAM_5000_SYSTEM_DRIVER_IDS,
+  ...STREAM_5000_UNIT_DRIVER_IDS,
 ] as const);
 
 const MODELS: readonly Stream5000ModelSpec[] = Object.freeze([

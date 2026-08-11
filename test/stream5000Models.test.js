@@ -7,6 +7,8 @@ const {
   STREAM_AC5000_MODEL,
   STREAM_AC5000_MODEL_ID,
   STREAM_5000_DRIVER_IDS,
+  STREAM_5000_SYSTEM_DRIVER_IDS,
+  STREAM_5000_UNIT_DRIVER_IDS,
   stream5000DeviceName,
   stream5000ModelFromSn,
   supportedStream5000Models,
@@ -29,8 +31,13 @@ test('the verified model chooses an explicit telemetry adapter', () => {
   assert.deepStrictEqual(supportedStream5000Models().map((candidate) => candidate.id), [STREAM_AC5000_MODEL_ID]);
 });
 
-test('the family driver namespace includes the active and compatibility IDs', () => {
-  assert.deepStrictEqual([...STREAM_5000_DRIVER_IDS], ['stream_5000_unit', 'stream_ac5000']);
+test('the family driver namespace separates aggregate and physical-unit identities', () => {
+  assert.deepStrictEqual([...STREAM_5000_SYSTEM_DRIVER_IDS], ['stream_5000_system']);
+  assert.deepStrictEqual([...STREAM_5000_UNIT_DRIVER_IDS], ['stream_5000_unit', 'stream_ac5000']);
+  assert.deepStrictEqual(
+    [...STREAM_5000_DRIVER_IDS],
+    ['stream_5000_system', 'stream_5000_unit', 'stream_ac5000'],
+  );
 });
 
 test('family naming prefers EcoFlow names and has a safe model fallback', () => {

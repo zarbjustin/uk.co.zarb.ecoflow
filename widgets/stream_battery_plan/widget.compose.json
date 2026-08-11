@@ -8,7 +8,7 @@
     "type": "app",
     "singular": true,
     "filter": {
-      "capabilities": "measure_power.from_battery"
+      "capabilities": "measure_power"
     }
   },
   "settings": [],

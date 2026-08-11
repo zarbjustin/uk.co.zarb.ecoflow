@@ -11,6 +11,7 @@ import {
   Stream5000TelemetryAdapter,
 } from './stream5000Adapters';
 import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
+import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
 import { integrateTimedSignedPower } from './energyIntegration';
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 
@@ -69,6 +70,20 @@ export class Stream5000UnitDevice extends Homey.Device {
   private lastEnergySampleAt = 0;
   private energyCheckpoint?: EnergyCheckpoint;
 
+  /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
+  protected isEnergyAggregate(): boolean {
+    return true;
+  }
+
+  protected monitoringOnlyMessageKey(): string {
+    return 'device.stream_5000_system.monitoring_only';
+  }
+
+  /** Translate protocol capabilities into the public capabilities for this device role. */
+  protected capabilityValuesForRole(values: Stream5000CapabilityValues): Stream5000CapabilityValues {
+    return values;
+  }
+
   async onInit(): Promise<void> {
     this.startedAt = Date.now();
     this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
@@ -81,16 +96,21 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
     this.sampleGate = this.telemetryAdapter.createSampleGate();
-    this.chargedWh = this.storedEnergyWh('chargedWh');
-    this.dischargedWh = this.storedEnergyWh('dischargedWh');
-    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
-    await this.initialiseEnergyCapabilities();
-    const localizedStatus = this.homey.__('device.stream_5000_unit.monitoring_only');
+    if (this.isEnergyAggregate()) {
+      this.chargedWh = this.storedEnergyWh('chargedWh');
+      this.dischargedWh = this.storedEnergyWh('dischargedWh');
+      this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
+      await this.initialiseEnergyCapabilities();
+    } else {
+      await this.initialisePhysicalUnitCapabilities();
+    }
+    const messageKey = this.monitoringOnlyMessageKey();
+    const localizedStatus = this.homey.__(messageKey);
 
     await this.setSettings({
       model: model.name,
       serial_number: sn,
-      experimental_notice: localizedStatus && localizedStatus !== 'device.stream_5000_unit.monitoring_only'
+      experimental_notice: localizedStatus && localizedStatus !== messageKey
         ? localizedStatus
         : MONITORING_ONLY_FALLBACK,
     }).catch(() => {});
@@ -168,14 +188,17 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
-    for (const [capability, value] of Object.entries(values)) {
+    const roleValues = this.capabilityValuesForRole(values);
+    for (const [capability, value] of Object.entries(roleValues)) {
       if (!this.hasCapability(capability)) continue;
       if (this.lastValues[capability] === value && this.getCapabilityValue(capability) === value) continue;
       this.lastValues[capability] = value;
       await this.setCapabilityValue(capability, value).catch((e) => this.error(capability, e));
     }
     const batteryPowerW = values.measure_power;
-    if (typeof batteryPowerW === 'number') await this.updateEnergy(batteryPowerW, receivedAt);
+    if (this.isEnergyAggregate() && typeof batteryPowerW === 'number') {
+      await this.updateEnergy(batteryPowerW, receivedAt);
+    }
   }
 
   private storedEnergyWh(key: string): number {
@@ -195,6 +218,19 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
     if (this.hasCapability('meter_power.discharged')) {
       await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+    }
+  }
+
+  /** Remove Energy-facing capabilities from devices paired before the role split. */
+  private async initialisePhysicalUnitCapabilities(): Promise<void> {
+    if (!this.hasCapability('stream_unit_power_battery_flow')) {
+      await this.addCapability('stream_unit_power_battery_flow')
+        .catch((e) => this.error('add stream_unit_power_battery_flow', e));
+    }
+    for (const capability of ['measure_power', ...ENERGY_CAPABILITIES]) {
+      if (this.hasCapability(capability)) {
+        await this.removeCapability(capability).catch((e) => this.error(`remove ${capability}`, e));
+      }
     }
   }
 
@@ -376,5 +412,24 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
     }
     return false;
+  }
+}
+
+/**
+ * A physical STREAM 5000-family monitor. Battery power stays available to the
+ * user and Insights through a custom capability, but is deliberately excluded
+ * from Homey Energy so the installation aggregate remains the single source.
+ */
+export class Stream5000PhysicalUnitDevice extends Stream5000UnitDevice {
+  protected isEnergyAggregate(): boolean {
+    return false;
+  }
+
+  protected monitoringOnlyMessageKey(): string {
+    return 'device.stream_5000_unit.monitoring_only';
+  }
+
+  protected capabilityValuesForRole(values: Stream5000CapabilityValues): Stream5000CapabilityValues {
+    return stream5000PhysicalCapabilityValues(values);
   }
 }

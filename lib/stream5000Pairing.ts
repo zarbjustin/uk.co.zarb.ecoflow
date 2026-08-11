@@ -2,20 +2,32 @@
 
 import { AppDevice, stream5000Devices } from './appDevices';
 import { registerAppAuthHandlers } from './appAuthPairing';
-import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
+import {
+  STREAM_5000_UNIT_DRIVER_IDS,
+  stream5000ModelFromSn,
+  Stream5000ModelSpec,
+} from './stream5000Models';
 
 export interface Stream5000PairingOptions {
   /** Optional compatibility filter for a deprecated model-specific driver. */
   selectDevices?: (devices: AppDevice[]) => AppDevice[];
   noAccountMessage?: string;
+  /** Driver IDs which represent the same pairing role and must not duplicate a serial. */
+  duplicateDriverIds?: readonly string[];
+  /** Optional aggregate-oriented device naming. */
+  deviceName?: (device: AppDevice, model: Stream5000ModelSpec) => string;
 }
 
 /**
- * Serial numbers already represented by either the active or compatibility
- * driver. Homey scopes identity to a driver, so this cross-driver check avoids
- * pairing one physical battery twice and double-counting it in Homey Energy.
+ * Serial numbers already paired in the requested 5000-family role. Homey
+ * scopes identity to a driver, so this cross-driver check prevents duplicate
+ * monitors across the active and deprecated unit drivers while keeping the
+ * aggregate namespace independent.
  */
-export function pairedStream5000Serials(driver: any): Set<string> {
+export function pairedStream5000Serials(
+  driver: any,
+  driverIds: readonly string[] = STREAM_5000_UNIT_DRIVER_IDS,
+): Set<string> {
   const serials = new Set<string>();
   const visited = new Set<any>();
   const collect = (familyDriver: any) => {
@@ -39,7 +51,7 @@ export function pairedStream5000Serials(driver: any): Set<string> {
   };
 
   collect(driver);
-  for (const driverId of STREAM_5000_DRIVER_IDS) {
+  for (const driverId of driverIds) {
     try {
       collect(driver?.homey?.drivers?.getDriver(driverId));
     } catch {
@@ -61,20 +73,21 @@ export function registerStream5000Pairing(
 ): void {
   const appAuth = registerAppAuthHandlers(driver, session);
   const selectDevices = options.selectDevices || stream5000Devices;
+  const duplicateDriverIds = options.duplicateDriverIds || STREAM_5000_UNIT_DRIVER_IDS;
 
   session.setHandler('list_devices', async () => {
     const client = appAuth.getClient();
     if (!client) {
       throw new Error(options.noAccountMessage || 'No EcoFlow account is configured for STREAM 5000 Series pairing.');
     }
-    const pairedSerials = pairedStream5000Serials(driver);
+    const pairedSerials = pairedStream5000Serials(driver, duplicateDriverIds);
     const devices = selectDevices(await client.getDeviceList())
       .filter((device) => !pairedSerials.has(device.sn));
     return devices.map((device) => {
       const model = stream5000ModelFromSn(device.sn);
       if (!model) throw new Error(`No verified STREAM 5000 model for serial prefix ${device.sn.slice(0, 4)}`);
       return {
-        name: device.name,
+        name: options.deviceName ? options.deviceName(device, model) : device.name,
         data: { sn: device.sn },
         store: {
           stream5000ModelId: model.id,

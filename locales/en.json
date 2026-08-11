@@ -1,9 +1,12 @@
 {
   "errors": {
-    "es22_wrong_driver": "This STREAM AC 5000 was added in the wrong place. Delete it and add it again as STREAM 5000 Series Unit.",
+    "es22_wrong_driver": "This STREAM AC 5000 was added in the wrong place. Delete it and add it again as STREAM Home Battery (5000 installation).",
     "developer_api_unsupported_device": "This EcoFlow device is not supported through the Developer API. Delete it and add it again using its dedicated EcoFlow device type."
   },
   "device": {
+    "stream_5000_system": {
+      "monitoring_only": "Monitoring only · controls intentionally disabled"
+    },
     "stream_5000_unit": {
       "monitoring_only": "Monitoring only · controls intentionally disabled"
     },

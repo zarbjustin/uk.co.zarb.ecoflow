@@ -16,9 +16,10 @@ shipped).
 ```
 App (app.ts) — shared Developer API EcoFlowMqtt plus an isolated app-auth WSS MQTT session;
  app settings: accessKey/secretKey/host/mqtt_enabled and separate app-auth account credentials
- Drivers (8, including one compatibility entry) → Devices:
+ Drivers (9, including one compatibility entry) → Devices:
    stream (battery) · stream_unit (battery) · stream_solar (solarpanel) · stream_micro (solarpanel)
-   · stream_socket (socket) · smartmeter (sensor) · stream_5000_unit (monitoring-only home battery)
+   · stream_socket (socket) · smartmeter (sensor) · stream_5000_system (monitoring-only home battery)
+   · stream_5000_unit (physical monitor)
    · stream_ac5000 (deprecated compatibility driver)
  Widgets (5): stream_flow, stream_balance, stream_battery_plan, stream_solar_forecast,
    stream_tariff_opportunity (+ shared widgets/stream_common.js)
@@ -94,10 +95,11 @@ per-unit/meter power capabilities (`stream_unit_power_*`, `smartmeter_power_*`,
 `alarm_generic`.
 
 ## 5. Homey Energy contract
-`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_5000_unit`
-(and the deprecated `stream_ac5000` compatibility driver):
-`homeBattery` without cumulative meters until its counters are verified. `stream_unit`:
-`batteries:['INTERNAL']`. `smartmeter`: `cumulative` import/export. Solar devices: exported
+`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_5000_system`:
+the app-auth 5000-family installation aggregate with the same Homey Energy contract.
+`stream_unit`, `stream_5000_unit` and deprecated `stream_ac5000`:
+`batteries:['INTERNAL']` and custom power capabilities, so physical monitors are
+never counted twice. `smartmeter`: `cumulative` import/export. Solar devices: exported
 production. **Invariant:** cumulative meters must be **monotonic** and **single-sourced** — flush on
 `onUninit` (H2) and latch off power-integration once device counters are seen (H3).
 
@@ -118,15 +120,16 @@ conditions `solar_power_below`, `charging_from_solar`; threshold triggers `grid_
 ## 7. Widget specifications (5 widgets)
 Common: device picker (`device.getId()`), shared `stream_common.js` data provider, serialized
 in-flight-guarded refresh, clear/mute all values on error/no-device (L1), and a **unique simplified
-preview generated from dedicated text-free vector artwork** (H5). Selectors are restricted to the
-aggregate `stream` Home Battery through its unique `measure_power.from_battery` capability; physical
-`stream_unit` devices never resolve in the backend. Preview canvases are transparent;
+preview generated from dedicated text-free vector artwork** (H5). Energy Flow and Battery Plan
+accept either aggregate transport through `measure_power`; richer history, solar-forecast and
+tariff widgets remain restricted to the BK aggregate through `measure_power.from_battery`.
+Physical unit devices expose neither marker and never resolve in the backend. Preview canvases are transparent;
 the live widget HTML is never used as preview artwork. Per widget:
 1. **Energy Flow** — live grid/solar/home/battery topology + SoC (fix arrow direction — M2).
 2. **Today Balance** — daily solar/consumption/import/export/independence (qualify unreliable — M5).
 3. **Battery Plan** — SoC, stored/usable kWh from optional user-entered system capacity, effective
    reserve/discharge floor, mode, time-to-full, and calculated or EcoFlow-reported time-to-empty
-   with explicit provenance.
+with explicit provenance.
 4. **Solar Target** — today's solar vs a user target/progress (rename away from "Forecast" — M3).
 5. **Energy Recommendation** (rename of "Tariff Opportunity") — live recommendation from
    power/SoC/feed-in (not tariff-aware — M4).

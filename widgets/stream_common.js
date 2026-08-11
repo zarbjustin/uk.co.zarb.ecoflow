@@ -114,11 +114,17 @@ function selectRuntime({
 
 function pickDevice(homey, query) {
   let devices = [];
-  try {
-    devices = homey.drivers.getDriver('stream').getDevices();
-  } catch (e) {
-    return { error: 'no_driver' };
+  let foundDriver = false;
+  for (const driverId of ['stream', 'stream_5000_system']) {
+    try {
+      const driver = homey.drivers.getDriver(driverId);
+      foundDriver = true;
+      devices.push(...driver.getDevices());
+    } catch (e) {
+      // A build or fixture may not contain both aggregate transports.
+    }
   }
+  if (!foundDriver) return { error: 'no_driver' };
   if (!devices.length) return { error: 'no_device' };
   if (query.deviceId) {
     const selected = devices.find((device) => device.getId() === query.deviceId);
