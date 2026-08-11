@@ -37,7 +37,7 @@ test('the replacement driver represents the STREAM 5000 unit family', () => {
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
-  assert.strictEqual(familyCompose.energy, undefined);
+  assert.deepStrictEqual(familyCompose.energy, { batteries: ['INTERNAL'] });
   assert.ok(familyCompose.capabilities.includes('stream_unit_power_battery_flow'));
   assert.ok(!familyCompose.capabilities.includes('measure_power'));
   assert.ok(!familyCompose.capabilities.includes('meter_power.charged'));
@@ -115,7 +115,7 @@ test('the generated app manifest has clean public copy and monitoring-only discl
 
 test('physical STREAM 5000 devices expose telemetry but no Homey Energy capabilities', () => {
   assert.strictEqual(compose.class, 'battery');
-  assert.strictEqual(compose.energy, undefined);
+  assert.deepStrictEqual(compose.energy, { batteries: ['INTERNAL'] });
   assert.ok(compose.capabilities.includes('measure_battery'));
   assert.ok(compose.capabilities.includes('stream_unit_power_battery_flow'));
   assert.ok(!compose.capabilities.includes('measure_power'));
@@ -123,8 +123,8 @@ test('physical STREAM 5000 devices expose telemetry but no Homey Energy capabili
   assert.ok(!compose.capabilities.includes('meter_power.discharged'));
 
   const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
-  assert.strictEqual(driver.energy, undefined);
-  assert.strictEqual(familyCompose.energy, undefined);
+  assert.deepStrictEqual(driver.energy, { batteries: ['INTERNAL'] });
+  assert.deepStrictEqual(familyCompose.energy, { batteries: ['INTERNAL'] });
 });
 
 test('STREAM AC 5000 offers an automatically-resetting diagnostic capture setting', () => {

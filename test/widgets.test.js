@@ -74,9 +74,9 @@ test('widget manifests admit STREAM 5000 only where its aggregate telemetry is s
   assert.ok(streamManifest.capabilities.includes(commonAggregateMarker));
   assert.ok(stream5000Manifest.capabilities.includes(commonAggregateMarker));
   assert.equal(unitManifest.capabilities.includes(commonAggregateMarker), false);
-  assert.equal(unitManifest.energy, undefined);
+  assert.deepEqual(unitManifest.energy, { batteries: ['INTERNAL'] });
   assert.equal(stream5000UnitManifest.capabilities.includes('measure_power'), false);
-  assert.equal(stream5000UnitManifest.energy, undefined);
+  assert.deepEqual(stream5000UnitManifest.energy, { batteries: ['INTERNAL'] });
   const capacity = streamManifest.settings.find((item) => item.id === 'installed_capacity_kwh');
   const efficiency = streamManifest.settings.find((item) => item.id === 'discharge_efficiency_percent');
   assert.equal(Object.hasOwn(capacity, 'value'), false);

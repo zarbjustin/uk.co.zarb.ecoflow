@@ -2320,6 +2320,11 @@
           }
         }
       },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
       "images": {
         "small": "/drivers/stream_ac5000/assets/images/small.png",
         "large": "/drivers/stream_ac5000/assets/images/large.png",
@@ -2527,6 +2532,11 @@
             "nl": "Batterijconditie"
           }
         }
+      },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
       },
       "images": {
         "small": "/drivers/stream_ac5000/assets/images/small.png",
@@ -3071,6 +3081,11 @@
             "nl": "Batterijcycli"
           }
         }
+      },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
       },
       "images": {
         "small": "/drivers/stream_unit/assets/images/small.png",

@@ -147,6 +147,11 @@
       }
     }
   },
+  "energy": {
+    "batteries": [
+      "INTERNAL"
+    ]
+  },
   "images": {
     "small": "/drivers/stream_unit/assets/images/small.png",
     "large": "/drivers/stream_unit/assets/images/large.png",
