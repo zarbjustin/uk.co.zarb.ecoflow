@@ -7,8 +7,7 @@
  */
 export const STREAM_5000_BETA_ENABLED_SETTING = 'stream5000BetaEnabled';
 
-export const STREAM_5000_BETA_DISABLED_MESSAGE =
-  'STREAM 5000 beta access is disabled. Enable it in the EcoFlow app settings before pairing.';
+export const STREAM_5000_BETA_DISABLED_MESSAGE = 'STREAM 5000 beta access is disabled. Enable it in the EcoFlow app settings before pairing.';
 
 export function isStream5000BetaEnabled(homey: any): boolean {
   return homey?.settings?.get(STREAM_5000_BETA_ENABLED_SETTING) === true;

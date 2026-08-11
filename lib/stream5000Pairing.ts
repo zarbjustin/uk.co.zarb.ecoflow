@@ -79,8 +79,9 @@ export function registerStream5000Pairing(
   const selectDevices = options.selectDevices || stream5000Devices;
   const duplicateDriverIds = options.duplicateDriverIds || STREAM_5000_UNIT_DRIVER_IDS;
 
-  session.setHandler('check_stream_5000_beta_access', async () =>
-    isStream5000BetaEnabled(driver?.homey));
+  session.setHandler('check_stream_5000_beta_access', async () => {
+    return isStream5000BetaEnabled(driver?.homey);
+  });
 
   session.setHandler('list_devices', async () => {
     // Pairing is the only gated operation. Already-paired devices continue to
