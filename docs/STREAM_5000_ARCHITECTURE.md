@@ -28,6 +28,9 @@ Unknown prefixes must remain absent from pairing even when their names contain
 - `lib/stream5000Adapters.ts` connects an admitted model to parsing, mapping and
   privacy-safe diagnostic functions.
 - `lib/stream5000Pairing.ts` is the shared app-auth discovery and pairing path.
+- `lib/stream5000Beta.ts` owns the default-off feature gate applied to every
+  5000-family pairing path. It gates new pairing only; it never disables an
+  existing device.
 - `lib/Stream5000UnitDevice.ts` owns transport-independent lifecycle,
   availability, role-specific capability application and cross-driver credential cleanup.
 - Model-specific protocol code remains isolated. ES22 continues to use
@@ -43,14 +46,20 @@ reusing the ES22 parser for an unverified product is not permitted.
   installation. Until EcoFlow exposes a stable group/gateway identifier, each
   ES22 serial is deliberately treated as a singleton installation.
 - `stream_5000_unit`: an optional monitor for one physical 5000-family battery
-  or inverter/battery unit. It uses custom power capabilities and never
-  contributes to Homey Energy.
+  or inverter/battery unit. It uses a custom instantaneous-power capability and
+  exposes cumulative charged/discharged meters. When the installation aggregate
+  is also paired, the user must exclude this optional unit from Homey Energy to
+  avoid duplicate cumulative totals.
 - A gateway, meter, solar-only component or other different Homey Energy role
   receives a separate driver even if it shares app authentication and MQTT.
 - Exact product names and icons belong to paired devices; the driver remains a
   family-level pairing entry.
 - App-auth products remain monitoring-only until both command payloads and safe
   state verification are demonstrated on real hardware.
+- Pairing is disabled by default and requires an explicit warning acknowledgement
+  in app settings. The warning must state that the implementation, capabilities,
+  Energy behaviour, credentials and pairing can change when EcoFlow publishes an
+  official API, including the possibility of re-pairing.
 
 ## Homey Energy accounting
 
@@ -88,8 +97,9 @@ Complete all of the following before exposing another model:
    in `stream5000Adapters.ts`.
 6. Only then add the product and its exact prefix to `stream5000Models.ts`.
 7. Confirm the Homey class, capabilities and Energy contribution. Add the model
-   to the aggregate and unit roles together; only the aggregate may expose
-   `homeBattery`, `measure_power` or charged/discharged Energy meters.
+   to the aggregate and unit roles together. Only the aggregate may expose
+   `homeBattery` or standard `measure_power`; a unit may expose cumulative
+   charged/discharged meters only with the duplicate-Energy warning retained.
 8. Add product naming, imagery, translations, pairing copy and diagnostics tests.
 9. Run TypeScript, lint, the full test suite and Homey validation, followed by a
    Test-channel installation on the real product.

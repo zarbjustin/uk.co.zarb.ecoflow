@@ -3,6 +3,10 @@
 import { AppDevice, stream5000Devices } from './appDevices';
 import { registerAppAuthHandlers } from './appAuthPairing';
 import {
+  isStream5000BetaEnabled,
+  requireStream5000BetaAccess,
+} from './stream5000Beta';
+import {
   STREAM_5000_UNIT_DRIVER_IDS,
   stream5000ModelFromSn,
   Stream5000ModelSpec,
@@ -75,7 +79,13 @@ export function registerStream5000Pairing(
   const selectDevices = options.selectDevices || stream5000Devices;
   const duplicateDriverIds = options.duplicateDriverIds || STREAM_5000_UNIT_DRIVER_IDS;
 
+  session.setHandler('check_stream_5000_beta_access', async () =>
+    isStream5000BetaEnabled(driver?.homey));
+
   session.setHandler('list_devices', async () => {
+    // Pairing is the only gated operation. Already-paired devices continue to
+    // run if the owner later disables beta access in Settings.
+    requireStream5000BetaAccess(driver?.homey);
     const client = appAuth.getClient();
     if (!client) {
       throw new Error(options.noAccountMessage || 'No EcoFlow account is configured for STREAM 5000 Series pairing.');

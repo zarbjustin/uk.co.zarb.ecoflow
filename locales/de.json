@@ -1,6 +1,6 @@
 {
   "errors": {
-    "es22_wrong_driver": "Dieser STREAM AC 5000 wurde an der falschen Stelle hinzugefügt. Lösche das Gerät und füge es erneut als „STREAM-Hausbatterie (5000-Anlage)“ hinzu.",
+    "es22_wrong_driver": "Dieser STREAM AC 5000 wurde an der falschen Stelle hinzugefügt. Aktiviere zuerst die STREAM-5000-Beta-Kopplung in den App-Einstellungen, lösche das Gerät und füge es erneut als „STREAM-Hausbatterie (5000 Beta)“ hinzu.",
     "developer_api_unsupported_device": "Dieses EcoFlow-Gerät wird von der Developer API nicht unterstützt. Lösche es und füge es erneut mit dem passenden EcoFlow-Gerätetyp hinzu."
   },
   "device": {

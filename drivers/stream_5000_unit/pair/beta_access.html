@@ -1,0 +1,60 @@
+<style>
+  .beta-pair { padding: 16px; max-width: 460px; margin: 0 auto; font-family: inherit; }
+  .beta-pair h2 { margin: 0 0 12px; }
+  .beta-pair .warning {
+    border: 1px solid #e0a800; background: #fff8e1; color: #5e4700;
+    border-radius: 8px; padding: 14px; font-size: 13px; line-height: 1.5;
+  }
+  .beta-pair .warning strong { display: block; margin-bottom: 6px; font-size: 14px; }
+  .beta-pair .status { font-size: 13px; line-height: 1.45; margin: 16px 0 0; }
+  .beta-pair button {
+    margin-top: 16px; width: 100%; padding: 12px; border: 0; border-radius: 8px;
+    background: #1aa3e8; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .beta-pair button.secondary { background: #707070; }
+</style>
+
+<div class="beta-pair">
+  <h2>STREAM 5000 Beta</h2>
+  <div class="warning">
+    <strong>Experimental, read-only integration</strong>
+    EcoFlow does not currently provide a supported public API for these products.
+    This beta uses the connection used by EcoFlow's mobile app. It may stop working,
+    and its device model, capabilities, Homey Energy behaviour, credentials or pairing
+    may need to change when EcoFlow releases its official API. Re-pairing may be required.
+    Controls are disabled and the app sends no device commands.
+  </div>
+  <p class="status">
+    This optional physical unit reports charged and discharged energy. If you also pair the
+    STREAM Home Battery, enable <strong>Exclude from Energy</strong> in this unit's advanced
+    settings to avoid counting the same energy twice.
+  </p>
+  <p class="status" id="beta-status">Checking beta access&hellip;</p>
+  <button id="beta-continue" type="button" style="display:none;">I understand, continue</button>
+  <button id="beta-recheck" class="secondary" type="button" style="display:none;">Check again</button>
+</div>
+
+<script type="text/javascript">
+  var betaStatus = document.getElementById('beta-status');
+  var betaContinue = document.getElementById('beta-continue');
+  var betaRecheck = document.getElementById('beta-recheck');
+
+  function checkBetaAccess() {
+    betaStatus.textContent = 'Checking beta access\u2026';
+    betaContinue.style.display = 'none';
+    betaRecheck.style.display = 'none';
+    Homey.emit('check_stream_5000_beta_access', null, function (err, enabled) {
+      if (!err && enabled) {
+        betaStatus.textContent = 'Beta access is enabled in the EcoFlow app settings.';
+        betaContinue.style.display = 'block';
+        return;
+      }
+      betaStatus.textContent = 'Beta access is disabled. Open the EcoFlow app settings, enable "STREAM 5000 beta pairing", then return here and check again.';
+      betaRecheck.style.display = 'block';
+    });
+  }
+
+  betaContinue.addEventListener('click', function () { Homey.showView('app_credentials'); });
+  betaRecheck.addEventListener('click', checkBetaAccess);
+  checkBetaAccess();
+</script>

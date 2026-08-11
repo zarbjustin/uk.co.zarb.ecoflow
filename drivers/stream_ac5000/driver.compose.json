@@ -16,6 +16,8 @@
     "measure_battery",
     "battery_charging_state",
     "stream_unit_power_battery_flow",
+    "meter_power.charged",
+    "meter_power.discharged",
     "measure_power.load",
     "measure_power.grid",
     "measure_power.grid_import",
@@ -36,6 +38,20 @@
         "en": "Battery state",
         "de": "Batteriestatus",
         "nl": "Batterijstatus"
+      }
+    },
+    "meter_power.charged": {
+      "title": {
+        "en": "Energy charged",
+        "de": "Geladene Energie",
+        "nl": "Geladen energie"
+      }
+    },
+    "meter_power.discharged": {
+      "title": {
+        "en": "Energy discharged",
+        "de": "Entladene Energie",
+        "nl": "Ontladen energie"
       }
     },
     "measure_power.load": {
@@ -84,7 +100,9 @@
   "energy": {
     "batteries": [
       "INTERNAL"
-    ]
+    ],
+    "meterPowerImportedCapability": "meter_power.charged",
+    "meterPowerExportedCapability": "meter_power.discharged"
   },
   "images": {
     "small": "/drivers/stream_ac5000/assets/images/small.png",

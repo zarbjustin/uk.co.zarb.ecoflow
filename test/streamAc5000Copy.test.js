@@ -31,17 +31,21 @@ test('the public STREAM AC 5000 driver name has no experimental qualifier', () =
 
 test('the replacement driver represents the STREAM 5000 unit family', () => {
   assert.deepStrictEqual(familyCompose.name, {
-    en: 'STREAM 5000 Series Unit',
-    de: 'STREAM-5000-Serieneinheit',
-    nl: 'STREAM 5000-serie-unit',
+    en: 'STREAM 5000 Series Unit (Beta)',
+    de: 'STREAM-5000-Serieneinheit (Beta)',
+    nl: 'STREAM 5000-serie-unit (bèta)',
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
-  assert.deepStrictEqual(familyCompose.energy, { batteries: ['INTERNAL'] });
+  assert.deepStrictEqual(familyCompose.energy, {
+    batteries: ['INTERNAL'],
+    meterPowerImportedCapability: 'meter_power.charged',
+    meterPowerExportedCapability: 'meter_power.discharged',
+  });
   assert.ok(familyCompose.capabilities.includes('stream_unit_power_battery_flow'));
   assert.ok(!familyCompose.capabilities.includes('measure_power'));
-  assert.ok(!familyCompose.capabilities.includes('meter_power.charged'));
-  assert.ok(!familyCompose.capabilities.includes('meter_power.discharged'));
+  assert.ok(familyCompose.capabilities.includes('meter_power.charged'));
+  assert.ok(familyCompose.capabilities.includes('meter_power.discharged'));
 
   const familyDriver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_5000_unit');
   assert.ok(familyDriver, 'generated app.json has no stream_5000_unit driver');
@@ -56,9 +60,9 @@ test('the STREAM 5000 installation aggregate is the sole Homey Energy battery', 
     meterPowerExportedCapability: 'meter_power.discharged',
   };
   assert.deepStrictEqual(systemCompose.name, {
-    en: 'STREAM Home Battery (5000 installation)',
-    de: 'STREAM-Hausbatterie (5000-Anlage)',
-    nl: 'STREAM-thuisbatterij (5000-installatie)',
+    en: 'STREAM Home Battery (5000 Beta)',
+    de: 'STREAM-Hausbatterie (5000 Beta)',
+    nl: 'STREAM-thuisbatterij (5000-bèta)',
   });
   assert.deepStrictEqual(systemCompose.energy, expectedEnergy);
   assert.ok(systemCompose.capabilities.includes('measure_power'));
@@ -113,15 +117,19 @@ test('the generated app manifest has clean public copy and monitoring-only discl
   assert.match(publicCopy, /no supported public API/);
 });
 
-test('physical STREAM 5000 devices are excluded from Homey Energy accounting', () => {
+test('physical STREAM 5000 devices omit instantaneous Homey Energy power but expose cumulative meters', () => {
   assert.strictEqual(compose.class, 'battery');
-  const expectedEnergy = { batteries: ['INTERNAL'] };
+  const expectedEnergy = {
+    batteries: ['INTERNAL'],
+    meterPowerImportedCapability: 'meter_power.charged',
+    meterPowerExportedCapability: 'meter_power.discharged',
+  };
   assert.deepStrictEqual(compose.energy, expectedEnergy);
   assert.ok(compose.capabilities.includes('measure_battery'));
   assert.ok(compose.capabilities.includes('stream_unit_power_battery_flow'));
   assert.ok(!compose.capabilities.includes('measure_power'));
-  assert.ok(!compose.capabilities.includes('meter_power.charged'));
-  assert.ok(!compose.capabilities.includes('meter_power.discharged'));
+  assert.ok(compose.capabilities.includes('meter_power.charged'));
+  assert.ok(compose.capabilities.includes('meter_power.discharged'));
 
   const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
   assert.deepStrictEqual(driver.energy, expectedEnergy);
@@ -155,6 +163,7 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   assert.match(familyHtml, /STREAM 5000 Series/);
   assert.match(familyHtml, /verified serial prefixes and telemetry/i);
   assert.match(familyHtml, /Monitoring only/i);
+  assert.match(familyHtml, /Exclude from Energy/i);
 
   const systemHtml = fs.readFileSync(
     path.join(root, 'drivers', 'stream_5000_system', 'pair', 'app_credentials.html'),
@@ -162,6 +171,19 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   );
   assert.match(systemHtml, /STREAM 5000 Home Battery/);
   assert.match(systemHtml, /Homey Energy Home Battery/);
+
+  for (const driverId of ['stream_5000_unit', 'stream_5000_system']) {
+    const driverCompose = require(`../drivers/${driverId}/driver.compose.json`);
+    assert.strictEqual(driverCompose.pair[0].id, 'beta_access');
+    const betaHtml = fs.readFileSync(
+      path.join(root, 'drivers', driverId, 'pair', 'beta_access.html'),
+      'utf8',
+    );
+    assert.match(betaHtml, /Experimental, read-only integration/i);
+    assert.match(betaHtml, /official API/i);
+    assert.match(betaHtml, /Re-pairing may be required/i);
+    assert.match(betaHtml, /check_stream_5000_beta_access/);
+  }
 });
 
 test('wrong-device and monitoring-only copy is localized without driver terminology', () => {
@@ -184,6 +206,9 @@ test('aggregate and physical drivers use the shared STREAM 5000 lifecycle with d
   assert.match(source, /device\.stream_5000_unit\.monitoring_only/);
   assert.match(source, /experimental_notice:\s*localizedStatus/);
   assert.match(source, /class Stream5000PhysicalUnitDevice/);
+  assert.match(source, /await this\.initialiseEnergyCapabilities\(\)/);
+  assert.match(source, /if \(typeof batteryPowerW === 'number'\)/);
+  assert.doesNotMatch(source, /\['measure_power', \.\.\.ENERGY_CAPABILITIES\]/);
   for (const driverId of ['stream_ac5000', 'stream_5000_unit']) {
     const wrapper = fs.readFileSync(path.join(root, 'drivers', driverId, 'device.ts'), 'utf8');
     assert.match(wrapper, /Stream5000PhysicalUnitDevice/);
@@ -193,4 +218,12 @@ test('aggregate and physical drivers use the shared STREAM 5000 lifecycle with d
     'utf8',
   );
   assert.match(aggregateWrapper, /Stream5000UnitDevice/);
+});
+
+test('every STREAM 5000 pairing path enforces the server-side beta gate', () => {
+  const source = fs.readFileSync(path.join(root, 'lib', 'stream5000Pairing.ts'), 'utf8');
+  assert.match(source, /check_stream_5000_beta_access/);
+  assert.match(source, /requireStream5000BetaAccess\(driver\?\.homey\)/);
+  assert.ok(source.indexOf('requireStream5000BetaAccess(driver?.homey)')
+    < source.indexOf('const client = appAuth.getClient()'));
 });

@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Home Battery (5000 installation)",
-    "de": "STREAM-Hausbatterie (5000-Anlage)",
-    "nl": "STREAM-thuisbatterij (5000-installatie)"
+    "en": "STREAM Home Battery (5000 Beta)",
+    "de": "STREAM-Hausbatterie (5000 Beta)",
+    "nl": "STREAM-thuisbatterij (5000-bèta)"
   },
   "class": "battery",
   "platforms": [
@@ -246,6 +246,9 @@
     }
   ],
   "pair": [
+    {
+      "id": "beta_access"
+    },
     {
       "id": "app_credentials"
     },

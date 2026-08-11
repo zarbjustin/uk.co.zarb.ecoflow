@@ -3,6 +3,11 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { pairedStream5000Serials } = require('../.homeybuild/lib/stream5000Pairing.js');
+const {
+  isStream5000BetaEnabled,
+  requireStream5000BetaAccess,
+  STREAM_5000_BETA_DISABLED_MESSAGE,
+} = require('../.homeybuild/lib/stream5000Beta.js');
 
 const device = (sn) => ({ getData: () => ({ sn }) });
 
@@ -55,4 +60,23 @@ test('cross-driver duplicate detection tolerates missing and malformed drivers',
     homey: { drivers: { getDriver: () => { throw new Error('not installed'); } } },
   };
   assert.deepStrictEqual([...pairedStream5000Serials(driver)], ['ES22VALID0001']);
+});
+
+test('STREAM 5000 beta access is opt-in and only explicit true enables it', () => {
+  const homey = { settings: { get: () => undefined } };
+  assert.strictEqual(isStream5000BetaEnabled(homey), false);
+  homey.settings.get = () => 'true';
+  assert.strictEqual(isStream5000BetaEnabled(homey), false);
+  homey.settings.get = () => true;
+  assert.strictEqual(isStream5000BetaEnabled(homey), true);
+});
+
+test('the shared pairing gate gives actionable guidance when beta access is off', () => {
+  const homey = { settings: { get: () => false } };
+  assert.throws(
+    () => requireStream5000BetaAccess(homey),
+    (err) => err.message === STREAM_5000_BETA_DISABLED_MESSAGE,
+  );
+  homey.settings.get = () => true;
+  assert.doesNotThrow(() => requireStream5000BetaAccess(homey));
 });

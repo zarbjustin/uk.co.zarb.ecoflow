@@ -96,14 +96,11 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
     this.sampleGate = this.telemetryAdapter.createSampleGate();
-    if (this.isEnergyAggregate()) {
-      this.chargedWh = this.storedEnergyWh('chargedWh');
-      this.dischargedWh = this.storedEnergyWh('dischargedWh');
-      this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
-      await this.initialiseEnergyCapabilities();
-    } else {
-      await this.initialisePhysicalUnitCapabilities();
-    }
+    this.chargedWh = this.storedEnergyWh('chargedWh');
+    this.dischargedWh = this.storedEnergyWh('dischargedWh');
+    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
+    await this.initialiseEnergyCapabilities();
+    if (!this.isEnergyAggregate()) await this.initialisePhysicalUnitCapabilities();
     const messageKey = this.monitoringOnlyMessageKey();
     const localizedStatus = this.homey.__(messageKey);
 
@@ -196,7 +193,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       await this.setCapabilityValue(capability, value).catch((e) => this.error(capability, e));
     }
     const batteryPowerW = values.measure_power;
-    if (this.isEnergyAggregate() && typeof batteryPowerW === 'number') {
+    if (typeof batteryPowerW === 'number') {
       await this.updateEnergy(batteryPowerW, receivedAt);
     }
   }
@@ -221,16 +218,14 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
   }
 
-  /** Remove Energy-facing capabilities from devices paired before the role split. */
+  /** Keep instantaneous power out of the physical unit's Energy contribution. */
   private async initialisePhysicalUnitCapabilities(): Promise<void> {
     if (!this.hasCapability('stream_unit_power_battery_flow')) {
       await this.addCapability('stream_unit_power_battery_flow')
         .catch((e) => this.error('add stream_unit_power_battery_flow', e));
     }
-    for (const capability of ['measure_power', ...ENERGY_CAPABILITIES]) {
-      if (this.hasCapability(capability)) {
-        await this.removeCapability(capability).catch((e) => this.error(`remove ${capability}`, e));
-      }
+    if (this.hasCapability('measure_power')) {
+      await this.removeCapability('measure_power').catch((e) => this.error('remove measure_power', e));
     }
   }
 
@@ -417,8 +412,10 @@ export class Stream5000UnitDevice extends Homey.Device {
 
 /**
  * A physical STREAM 5000-family monitor. Battery power stays available to the
- * user and Insights through a custom capability, but is deliberately excluded
- * from Homey Energy so the installation aggregate remains the single source.
+ * user and Insights through a custom capability. Charged/discharged cumulative
+ * meters are exposed for testing, but users who also pair the installation
+ * aggregate must exclude this optional unit from Homey Energy to avoid double
+ * counting.
  */
 export class Stream5000PhysicalUnitDevice extends Stream5000UnitDevice {
   protected isEnergyAggregate(): boolean {

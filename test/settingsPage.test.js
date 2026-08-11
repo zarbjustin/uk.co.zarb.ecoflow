@@ -43,6 +43,9 @@ function fakeDocument() {
           click() {
             return this.handlers.click ? this.handlers.click() : undefined;
           },
+          change() {
+            return this.handlers.change ? this.handlers.change() : undefined;
+          },
         });
       }
       return elements.get(id);
@@ -54,7 +57,9 @@ function fakeDocument() {
  * Settings-API stub. `failures` maps a key to the error a call for it produces,
  * so a partially failing removal can be reproduced.
  */
-function fakeHomey({ values = {}, unsetFails = {}, setFails = {}, withUnset = true } = {}) {
+function fakeHomey({
+  values = {}, unsetFails = {}, setFails = {}, withUnset = true, confirmAccepted = true,
+} = {}) {
   const store = new Map(Object.entries(values));
   const homey = {
     store,
@@ -72,6 +77,9 @@ function fakeHomey({ values = {}, unsetFails = {}, setFails = {}, withUnset = tr
     },
     api(method, url, body, cb) {
       cb(null, {});
+    },
+    confirm(message, type, cb) {
+      cb(null, confirmAccepted);
     },
   };
   if (withUnset) {
@@ -168,9 +176,44 @@ test('the stored password is never read back into the page', () => {
   assert.ok(!html.includes('Homey.get("appAuthPassword"'));
 });
 
-test('the STREAM 5000 family settings copy is monitoring-only without a beta label', () => {
+test('STREAM 5000 beta pairing is disabled by default and requires acknowledgement', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey({ confirmAccepted: false });
+  context.onHomeyReady(homey);
+  const checkbox = context.document.getElementById('stream5000BetaEnabled');
+
+  assert.strictEqual(checkbox.checked, false);
+  checkbox.checked = true;
+  await checkbox.change();
+  assert.strictEqual(checkbox.checked, false);
+  assert.strictEqual(homey.store.has('stream5000BetaEnabled'), false);
+  assert.match(context.document.getElementById('stream5000BetaSaved').textContent, /remains disabled/i);
+});
+
+test('accepting the warning persists STREAM 5000 beta access independently', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey();
+  context.onHomeyReady(homey);
+  const checkbox = context.document.getElementById('stream5000BetaEnabled');
+
+  checkbox.checked = true;
+  await checkbox.change();
+  assert.strictEqual(homey.store.get('stream5000BetaEnabled'), true);
+  assert.match(context.document.getElementById('stream5000BetaSaved').textContent, /enabled/i);
+
+  checkbox.checked = false;
+  await checkbox.change();
+  assert.strictEqual(homey.store.get('stream5000BetaEnabled'), false);
+  assert.match(context.document.getElementById('stream5000BetaSaved').textContent, /Existing paired devices will continue/i);
+});
+
+test('the STREAM 5000 settings clearly disclose the beta API risk', () => {
   const html = fs.readFileSync(SETTINGS_HTML, 'utf8');
-  assert.ok(!/STREAM AC 5000 \(experimental\)/i.test(html));
+  assert.match(html, /STREAM 5000 Series \(Beta\)/i);
+  assert.match(html, /Experimental, read-only integration/i);
+  assert.match(html, /official API/i);
+  assert.match(html, /Re-pairing may be required/i);
+  assert.match(html, /Disabled by default/i);
   assert.match(html, /not available\s+through the supported public API/i);
   assert.match(html, /Monitoring only/i);
   assert.match(html, /controls are intentionally disabled/i);

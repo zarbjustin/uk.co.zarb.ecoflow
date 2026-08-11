@@ -53,8 +53,9 @@ privacy-safe discovery rather than guessed aliases:
    without the pack attached to determine whether it is nested or independent.
 5. Keep all new models monitoring-only until their read path is verified.
 
-The current build offers only `ES22` devices during **STREAM 5000 Home Battery**
-and **STREAM 5000 Series Unit** pairing.
+The current build offers only `ES22` devices during **STREAM Home Battery (5000 Beta)**
+and **STREAM 5000 Series Unit (Beta)** pairing. Pairing is disabled by default
+until the user acknowledges the unsupported-API warning in the app settings.
 Unknown products are not subscribed or parsed yet; widening discovery is a
 future diagnostic increment.
 
@@ -124,8 +125,10 @@ switch resets automatically. No raw parsed payload is logged by this option.
   want to find in production.
 * **No REST polling.** An ES22 answers 1006, so polling would only consume the
   account's rate limit. All data arrives over MQTT.
-* **No Flow cards, no Energy-dashboard totals.** Cumulative kWh counters are not
-  derived in this increment.
+* **No Flow cards or controls.** Cumulative charged/discharged kWh is derived
+  locally from signed battery power. If both the installation Home Battery and
+  optional physical unit are paired, exclude the unit from Homey Energy to avoid
+  duplicate totals.
 
 ## Availability behaviour
 
@@ -166,12 +169,18 @@ Read this before you use it.
 
 ## Setup
 
-1. In Homey, add a device → **EcoFlow STREAM Series** → **STREAM Home Battery (5000 installation)**.
-2. Read the warning on the first pairing screen, then enter your **EcoFlow app**
+1. In the EcoFlow app settings on Homey, acknowledge the beta warning and enable
+   **STREAM 5000 beta pairing**.
+2. Add a device → **EcoFlow STREAM Series** → **STREAM Home Battery (5000 Beta)**.
+3. Read the warning on the first pairing screen, then enter your **EcoFlow app**
    email address, password and region.
-3. Pick your ES22 unit(s) from the list. Multiple ES22 units on one account are
+4. Pick your ES22 unit(s) from the list. Multiple ES22 units on one account are
    supported and share a single MQTT session. Your account is only saved once a
    unit is actually being added.
+
+The implementation may change or stop working when EcoFlow releases its official
+API. Device roles, capabilities, Homey Energy behaviour and credentials may be
+revised, and re-pairing may be required.
 
 The account is asked for once. Adding a second ES22 later skips straight to the
 device list.
@@ -181,10 +190,10 @@ device list.
 * **Previously paired as a STREAM Home Battery:** older app versions could offer
   an ES22 through the wrong Developer-API driver. The device is now quarantined
   without polling and shows an unavailable message. Delete that device, then add
-  it again using **STREAM Home Battery (5000 installation)**.
+  enable beta pairing and add it again using **STREAM Home Battery (5000 Beta)**.
 * **Previously paired through the app-connected AC 5000 test driver:** the app
   automatically removes its Energy-facing power and meter capabilities and
-  keeps it as a physical monitor. Add **STREAM Home Battery (5000 installation)**
+  keeps it as a physical monitor. Add **STREAM Home Battery (5000 Beta)**
   for Homey Energy; delete the older monitor if you do not want both roles.
 * **Remove one unit:** delete the device in Homey. The MQTT subscription is
   released immediately, and once the last app-connected STREAM 5000-family

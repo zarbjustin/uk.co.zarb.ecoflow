@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM 5000 Series Unit",
-    "de": "STREAM-5000-Serieneinheit",
-    "nl": "STREAM 5000-serie-unit"
+    "en": "STREAM 5000 Series Unit (Beta)",
+    "de": "STREAM-5000-Serieneinheit (Beta)",
+    "nl": "STREAM 5000-serie-unit (bèta)"
   },
   "class": "battery",
   "platforms": [
@@ -15,6 +15,8 @@
     "measure_battery",
     "battery_charging_state",
     "stream_unit_power_battery_flow",
+    "meter_power.charged",
+    "meter_power.discharged",
     "measure_power.load",
     "measure_power.grid",
     "measure_power.grid_import",
@@ -35,6 +37,20 @@
         "en": "Battery state",
         "de": "Batteriestatus",
         "nl": "Batterijstatus"
+      }
+    },
+    "meter_power.charged": {
+      "title": {
+        "en": "Energy charged",
+        "de": "Geladene Energie",
+        "nl": "Geladen energie"
+      }
+    },
+    "meter_power.discharged": {
+      "title": {
+        "en": "Energy discharged",
+        "de": "Entladene Energie",
+        "nl": "Ontladen energie"
       }
     },
     "measure_power.load": {
@@ -83,7 +99,9 @@
   "energy": {
     "batteries": [
       "INTERNAL"
-    ]
+    ],
+    "meterPowerImportedCapability": "meter_power.charged",
+    "meterPowerExportedCapability": "meter_power.discharged"
   },
   "images": {
     "small": "/drivers/stream_ac5000/assets/images/small.png",
@@ -181,15 +199,18 @@
           },
           "value": "Monitoring only · controls intentionally disabled",
           "hint": {
-            "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This integration signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
-            "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Integration meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
-            "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze integratie meldt zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
+            "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This integration signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified. If the STREAM Home Battery is also paired, use Homey's Exclude from Energy advanced setting on this optional unit to prevent duplicate energy totals.",
+            "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Integration meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist. Wenn auch die STREAM-Hausbatterie gekoppelt ist, schließen Sie diese optionale Einheit in den erweiterten Homey-Einstellungen von Energy aus, um doppelte Energiewerte zu vermeiden.",
+            "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze integratie meldt zich aan via de EcoFlow-appverbinding en leest alleen gegevens. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd. Als ook de STREAM-thuisbatterij is gekoppeld, sluit deze optionele unit dan via de geavanceerde Homey-instelling uit van Energy om dubbele energietotalen te voorkomen."
           }
         }
       ]
     }
   ],
   "pair": [
+    {
+      "id": "beta_access"
+    },
     {
       "id": "app_credentials"
     },

@@ -12,6 +12,9 @@
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
     button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1AA3E8; color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
     .saved { color: #1a7f37; font-size: 13px; margin-top: 12px; min-height: 18px; }
+    .beta-warning { border: 1px solid #e0a800; background: #fff8e1; color: #5e4700; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; }
+    .beta-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
+    .beta-toggle input { width:auto; margin-top:3px; }
   </style>
 </head>
 <body>
@@ -43,7 +46,23 @@
 
   <hr style="margin:28px 0;border:0;border-top:1px solid #e3e3e3;" />
 
-  <h1 style="font-size:17px;">STREAM 5000 Series</h1>
+  <h1 style="font-size:17px;">STREAM 5000 Series (Beta)</h1>
+  <div class="beta-warning">
+    <strong>Experimental, read-only integration</strong><br />
+    EcoFlow does not currently provide a supported public API for these products. This beta uses
+    the connection used by EcoFlow's mobile app. It may stop working, and the device model,
+    capabilities, Homey Energy behaviour, credentials or pairing may need to change when EcoFlow
+    releases its official API. Re-pairing may be required.
+  </div>
+  <label class="beta-toggle" for="stream5000BetaEnabled">
+    <input id="stream5000BetaEnabled" type="checkbox" />
+    <span>Enable STREAM 5000 beta pairing</span>
+  </label>
+  <p class="help">
+    Disabled by default. Turning this off later prevents new pairing only; it does not remove or
+    disable STREAM 5000 devices you already paired.
+  </p>
+  <div class="saved" id="stream5000BetaSaved"></div>
   <p class="help">
     Verified STREAM 5000-family units use EcoFlow's app connection because they are not available
     through the supported public API. Today this supports the STREAM AC 5000
@@ -62,6 +81,10 @@
       Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
       Homey.get('mqtt_enabled', function (err, v) { if (!err && v === false) document.getElementById('mqtt').checked = false; });
+      document.getElementById('stream5000BetaEnabled').checked = false;
+      Homey.get('stream5000BetaEnabled', function (err, v) {
+        if (!err) document.getElementById('stream5000BetaEnabled').checked = v === true;
+      });
 
       // The stored account password is never read back into this page.
       function refreshAppAuthState() {
@@ -96,6 +119,42 @@
           });
         });
       }
+
+      function confirmBetaEnable(Homey) {
+        return new Promise(function (resolve) {
+          if (typeof Homey.confirm !== 'function') {
+            resolve(false);
+            return;
+          }
+          Homey.confirm(
+            'STREAM 5000 support is experimental and uses EcoFlow\'s unsupported app connection. It may stop working or require changes and re-pairing when EcoFlow releases its official API. Enable beta pairing?',
+            'warning',
+            function (err, accepted) { resolve(!err && accepted === true); }
+          );
+        });
+      }
+
+      document.getElementById('stream5000BetaEnabled').addEventListener('change', async function () {
+        var checkbox = document.getElementById('stream5000BetaEnabled');
+        var status = document.getElementById('stream5000BetaSaved');
+        var enabled = checkbox.checked === true;
+        if (enabled && !(await confirmBetaEnable(Homey))) {
+          checkbox.checked = false;
+          status.textContent = 'Beta pairing remains disabled.';
+          return;
+        }
+        status.textContent = 'Saving...';
+        try {
+          await saveSetting(Homey, 'stream5000BetaEnabled', enabled);
+          status.textContent = enabled
+            ? 'Beta pairing enabled. You can now add a STREAM 5000 Beta device.'
+            : 'Beta pairing disabled. Existing paired devices will continue to run.';
+        } catch (err) {
+          checkbox.checked = !enabled;
+          status.textContent = 'Could not update beta access: '
+            + ((err && err.message) ? err.message : err);
+        }
+      });
 
       document.getElementById('clearAppAuth').addEventListener('click', async function () {
         var status = document.getElementById('appAuthSaved');
