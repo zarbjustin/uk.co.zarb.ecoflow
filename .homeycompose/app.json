@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.16",
+  "version": "1.10.17",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",

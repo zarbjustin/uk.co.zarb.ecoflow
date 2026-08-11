@@ -157,5 +157,8 @@
   },
   "1.10.16": {
     "en": "Updated STREAM 5000 driver icons to use the accurate AC 5000 wireframe artwork across the physical unit and Home Battery roles."
+  },
+  "1.10.17": {
+    "en": "Simplified the supported-device names to STREAM Home Battery and STREAM Unit while preserving clear pairing guidance for aggregate and individual devices."
   }
 }
