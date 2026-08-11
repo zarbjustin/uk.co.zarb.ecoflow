@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 30790)
-Total output lines: 4128
-
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
@@ -2038,7 +2035,99 @@ Total output lines: 4128
         "measure_power.load": {
           "title": {
             "en": "House consumption",
-            "de": "Hausverbr…790 tokens truncated…
+            "de": "Hausverbrauch",
+            "nl": "Huisverbruik"
+          }
+        },
+        "measure_power.grid": {
+          "title": {
+            "en": "Grid import/export",
+            "de": "Netzbezug/-einspeisung",
+            "nl": "Netafname/-teruglevering"
+          }
+        },
+        "measure_power.grid_import": {
+          "title": {
+            "en": "Grid import",
+            "de": "Netzbezug",
+            "nl": "Netafname"
+          }
+        },
+        "measure_power.grid_export": {
+          "title": {
+            "en": "Grid export",
+            "de": "Netzeinspeisung",
+            "nl": "Netteruglevering"
+          }
+        },
+        "measure_temperature": {
+          "title": {
+            "en": "Battery temperature",
+            "de": "Batterietemperatur",
+            "nl": "Batterijtemperatuur"
+          }
+        },
+        "battery_soh": {
+          "title": {
+            "en": "Battery health",
+            "de": "Batteriezustand",
+            "nl": "Batterijconditie"
+          }
+        }
+      },
+      "energy": {
+        "homeBattery": true,
+        "meterPowerImportedCapability": "meter_power.charged",
+        "meterPowerExportedCapability": "meter_power.discharged"
+      },
+      "images": {
+        "small": "/drivers/stream_ac5000/assets/images/small.png",
+        "large": "/drivers/stream_ac5000/assets/images/large.png",
+        "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "id": "installed_capacity_kwh",
+          "type": "number",
+          "label": {
+            "en": "Installed system capacity (kWh)",
+            "de": "Installierte Systemkapazität (kWh)",
+            "nl": "Geïnstalleerde systeemcapaciteit (kWh)"
+          },
+          "min": 0.1,
+          "max": 200,
+          "hint": {
+            "en": "Optional total usable capacity of all batteries in this installation. Used only for stored-energy and runtime estimates.",
+            "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
+            "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen gebruikt voor energie- en looptijdschattingen."
+          }
+        },
+        {
+          "id": "discharge_efficiency_percent",
+          "type": "number",
+          "label": {
+            "en": "Discharge efficiency (%)",
+            "de": "Entladewirkungsgrad (%)",
+            "nl": "Ontlaadrendement (%)"
+          },
+          "value": 92,
+          "min": 50,
+          "max": 100,
+          "hint": {
+            "en": "Efficiency applied to the calculated time-to-empty estimate. The default is 92%.",
+            "de": "Wirkungsgrad für die berechnete Restlaufzeitschätzung. Standardwert: 92 %.",
+            "nl": "Rendement voor de berekende schatting van de resterende looptijd. Standaard: 92%."
+          }
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Device information",
+            "de": "Geräteinformationen",
+            "nl": "Apparaatinformatie"
+          },
+          "children": [
+            {
               "id": "model",
               "type": "label",
               "label": {
