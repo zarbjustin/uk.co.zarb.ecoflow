@@ -20,7 +20,7 @@
       "intro": "Deze vertegenwoordigt één volledige STREAM-installatie en levert systeemtotalen voor Homey Energy en widgets. Koppel er één per serienummer van het hoofdsysteem."
     },
     "stream_unit": {
-      "title": "Koppel een fysieke STREAM-unit",
+      "title": "Koppel een STREAM-unit",
       "intro": "Dit voegt één omvormer of batterij toe als fysiek apparaat. Deze levert geen totalen voor de hele installatie en wordt niet gebruikt door Homey Energy of STREAM-widgets. Koppel STREAM Home Battery voor de gecombineerde energiegegevens van de installatie."
     }
   },

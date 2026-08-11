@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Home Battery (installation)",
-    "de": "STREAM-Hausbatterie (Anlage)",
-    "nl": "STREAM-thuisbatterij (installatie)"
+    "en": "STREAM Home Battery",
+    "de": "STREAM-Hausbatterie",
+    "nl": "STREAM-thuisbatterij"
   },
   "class": "battery",
   "platforms": [

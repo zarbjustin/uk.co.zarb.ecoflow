@@ -20,7 +20,7 @@
       "intro": "This represents one complete STREAM installation and provides whole-system totals for Homey Energy and widgets. Pair one per main system serial."
     },
     "stream_unit": {
-      "title": "Pair a physical STREAM Unit",
+      "title": "Pair a STREAM Unit",
       "intro": "This adds one inverter or battery as physical hardware. It does not provide whole-installation totals and is not used by Homey Energy or STREAM widgets. Pair STREAM Home Battery for the installation's combined energy data."
     }
   },

@@ -20,7 +20,7 @@
       "intro": "Sie steht für eine vollständige STREAM-Anlage und liefert Gesamtdaten für Homey Energy und Widgets. Kopple eine pro Hauptsystem-Seriennummer."
     },
     "stream_unit": {
-      "title": "Physische STREAM-Einheit koppeln",
+      "title": "STREAM-Einheit koppeln",
       "intro": "Dies fügt einen einzelnen Wechselrichter oder Akku als physisches Gerät hinzu. Er liefert keine Gesamtwerte der Anlage und wird weder von Homey Energy noch von STREAM-Widgets verwendet. Koppeln Sie STREAM Home Battery für die kombinierten Energiedaten der Anlage."
     }
   },

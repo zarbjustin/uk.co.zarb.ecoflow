@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "Physical STREAM Unit",
-    "de": "Physische STREAM-Einheit",
-    "nl": "Fysieke STREAM-unit"
+    "en": "STREAM Unit",
+    "de": "STREAM-Einheit",
+    "nl": "STREAM-unit"
   },
   "class": "battery",
   "platforms": [

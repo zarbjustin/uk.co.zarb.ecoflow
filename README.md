@@ -14,9 +14,9 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 - **Control:** settable charge/discharge limits, backup-reserve level (3–100%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
 - Devices are classified by serial prefix (BK11 Ultra, BK12 Pro, BK31 AC Pro, BK41 Max, BK51 AC, BK61 Ultra X), so all current STREAM models are discovered; the Microinverter (BK01) is skipped as it exposes no telemetry.
 
-Pair **STREAM Home Battery (installation)** for one aggregate device per main system serial. It is
+Pair **STREAM Home Battery** for one aggregate device per main system serial. It is
 the single source used by Homey Energy and the STREAM widgets, including one-unit installations.
-Pair **Physical STREAM Unit** only when you also want separate per-device telemetry; physical units
+Pair **STREAM Unit** only when you also want separate per-device telemetry; physical units
 do not contribute to Homey Energy and do not contain reliable whole-installation totals.
 
 ### STREAM 5000 Series Beta — AC 5000 monitoring
@@ -57,8 +57,8 @@ English, **German** and **Dutch**.
 
 ## Setup
 1. Create an **Access Key** and **Secret Key** at [developer.ecoflow.com](https://developer.ecoflow.com) → *IoT Background*.
-2. Add **STREAM Home Battery (installation)** for Homey Energy, system totals and widgets. Add
-   **Physical STREAM Unit** only for optional per-device monitoring. Enter the keys + region when prompted.
+2. Add **STREAM Home Battery** for Homey Energy, system totals and widgets. Add
+   **STREAM Unit** only for optional per-device monitoring. Enter the keys + region when prompted.
 3. Manage credentials later under the app's **Settings** page.
 
 > **STREAM AC 5000 beta testers:** enable beta pairing in the app settings, add **STREAM Home Battery (5000 Beta)** for Homey Energy, then optionally add **STREAM 5000 Series Unit (Beta)** for physical telemetry. The optional unit does not contribute separately to Homey Energy. These use a separate EcoFlow app sign-in and are monitoring only—see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
