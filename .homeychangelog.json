@@ -154,5 +154,8 @@
   },
   "1.10.15": {
     "en": "Simplified STREAM energy reporting so physical units are telemetry-only and all Homey Energy power and charged/discharged totals come from STREAM Home Battery."
+  },
+  "1.10.16": {
+    "en": "Updated STREAM 5000 driver icons to use the accurate AC 5000 wireframe artwork across the physical unit and Home Battery roles."
   }
 }
