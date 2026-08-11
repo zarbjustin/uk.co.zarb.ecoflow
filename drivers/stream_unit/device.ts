@@ -1,9 +1,6 @@
 'use strict';
 
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
-import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
-import { batteryEnergyMode, followResettableCounter, integrateSignedPower } from '../../lib/energyIntegration';
-import { toFiniteNumber } from '../../lib/quota';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { streamModelFromSn } from '../../lib/streamModels';
 import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
@@ -26,26 +23,6 @@ import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/strea
  */
 module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private mainSn = '';
-
-  private chargedWh = 0;
-
-  private dischargedWh = 0;
-
-  private chargedRawWh: number | undefined;
-
-  private dischargedRawWh: number | undefined;
-
-  private lastEnergyTs = 0;
-
-  private countersAvailable = false;
-
-  private energyCheckpoint!: EnergyCheckpoint;
-
-  private static readonly ENERGY_CAPS = [
-    'measure_power',
-    'meter_power.charged',
-    'meter_power.discharged',
-  ];
 
   /** Whole-home controls + flow tiles, meaningful only on the system main unit. */
   private static readonly SYSTEM_CAPS = [
@@ -90,6 +67,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     'measure_power.from_pv': 'stream_unit_power_from_solar',
     'measure_power.from_battery': 'stream_unit_power_from_battery',
     'measure_power.from_grid': 'stream_unit_power_from_grid',
+    measure_power: 'stream_unit_power_battery_flow',
     'measure_power.grid': 'stream_unit_power_grid',
   };
 
@@ -97,13 +75,6 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const sn = this.getData().sn as string;
     const spec = streamModelFromSn(sn);
     this.mainSn = (this.getStoreValue('mainSn') as string) || sn;
-    this.chargedWh = (this.getStoreValue('chargedWh') as number) || 0;
-    this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
-    this.chargedRawWh = this.getStoreValue('chargedRawWh') as number | undefined;
-    this.dischargedRawWh = this.getStoreValue('dischargedRawWh') as number | undefined;
-    this.countersAvailable = this.getStoreValue('countersAvailable') === true
-      || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined;
-    this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistBatteryStore());
     try {
       if (this.mainSn === sn) this.mainSn = await this.client.getMainSn(sn);
     } catch (e) {
@@ -112,14 +83,8 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const isMain = this.mainSn === sn;
 
     // Base per-unit capabilities every unit should have.
-    await this.ensureCapabilities([
-      'battery_charging_state',
-      'stream_unit_power_battery_flow',
-      'stream_unit_power_grid',
-      ...StreamUnitDevice.ENERGY_CAPS,
-      ...StreamUnitDevice.AC_CAPS,
-    ]);
-    await this.removeCapabilities(['measure_power.grid']);
+    await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...StreamUnitDevice.AC_CAPS]);
+    await this.removeCapabilities(['measure_power', 'measure_power.grid', 'meter_power.charged', 'meter_power.discharged']);
     await this.removeCapabilities(StreamUnitDevice.LEGACY_AC_POWER_CAPS);
 
     // Solar tiles: solar models keep their PV inputs; AC-coupled models drop them.
@@ -131,8 +96,6 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     await this.removeCapabilities(StreamUnitDevice.LEGACY_SYSTEM_CAPS);
 
     this.registerControlListeners(isMain);
-    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
     await this.refreshInfoSettings(sn, isMain).catch((e) => this.error('refresh info settings', e));
   }
 
@@ -255,13 +218,6 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
   async applyQuota(quota: Record<string, any>): Promise<void> {
     const values = mapStreamQuota(quota, 'unit');
-    // Maintain reset-proof, monotonic Homey meters locally. Directly mapped raw
-    // EcoFlow counters can reset after firmware updates and must not be exposed.
-    delete values['meter_power.charged'];
-    delete values['meter_power.discharged'];
-    if (values.measure_power !== undefined) {
-      values.stream_unit_power_battery_flow = values.measure_power;
-    }
     for (const [source, target] of Object.entries(StreamUnitDevice.POWER_CAP_MAP)) {
       const value = values[source];
       if (value !== undefined) values[target] = value;
@@ -277,77 +233,5 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
-    await this.updateBatteryEnergy(quota, values.measure_power);
-  }
-
-  private async updateBatteryEnergy(
-    quota: Record<string, any>,
-    batteryPowerW: number | boolean | string | undefined,
-  ): Promise<void> {
-    const accuChg = toFiniteNumber(quota.accuChgEnergy);
-    const accuDsg = toFiniteNumber(quota.accuDsgEnergy);
-    const hasChg = accuChg !== undefined;
-    const hasDsg = accuDsg !== undefined;
-    const mode = batteryEnergyMode(hasChg || hasDsg, this.countersAvailable);
-    if (mode === 'skip') return;
-
-    if (mode === 'counter') {
-      this.lastEnergyTs = Date.now();
-      this.countersAvailable = true;
-      let changed = false;
-      if (hasChg) {
-        const next = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
-        if (next.totalWh !== this.chargedWh) changed = true;
-        this.chargedWh = next.totalWh;
-        this.chargedRawWh = next.lastRawWh;
-      }
-      if (hasDsg) {
-        const next = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg as number);
-        if (next.totalWh !== this.dischargedWh) changed = true;
-        this.dischargedWh = next.totalWh;
-        this.dischargedRawWh = next.lastRawWh;
-      }
-      // Persist the counter-source latch even when the first sample only anchors
-      // the raw values and therefore does not advance either Homey meter.
-      this.energyCheckpoint.mark();
-      if (changed) await this.updateBatteryEnergyCapabilities();
-      return;
-    }
-
-    if (typeof batteryPowerW !== 'number') return;
-    const now = Date.now();
-    const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
-    this.lastEnergyTs = now;
-    if (dtMs <= 0) return;
-    const next = integrateSignedPower(
-      { posWh: this.chargedWh, negWh: this.dischargedWh },
-      batteryPowerW,
-      dtMs,
-    );
-    if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
-      this.chargedWh = next.posWh;
-      this.dischargedWh = next.negWh;
-      await this.updateBatteryEnergyCapabilities();
-    }
-  }
-
-  private async updateBatteryEnergyCapabilities(): Promise<void> {
-    this.energyCheckpoint.mark();
-    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
-  }
-
-  private async persistBatteryStore(): Promise<void> {
-    await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
-    await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
-    if (this.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', this.chargedRawWh).catch(() => {});
-    if (this.dischargedRawWh !== undefined) {
-      await this.setStoreValue('dischargedRawWh', this.dischargedRawWh).catch(() => {});
-    }
-    if (this.countersAvailable) await this.setStoreValue('countersAvailable', true).catch(() => {});
-  }
-
-  protected async onTeardown(): Promise<void> {
-    await this.energyCheckpoint?.flush();
   }
 };

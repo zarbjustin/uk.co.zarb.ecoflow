@@ -21,7 +21,7 @@
     },
     "stream_unit": {
       "title": "Physische STREAM-Einheit koppeln",
-      "intro": "Dies fügt einen einzelnen Wechselrichter oder Akku mit eigener geladener und entladener Energie hinzu. Verwende ihn allein für eine einfache Einzelanlage. Wenn auch eine aggregierte STREAM-Hausbatterie gekoppelt ist, schließe diese Einheit von Homey Energy aus, damit nichts doppelt gezählt wird. STREAM-Widgets für die Gesamtanlage verwenden weiterhin das aggregierte Gerät."
+      "intro": "Dies fügt einen einzelnen Wechselrichter oder Akku als physisches Gerät hinzu. Er liefert keine Gesamtwerte der Anlage und wird weder von Homey Energy noch von STREAM-Widgets verwendet. Koppeln Sie STREAM Home Battery für die kombinierten Energiedaten der Anlage."
     }
   },
   "widgets": {

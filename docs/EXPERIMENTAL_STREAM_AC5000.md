@@ -126,9 +126,8 @@ switch resets automatically. No raw parsed payload is logged by this option.
 * **No REST polling.** An ES22 answers 1006, so polling would only consume the
   account's rate limit. All data arrives over MQTT.
 * **No Flow cards or controls.** Cumulative charged/discharged kWh is derived
-  locally from signed battery power. If both the installation Home Battery and
-  optional physical unit are paired, exclude the unit from Homey Energy to avoid
-  duplicate totals.
+  locally from signed battery power on the installation Home Battery only. The
+  optional physical unit is a telemetry monitor and does not contribute to Homey Energy.
 
 ## Availability behaviour
 
@@ -192,10 +191,9 @@ device list.
   without polling and shows an unavailable message. Enable beta pairing, delete
   that device and add it again using **STREAM Home Battery (5000 Beta)**.
 * **Previously paired through the app-connected AC 5000 test driver:** the app
-  removes its standard instantaneous Energy power and keeps it as a physical
-  monitor with cumulative charged/discharged meters. Add **STREAM Home Battery
-  (5000 Beta)** for Homey Energy; delete the older monitor, or exclude it from
-  Energy, if you do not want both roles contributing cumulative totals.
+  removes its standard instantaneous and cumulative Energy capabilities and keeps
+  it as a physical telemetry monitor. Add **STREAM Home Battery (5000 Beta)** for
+  all Homey Energy reporting.
 * **Remove one unit:** delete the device in Homey. The MQTT subscription is
   released immediately, and once the last app-connected STREAM 5000-family
   unit is gone the shared MQTT session is closed too.

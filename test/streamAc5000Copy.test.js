@@ -37,15 +37,11 @@ test('the replacement driver represents the STREAM 5000 unit family', () => {
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
-  assert.deepStrictEqual(familyCompose.energy, {
-    batteries: ['INTERNAL'],
-    meterPowerImportedCapability: 'meter_power.charged',
-    meterPowerExportedCapability: 'meter_power.discharged',
-  });
+  assert.strictEqual(familyCompose.energy, undefined);
   assert.ok(familyCompose.capabilities.includes('stream_unit_power_battery_flow'));
   assert.ok(!familyCompose.capabilities.includes('measure_power'));
-  assert.ok(familyCompose.capabilities.includes('meter_power.charged'));
-  assert.ok(familyCompose.capabilities.includes('meter_power.discharged'));
+  assert.ok(!familyCompose.capabilities.includes('meter_power.charged'));
+  assert.ok(!familyCompose.capabilities.includes('meter_power.discharged'));
 
   const familyDriver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_5000_unit');
   assert.ok(familyDriver, 'generated app.json has no stream_5000_unit driver');
@@ -117,23 +113,18 @@ test('the generated app manifest has clean public copy and monitoring-only discl
   assert.match(publicCopy, /no supported public API/);
 });
 
-test('physical STREAM 5000 devices omit instantaneous Homey Energy power but expose cumulative meters', () => {
+test('physical STREAM 5000 devices expose telemetry but no Homey Energy capabilities', () => {
   assert.strictEqual(compose.class, 'battery');
-  const expectedEnergy = {
-    batteries: ['INTERNAL'],
-    meterPowerImportedCapability: 'meter_power.charged',
-    meterPowerExportedCapability: 'meter_power.discharged',
-  };
-  assert.deepStrictEqual(compose.energy, expectedEnergy);
+  assert.strictEqual(compose.energy, undefined);
   assert.ok(compose.capabilities.includes('measure_battery'));
   assert.ok(compose.capabilities.includes('stream_unit_power_battery_flow'));
   assert.ok(!compose.capabilities.includes('measure_power'));
-  assert.ok(compose.capabilities.includes('meter_power.charged'));
-  assert.ok(compose.capabilities.includes('meter_power.discharged'));
+  assert.ok(!compose.capabilities.includes('meter_power.charged'));
+  assert.ok(!compose.capabilities.includes('meter_power.discharged'));
 
   const driver = generatedApp.drivers.find((candidate) => candidate.id === 'stream_ac5000');
-  assert.deepStrictEqual(driver.energy, expectedEnergy);
-  assert.deepStrictEqual(familyCompose.energy, expectedEnergy);
+  assert.strictEqual(driver.energy, undefined);
+  assert.strictEqual(familyCompose.energy, undefined);
 });
 
 test('STREAM AC 5000 offers an automatically-resetting diagnostic capture setting', () => {
@@ -163,7 +154,8 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   assert.match(familyHtml, /STREAM 5000 Series/);
   assert.match(familyHtml, /verified serial prefixes and telemetry/i);
   assert.match(familyHtml, /Monitoring only/i);
-  assert.match(familyHtml, /Exclude from Energy/i);
+  assert.match(familyHtml, /does not contribute to Homey Energy/i);
+  assert.match(familyHtml, /STREAM Home Battery \(5000 Beta\)/i);
 
   const systemHtml = fs.readFileSync(
     path.join(root, 'drivers', 'stream_5000_system', 'pair', 'app_credentials.html'),
@@ -206,9 +198,9 @@ test('aggregate and physical drivers use the shared STREAM 5000 lifecycle with d
   assert.match(source, /device\.stream_5000_unit\.monitoring_only/);
   assert.match(source, /experimental_notice:\s*localizedStatus/);
   assert.match(source, /class Stream5000PhysicalUnitDevice/);
-  assert.match(source, /await this\.initialiseEnergyCapabilities\(\)/);
-  assert.match(source, /if \(typeof batteryPowerW === 'number'\)/);
-  assert.doesNotMatch(source, /\['measure_power', \.\.\.ENERGY_CAPABILITIES\]/);
+  assert.match(source, /if \(this\.isEnergyAggregate\(\)\)/);
+  assert.match(source, /if \(this\.isEnergyAggregate\(\) && typeof batteryPowerW === 'number'\)/);
+  assert.match(source, /\['measure_power', \.\.\.ENERGY_CAPABILITIES\]/);
   for (const driverId of ['stream_ac5000', 'stream_5000_unit']) {
     const wrapper = fs.readFileSync(path.join(root, 'drivers', driverId, 'device.ts'), 'utf8');
     assert.match(wrapper, /Stream5000PhysicalUnitDevice/);

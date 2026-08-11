@@ -46,10 +46,8 @@ reusing the ES22 parser for an unverified product is not permitted.
   installation. Until EcoFlow exposes a stable group/gateway identifier, each
   ES22 serial is deliberately treated as a singleton installation.
 - `stream_5000_unit`: an optional monitor for one physical 5000-family battery
-  or inverter/battery unit. It uses a custom instantaneous-power capability and
-  exposes cumulative charged/discharged meters. When the installation aggregate
-  is also paired, the user must exclude this optional unit from Homey Energy to
-  avoid duplicate cumulative totals.
+  or inverter/battery unit. It uses custom telemetry capabilities and never
+  contributes instantaneous or cumulative data to Homey Energy.
 - A gateway, meter, solar-only component or other different Homey Energy role
   receives a separate driver even if it shares app authentication and MQTT.
 - Exact product names and icons belong to paired devices; the driver remains a
@@ -98,8 +96,7 @@ Complete all of the following before exposing another model:
 6. Only then add the product and its exact prefix to `stream5000Models.ts`.
 7. Confirm the Homey class, capabilities and Energy contribution. Add the model
    to the aggregate and unit roles together. Only the aggregate may expose
-   `homeBattery` or standard `measure_power`; a unit may expose cumulative
-   charged/discharged meters only with the duplicate-Energy warning retained.
+   `homeBattery`, standard `measure_power`, or cumulative charged/discharged meters.
 8. Add product naming, imagery, translations, pairing copy and diagnostics tests.
 9. Run TypeScript, lint, the full test suite and Homey validation, followed by a
    Test-channel installation on the real product.
@@ -111,9 +108,8 @@ Homey identifies a device using its immutable `data` object together with its
 driver ID. The role split was made before STREAM 5000 support reached general
 availability, so no permanent Energy-compatibility layer is carried forward.
 An earlier app-connected test device is migrated in place to the physical-monitor
-role with cumulative charged/discharged meters. Test installations then pair the
-new Home Battery aggregate and may keep or delete the older monitor as preferred;
-when keeping both, they must exclude the physical monitor from Homey Energy.
+role with all standard Homey Energy capabilities removed. Test installations then
+pair the new Home Battery aggregate and may keep or delete the older monitor as preferred.
 
 All three app-auth driver IDs share one account lifecycle. Stored EcoFlow
 credentials are removed only after the last aggregate or unit device is deleted.

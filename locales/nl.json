@@ -21,7 +21,7 @@
     },
     "stream_unit": {
       "title": "Koppel een fysieke STREAM-unit",
-      "intro": "Dit voegt één fysieke omvormer of batterij toe met eigen geladen en ontladen energie. Gebruik deze zelfstandig voor een eenvoudige installatie met één unit. Als ook een geaggregeerde STREAM-thuisbatterij is gekoppeld, sluit deze unit dan uit van Homey Energy om dubbeltelling te voorkomen. STREAM-widgets voor de hele installatie blijven het geaggregeerde apparaat gebruiken."
+      "intro": "Dit voegt één omvormer of batterij toe als fysiek apparaat. Deze levert geen totalen voor de hele installatie en wordt niet gebruikt door Homey Energy of STREAM-widgets. Koppel STREAM Home Battery voor de gecombineerde energiegegevens van de installatie."
     }
   },
   "widgets": {

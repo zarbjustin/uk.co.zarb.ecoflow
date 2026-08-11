@@ -21,7 +21,7 @@
     },
     "stream_unit": {
       "title": "Pair a physical STREAM Unit",
-      "intro": "This adds one physical inverter or battery with its own charged and discharged energy. Use it by itself for a simple standalone installation. If a STREAM Home Battery aggregate is also paired, exclude this unit from Homey Energy to avoid double counting. Whole-installation STREAM widgets still use the aggregate device."
+      "intro": "This adds one inverter or battery as physical hardware. It does not provide whole-installation totals and is not used by Homey Energy or STREAM widgets. Pair STREAM Home Battery for the installation's combined energy data."
     }
   },
   "widgets": {
