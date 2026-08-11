@@ -142,5 +142,8 @@
   },
   "1.10.11": {
     "en": "Corrected the Homey Store descriptions for the new STREAM 5000 installation Home Battery and optional physical-monitor roles."
+  },
+  "1.10.12": {
+    "en": "Added opt-in STREAM 5000 beta pairing with unsupported-API warnings, Beta-labelled devices, cumulative charged/discharged unit meters, and guidance to prevent duplicate Homey Energy totals."
   }
 }
