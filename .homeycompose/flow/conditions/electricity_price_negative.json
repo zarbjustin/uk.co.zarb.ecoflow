@@ -16,6 +16,6 @@
     "nl": "Waar wanneer de ingevoerde prijs onder nul ligt (je wordt betaald om te verbruiken). Gebruikt de actie 'Huidige stroomprijs instellen'."
   },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream" }
+    { "type": "device", "name": "device", "filter": "driver_id=stream&capabilities=operating_mode" }
   ]
 }

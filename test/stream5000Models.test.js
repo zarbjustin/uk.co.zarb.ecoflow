@@ -10,6 +10,7 @@ const {
   STREAM_5000_SYSTEM_DRIVER_IDS,
   STREAM_5000_UNIT_DRIVER_IDS,
   stream5000DeviceName,
+  streamHomeBatteryProfile,
   stream5000ModelFromSn,
   supportedStream5000Models,
 } = require('../.homeybuild/lib/stream5000Models.js');
@@ -31,12 +32,18 @@ test('the verified model chooses an explicit telemetry adapter', () => {
   assert.deepStrictEqual(supportedStream5000Models().map((candidate) => candidate.id), [STREAM_AC5000_MODEL_ID]);
 });
 
-test('the family driver namespace separates aggregate and physical-unit identities', () => {
-  assert.deepStrictEqual([...STREAM_5000_SYSTEM_DRIVER_IDS], ['stream_5000_system']);
+test('the shared Home Battery runtime is selected from stored profile with a serial fallback', () => {
+  assert.strictEqual(streamHomeBatteryProfile('BK61ZK1B2H720041'), 'developer_api');
+  assert.strictEqual(streamHomeBatteryProfile('ES22ZEB1ABCD0001'), 'stream_5000');
+  assert.strictEqual(streamHomeBatteryProfile('UNKNOWN', 'stream_5000'), 'stream_5000');
+});
+
+test('the family driver namespace uses the shared Home Battery and separate physical-unit identities', () => {
+  assert.deepStrictEqual([...STREAM_5000_SYSTEM_DRIVER_IDS], ['stream', 'stream_5000_system']);
   assert.deepStrictEqual([...STREAM_5000_UNIT_DRIVER_IDS], ['stream_5000_unit', 'stream_ac5000']);
   assert.deepStrictEqual(
     [...STREAM_5000_DRIVER_IDS],
-    ['stream_5000_system', 'stream_5000_unit', 'stream_ac5000'],
+    ['stream', 'stream_5000_system', 'stream_5000_unit', 'stream_ac5000'],
   );
 });
 

@@ -10,8 +10,15 @@ import {
   stream5000TelemetryAdapter,
   Stream5000TelemetryAdapter,
 } from './stream5000Adapters';
-import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
-import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
+import {
+  isSupportedStream5000Sn,
+  STREAM_5000_DRIVER_IDS,
+  stream5000ModelFromSn,
+} from './stream5000Models';
+import {
+  STREAM_5000_HOME_BATTERY_CAPABILITIES,
+  stream5000PhysicalCapabilityValues,
+} from './stream5000Roles';
 import { integrateTimedSignedPower } from './energyIntegration';
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 
@@ -76,7 +83,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   protected monitoringOnlyMessageKey(): string {
-    return 'device.stream_5000_system.monitoring_only';
+    return 'device.stream.monitoring_only';
   }
 
   /** Translate protocol capabilities into the public capabilities for this device role. */
@@ -208,7 +215,13 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   /** Add the meters defensively so devices paired with an older manifest migrate in place. */
   private async initialiseEnergyCapabilities(): Promise<void> {
-    for (const capability of ENERGY_CAPABILITIES) {
+    const allowed = new Set<string>(STREAM_5000_HOME_BATTERY_CAPABILITIES);
+    for (const capability of this.getCapabilities()) {
+      if (!allowed.has(capability)) {
+        await this.removeCapability(capability).catch((e) => this.error(`remove ${capability}`, e));
+      }
+    }
+    for (const capability of STREAM_5000_HOME_BATTERY_CAPABILITIES) {
       if (!this.hasCapability(capability)) {
         await this.addCapability(capability).catch((e) => this.error(`add ${capability}`, e));
       }
@@ -404,7 +417,7 @@ export class Stream5000UnitDevice extends Homey.Device {
         const devices = typeof driver?.getDevices === 'function' ? driver.getDevices() : [];
         if (devices.some((device: any) => {
           if (device === this) return false;
-          return Boolean(device.getData?.().sn);
+          return isSupportedStream5000Sn(device.getData?.().sn);
         })) return true;
       } catch {
         // A driver may be absent in a development build. Continue with the

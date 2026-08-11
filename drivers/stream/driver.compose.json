@@ -384,11 +384,99 @@
         "de": "Wirkungsgrad für die berechnete Restlaufzeitschätzung. Standardwert: 92 %.",
         "nl": "Rendement voor de berekende schatting van de resterende looptijd. Standaard: 92%."
       }
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "STREAM 5000 app connection",
+        "de": "STREAM-5000-App-Verbindung",
+        "nl": "STREAM 5000-appverbinding"
+      },
+      "children": [
+        {
+          "id": "model",
+          "type": "label",
+          "label": {
+            "en": "Detected model",
+            "de": "Erkanntes Modell",
+            "nl": "Gedetecteerd model"
+          },
+          "value": "—",
+          "hint": {
+            "en": "Populated automatically for a 5000-series Home Battery.",
+            "de": "Wird für eine Hausbatterie der 5000-Serie automatisch ausgefüllt.",
+            "nl": "Wordt automatisch ingevuld voor een thuisbatterij uit de 5000-serie."
+          }
+        },
+        {
+          "id": "serial_number",
+          "type": "label",
+          "label": {
+            "en": "Representative serial number",
+            "de": "Repräsentative Seriennummer",
+            "nl": "Representatief serienummer"
+          },
+          "value": "—"
+        },
+        {
+          "id": "unavailable_after",
+          "type": "number",
+          "label": {
+            "en": "Report app connection offline after (minutes)",
+            "de": "App-Verbindung als offline melden nach (Minuten)",
+            "nl": "Appverbinding als offline melden na (minuten)"
+          },
+          "value": 20,
+          "min": 5,
+          "max": 240,
+          "hint": {
+            "en": "Used only by 5000-series installations. If no parsed telemetry arrives within this time, the Home Battery is shown as unavailable.",
+            "de": "Wird nur für Anlagen der 5000-Serie verwendet. Treffen in dieser Zeit keine auswertbaren Telemetriedaten ein, wird die Hausbatterie als nicht verfügbar angezeigt.",
+            "nl": "Alleen gebruikt voor installaties uit de 5000-serie. Als binnen deze tijd geen bruikbare telemetrie binnenkomt, wordt de thuisbatterij als niet beschikbaar getoond."
+          }
+        },
+        {
+          "id": "diagnostic_capture_next",
+          "type": "checkbox",
+          "label": {
+            "en": "Capture next 5000 telemetry snapshot",
+            "de": "Nächsten 5000-Telemetrie-Snapshot erfassen",
+            "nl": "Volgende 5000-telemetriesnapshot vastleggen"
+          },
+          "value": false,
+          "hint": {
+            "en": "Used only by 5000-series installations. The next supported telemetry cycle is added to the diagnostic log without credentials or a complete serial number, then this option switches off automatically.",
+            "de": "Wird nur für Anlagen der 5000-Serie verwendet. Der nächste unterstützte Telemetriezyklus wird ohne Zugangsdaten oder vollständige Seriennummer zum Diagnoseprotokoll hinzugefügt; danach schaltet sich diese Option automatisch aus.",
+            "nl": "Alleen gebruikt voor installaties uit de 5000-serie. De volgende ondersteunde telemetriecyclus wordt zonder inloggegevens of volledig serienummer aan het diagnoselogboek toegevoegd; daarna schakelt deze optie automatisch uit."
+          }
+        },
+        {
+          "id": "experimental_notice",
+          "type": "label",
+          "label": {
+            "en": "5000 connection status",
+            "de": "Status der 5000-Verbindung",
+            "nl": "Status van de 5000-verbinding"
+          },
+          "value": "—",
+          "hint": {
+            "en": "5000-series products use EcoFlow's app connection for read-only monitoring. Other STREAM installations use the supported Developer API.",
+            "de": "Produkte der 5000-Serie nutzen die EcoFlow-App-Verbindung zur reinen Überwachung. Andere STREAM-Anlagen verwenden die unterstützte Developer API.",
+            "nl": "Producten uit de 5000-serie gebruiken de EcoFlow-appverbinding voor alleen-lezen monitoring. Andere STREAM-installaties gebruiken de ondersteunde Developer API."
+          }
+        }
+      ]
     }
   ],
   "pair": [
     {
+      "id": "select_connection"
+    },
+    {
       "id": "credentials"
+    },
+    {
+      "id": "app_credentials"
     },
     {
       "id": "list_devices",

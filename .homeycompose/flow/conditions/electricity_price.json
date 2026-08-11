@@ -19,7 +19,7 @@
     {
       "type": "device",
       "name": "device",
-      "filter": "driver_id=stream"
+      "filter": "driver_id=stream&capabilities=operating_mode"
     },
     {
       "type": "dropdown",

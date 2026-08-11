@@ -3,7 +3,8 @@
 import { isStreamAc5000Sn } from './deviceIdentity';
 
 export const ES22_WRONG_DRIVER_MESSAGE_KEY = 'errors.es22_wrong_driver';
-export const ES22_WRONG_DRIVER_FALLBACK = 'This STREAM AC 5000 was added in the wrong place. Delete it and add it again as STREAM Home Battery (5000 installation).';
+export const ES22_WRONG_DRIVER_FALLBACK = 'This STREAM AC 5000 was added in the wrong place. '
+  + 'Delete it and add it again as STREAM Home Battery using the 5000-series app connection.';
 export const DEVELOPER_API_UNSUPPORTED_MESSAGE_KEY = 'errors.developer_api_unsupported_device';
 export const DEVELOPER_API_UNSUPPORTED_FALLBACK = 'This EcoFlow device is not supported through the Developer API. Delete it and add it again using its dedicated EcoFlow device type.';
 

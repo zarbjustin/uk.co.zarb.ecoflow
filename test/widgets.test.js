@@ -24,13 +24,12 @@ function device(id, name, { capabilities = {}, settings = {} } = {}) {
   };
 }
 
-function homey(streamDevices, unitDevices = [], stream5000Systems = []) {
+function homey(streamDevices, unitDevices = []) {
   return {
     drivers: {
       getDriver: (id) => ({
         getDevices: () => {
           if (id === 'stream') return streamDevices;
-          if (id === 'stream_5000_system') return stream5000Systems;
           return unitDevices;
         },
       }),
@@ -58,10 +57,10 @@ test('streamData never resolves a physical STREAM Unit id as an aggregate system
   });
 });
 
-test('streamData resolves a STREAM 5000 installation aggregate alongside BK systems', () => {
+test('streamData resolves BK and STREAM 5000 installations from the same Home Battery driver', () => {
   const bk = device('bk-system', 'BK Home Battery');
   const es22 = device('es22-system', '5000 Home Battery');
-  assert.equal(streamData(homey([bk], [], [es22]), { deviceId: es22.getId() }).name, '5000 Home Battery');
+  assert.equal(streamData(homey([bk, es22]), { deviceId: es22.getId() }).name, '5000 Home Battery');
 });
 
 test('widget manifests admit STREAM 5000 only where its aggregate telemetry is sufficient', () => {
@@ -69,11 +68,9 @@ test('widget manifests admit STREAM 5000 only where its aggregate telemetry is s
   const bkRichAggregateMarker = 'measure_power.from_battery';
   const streamManifest = require('../drivers/stream/driver.compose.json');
   const unitManifest = require('../drivers/stream_unit/driver.compose.json');
-  const stream5000Manifest = require('../drivers/stream_5000_system/driver.compose.json');
   const stream5000UnitManifest = require('../drivers/stream_5000_unit/driver.compose.json');
   assert.ok(streamManifest.capabilities.includes(commonAggregateMarker));
   assert.equal(unitManifest.capabilities.includes(commonAggregateMarker), false);
-  assert.ok(stream5000Manifest.capabilities.includes(commonAggregateMarker));
   assert.equal(stream5000UnitManifest.capabilities.includes(commonAggregateMarker), false);
   const capacity = streamManifest.settings.find((item) => item.id === 'installed_capacity_kwh');
   const efficiency = streamManifest.settings.find((item) => item.id === 'discharge_efficiency_percent');

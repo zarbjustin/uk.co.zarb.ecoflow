@@ -1,0 +1,57 @@
+<style>
+  .ef-pair { padding: 16px; max-width: 520px; margin: 0 auto; font-family: inherit; }
+  .ef-pair h2 { margin: 0 0 8px; }
+  .ef-pair p.help { color: #777; font-size: 13px; margin: 0 0 18px; line-height: 1.45; }
+  .ef-choice {
+    display: block; width: 100%; box-sizing: border-box; text-align: left;
+    margin: 12px 0; padding: 16px; border: 1px solid #ccc; border-radius: 12px;
+    background: transparent; color: inherit; cursor: pointer;
+  }
+  .ef-choice strong { display: block; font-size: 15px; margin-bottom: 5px; }
+  .ef-choice span { display: block; color: #777; font-size: 13px; line-height: 1.4; }
+  .ef-choice:disabled { opacity: 0.6; cursor: default; }
+  .ef-pair .err { color: #d23; font-size: 13px; margin-top: 12px; min-height: 18px; }
+</style>
+
+<div class="ef-pair">
+  <h2>Pair a STREAM Home Battery</h2>
+  <p class="help">
+    Choose the connection used by your installation. Both choices create the
+    same STREAM Home Battery in Homey; the app selects the correct telemetry
+    implementation for the paired model.
+  </p>
+
+  <button class="ef-choice" type="button" data-mode="developer_api" data-view="credentials">
+    <strong>STREAM Series</strong>
+    <span>Ultra, Pro, AC, AC Pro, Max and Ultra X using EcoFlow Developer API keys.</span>
+  </button>
+
+  <button class="ef-choice" type="button" data-mode="app_connection" data-view="app_credentials">
+    <strong>STREAM 5000 Series</strong>
+    <span>Verified 5 kWh-family installations using the EcoFlow app connection. Monitoring only.</span>
+  </button>
+
+  <div class="err" id="ef-err"></div>
+</div>
+
+<script type="text/javascript">
+  (function () {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.ef-choice'));
+    var error = document.getElementById('ef-err');
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        error.textContent = '';
+        buttons.forEach(function (candidate) { candidate.disabled = true; });
+        Homey.emit('select_pairing_mode', { mode: button.dataset.mode }, function (err, result) {
+          if (err) {
+            error.textContent = (err && err.message) ? err.message : 'Could not select this connection.';
+            buttons.forEach(function (candidate) { candidate.disabled = false; });
+            return;
+          }
+          Homey.showView(result && result.hasCredentials ? 'list_devices' : button.dataset.view);
+        });
+      });
+    });
+  })();
+</script>

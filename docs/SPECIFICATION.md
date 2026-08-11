@@ -18,8 +18,8 @@ App (app.ts) — shared Developer API EcoFlowMqtt plus an isolated app-auth WSS 
  app settings: accessKey/secretKey/host/mqtt_enabled and separate app-auth account credentials
  Drivers (9, including one compatibility entry) → Devices:
    stream (battery) · stream_unit (battery) · stream_solar (solarpanel) · stream_micro (solarpanel)
-   · stream_socket (socket) · smartmeter (sensor) · stream_5000_system (monitoring-only home battery)
-   · stream_5000_unit (physical monitor)
+   · stream_socket (socket) · smartmeter (sensor) · stream (includes the monitoring-only 5000 profile)
+   · stream_5000_unit (optional physical monitor)
    · stream_ac5000 (deprecated compatibility driver)
  Widgets (5): stream_flow, stream_balance, stream_battery_plan, stream_solar_forecast,
    stream_tariff_opportunity (+ shared widgets/stream_common.js)
@@ -95,8 +95,8 @@ per-unit/meter power capabilities (`stream_unit_power_*`, `smartmeter_power_*`,
 `alarm_generic`.
 
 ## 5. Homey Energy contract
-`stream`: `homeBattery` + `meter_power.charged/.discharged`. `stream_5000_system`:
-the app-auth 5000-family installation aggregate with the same Homey Energy contract.
+`stream`: the shared Developer-API and app-connected 5000 installation Home Battery,
+with `homeBattery` + `meter_power.charged/.discharged`.
 `stream_unit`, `stream_5000_unit` and deprecated `stream_ac5000`:
 `batteries:['INTERNAL']` and custom power capabilities, so physical monitors are
 never counted twice. `smartmeter`: `cumulative` import/export. Solar devices: exported

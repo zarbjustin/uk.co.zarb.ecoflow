@@ -1,6 +1,7 @@
 'use strict';
 
-import { AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
+import { EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
+import type { AppAuthTransport } from './EcoFlowAppAuthClient';
 
 /**
  * App-auth account handling for verified STREAM 5000-family drivers.
@@ -86,6 +87,8 @@ export interface RegisterAppAuthOptions {
   transport?: AppAuthTransport;
   /** Delay before the orphaned-account safety net runs. */
   cleanupDelayMs?: number;
+  /** Optional family-aware count for drivers that also contain non-app-auth devices. */
+  pairedDeviceCount?: () => number | null;
 }
 
 /** Number of paired devices, or null when it cannot be determined. */
@@ -158,7 +161,10 @@ export function registerAppAuthHandlers(
       if (!committed || hadSavedCreds) return;
       // Stored for a device that then failed to be created: take it back out.
       scheduleOn(driver.homey, () => {
-        if (pairedDeviceCount(driver) !== 0) return;
+        const deviceCount = options.pairedDeviceCount
+          ? options.pairedDeviceCount()
+          : pairedDeviceCount(driver);
+        if (deviceCount !== 0) return;
         if (!hasSavedAppAuthCreds(driver.homey)) return;
         clearSavedAppAuthCreds(driver.homey);
         log('Pairing ended without a device — stored EcoFlow account removed');

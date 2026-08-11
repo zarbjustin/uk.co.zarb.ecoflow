@@ -115,7 +115,7 @@ function selectRuntime({
 function pickDevice(homey, query) {
   let devices = [];
   let foundDriver = false;
-  for (const driverId of ['stream', 'stream_5000_system']) {
+  for (const driverId of ['stream']) {
     try {
       const driver = homey.drivers.getDriver(driverId);
       foundDriver = true;

@@ -2,7 +2,7 @@
 
 > **Status: monitoring only. EcoFlow provides no supported public API for this model.**
 > Everything in this document applies to the ES22 adapter shared by the
-> installation-level `stream_5000_system` Home Battery, the physical
+> installation profile inside the `stream` Home Battery, the physical
 > `stream_5000_unit` monitor and deprecated `stream_ac5000` monitor. See
 > `STREAM_5000_ARCHITECTURE.md` before adding another model.
 > The STREAM Ultra / Pro / AC / AC Pro / Max / Ultra X (BK-series) and the Smart
@@ -16,7 +16,8 @@ public IoT Developer API. Every `quota` call for an ES22 returns API code
 or otherwise. EcoFlow support was asked and provided no information or timeline.
 
 The only working route is the app connection EcoFlow's own mobile app uses.
-This app implements a **read-only** subset of it, behind its own driver, so
+This app implements a **read-only** subset of it, behind a model-specific
+runtime selected by the shared STREAM Home Battery driver, so
 owners of an ES22 can at least monitor the unit from Homey.
 
 ## Relationship to the new 5 kWh STREAM family
@@ -166,8 +167,9 @@ Read this before you use it.
 
 ## Setup
 
-1. In Homey, add a device → **EcoFlow STREAM Series** → **STREAM Home Battery (5000 installation)**.
-2. Read the warning on the first pairing screen, then enter your **EcoFlow app**
+1. In Homey, add a device → **EcoFlow STREAM Series** → **STREAM Home Battery**,
+   then choose **STREAM 5000 Series**.
+2. Read the warning on the connection screen, then enter your **EcoFlow app**
    email address, password and region.
 3. Pick your ES22 unit(s) from the list. Multiple ES22 units on one account are
    supported and share a single MQTT session. Your account is only saved once a
@@ -181,10 +183,11 @@ device list.
 * **Previously paired as a STREAM Home Battery:** older app versions could offer
   an ES22 through the wrong Developer-API driver. The device is now quarantined
   without polling and shows an unavailable message. Delete that device, then add
-  it again using **STREAM Home Battery (5000 installation)**.
+  it again using **STREAM Home Battery** → **STREAM 5000 Series**.
 * **Previously paired through the app-connected AC 5000 test driver:** the app
   automatically removes its Energy-facing power and meter capabilities and
-  keeps it as a physical monitor. Add **STREAM Home Battery (5000 installation)**
+  keeps it as a physical monitor. Add **STREAM Home Battery** using the
+  **STREAM 5000 Series** connection
   for Homey Energy; delete the older monitor if you do not want both roles.
 * **Remove one unit:** delete the device in Homey. The MQTT subscription is
   released immediately, and once the last app-connected STREAM 5000-family
@@ -253,7 +256,7 @@ Not affiliated with EcoFlow.
 | `lib/streamAc5000Protocol.ts` | Frame header decoder + ES22 field map → typed telemetry |
 | `lib/streamAc5000Mapping.ts` | Telemetry → Homey capability values |
 | `lib/streamAc5000Diagnostics.ts` | Bounded, serial-redacted parser diagnostics for submitted Homey logs |
-| `drivers/stream_5000_system/` | Installation aggregate and sole Homey Energy contribution |
+| `drivers/stream/` | Unified installation Home Battery; maps ES22 devices to the app-connected runtime |
 | `drivers/stream_5000_unit/` | Optional physical-unit monitor |
 | `drivers/stream_ac5000/` | Deprecated physical-monitor wrapper and original assets |
 | `lib/stream5000Models.ts` | Verified serial-prefix/model allow-list |

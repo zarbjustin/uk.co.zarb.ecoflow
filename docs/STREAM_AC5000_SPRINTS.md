@@ -8,13 +8,14 @@ Status: code complete for the next test build. Live validation remains a release
   fixture. The serial-keyed float `f50.1.2` is preferred, with integer
   `f54.1.2` as its fallback; the original `f11.5` and precise `f33.6` values
   retain precedence.
-- The AC 5000 installation is declared through `stream_5000_system` as a Homey
-  Energy home battery with persistent charged/discharged meters.
+- The AC 5000 installation is declared through the existing `stream` driver as
+  the same STREAM Home Battery used by every other installation, with a stored
+  5000 profile and persistent charged/discharged meters.
 - `stream_5000_unit` is an optional physical monitor using custom power
   capabilities, so pairing both roles cannot duplicate Homey Energy.
-- This role split predates general availability. Existing app-connected test
-  devices migrate to physical monitors; users add the new aggregate separately,
-  without carrying a permanent Energy-compatibility layer.
+- This model/profile split predates general availability. The short-lived
+  `stream_5000_system` test device is removed and re-paired through the standard
+  STREAM Home Battery entry, without carrying a permanent public driver.
 
 Acceptance evidence to collect on the test build:
 

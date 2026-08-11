@@ -9,8 +9,9 @@ import { registerStream5000Pairing } from '../../lib/stream5000Pairing';
  *
  * Discovery runs against EcoFlow's app API because an ES22 answers API code
  * 1006 to every Developer/Open API quota call. Only ES22 serials are listed
- * here. New pairing is handled by `stream_5000_unit`; existing test devices
- * retain this driver ID but use the same non-Energy physical-monitor role.
+ * here. New physical-unit pairing is handled by `stream_5000_unit`; the
+ * installation itself pairs through the unified `stream` Home Battery driver.
+ * Existing test devices retain this ID but use the same non-Energy monitor role.
  */
 module.exports = class StreamAc5000Driver extends Homey.Driver {
   async onInit(): Promise<void> {

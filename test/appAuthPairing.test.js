@@ -228,6 +228,26 @@ test('credentials stored for a device that never appeared are removed again', as
   assert.deepStrictEqual(storedKeys(homey), []);
 });
 
+test('a mixed driver can supply a family-aware device count for orphan cleanup', async () => {
+  const homey = fakeHomey();
+  // The unified stream driver may already contain BK devices; they must not
+  // make a failed 5000 pairing retain app-account credentials.
+  const driver = fakeDriver(homey, [{ getData: () => ({ sn: 'BK61EXISTING' }) }]);
+  const session = fakeSession();
+  registerAppAuthHandlers(driver, session, {
+    transport: okTransport(),
+    cleanupDelayMs: 0,
+    pairedDeviceCount: () => 0,
+  });
+
+  await login(session);
+  await session.call('add_device', {});
+  await session.call('disconnect');
+  homey.runTimers();
+
+  assert.strictEqual(hasSavedAppAuthCreds(homey), false);
+});
+
 test('credentials are kept when the device really was created', async () => {
   const homey = fakeHomey();
   const driver = fakeDriver(homey, []);

@@ -1,9 +1,23 @@
 'use strict';
 
 import Homey from 'homey';
-import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
+import {
+  registerCredentialHandlers, clientFromSettings, hasSavedCreds,
+} from '../../lib/pairing';
 import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
 import { aboveBelow } from '../../lib/thresholds';
+import { registerAppAuthHandlers, hasSavedAppAuthCreds } from '../../lib/appAuthPairing';
+import {
+  stream5000HomeBatteryPairingOptions,
+  pairedStream5000FamilyCount,
+  stream5000PairingDevices,
+} from '../../lib/stream5000Pairing';
+import { streamHomeBatteryProfile } from '../../lib/stream5000Models';
+import { Stream5000UnitDevice } from '../../lib/Stream5000UnitDevice';
+
+const StreamDevice = require('./device');
+
+type StreamPairingMode = 'developer_api' | 'app_connection';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -94,10 +108,57 @@ module.exports = class StreamDriver extends Homey.Driver {
     );
   }
 
+  /**
+   * Homey supports multiple Device subclasses behind one stable driver ID.
+   * The immutable serial prefix is sufficient to select the app-connected
+   * 5000 runtime; every other STREAM Home Battery keeps the Developer-API
+   * implementation that existing users already have.
+   */
+  onMapDeviceClass(device: any): any {
+    const serial = String(device.getData?.().sn || '');
+    const profile = String(device.getStoreValue?.('streamProfile') || '');
+    return streamHomeBatteryProfile(serial, profile) === 'stream_5000'
+      ? Stream5000UnitDevice
+      : StreamDevice;
+  }
+
   async onPair(session: any): Promise<void> {
     registerCredentialHandlers(this, session);
+    const appAuth = registerAppAuthHandlers(this, session, {
+      pairedDeviceCount: () => pairedStream5000FamilyCount(this),
+    });
+    let pairingMode: StreamPairingMode | undefined;
+
+    session.setHandler('select_pairing_mode', async (data: { mode?: StreamPairingMode }) => {
+      if (data?.mode !== 'developer_api' && data?.mode !== 'app_connection') {
+        throw new Error('Choose a supported STREAM connection type.');
+      }
+      pairingMode = data.mode;
+      return {
+        hasCredentials: pairingMode === 'developer_api'
+          ? hasSavedCreds(this.homey)
+          : hasSavedAppAuthCreds(this.homey),
+      };
+    });
 
     session.setHandler('list_devices', async () => {
+      if (pairingMode === 'app_connection') {
+        const client = appAuth.getClient();
+        if (!client) throw new Error('Sign in to the EcoFlow app account before pairing a STREAM 5000 installation.');
+        const devices = await client.getDeviceList();
+        const options = stream5000HomeBatteryPairingOptions();
+        const verified = stream5000PairingDevices(this, devices, options);
+        if (verified.length > 1) {
+          return verified.map((device) => ({
+            ...device,
+            name: `STREAM Home Battery (${device.data.sn.slice(-4)})`,
+          }));
+        }
+        return verified;
+      }
+      if (pairingMode !== 'developer_api') {
+        throw new Error('Choose the STREAM generation before listing devices.');
+      }
       const client = clientFromSettings(this);
       const units = await collectStreamUnits(client);
       // A multi-unit STREAM installation is one household battery addressed by

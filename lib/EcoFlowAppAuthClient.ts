@@ -4,7 +4,8 @@ import https from 'https';
 import { URL } from 'url';
 import { ECOFLOW_API_HOSTS, normalizeApiHost } from './apiHost';
 import { decryptCertification } from './appAuthCrypto';
-import { AppDevice, normalizeAppDeviceList } from './appDevices';
+import { normalizeAppDeviceList } from './appDevices';
+import type { AppDevice } from './appDevices';
 
 /**
  * EXPERIMENTAL — EcoFlow **app** (mobile/portal) authentication client.

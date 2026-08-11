@@ -30,12 +30,18 @@ export const STREAM_AC5000_MODEL = 'STREAM AC 5000';
 export const STREAM_AC5000_PREFIX = 'ES22';
 
 /** Driver IDs sharing one app-auth account. */
-export const STREAM_5000_SYSTEM_DRIVER_ID = 'stream_5000_system';
+export const STREAM_HOME_BATTERY_DRIVER_ID = 'stream';
+export const LEGACY_STREAM_5000_SYSTEM_DRIVER_ID = 'stream_5000_system';
 export const STREAM_5000_DRIVER_ID = 'stream_5000_unit';
 export const LEGACY_STREAM_AC5000_DRIVER_ID = 'stream_ac5000';
-/** Pairing identity is role-scoped: one aggregate and, optionally, one unit monitor. */
+/**
+ * Pairing identity is role-scoped: one Home Battery and, optionally, one unit
+ * monitor. The removed stream_5000_system ID remains here only so pairing and
+ * credential cleanup recognise devices created by the short-lived test build.
+ */
 export const STREAM_5000_SYSTEM_DRIVER_IDS = Object.freeze([
-  STREAM_5000_SYSTEM_DRIVER_ID,
+  STREAM_HOME_BATTERY_DRIVER_ID,
+  LEGACY_STREAM_5000_SYSTEM_DRIVER_ID,
 ] as const);
 export const STREAM_5000_UNIT_DRIVER_IDS = Object.freeze([
   STREAM_5000_DRIVER_ID,
@@ -81,6 +87,22 @@ export function stream5000ModelFromSn(sn: string | undefined): Stream5000ModelSp
 
 export function isSupportedStream5000Sn(sn: string | undefined): boolean {
   return stream5000ModelFromSn(sn) !== undefined;
+}
+
+export type StreamHomeBatteryProfile = 'developer_api' | 'stream_5000';
+
+/**
+ * Resolve the internal runtime behind the shared STREAM Home Battery driver.
+ * The stored profile is the primary forward-compatible contract; the verified
+ * serial registry is a recovery path for early test devices that predate it.
+ */
+export function streamHomeBatteryProfile(
+  sn: string | undefined,
+  storedProfile?: string,
+): StreamHomeBatteryProfile {
+  return storedProfile === 'stream_5000' || isSupportedStream5000Sn(sn)
+    ? 'stream_5000'
+    : 'developer_api';
 }
 
 export function stream5000DeviceName(sn: string, productName?: string, deviceName?: string): string {

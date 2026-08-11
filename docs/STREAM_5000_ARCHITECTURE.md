@@ -2,10 +2,11 @@
 
 ## Purpose
 
-EcoFlow's 5 kWh STREAM platform contains multiple products. Homey devices are
-therefore split by energy role rather than launch SKU: `stream_5000_system` is
-the installation-level Home Battery and `stream_5000_unit` is a physical-unit
-monitor. The deprecated `stream_ac5000` ID has the same non-Energy unit role.
+EcoFlow's 5 kWh STREAM platform contains multiple products. Installation-level
+devices therefore use the existing `stream` driver and appear to users simply
+as **STREAM Home Battery**, regardless of generation. `stream_5000_unit` is an
+optional physical-unit monitor. The deprecated `stream_ac5000` ID has the same
+non-Energy unit role.
 
 Current verified support is deliberately narrower than the product catalogue:
 
@@ -30,6 +31,9 @@ Unknown prefixes must remain absent from pairing even when their names contain
 - `lib/stream5000Pairing.ts` is the shared app-auth discovery and pairing path.
 - `lib/Stream5000UnitDevice.ts` owns transport-independent lifecycle,
   availability, role-specific capability application and cross-driver credential cleanup.
+- `drivers/stream/driver.ts` owns the unified pairing choice and uses Homey's
+  supported `onMapDeviceClass` hook to select the Developer-API or app-connected
+  runtime from immutable device identity and stored profile metadata.
 - Model-specific protocol code remains isolated. ES22 continues to use
   `streamAc5000Protocol`, `streamAc5000Mapping` and `streamAc5000Diagnostics`.
 
@@ -39,18 +43,23 @@ reusing the ES22 parser for an unverified product is not permitted.
 
 ## Driver policy
 
-- `stream_5000_system`: one Homey Energy Home Battery per verified 5000-family
-  installation. Until EcoFlow exposes a stable group/gateway identifier, each
-  ES22 serial is deliberately treated as a singleton installation.
+- `stream`: one Homey Energy Home Battery per STREAM installation, including a
+  verified 5000-family installation. Until EcoFlow exposes a stable
+  group/gateway identifier, each ES22 serial is deliberately treated as a
+  singleton installation.
 - `stream_5000_unit`: an optional monitor for one physical 5000-family battery
   or inverter/battery unit. It uses custom power capabilities and never
   contributes to Homey Energy.
 - A gateway, meter, solar-only component or other different Homey Energy role
   receives a separate driver even if it shares app authentication and MQTT.
-- Exact product names and icons belong to paired devices; the driver remains a
-  family-level pairing entry.
+- Product generation is a stored internal profile, not a public driver. Exact
+  product names and icons belong to optional physical monitors; the Home Battery
+  remains a stable installation-level pairing entry.
 - App-auth products remain monitoring-only until both command payloads and safe
   state verification are demonstrated on real hardware.
+- Pairing supplies a model-specific capability array. Flow cards that require
+  Developer-API controls are filtered by `operating_mode`, so an app-connected
+  5000 Home Battery never exposes unsupported controls.
 
 ## Homey Energy accounting
 
@@ -87,9 +96,10 @@ Complete all of the following before exposing another model:
 5. Add the adapter ID to `Stream5000TelemetryAdapterId` and register the adapter
    in `stream5000Adapters.ts`.
 6. Only then add the product and its exact prefix to `stream5000Models.ts`.
-7. Confirm the Homey class, capabilities and Energy contribution. Add the model
-   to the aggregate and unit roles together; only the aggregate may expose
-   `homeBattery`, `measure_power` or charged/discharged Energy meters.
+7. Confirm the Homey class, capabilities and Energy contribution. Admit the
+   installation through the shared `stream` Home Battery profile and the unit
+   through `stream_5000_unit`; only the Home Battery may expose `measure_power`
+   or charged/discharged Energy meters.
 8. Add product naming, imagery, translations, pairing copy and diagnostics tests.
 9. Run TypeScript, lint, the full test suite and Homey validation, followed by a
    Test-channel installation on the real product.
@@ -98,13 +108,30 @@ Complete all of the following before exposing another model:
 ## Compatibility
 
 Homey identifies a device using its immutable `data` object together with its
-driver ID. The role split was made before STREAM 5000 support reached general
-availability, so no permanent Energy-compatibility layer is carried forward.
-An earlier app-connected test device is migrated in place to the non-Energy
-physical-monitor role. Test installations then pair the new Home Battery
-aggregate and may keep or delete the older monitor as preferred.
+driver ID. The short-lived `stream_5000_system` test driver was removed before
+general availability. Test users remove that device and pair the same ES22
+through `stream`; no permanent duplicate public driver is carried forward.
 
-All three app-auth driver IDs share one account lifecycle. Stored EcoFlow
-credentials are removed only after the last aggregate or unit device is deleted.
-Duplicate suppression is role-scoped: one serial can appear once as an aggregate
-and once as a physical monitor, but never twice within either role.
+The current and deprecated app-auth driver IDs share one account lifecycle.
+Stored EcoFlow credentials are removed only after the last verified 5000 Home
+Battery or physical unit is deleted. Duplicate suppression is role-scoped: one
+serial can appear once as a Home Battery and once as a physical monitor, but
+never twice within either role. The legacy system ID remains only in the
+cross-driver duplicate/cleanup registry during the test transition.
+
+## Reversibility and future separation
+
+The shared public Home Battery is a presentation and identity decision, not a
+protocol merge. The 5000 model allow-list, app authentication, MQTT transport,
+telemetry adapters and runtime class remain isolated behind the stored
+`streamProfile: stream_5000` marker. This means a later model can move to a
+dedicated driver without first untangling it from the Developer-API runtime.
+
+Create a separate public driver only when the product has a materially different
+Homey role, capability contract, pairing journey or lifecycle that cannot be
+represented safely by profile-based runtime selection. A split after devices
+have been paired is still a user-visible migration: Homey's driver ID is part of
+device identity, so affected users must remove and re-pair the device and review
+Flows and Insights that referenced it. Preserve the stored profile and model ID
+during any such migration so duplicate detection and account cleanup remain
+deterministic.
