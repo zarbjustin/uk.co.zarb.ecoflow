@@ -148,5 +148,8 @@
   },
   "1.10.13": {
     "en": "Added standalone STREAM Unit Homey Energy support with individual live power, charged/discharged meters, and safe aggregate widget filtering."
+  },
+  "1.10.14": {
+    "en": "Simplified STREAM energy reporting so physical units are telemetry-only and all Homey Energy power and charged/discharged totals come from STREAM Home Battery."
   }
 }
