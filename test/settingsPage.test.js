@@ -176,6 +176,38 @@ test('the stored password is never read back into the page', () => {
   assert.ok(!html.includes('Homey.get("appAuthPassword"'));
 });
 
+test('support report is requested locally on demand and rendered as text', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey();
+  let calls = 0;
+  homey.api = (method, url, body, cb) => {
+    calls += 1;
+    assert.equal(method, 'GET');
+    assert.equal(url, '/support-snapshot');
+    assert.equal(body, null);
+    cb(null, { appVersion: '1.10.17', harmless: '<script>not executable</script>' });
+  };
+  context.onHomeyReady(homey);
+  assert.equal(calls, 0);
+  await context.document.getElementById('supportSnapshot').click();
+  assert.equal(calls, 1);
+  const output = context.document.getElementById('supportSnapshotResult');
+  assert.match(output.textContent, /1.10.17/);
+  assert.match(output.textContent, /<script>not executable/);
+  assert.equal(output.innerHTML, undefined);
+});
+
+test('support report failure cannot display private exception contents', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey();
+  homey.api = (_method, _url, _body, cb) => cb(new Error('secret-token'));
+  context.onHomeyReady(homey);
+  await context.document.getElementById('supportSnapshot').click();
+  assert.match(context.document.getElementById('supportSnapshotResult').textContent, /Could not read/);
+  assert.ok(!context.document.getElementById('supportSnapshotResult').textContent.includes('secret-token'));
+  assert.equal(context.document.getElementById('supportSnapshot').disabled, false);
+});
+
 test('STREAM 5000 beta pairing is disabled by default and requires acknowledgement', async () => {
   const context = loadSettingsScript();
   const homey = fakeHomey({ confirmAccepted: false });

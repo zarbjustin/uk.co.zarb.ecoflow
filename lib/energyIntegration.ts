@@ -45,6 +45,21 @@ export interface TimedSignedTotals extends SignedTotals {
   lastSampleAt: number;
 }
 
+/** Numeric/enum-only accounting evidence; no device identity or credentials. */
+export interface EnergyAccountingDiagnostic {
+  source: 'waiting' | 'device_counters' | 'integrated_power';
+  samples: number;
+  skippedSamples: number;
+  ignoredGaps: number;
+  counterResets: number;
+  chargedCounterSeen: boolean;
+  dischargedCounterSeen: boolean;
+  lastSampleAgeSec: number | null;
+  chargedKWh: number;
+  dischargedKWh: number;
+  checkpoint?: { pending: boolean; writing: boolean; failures: number };
+}
+
 /**
  * Integrate a signed power sample into two monotonic buckets:
  *  - positive power → `posWh` (e.g. grid import, battery charge)

@@ -82,6 +82,10 @@
     "homey:manager:geolocation"
   ],
   "api": {
+    "supportSnapshot": {
+      "method": "GET",
+      "path": "/support-snapshot"
+    },
     "validateCredentials": {
       "method": "POST",
       "path": "/validate-credentials"

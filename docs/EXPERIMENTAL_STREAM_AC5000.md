@@ -11,9 +11,11 @@
 ## Why this exists
 
 The STREAM AC 5000 (serial prefix `ES22`) is not exposed through EcoFlow's
-public IoT Developer API. Every `quota` call for an ES22 returns API code
-**1006**, so there is no supported way to read the device — with Developer keys
-or otherwise. EcoFlow support was asked and provided no information or timeline.
+public IoT Developer API in the tested beta setup. Tester `quota` calls returned
+API code **1006**. The October 2026 documentation review did not establish an
+official ES22 read contract; app-auth telemetry remains experimental rather than
+being promoted to the supported Developer API path. EcoFlow support was asked
+and provided no information or timeline.
 
 The only working route is the app connection EcoFlow's own mobile app uses.
 This app implements a **read-only** subset of it, behind its own driver, so
@@ -29,7 +31,7 @@ is routed to this parser.
 | Product | Officially published information | Protocol confidence |
 | --- | --- | --- |
 | STREAM AC 5000 | 5,024 Wh; 3,000 W AC input/output; no direct PV input | **Confirmed:** serial prefix `ES22`, separate parser implemented here |
-| STREAM 5000 | 5,024 Wh; 3,000 W AC input/output; 4,000 W PV across four MPPT inputs | Product confirmed, but serial prefix and telemetry layout are unknown |
+| STREAM 5000 | 5,024 Wh; 3,000 W AC input/output; 4,000 W PV across four MPPT inputs | Community captures now identify `ES21`; not yet admitted to this app's pairing allow-list |
 | STREAM Expansion Battery 5000 | 5,024 Wh expansion module for the new platform | Unknown whether it appears as an independent cloud device or as a nested pack under its host |
 | STREAM Gateway | EcoFlow describes it as enabling later system expansion without rewiring | Product confirmed, but discovery identity, topics and telemetry are unknown |
 | STREAM 3000 | Not listed as a distinct product on the referenced launch pages | The pages advertise 3,000 W output; STREAM Ultra X is listed separately at 3,084 Wh |
@@ -82,13 +84,13 @@ the sign-in, because an account only exists in one region.
 
 | Homey capability | Source |
 | --- | --- |
-| `measure_battery` | `254/39 f11.5`, refined by `f33.6`; V1.1.4.35 fallback from serial-keyed `f50.1.2`, then `f54.1.2` |
+| `measure_battery` | Home Battery: system `254/39 f11.5`; physical monitor: own `f33.6` or own serial-keyed record. Legacy single-record fallback never replaces a known system percentage |
 | `battery_soh` | `32/50 f15` (BMS heartbeat) |
-| `measure_power` | Signed battery power derived from the `254/39 f12` flow matrix; **positive = charging** |
+| `measure_power` | Home Battery only: signed `254/39 f12` flow matrix, including direct MPPT charge; **positive = charging** |
 | `battery_charging_state` | Derived from the signed battery power (±5 W deadband) |
 | `measure_power.load` | `254/39 f11.1` (half-watt units) |
 | `measure_power.grid` | Signed meter net: `f15.3` (Tibber Pulse) or `f16.16` (EcoFlow P1); **positive = importing** |
-| `measure_power.grid_import` / `.grid_export` | Derived from the flow-matrix edges, so both are non-negative |
+| `measure_power.grid_import` / `.grid_export` | Non-negative flow-matrix edges; import includes the grid-to-AC-socket edge |
 | `measure_temperature` | `32/50 f9` (battery temperature) |
 
 Fields the reference implementation flags as unverified or ambiguous
@@ -98,6 +100,15 @@ thresholds) are deliberately **not** mapped. Nothing here is guessed.
 Solar power, the SoC limits, pack voltage and BMS current are parsed but not yet
 surfaced as capabilities — they are kept for a later increment once the read
 path has been validated against live hardware.
+
+The optional physical monitor uses the custom `stream_unit_power_battery_flow`
+capability, never standard Energy power or meters. Its signed power/state uses
+the flow matrix only while no linked-unit evidence has been observed. Once peers
+appear, that provisional reading is cleared: `f54.1.4` is positive during both
+captured charge and discharge states, so it cannot establish direction. Raw unit
+power is retained internally, not used to invent a signed capability or state.
+Repeated `f50`/`f54` records are preserved by serial instead of last-entry-wins.
+See [the current telemetry validation rules](STREAM_5000_API_REVIEW.md).
 
 ### Diagnostics and live validation
 
@@ -132,16 +143,19 @@ switch resets automatically. No raw parsed payload is logged by this option.
 ## Availability behaviour
 
 Because there is no REST fallback, availability is based purely on the age of
-the last MQTT frame:
+the last usable capability projection for this device role:
 
-* a frame arrives → the device is available;
-* no frame for longer than **Report offline after** (device setting, default 20
+* a usable parsed value arrives → the device is available;
+* no usable value for longer than **Report offline after** (device setting, default 20
   minutes) → the device is shown as unavailable, **once** — the state is only
   applied on a transition, so a quiet device does not produce repeated
   notifications;
 * on app start there is a 5-minute grace window before silence counts;
 * if the app-auth session cannot be established at all, the device says so and
   retries every 5 minutes.
+
+Unknown frames, foreign-serial headers, unit-only deltas on a Home Battery, and
+clearing an ambiguous reading do not refresh the usable-data timestamp.
 
 ## Security and privacy implications
 
@@ -225,7 +239,7 @@ knowledge is theirs.
 ```
 MIT License
 
-Copyright (c) shuette42 and the ecoflow-energy-ha contributors
+Copyright (c) 2026 shuette42 and the ecoflow-energy-ha contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

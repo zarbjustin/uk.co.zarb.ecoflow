@@ -220,3 +220,24 @@ test('every STREAM 5000 pairing path enforces the server-side beta gate', () => 
   assert.ok(source.indexOf('requireStream5000BetaAccess(driver?.homey)')
     < source.indexOf('const client = appAuth.getClient()'));
 });
+
+test('both beta choices are present for Homey Pro without being deprecated', () => {
+  for (const driverId of ['stream_5000_system', 'stream_5000_unit']) {
+    const driver = generatedApp.drivers.find((candidate) => candidate.id === driverId);
+    assert.ok(driver, `missing generated beta choice ${driverId}`);
+    assert.deepStrictEqual(driver.platforms, ['local']);
+    assert.notStrictEqual(driver.deprecated, true);
+    assert.strictEqual(driver.pair[0].id, 'beta_access');
+  }
+});
+
+test('settings explain the beta gate, test channel and Energy role without promising picker repair', () => {
+  const html = fs.readFileSync(path.join(root, 'settings', 'index.html'), 'utf8');
+  assert.match(html, /Homey EcoFlow integration/);
+  assert.match(html, /https:\/\/homey\.app\/a\/uk\.co\.zarb\.ecoflow\/test\//);
+  assert.match(html, /does not install or update the app or dynamically add device types/);
+  assert.match(html, /STREAM Home Battery \(5000 Beta\)/);
+  assert.match(html, /not a second Energy battery/);
+  assert.match(html, /do not delete existing devices/);
+  assert.match(html, /Homey mobile-app version/);
+});

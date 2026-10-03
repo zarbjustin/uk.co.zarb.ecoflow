@@ -35,6 +35,15 @@ test('describeEs22Frame reports malformed input without throwing', () => {
   assert.ok(diagnostic.sampleBase64);
 });
 
+test('linked unit serials are redacted even in a malformed diagnostic frame', () => {
+  const own = 'ES22ZEB1ABCD0001';
+  const peer = 'ES22ZEB1PEER0002';
+  const oldGeneration = 'BK61ZK1B2H720041';
+  const diagnostic = describeEs22Frame(Buffer.from(`broken:${own}:${peer}:${oldGeneration}`), own);
+  const sample = Buffer.from(diagnostic.sampleBase64, 'base64').toString('utf8');
+  for (const serial of [own, peer, oldGeneration]) assert.ok(!sample.includes(serial));
+});
+
 test('es22TopicKind removes account and serial details', () => {
   assert.strictEqual(es22TopicKind('/app/device/property/ES22SECRET'), 'device_property');
   assert.strictEqual(

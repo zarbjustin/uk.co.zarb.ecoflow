@@ -1,5 +1,9 @@
 # EcoFlow STREAM → Homey Energy: Full-Integration Roadmap
 
+> Historical integration plan and progress record. Current October 2026
+> priorities, evidence boundaries and release gates are maintained in the
+> [Community feedback roadmap](COMMUNITY_FEEDBACK_ROADMAP.md).
+
 Status: planning · Target: make STREAM a first-class Homey **Energy** integration
 (battery + solar + grid + control), grounded in the Homey Energy spec
 (<https://apps.developer.homey.app/the-basics/devices/energy>) and verified against

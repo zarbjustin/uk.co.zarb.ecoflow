@@ -52,9 +52,11 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
     // --- node totals (half-watt) ---
     'f11.1': { key: 'homeW', type: 'float', scale: HALF_WATT },
     'f11.5': { key: 'socPct', type: 'int', scale: 1 },
+    'f11.7': { key: 'acSocketW', type: 'float', scale: HALF_WATT },
     // Watts, not half-watts. Absent on units with no PV wired to the EcoFlow.
     'f11.9': { key: 'solarW', type: 'float', scale: 1 },
     // --- flow matrix edges (watts) ---
+    'f12.2': { key: '_mpptToBattW', type: 'float', scale: 1 },
     'f12.4': { key: 'homeFromBattW', type: 'float', scale: 1 },
     'f12.5': { key: '_battToGridW', type: 'float', scale: 1 },
     'f12.6': { key: 'homeFromGridW', type: 'float', scale: 1 },
@@ -63,18 +65,14 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
     // capture, so its position is inferred rather than shown.
     'f12.9': { key: '_solarToBattW', type: 'float', scale: 1 },
     'f12.10': { key: '_solarToGridW', type: 'float', scale: 1 },
+    'f12.18': { key: '_gridToSocketW', type: 'float', scale: 1 },
     // --- meter block: Tibber Pulse variant ---
     'f15.3': { key: '_meterNetW', type: 'float', scale: 1 },
     // --- meter block: EcoFlow P1 variant (a unit reports one or the other) ---
     'f16.16': { key: '_meterNetW', type: 'float', scale: 1 },
-    // --- precise state of charge ---
+    // Precise *unit* SoC, NOT a refinement of the installation's f11.5.
     'f33.6': { key: 'socPrecisePct', type: 'float', scale: 1 },
-    // Firmware V1.1.4.35 also sends SoC in its serial-keyed unit blocks. These
-    // paths were verified from a redacted ES22 diagnostic: both read 99 in the
-    // same frame, while the EcoFlow device screen later showed 81%. Keep them
-    // as fallbacks so the original f11/f33 layout retains precedence.
-    'f50.1.2': { key: '_packSocPct', type: 'float', scale: 1 },
-    'f54.1.2': { key: '_systemSocPct', type: 'int', scale: 1 },
+    // f50/f54 contain repeated serial-keyed units; read separately, never flatten.
   },
   '32/2': {
     'f1.7': { key: 'maxChargeSocPct', type: 'int', scale: 1 },
@@ -97,7 +95,7 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
  * would report its last power forever. An absent group means "unchanged".
  */
 const ZERO_FILL_PATHS: Record<string, string[]> = {
-  '254/39': ['f11.9', 'f12.4', 'f12.5', 'f12.6', 'f12.7'],
+  '254/39': ['f11.7', 'f11.9', 'f12.2', 'f12.4', 'f12.5', 'f12.6', 'f12.7', 'f12.18'],
 };
 
 function cmdKey(cmdFunc: number, cmdId: number): string {
@@ -307,16 +305,31 @@ export function decodeFrameHeaders(frame: Buffer): Es22FrameHeader[] {
   return headers;
 }
 
-/** Flat, unit-normalized telemetry for a STREAM AC 5000. All fields optional. */
+export interface Es22UnitTelemetry {
+  socPct?: number;
+  socPrecisePct?: number;
+  /** f54.1.4, half-watts normalized to watts; direction is NOT verified. */
+  batteryPowerRawW?: number;
+}
+
+/** System totals and serial-keyed unit telemetry; these are different scopes. */
 export interface Es22Telemetry {
   /** Whole-home consumption (W). */
   homeW?: number;
   /** Solar generation reported by the unit (W). */
   solarW?: number;
-  /** Integer state of charge (%). */
+  /** Installation state of charge (%) from f11.5 only. */
   socPct?: number;
-  /** Fractional state of charge (%), preferred when present. */
+  /** Fractional *source unit* state of charge (%), not system SoC. */
   socPrecisePct?: number;
+  sourceSn?: string;
+  unitsBySn?: Record<string, Es22UnitTelemetry>;
+  /** Observed records, not a stable installation identity or complete topology. */
+  unitRecordCount?: number;
+  /** Legacy single-record candidate; must never override a known system SoC. */
+  singleUnitSocPct?: number;
+  singleUnitSn?: string;
+  acSocketW?: number;
   /** Signed battery power (W); positive charges the pack. */
   battW?: number;
   battChargePowerW?: number;
@@ -347,21 +360,12 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
 
   const out: Es22Telemetry = {};
   const copy: Array<keyof Es22Telemetry> = [
-    'homeW', 'solarW', 'socPct', 'socPrecisePct', 'homeFromBattW', 'homeFromGridW',
+    'homeW', 'solarW', 'socPct', 'socPrecisePct', 'acSocketW', 'homeFromBattW', 'homeFromGridW',
     'battTempC', 'bmsSohPct', 'maxChargeSocPct', 'minDischargeSocPct',
   ];
   for (const key of copy) {
     const value = raw[key as string];
     if (typeof value === 'number') (out as Record<string, number>)[key as string] = value;
-  }
-
-  // Some ES22 firmware omits both original SoC locations and only publishes
-  // these serial-keyed unit summaries. Prefer the float value that travels
-  // with the unit's signed battery power; the integer copy remains a fallback.
-  // Neither may replace the original system SoC when that is present.
-  if (out.socPct === undefined) {
-    const fallbackSoc = raw._packSocPct ?? raw._systemSocPct;
-    if (typeof fallbackSoc === 'number') out.socPct = fallbackSoc;
   }
 
   if (typeof raw._battVoltageMv === 'number') out.battVoltageV = raw._battVoltageMv / 1000;
@@ -380,7 +384,7 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   // Import/export come from the flow edges, so both are structurally
   // non-negative — which is what an energy dashboard needs.
   if (typeof gridToBatt === 'number' && typeof homeFromGridW === 'number') {
-    out.gridImportPowerW = homeFromGridW + gridToBatt;
+    out.gridImportPowerW = homeFromGridW + gridToBatt + (raw._gridToSocketW ?? 0);
   }
   if (typeof battToGrid === 'number') {
     out.gridExportPowerW = battToGrid + (typeof solarToGrid === 'number' ? solarToGrid : 0);
@@ -390,13 +394,82 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   // numbers means this frame actually carried `f12`; an absent group leaves
   // battW out so the caller keeps the last known value.
   if (typeof homeFromBattW === 'number' && typeof battToGrid === 'number' && typeof gridToBatt === 'number') {
-    const into = gridToBatt + (typeof solarToBatt === 'number' ? solarToBatt : 0);
+    const into = gridToBatt + (typeof solarToBatt === 'number' ? solarToBatt : 0) + (raw._mpptToBattW ?? 0);
     out.battW = into - (homeFromBattW + battToGrid);
     out.battChargePowerW = out.battW > 0 ? out.battW : 0;
     out.battDischargePowerW = out.battW < 0 ? Math.abs(out.battW) : 0;
   }
 
   return out;
+}
+
+/** Read each f50/f54 entry independently; serial strings are never walked as messages. */
+function readUnitRecords(payload: Buffer): {
+  units: Record<string, Es22UnitTelemetry>; count: number; soc?: number; sn?: string;
+} {
+  const units: Record<string, Es22UnitTelemetry> = {};
+  let count = 0;
+  let candidateSoc: number | undefined;
+  let candidateSn: string | undefined;
+  let pos = 0;
+  while (pos < payload.length) {
+    const tag = readVarint(payload, pos);
+    const number = Number(tag.value >> 3n);
+    const wire = Number(tag.value & 7n);
+    const group = readField(payload, tag.next, wire);
+    pos = group.next;
+    if ((number !== 50 && number !== 54) || wire !== 2) continue;
+    let entryPos = 0;
+    let entries = 0;
+    while (entryPos < group.bytes.length) {
+      const entryTag = readVarint(group.bytes, entryPos);
+      const entryWire = Number(entryTag.value & 7n);
+      const entry = readField(group.bytes, entryTag.next, entryWire);
+      entryPos = entry.next;
+      if (Number(entryTag.value >> 3n) !== 1 || entryWire !== 2) continue;
+      entries += 1;
+      // A corrupt nested entry is contained; other units can still be read.
+      try {
+        const unit: Es22UnitTelemetry = {};
+        let serial: string | undefined;
+        let valuePos = 0;
+        while (valuePos < entry.bytes.length) {
+          const valueTag = readVarint(entry.bytes, valuePos);
+          const valueNumber = Number(valueTag.value >> 3n);
+          const valueWire = Number(valueTag.value & 7n);
+          const value = readField(entry.bytes, valueTag.next, valueWire);
+          valuePos = value.next;
+          if (valueNumber === 1 && valueWire === 2) {
+            const text = value.bytes.toString('ascii');
+            if (/^[A-Z0-9]{1,64}$/.test(text) && Buffer.from(text, 'ascii').equals(value.bytes)) serial = text;
+          } else if (valueNumber === 2) {
+            const soc = decodeScalar(valueWire, value.bytes, number === 50 ? 'float' : 'int');
+            if (soc !== undefined && Number.isFinite(soc)) {
+              if (number === 50) unit.socPrecisePct = soc;
+              else unit.socPct = soc;
+            }
+          } else if (number === 54 && valueNumber === 4 && valueWire === 0) {
+            const power = decodeScalar(valueWire, value.bytes, 'int');
+            if (power !== undefined && Number.isFinite(power)) unit.batteryPowerRawW = power * HALF_WATT;
+          }
+          // f50.1.4 latches at rest: deliberately never use it for battery power.
+        }
+        if (serial) units[serial] = { ...units[serial], ...unit };
+        const soc = unit.socPrecisePct ?? unit.socPct;
+        if (soc !== undefined && (number === 50 || candidateSoc === undefined)) {
+          candidateSoc = soc;
+          candidateSn = serial;
+        }
+      } catch {
+        // Missing, malformed or unattributable data never becomes another unit's reading.
+      }
+    }
+    count = Math.max(count, entries);
+  }
+  count = Math.max(count, Object.keys(units).length);
+  return {
+    units, count, soc: count === 1 ? candidateSoc : undefined, sn: count === 1 ? candidateSn : undefined,
+  };
 }
 
 /**
@@ -406,7 +479,7 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
  * command, or yields no mapped field — callers treat that as "nothing to apply"
  * rather than as an error.
  */
-export function parseStreamAc5000Frame(frame: Buffer): Es22Telemetry | null {
+export function parseStreamAc5000Frame(frame: Buffer, expectedSerial?: string): Es22Telemetry | null {
   let headers: Es22FrameHeader[];
   try {
     headers = decodeFrameHeaders(frame);
@@ -416,14 +489,25 @@ export function parseStreamAc5000Frame(frame: Buffer): Es22Telemetry | null {
   if (headers.length === 0) return null;
 
   const merged: Record<string, number> = {};
+  const unitsBySn: Record<string, Es22UnitTelemetry> = {};
+  let unitRecordCount = 0;
+  let singleUnitSocPct: number | undefined;
+  let singleUnitSn: string | undefined;
+  let sourceSn: string | undefined;
   let matched = false;
   for (const header of headers) {
+    // A bundled response from a different unit must not overwrite local BMS/SoC.
+    if (expectedSerial && header.deviceSn
+      && header.deviceSn.toUpperCase() !== expectedSerial.toUpperCase()) continue;
     const tree = FIELD_TREE[cmdKey(header.cmdFunc, header.cmdId)];
     if (!tree || !header.pdata || header.pdata.length === 0) continue;
     const decoded: Record<string, number> = {};
     const seenGroups = new Set<string>();
+    let records: ReturnType<typeof readUnitRecords>;
     try {
       walk(header.pdata, tree, decoded, seenGroups);
+      records = header.cmdFunc === 254 && header.cmdId === 39
+        ? readUnitRecords(header.pdata) : { units: {}, count: 0 };
     } catch {
       // A malformed message is contained: the rest of the bundle still counts.
       continue;
@@ -435,9 +519,25 @@ export function parseStreamAc5000Frame(frame: Buffer): Es22Telemetry | null {
     }
     matched = true;
     Object.assign(merged, decoded);
+    if (Object.keys(decoded).length > 0) sourceSn = header.deviceSn || expectedSerial || sourceSn;
+    for (const [sn, unit] of Object.entries(records.units)) {
+      unitsBySn[sn] = { ...unitsBySn[sn], ...unit };
+    }
+    unitRecordCount = Math.max(unitRecordCount, records.count, Object.keys(unitsBySn).length);
+    if (records.count === 1 && records.soc !== undefined) {
+      singleUnitSocPct = records.soc;
+      singleUnitSn = records.sn;
+    }
   }
-  if (!matched || Object.keys(merged).length === 0) return null;
+  if (!matched) return null;
 
   const telemetry = finalize(merged);
+  if (sourceSn) telemetry.sourceSn = sourceSn.toUpperCase();
+  if (unitRecordCount > 0) telemetry.unitRecordCount = unitRecordCount;
+  if (Object.keys(unitsBySn).length > 0) telemetry.unitsBySn = unitsBySn;
+  if (unitRecordCount === 1 && singleUnitSocPct !== undefined) {
+    telemetry.singleUnitSocPct = singleUnitSocPct;
+    if (singleUnitSn) telemetry.singleUnitSn = singleUnitSn;
+  }
   return Object.keys(telemetry).length > 0 ? telemetry : null;
 }

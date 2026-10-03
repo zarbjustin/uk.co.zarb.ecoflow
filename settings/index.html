@@ -7,7 +7,8 @@
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; max-width: 520px; margin: 0 auto; }
     h1 { font-size: 20px; }
-    p.help { color: #888; font-size: 13px; }
+    .help { color: #888; font-size: 13px; }
+    pre { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #f4f4f4; }
     label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: 13px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
     button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1AA3E8; color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
@@ -63,6 +64,20 @@
     disable STREAM 5000 devices you already paired.
   </p>
   <div class="saved" id="stream5000BetaSaved"></div>
+  <div class="help" id="stream5000PairingHelp">
+    <p>Use these settings in the <strong>Homey EcoFlow integration</strong>, not in EcoFlow's own mobile app.</p>
+    <ol>
+      <li>Install a Homey app version that includes the beta choices. They are currently available in the
+        <a href="https://homey.app/a/uk.co.zarb.ecoflow/test/" target="_blank" rel="noopener noreferrer">Homey test version</a>.</li>
+      <li>Enable beta pairing above, then open <strong>Add device &rarr; EcoFlow STREAM Series</strong>.</li>
+      <li>Choose <strong>STREAM Home Battery (5000 Beta)</strong> once for the installation's Homey Energy readings.</li>
+      <li>Optionally choose <strong>STREAM 5000 Series Unit (Beta)</strong> for a physical monitor, not a second Energy battery.</li>
+    </ol>
+    <p>This switch permits pairing only; it does not install or update the app or dynamically add device types.
+      If the two beta choices are missing, report the installed EcoFlow Homey app version, Homey OS version,
+      Homey mobile-app version and a screenshot of the device picker. Please do not delete existing devices
+      until the correct replacement is visible; deleting a device can affect its Flows and history.</p>
+  </div>
   <p class="help">
     Verified STREAM 5000-family units use EcoFlow's app connection because they are not available
     through the supported public API. Today this supports the STREAM AC 5000
@@ -73,6 +88,15 @@
   <p class="help" id="appAuthState" style="color:#555;">Checking&hellip;</p>
   <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
   <div class="saved" id="appAuthSaved"></div>
+
+  <h1 style="font-size:17px;">Setup and Energy diagnostics</h1>
+  <p class="help">This local report shows the installed app and Homey versions, packaged/registered
+    battery drivers, beta pairing access and anonymous Energy accounting counters. It does not
+    contact EcoFlow or include credentials, device names or serial numbers. Copy it when reporting
+    missing device choices or incorrect energy totals. Also include your Homey mobile-app version
+    and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
+  <button id="supportSnapshot" type="button">Show support report</button>
+  <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
 
   <script type="text/javascript">
     function onHomeyReady(Homey) {
@@ -95,6 +119,17 @@
         });
       }
       refreshAppAuthState();
+
+      document.getElementById('supportSnapshot').addEventListener('click', function () {
+        var button = document.getElementById('supportSnapshot');
+        var output = document.getElementById('supportSnapshotResult');
+        button.disabled = true;
+        output.textContent = 'Reading local diagnostics...';
+        Homey.api('GET', '/support-snapshot', null, function (err, report) {
+          button.disabled = false;
+          output.textContent = err ? 'Could not read local diagnostics. Please try again.' : JSON.stringify(report, null, 2);
+        });
+      });
 
       function saveSetting(Homey, key, value) {
         return new Promise(function (resolve, reject) {
@@ -147,7 +182,7 @@
         try {
           await saveSetting(Homey, 'stream5000BetaEnabled', enabled);
           status.textContent = enabled
-            ? 'Beta pairing enabled. You can now add a STREAM 5000 Beta device.'
+            ? 'Beta pairing enabled. Choose STREAM Home Battery (5000 Beta) for Homey Energy; the physical unit monitor is optional.'
             : 'Beta pairing disabled. Existing paired devices will continue to run.';
         } catch (err) {
           checkbox.checked = !enabled;

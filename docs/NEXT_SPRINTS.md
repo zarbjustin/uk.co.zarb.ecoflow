@@ -1,5 +1,8 @@
 # EcoFlow STREAM — Next Sprint Wave (post code-review)
 
+> Historical sprint wave. For current October 2026 priorities and validation
+> gates, see [Community feedback roadmap](COMMUNITY_FEEDBACK_ROADMAP.md).
+
 Status: planning · Produced from a **multi-model code review** (GPT‑5.4 + Gemini 3.1
 Pro + Sonnet 4.6) of the app at v1.3.1. The high‑severity bugs the review found are
 already fixed in v1.3.1 (see CHANGELOG). This document lists the **next wave** of

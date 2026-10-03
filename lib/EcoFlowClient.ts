@@ -182,7 +182,7 @@ export class EcoFlowClient {
             let json: any;
             try {
               json = text ? JSON.parse(text) : {};
-            } catch (e) {
+            } catch {
               reject(new Error(`EcoFlow API: invalid JSON (HTTP ${res.statusCode}): ${text.slice(0, 200)}`));
               return;
             }

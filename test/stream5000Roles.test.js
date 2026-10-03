@@ -27,3 +27,10 @@ test('physical unit telemetry retains a genuine zero battery-flow sample', () =>
   assert.equal(unitValues.stream_unit_power_battery_flow, 0);
   assert.equal(unitValues.measure_power, undefined);
 });
+
+test('physical role clears an ambiguous signed reading without adding an Energy source', () => {
+  const values = stream5000PhysicalCapabilityValues({ measure_power: null, battery_charging_state: null });
+  assert.equal(values.stream_unit_power_battery_flow, null);
+  assert.equal(values.battery_charging_state, null);
+  assert.equal(values.measure_power, undefined);
+});

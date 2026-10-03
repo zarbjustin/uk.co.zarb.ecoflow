@@ -19,6 +19,11 @@ const DEFAULT_POLL_MS = 30000;
 const REALTIME_GRACE_MS = 90000;
 const UNSUPPORTED_API_FAILURE_LIMIT = 3;
 
+export interface QuotaSampleContext {
+  receivedAt: number;
+  source: 'mqtt' | 'rest';
+}
+
 /**
  * Shared lifecycle for all EcoFlow devices: credential read + client creation,
  * REST polling, shared-MQTT subscription (quota + optional online/offline
@@ -37,6 +42,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private applyChain: Promise<void> = Promise.resolve();
   private pollPromise: Promise<void> | null = null;
   private lastRealtimeAt = 0;
+  private realtimeRevision = 0;
+  private stopping = false;
   private developerApiQuarantineReason: string | null = null;
   private consecutiveUnsupportedApiFailures = 0;
 
@@ -44,7 +51,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   protected abstract getReadSn(): string;
 
   /** Apply a quota payload (from poll or MQTT) to this device's capabilities. */
-  abstract applyQuota(quota: Record<string, any>): Promise<void>;
+  abstract applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void>;
 
   /** Subscribe to MQTT online/offline status as well as quota. Default: false. */
   protected handlesStatus(): boolean {
@@ -67,11 +74,12 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    this.stopping = false;
     const quarantineReason = this.getDeveloperApiQuarantineReason();
     if (quarantineReason) {
       await this.quarantineDeveloperApi(
         quarantineReason,
-        'ES22 device quarantined from the Developer API; enable STREAM 5000 beta pairing, then delete and add it again as STREAM 5000 Series Unit (Beta).',
+        'ES22 device quarantined from the Developer API; enable STREAM 5000 beta pairing, then add STREAM Home Battery (5000 Beta) for Homey Energy. The physical unit monitor is optional.',
         false,
       );
       return;
@@ -98,6 +106,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.subscribedSn = sn;
     this.quotaHandler = (q) => {
       this.lastRealtimeAt = Date.now();
+      this.realtimeRevision += 1;
       this.queueQuota(q, 'mqtt').catch((e) => this.error('mqtt apply', e));
     };
     if (this.handlesStatus()) {
@@ -142,12 +151,15 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   private async performPoll(): Promise<void> {
-    const requestedAt = Date.now();
+    const requestedRevision = this.realtimeRevision;
     try {
       this.refreshClientCredentials();
       const quota = await this.client.getQuotaAll(this.getReadSn());
+      if (this.stopping) return;
       this.consecutiveUnsupportedApiFailures = 0;
-      if (this.lastRealtimeAt <= requestedAt) await this.queueQuota(quota, 'rest');
+      // A revision detects newer MQTT even within the same millisecond. Check
+      // again when the queued reply runs: capability writes may hold the queue.
+      if (this.realtimeRevision === requestedRevision) await this.queueQuota(quota, 'rest', requestedRevision);
       // Don't override a realtime MQTT "offline" with a possibly-stale REST 200.
       if (!this.mqttOffline) await this.setOnlineState(true);
     } catch (e: any) {
@@ -177,10 +189,13 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     }
   }
 
-  private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest'): Promise<void> {
+  private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest', requestedRevision?: number): Promise<void> {
+    if (this.stopping) return Promise.resolve();
+    const context = { receivedAt: Date.now(), source };
     const run = async () => {
       if (this.developerApiQuarantineReason) return;
-      await this.applyQuota(quota);
+      if (source === 'rest' && requestedRevision !== this.realtimeRevision) return;
+      await this.applyQuota(quota, context);
       if (source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
     };
     this.applyChain = this.applyChain.then(run, run);
@@ -280,6 +295,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     await this.onSettingsChanged(newSettings, changedKeys);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- SDK types deletion void; teardown must await saved energy.
   async onDeleted(): Promise<void> {
     await this.teardown();
   }
@@ -296,11 +312,13 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
    * (non-monotonic) across restarts, corrupting the Homey Energy dashboard.
    */
   private async teardown(): Promise<void> {
+    this.stopping = true;
     this.unsubscribeSupportedRealtime();
     if (this.pollTimer) {
       this.homey.clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+    await this.applyChain.catch(() => {});
     await this.onTeardown();
   }
 }

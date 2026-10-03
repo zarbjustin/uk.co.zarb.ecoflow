@@ -28,7 +28,7 @@ function loadWithHomeyMock(modulePath) {
 
 const { BaseEcoFlowDevice } = loadWithHomeyMock('../.homeybuild/lib/BaseEcoFlowDevice.js');
 const StreamDevice = loadWithHomeyMock('../.homeybuild/drivers/stream/device.js');
-const LOCALIZED_ES22_MESSAGE = 'Enable beta pairing, then delete this device and add it again as STREAM 5000 Series Unit (Beta).';
+const LOCALIZED_ES22_MESSAGE = 'Enable beta pairing, then delete this device and add it again as STREAM Home Battery (5000 Beta).';
 const LOCALIZED_UNSUPPORTED_MESSAGE = 'Delete this unsupported device and add its dedicated type.';
 
 class TestDevice extends BaseEcoFlowDevice {
@@ -172,6 +172,8 @@ test('an already-paired ES22 stops before lifecycle setup and stays stopped', as
   assert.strictEqual(device.readyCalls, 0);
   assert.strictEqual(device.timerCalls, 0);
   assert.strictEqual(device.subscribeCalls, 0);
+  assert.ok(device.logs.some((message) => message.includes('STREAM Home Battery (5000 Beta)')));
+  assert.ok(!device.logs.some((message) => message.includes('add it again as STREAM 5000 Series Unit')));
 
   await device.onSettings({ newSettings: { poll_interval: 10 }, changedKeys: ['poll_interval'] });
   await assert.rejects(device.manualPoll(), {

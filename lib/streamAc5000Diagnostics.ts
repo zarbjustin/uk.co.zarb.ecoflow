@@ -1,7 +1,7 @@
 'use strict';
 
 import { createHash } from 'crypto';
-import { decodeFrameHeaders } from './streamAc5000Protocol';
+import { decodeFrameHeaders, parseStreamAc5000Frame } from './streamAc5000Protocol';
 
 const DEFAULT_SAMPLE_BYTES = 192;
 const SHAPE_BUCKET_BYTES = 32;
@@ -84,7 +84,7 @@ export class Es22SampleGate {
  * Keeping an explicit allow-list prevents settings, identifiers or future
  * protocol internals from accidentally entering a diagnostic snapshot.
  */
-export function formatEs22CapabilitySnapshot(values: Record<string, number | string>): string {
+export function formatEs22CapabilitySnapshot(values: Record<string, number | string | null>): string {
   const parts: string[] = [];
   for (const capability of Object.keys(SAFE_VALUE_NAMES)) {
     const value = values[capability];
@@ -122,9 +122,12 @@ export function describeEs22Frame(
   sampleBytes = DEFAULT_SAMPLE_BYTES,
 ): Es22FrameDiagnostic {
   let commands: string[] = [];
+  const serials = new Set([deviceSn]);
   try {
+    const headers = decodeFrameHeaders(payload);
+    for (const header of headers) if (header.deviceSn) serials.add(header.deviceSn);
     commands = [...new Set(
-      decodeFrameHeaders(payload)
+      headers
         .filter((header) => header.cmdFunc >= 0 && header.cmdId >= 0)
         .map((header) => `${header.cmdFunc}/${header.cmdId}`),
     )].sort();
@@ -132,7 +135,15 @@ export function describeEs22Frame(
     // Invalid protobuf is still useful as a bounded redacted sample.
   }
 
-  const redacted = redactAscii(payload, deviceSn);
+  // Linked snapshots can contain neighbours' serials, not just the subscription SN.
+  // Parsed records plus a conservative prefix scan also cover damaged frames.
+  if (sampleBytes > 0) {
+    const telemetry = parseStreamAc5000Frame(payload);
+    for (const serial of Object.keys(telemetry?.unitsBySn || {})) serials.add(serial);
+    for (const match of payload.toString('latin1').matchAll(/(?:ES\d{2}|BK\d{2})[A-Z0-9]{8,60}/g)) serials.add(match[0]);
+  }
+  let redacted = payload;
+  for (const serial of serials) redacted = redactAscii(redacted, serial);
   const limit = Math.max(0, Math.min(sampleBytes, DEFAULT_SAMPLE_BYTES));
   return {
     bytes: payload.length,

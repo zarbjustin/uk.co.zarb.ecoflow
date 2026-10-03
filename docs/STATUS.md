@@ -2,6 +2,35 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Current handover — 4 October 2026
+
+The October [community roadmap](COMMUNITY_FEEDBACK_ROADMAP.md) supersedes the
+historical sprint/current-version statements below. Sprint 1 and next-wave
+changes are being prepared on `codex/stream-next-wave-test`, based on v1.10.17.
+The user authorized a Test-channel release on 4 October. Production promotion,
+automatic grouping, live-device installation and control writes are not part of
+this release. The GitHub version workflow owns the upcoming patch version.
+
+- Telemetry corrections: [API review](STREAM_5000_API_REVIEW.md).
+- Next-wave accounting: persist initial BK counter baselines, retry failed
+  checkpoints, serialize writes, snapshot values before awaiting, use receipt
+  timestamps and suppress REST replies superseded by newer MQTT.
+- Local settings support report: version/platform, packaged versus registered
+  beta drivers, anonymous accounting evidence; no credentials/names/serials.
+- Development dependency upgrade uses Athom config 4.0.2 with its supported
+  ESLint 8.57.1 peer. Full npm audit is clear; CI now checks full dependencies.
+- [Tester validation and mixed-generation evidence plan](TESTER_VALIDATION.md).
+- [Original STREAM Flow capability audit](BK_FLOW_CAPABILITY_AUDIT.md).
+- [Mixed-generation discovery plan](MIXED_GENERATION_VALIDATION.md), including
+  API source/scope changes, history risks and a tester request draft (not sent).
+- Eight manual reports are not proven process crashes; Energy calculation and
+  missing-picker reports remain open. No automatic grouping or 5000 controls.
+- Verified locally: build, lint, 242 tests, clean `npm ci`, full audit (zero
+  findings), whitespace checks and Homey publish-level validation. No hardware
+  or Homey endpoint verification is implied.
+
+Read the validation documents before inviting testers or promoting a build.
+
 ## Outstanding / next actions (resume here)
 
 - [ ] **STREAM AC 5000 live gate** — install the next Test build and complete the

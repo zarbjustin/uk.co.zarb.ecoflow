@@ -12,7 +12,7 @@ Current verified support is deliberately narrower than the product catalogue:
 | Product | Serial evidence | Telemetry adapter | Pairable |
 |---|---|---|---|
 | STREAM AC 5000 | `ES22` | `es22` | Yes: one installation aggregate and an optional unit monitor |
-| STREAM 5000 | Not yet verified | None | No |
+| STREAM 5000 | Community captures identify `ES21`; not admitted here | None registered | No |
 | STREAM Expansion Battery 5000 | Not yet verified | None | No |
 | STREAM Gateway | Not yet verified | None | No; likely a separate functional driver |
 
@@ -43,8 +43,11 @@ reusing the ES22 parser for an unverified product is not permitted.
 ## Driver policy
 
 - `stream_5000_system`: one Homey Energy Home Battery per verified 5000-family
-  installation. Until EcoFlow exposes a stable group/gateway identifier, each
-  ES22 serial is deliberately treated as a singleton installation.
+  installation. Pairing identity is still anchored to an ES22 serial, not a
+  proven group/gateway identifier. Linked-unit captures now demonstrate system
+  totals: **do not pair an aggregate for every member of the same installation**.
+  Sprint 2 must establish stable membership/deduplication before mixed-generation
+  auto-consolidation. Account membership or one partial unit list is not enough.
 - `stream_5000_unit`: an optional monitor for one physical 5000-family battery
   or inverter/battery unit. It uses custom telemetry capabilities and never
   contributes instantaneous or cumulative data to Homey Energy.
@@ -58,6 +61,23 @@ reusing the ES22 parser for an unverified product is not permitted.
   in app settings. The warning must state that the implementation, capabilities,
   Energy behaviour, credentials and pairing can change when EcoFlow publishes an
   official API, including the possibility of re-pairing.
+
+## Telemetry scopes (October 2026 Sprint 1)
+
+The installation's `f11.5` percentage is authoritative; `f33.6` is a unit's
+percentage and must not refine it. Repeated `f50`/`f54` records remain keyed by
+serial. A legacy single-record percentage is only a provisional fallback before
+system or peer evidence appears; it is not proof of installation membership.
+
+Per-device mapping retains scope evidence across delta frames and reconnects
+within the device session. Physical monitors never inherit known linked-system
+power. The raw per-unit `f54.1.4` direction is unverified, so linked-unit signed
+power/state is cleared rather than guessed. System power remains derived from
+the flow matrix, and is never synthesized by summing these raw unit values.
+
+These are parsing/mapping corrections, not an identity migration: driver IDs,
+pairing data, counters and the default-off beta gate are unchanged. See
+[API-review evidence and release gates](STREAM_5000_API_REVIEW.md).
 
 ## Homey Energy accounting
 

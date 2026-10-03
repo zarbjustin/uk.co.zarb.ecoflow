@@ -17,6 +17,7 @@
     "import/extensions": "off",
     "import/no-unresolved": "off",
     "import/prefer-default-export": "off",
+    "import/no-import-module-exports": "off",
     "max-classes-per-file": "off",
     "node/no-missing-import": "off",
     "node/no-unsupported-features/es-builtins": "off",

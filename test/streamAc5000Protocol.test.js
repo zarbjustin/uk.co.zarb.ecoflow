@@ -3,7 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { parseStreamAc5000Frame, decodeFrameHeaders } = require('../.homeybuild/lib/streamAc5000Protocol.js');
-const { mapStreamAc5000, chargingState } = require('../.homeybuild/lib/streamAc5000Mapping.js');
+const { mapStreamAc5000, createStreamAc5000Mapper, chargingState } = require('../.homeybuild/lib/streamAc5000Mapping.js');
+const captures = require('./fixtures/stream5000Telemetry.json');
 
 // --- minimal protobuf encoder, used only to build deterministic fixtures -----
 
@@ -101,17 +102,17 @@ test('254/39 decodes the V1.1.4.35 SoC fallback from a live redacted frame', () 
     'CoABCl9yBijEBjjDBuICCRDYBSiG+BI4CZIDKgooChAqKioqKioqKioqKioqKioqFQAAxkIlvFPRQygCNWTPz8M9vFPRw7IDGwoZChAqKioqKioqKioqKioqKioqEGMYACDEBhACGCAgASgBOANA/gFIJ1BfWAFw4crtAXiBmAKAAQM=',
     'base64',
   );
-  assert.deepStrictEqual(parseStreamAc5000Frame(captured), { socPct: 99 });
+  assert.deepStrictEqual(parseStreamAc5000Frame(captured), { unitRecordCount: 1, singleUnitSocPct: 99 });
   assert.strictEqual(mapStreamAc5000(parseStreamAc5000Frame(captured)).measure_battery, 99);
 });
 
-test('original and precise SoC fields retain precedence over firmware fallbacks', () => {
+test('system SoC is not refined by unit SoC or serial-keyed fallbacks', () => {
   const fallbackBlocks = Buffer.concat([
     lField(50, lField(1, fField(2, 81))),
     lField(54, lField(1, vField(2, 82))),
   ]);
   assert.strictEqual(
-    parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata: fallbackBlocks }])).socPct,
+    parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata: fallbackBlocks }])).singleUnitSocPct,
     81,
   );
 
@@ -123,7 +124,7 @@ test('original and precise SoC fields retain precedence over firmware fallbacks'
   const telemetry = parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata: withOriginal }]));
   assert.strictEqual(telemetry.socPct, 77);
   assert.ok(Math.abs(telemetry.socPrecisePct - 75.4) < 0.001);
-  assert.strictEqual(mapStreamAc5000(telemetry).measure_battery, 75);
+  assert.strictEqual(mapStreamAc5000(telemetry).measure_battery, 77);
 });
 
 test('254/39 derives a positive battery power while charging, including solar', () => {
@@ -194,6 +195,7 @@ test('a present f11 group zero-fills the solar total', () => {
   }]));
   assert.strictEqual(t.socPct, 44);
   assert.strictEqual(t.solarW, 0);
+  assert.strictEqual(t.acSocketW, 0);
 });
 
 // --- 32/50 BMS heartbeat and 32/2 limits ------------------------------------
@@ -286,13 +288,14 @@ test('mapStreamAc5000 omits capabilities the frame did not carry', () => {
   assert.deepStrictEqual(mapStreamAc5000({}), {});
 });
 
-test('mapStreamAc5000 prefers precise SoC and rejects impossible telemetry', () => {
-  assert.strictEqual(mapStreamAc5000({ socPct: 60, socPrecisePct: 62.6 }).measure_battery, 63);
+test('mapStreamAc5000 separates system and precise unit SoC and rejects impossible telemetry', () => {
+  assert.strictEqual(mapStreamAc5000({ socPct: 60, socPrecisePct: 62.6 }).measure_battery, 60);
+  assert.strictEqual(mapStreamAc5000({ socPct: 60, socPrecisePct: 62.6 }, { scope: 'unit' }).measure_battery, 63);
   assert.strictEqual(mapStreamAc5000({ socPrecisePct: 120 }).measure_battery, undefined);
   assert.strictEqual(mapStreamAc5000({ socPrecisePct: -5 }).measure_battery, undefined);
   assert.strictEqual(mapStreamAc5000({ bmsSohPct: 101 }).battery_soh, undefined);
   assert.strictEqual(mapStreamAc5000({ battTempC: 900 }).measure_temperature, undefined);
-  assert.strictEqual(mapStreamAc5000({ battW: 50000 }).measure_power, undefined);
+  assert.strictEqual(mapStreamAc5000({ battW: 100001 }).measure_power, undefined);
   assert.strictEqual(mapStreamAc5000({ gridImportPowerW: -1 })['measure_power.grid_import'], undefined);
 });
 
@@ -325,4 +328,146 @@ test('chargingState applies a deadband around zero', () => {
   assert.strictEqual(chargingState(0), 'idle');
   assert.strictEqual(chargingState(3), 'idle');
   assert.strictEqual(chargingState(-3), 'idle');
+});
+
+// Public, masked hardware captures. Expectations are scoped; never derive
+// installation SoC by averaging units or installation power by summing them.
+test('linked ES22 capture keeps system 76% distinct from units 87% and 65%', () => {
+  const { unit_a: a, unit_b: b } = captures.pair;
+  const systemMapper = createStreamAc5000Mapper(a, 'system');
+  const unitAMapper = createStreamAc5000Mapper(a, 'unit');
+  const unitBMapper = createStreamAc5000Mapper(b, 'unit');
+  const expectedPower = [[829, 0], [817, 0], [57, 400], [41, 420], [0, 550], [0, 689]];
+  for (const [index, captured] of captures.pair.frames.entries()) {
+    const t = parseStreamAc5000Frame(frame([{
+      cmdFunc: 254, cmdId: 39, pdata: Buffer.from(captured.pdata_hex, 'hex'), sn: a,
+    }]));
+    assert.equal(systemMapper(t).measure_battery, 76);
+    assert.equal(unitAMapper(t).measure_battery, 87);
+    assert.equal(unitBMapper(t).measure_battery, 65);
+    assert.equal(t.unitsBySn[a].batteryPowerRawW, expectedPower[index][0]);
+    assert.equal(unitAMapper(t).measure_power, null);
+    assert.equal(t.unitsBySn[b].batteryPowerRawW, expectedPower[index][1]);
+    assert.equal(unitBMapper(t).measure_power, null);
+    assert.equal(t.unitsBySn[a].socPct, 87);
+    assert.equal(t.unitsBySn[b].socPct, 65);
+  }
+});
+
+test('MPPT capture includes direct PV-to-battery charge without enabling ES21 pairing', () => {
+  const { isSupportedStream5000Sn } = require('../.homeybuild/lib/stream5000Models');
+  assert.equal(isSupportedStream5000Sn('ES21TESTUNITAAAA'), false);
+  const expected = [438, 34, 28];
+  for (const [index, captured] of captures.mppt.frames.entries()) {
+    const t = parseStreamAc5000Frame(Buffer.from(captured.hex, 'hex'));
+    assert.equal(t.battW, expected[index]);
+    assert.equal(t.battChargePowerW, expected[index]);
+    assert.equal(t.battDischargePowerW, 0);
+  }
+});
+
+test('loaded AC socket capture includes grid-to-socket import; idle unit stays unchanged', () => {
+  const expected = [554, 558, 553];
+  for (const [index, captured] of captures.socket.loaded.entries()) {
+    const t = parseStreamAc5000Frame(Buffer.from(captured.hex, 'hex'));
+    assert.equal(t.gridImportPowerW, expected[index]);
+  }
+  assert.equal(parseStreamAc5000Frame(Buffer.from(captures.socket.loaded[0].hex, 'hex')).acSocketW, 355);
+  const idle = parseStreamAc5000Frame(Buffer.from(captures.socket.idle[0].hex, 'hex'));
+  assert.equal(idle.gridImportPowerW, 200);
+});
+
+test('real discharge capture proves f54 power must not supply a signed unit state', () => {
+  const t = parseStreamAc5000Frame(Buffer.from(captures.discharge.frames[0].hex, 'hex'));
+  const serial = Object.keys(t.unitsBySn)[0];
+  assert.equal(t.battW, -536);
+  assert.equal(t.unitsBySn[serial].batteryPowerRawW, 534.5, 'positive raw power during discharge');
+  const unit = createStreamAc5000Mapper(serial, 'unit')(t);
+  assert.equal(unit.measure_power, -536, 'single unit uses the verified signed flow matrix');
+  assert.equal(unit.battery_charging_state, 'discharging');
+});
+
+test('new flow edges clear at idle but absent f12 remains a delta', () => {
+  const parse = (pdata) => parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata }]));
+  assert.equal(parse(lField(12, Buffer.concat([vField(2, 308), vField(9, 130)]))).battW, 438);
+  assert.equal(parse(lField(12, vField(18, 354))).gridImportPowerW, 354);
+  assert.equal(parse(lField(12, Buffer.alloc(0))).battW, 0);
+  assert.equal(parse(lField(12, Buffer.alloc(0))).gridImportPowerW, 0);
+  assert.equal(parse(lField(33, fField(6, 81))).battW, undefined);
+});
+
+test('serial-keyed f50 and f54 merge by identity, not by position', () => {
+  const other = 'ES22TESTOTHER001';
+  const pdata = Buffer.concat([
+    lField(50, Buffer.concat([
+      lField(1, Buffer.concat([sField(1, SN), fField(2, 81.4), fField(4, 9999)])),
+      lField(1, Buffer.concat([sField(1, other), fField(2, 20.2)])),
+    ])),
+    lField(54, Buffer.concat([
+      lField(1, Buffer.concat([sField(1, other), vField(2, 20), vField(4, 100)])),
+      lField(1, Buffer.concat([sField(1, SN), vField(2, 81), vField(4, -600)])),
+    ])),
+  ]);
+  const t = parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, pdata }]));
+  assert.equal(t.unitRecordCount, 2);
+  assert.equal(t.singleUnitSocPct, undefined);
+  assert.equal(mapStreamAc5000(t).measure_battery, undefined);
+  assert.deepEqual(t.unitsBySn[SN], { socPrecisePct: Math.fround(81.4), socPct: 81, batteryPowerRawW: -300 });
+  assert.equal(mapStreamAc5000(t, { scope: 'unit', serialNumber: SN }).measure_power, null);
+  assert.equal(mapStreamAc5000(t, { scope: 'unit', serialNumber: other }).measure_power, null);
+  assert.equal(mapStreamAc5000(t, { scope: 'unit', serialNumber: 'ES22UNLISTED' }).measure_power, null);
+});
+
+test('omitted unit power is not zero; explicit zero clears it and f50 latched power is ignored', () => {
+  const parse = (fields) => parseStreamAc5000Frame(frame([{
+    cmdFunc: 254, cmdId: 39, pdata: lField(54, lField(1, Buffer.concat([sField(1, SN), ...fields]))),
+  }]));
+  assert.equal(parse([vField(2, 80)]).unitsBySn[SN].batteryPowerRawW, undefined);
+  assert.equal(parse([vField(4, 0)]).unitsBySn[SN].batteryPowerRawW, 0);
+  const latched = parseStreamAc5000Frame(frame([{
+    cmdFunc: 254, cmdId: 39, pdata: lField(50, lField(1, Buffer.concat([sField(1, SN), fField(4, 500)]))),
+  }]));
+  assert.equal(latched.unitsBySn[SN].batteryPowerRawW, undefined);
+});
+
+test('a malformed unit entry cannot replace its valid sibling', () => {
+  const t = parseStreamAc5000Frame(frame([{
+    cmdFunc: 254, cmdId: 39, pdata: lField(54, Buffer.concat([
+      lField(1, Buffer.from([0xff])),
+      lField(1, Buffer.concat([sField(1, SN), vField(4, -200)])),
+    ])),
+  }]));
+  assert.equal(t.unitsBySn[SN].batteryPowerRawW, -100);
+  assert.equal(t.unitRecordCount, 2, 'a corrupt sibling still rules out a singleton fallback');
+});
+
+test('mapper remembers system SoC and peer evidence across partial frames', () => {
+  const system = createStreamAc5000Mapper(SN, 'system');
+  assert.equal(system({ unitRecordCount: 1, singleUnitSn: SN, singleUnitSocPct: 81 }).measure_battery, 81);
+  assert.equal(system({ socPct: 76, socPrecisePct: 87 }).measure_battery, 76);
+  assert.equal(system({ unitRecordCount: 1, singleUnitSn: SN, singleUnitSocPct: 87 }).measure_battery, undefined);
+  assert.equal(system({ socPrecisePct: 88 }).measure_battery, undefined);
+
+  const unit = createStreamAc5000Mapper(SN, 'unit');
+  assert.equal(unit({ battW: -300 }).measure_power, -300, 'retain legacy single-unit beta reading');
+  assert.equal(unit({ unitRecordCount: 2, battW: -600 }).measure_power, null);
+  assert.equal(unit({ battW: -900 }).measure_power, null, 'a delta cannot re-enable aggregate-as-unit power');
+  assert.equal(unit({ unitsBySn: { [SN]: { batteryPowerRawW: 0 } } }).measure_power, null);
+  assert.equal(createStreamAc5000Mapper(SN, 'unit')({ battW: -300 }).measure_power, -300, 'instances do not share state');
+});
+
+test('unit-only deltas and foreign serial headers cannot overwrite the installation', () => {
+  const payload = frame([{ cmdFunc: 254, cmdId: 39, pdata: lField(33, fField(6, 91)), sn: SN }]);
+  assert.equal(parseStreamAc5000Frame(payload, 'ES22ANOTHERUNIT'), null);
+  assert.equal(mapStreamAc5000(parseStreamAc5000Frame(payload)).measure_battery, undefined);
+  assert.equal(mapStreamAc5000(parseStreamAc5000Frame(payload), { scope: 'unit', serialNumber: SN }).measure_battery, 91);
+});
+
+test('aggregate power supports larger installations without relaxing unit sanity bounds', () => {
+  assert.equal(mapStreamAc5000({ battW: 18000 }).measure_power, 18000);
+  const unit = { battW: 18000 };
+  assert.equal(mapStreamAc5000(unit, { scope: 'unit', serialNumber: SN, allowSystemPowerForUnit: true }).measure_power, undefined);
+  for (const value of [NaN, Infinity, -Infinity, 100001, -100001]) {
+    assert.equal(mapStreamAc5000({ battW: value }).measure_power, undefined);
+  }
 });

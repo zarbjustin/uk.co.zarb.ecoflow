@@ -49,7 +49,7 @@ function defaultGetJson(url: string): Promise<any> {
       res.on('end', () => {
         try {
           resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
-        } catch (e) {
+        } catch {
           reject(new Error('Open-Meteo: invalid JSON'));
         }
       });

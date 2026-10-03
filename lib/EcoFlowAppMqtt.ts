@@ -255,7 +255,11 @@ export class EcoFlowAppMqtt {
         await this.connecting;
       } catch { /* ignore */ }
     }
-    if (this.client) await new Promise<void>((res) => this.client!.end(false, {}, () => res()));
+    if (this.client) {
+      await new Promise<void>((res) => {
+        this.client!.end(false, {}, () => res());
+      });
+    }
     this.client = null;
     this.handlers.clear();
   }

@@ -54,6 +54,9 @@ English, **German** and **Dutch**.
 - Signed EcoFlow IoT Open Platform REST client (HMAC-SHA256, validated against the documented test vector), with bounded retry for transient blips.
 - Shared **MQTT** connection for realtime (~2 s) updates, with REST polling as a fallback.
 - **Troubleshooting / logs:** view the app's live log (incl. `[mqtt]` connection events) via *Homey Developer Tools → your app → Log*.
+- **Local support report:** app Settings → **Show support report** provides installed
+  versions, battery-driver registration and anonymous Energy accounting evidence,
+  without credentials, device names or serials. See the [tester checklist](docs/TESTER_VALIDATION.md).
 
 ## Setup
 1. Create an **Access Key** and **Secret Key** at [developer.ecoflow.com](https://developer.ecoflow.com) → *IoT Background*.

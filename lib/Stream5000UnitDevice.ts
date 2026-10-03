@@ -12,7 +12,7 @@ import {
 } from './stream5000Adapters';
 import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
 import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
-import { integrateTimedSignedPower } from './energyIntegration';
+import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } from './energyIntegration';
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 
 /**
@@ -52,7 +52,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private watchdog: NodeJS.Timeout | null = null;
   private resubscribeTimer: NodeJS.Timeout | null = null;
   private applyChain: Promise<void> = Promise.resolve();
-  private lastValues: Record<string, number | string> = {};
+  private lastValues: Stream5000CapabilityValues = {};
   private lastResubscribeAt = 0;
   private framesReceived = 0;
   private parsedFrames = 0;
@@ -69,6 +69,8 @@ export class Stream5000UnitDevice extends Homey.Device {
   private dischargedWh = 0;
   private lastEnergySampleAt = 0;
   private energyCheckpoint?: EnergyCheckpoint;
+  private energySamples = 0;
+  private ignoredEnergyGaps = 0;
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -95,6 +97,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       return;
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
+    const mapTelemetry = this.telemetryAdapter.createMapper(sn, this.isEnergyAggregate() ? 'system' : 'unit');
     this.sampleGate = this.telemetryAdapter.createSampleGate();
     if (this.isEnergyAggregate()) {
       this.chargedWh = this.storedEnergyWh('chargedWh');
@@ -120,7 +123,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.framesReceived += 1;
       this.bytesReceived += payload.length;
       this.lastFrameAt = Date.now();
-      const telemetry = this.telemetryAdapter.parse(payload);
+      const telemetry = this.telemetryAdapter.parse(payload, sn);
       const diagnostic = this.telemetryAdapter.describe(payload, sn, telemetry ? 0 : undefined);
       if (!telemetry) {
         this.unparsedFrames += 1;
@@ -131,13 +134,17 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       this.parsedFrames += 1;
       const receivedAt = Date.now();
-      this.lastTelemetryAt = receivedAt;
-      const values = this.telemetryAdapter.map(telemetry);
+      const values = mapTelemetry(telemetry);
+      const roleValues = this.capabilityValuesForRole(values);
+      const usable = Object.entries(roleValues).some(([capability, value]) => value !== null && this.hasCapability(capability));
+      if (usable) this.lastTelemetryAt = receivedAt;
       Object.assign(this.lastValues, values);
       this.recordCommands(diagnostic, true);
       this.captureRequestedSnapshot(diagnostic, topic);
       this.maybeLogDiagnosticSummary(topic);
-      this.queueTelemetry(values, receivedAt).catch((e) => this.error('apply telemetry', e?.message || e));
+      if (Object.keys(roleValues).some((capability) => this.hasCapability(capability))) {
+        this.queueTelemetry(values, receivedAt, usable).catch((e) => this.error('apply telemetry', e?.message || e));
+      }
     };
 
     await this.subscribe();
@@ -178,10 +185,10 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
   }
 
-  private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
+  private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number, usable: boolean): Promise<void> {
     const run = async () => {
       await this.applyTelemetry(values, receivedAt);
-      await this.setOnline();
+      if (usable) await this.setOnline();
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
@@ -236,6 +243,8 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async updateEnergy(batteryPowerW: number, sampleAt: number): Promise<void> {
+    this.energySamples += 1;
+    if (this.lastEnergySampleAt > 0 && sampleAt - this.lastEnergySampleAt > MAX_GAP_MS) this.ignoredEnergyGaps += 1;
     const next = integrateTimedSignedPower({
       posWh: this.chargedWh,
       negWh: this.dischargedWh,
@@ -255,8 +264,27 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async persistEnergy(): Promise<void> {
-    await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
-    await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
+    const { chargedWh } = this;
+    const { dischargedWh } = this;
+    await this.setStoreValue('chargedWh', chargedWh);
+    await this.setStoreValue('dischargedWh', dischargedWh);
+  }
+
+  getEnergyDiagnostics(): EnergyAccountingDiagnostic | null {
+    if (!this.isEnergyAggregate()) return null;
+    return {
+      source: this.lastEnergySampleAt > 0 ? 'integrated_power' : 'waiting',
+      samples: this.energySamples,
+      skippedSamples: 0,
+      ignoredGaps: this.ignoredEnergyGaps,
+      counterResets: 0,
+      chargedCounterSeen: false,
+      dischargedCounterSeen: false,
+      lastSampleAgeSec: this.lastEnergySampleAt > 0 ? Math.max(0, Math.round((Date.now() - this.lastEnergySampleAt) / 1000)) : null,
+      chargedKWh: this.chargedWh / 1000,
+      dischargedKWh: this.dischargedWh / 1000,
+      checkpoint: this.energyCheckpoint?.diagnostics(),
+    };
   }
 
   private recordCommands(diagnostic: Stream5000FrameDiagnostic, parsed: boolean): void {
@@ -357,6 +385,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     await this.setUnavailable(message).catch(() => {});
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- SDK types deletion void; teardown must await saved energy.
   async onDeleted(): Promise<void> {
     await this.teardown();
     // Removing the final app-connected STREAM 5000-family device removes the

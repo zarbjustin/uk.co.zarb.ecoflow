@@ -1,5 +1,8 @@
 # EcoFlow STREAM Series — Sprint Plan (v1.8.6 review)
 
+> Historical v1.8.6 plan. For current October 2026 priorities and validation
+> gates, see [Community feedback roadmap](COMMUNITY_FEEDBACK_ROADMAP.md).
+
 > Ordered backlog from `docs/PRODUCT_RESEARCH.md`, `docs/CODE_REVIEW_v1.8.6.md`,
 > `docs/FEATURE_EVALUATION.md` and `docs/SPECIFICATION.md`, for the **current release** (v1.8.6).
 > Every sprint ends with: **build → lint → test → `homey app validate --level publish`**.

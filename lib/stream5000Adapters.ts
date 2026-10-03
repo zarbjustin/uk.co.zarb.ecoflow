@@ -7,11 +7,11 @@ import {
   es22TopicKind,
   formatEs22CapabilitySnapshot,
 } from './streamAc5000Diagnostics';
-import { mapStreamAc5000 } from './streamAc5000Mapping';
+import { createStreamAc5000Mapper, mapStreamAc5000 } from './streamAc5000Mapping';
 import { parseStreamAc5000Frame } from './streamAc5000Protocol';
 import { Stream5000ModelSpec, Stream5000TelemetryAdapterId } from './stream5000Models';
 
-export type Stream5000CapabilityValues = Record<string, number | string>;
+export type Stream5000CapabilityValues = Record<string, number | string | null>;
 
 export interface Stream5000FrameDiagnostic {
   bytes: number;
@@ -35,8 +35,9 @@ export interface Stream5000TelemetryAdapter {
   id: Stream5000TelemetryAdapterId;
   diagnosticLabel: string;
   requestedSnapshotCommand?: string;
-  parse(payload: Buffer): unknown | null;
+  parse(payload: Buffer, serialNumber?: string): unknown | null;
   map(telemetry: unknown): Stream5000CapabilityValues;
+  createMapper(serialNumber: string, scope: 'system' | 'unit'): (telemetry: unknown) => Stream5000CapabilityValues;
   describe(payload: Buffer, serialNumber: string, sampleBytes?: number): Stream5000FrameDiagnostic;
   frameShape(diagnostic: Stream5000FrameDiagnostic): string;
   topicKind(topic: string): string;
@@ -50,6 +51,10 @@ const ES22_ADAPTER: Stream5000TelemetryAdapter = Object.freeze({
   requestedSnapshotCommand: '254/39',
   parse: parseStreamAc5000Frame,
   map: (telemetry: unknown) => mapStreamAc5000(telemetry as Parameters<typeof mapStreamAc5000>[0]),
+  createMapper: (serialNumber: string, scope: 'system' | 'unit') => {
+    const mapper = createStreamAc5000Mapper(serialNumber, scope);
+    return (telemetry: unknown) => mapper(telemetry as Parameters<typeof mapStreamAc5000>[0]);
+  },
   describe: describeEs22Frame,
   frameShape: es22FrameShape,
   topicKind: es22TopicKind,

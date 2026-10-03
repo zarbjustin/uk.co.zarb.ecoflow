@@ -1,0 +1,168 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+
+class FakeDevice {
+  constructor() { this.store = {}; this.values = {}; this.timers = new Map(); this.nextTimer = 0; }
+  getData() { return { sn: 'BK61TEST00000001' }; }
+  getStoreValue(key) { return this.store[key]; }
+  getSetting() { return false; }
+  hasCapability(cap) { return ['measure_power', 'battery_charging_state', 'meter_power.charged', 'meter_power.discharged'].includes(cap); }
+  getCapabilityValue(cap) { return this.values[cap]; }
+  async setCapabilityValue(cap, value) { this.values[cap] = value; }
+  async setStoreValue(key, value) { this.store[key] = value; }
+  registerCapabilityListener() {}
+  error(...args) { throw new Error(args.join(' ')); }
+}
+
+const originalLoad = Module._load;
+let StreamDevice;
+try {
+  Module._load = function load(request, ...args) {
+    if (request === 'homey') return { Device: FakeDevice };
+    return originalLoad.call(this, request, ...args);
+  };
+  StreamDevice = require('../.homeybuild/drivers/stream/device');
+} finally { Module._load = originalLoad; }
+
+async function harness(store = {}) {
+  const device = new StreamDevice();
+  Object.assign(device.store, store);
+  device.homey = {
+    setTimeout: (fn) => { device.timers.set(++device.nextTimer, fn); return device.nextTimer; },
+    clearTimeout: (id) => device.timers.delete(id),
+    flow: { getDeviceTriggerCard: () => ({ trigger: async () => {} }) },
+  };
+  await device.onReady();
+  return device;
+}
+
+test('BK first counter baseline survives restart even when it adds no energy', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const first = await harness();
+  await first.applyQuota({ accuChgEnergy: 1000, accuDsgEnergy: 500 });
+  assert.equal(first.getEnergyDiagnostics().checkpoint.pending, true);
+  await first.onTeardown();
+  assert.equal(first.store.chargedRawWh, 1000);
+  assert.equal(first.store.dischargedRawWh, 500);
+  assert.equal(first.store.countersAvailable, true);
+  const restarted = await harness(first.store);
+  await restarted.applyQuota({ powGetBpCms: 900 });
+  assert.equal(restarted.getEnergyDiagnostics().source, 'device_counters');
+  assert.equal(restarted.values['meter_power.charged'], 0);
+  await restarted.applyQuota({ accuChgEnergy: 1100, accuDsgEnergy: 550 });
+  assert.equal(restarted.values['meter_power.charged'], 0.1);
+  assert.equal(restarted.values['meter_power.discharged'], 0.05);
+  await restarted.onTeardown();
+});
+
+test('BK missing/negative counters cannot latch the source or anchor historical raw totals at zero', async () => {
+  const device = await harness();
+  await device.applyQuota({ accuChgEnergy: -1, accuDsgEnergy: '' });
+  assert.equal(device.getEnergyDiagnostics().source, 'waiting');
+  await device.applyQuota({ accuChgEnergy: 5000 });
+  assert.equal(device.getEnergyDiagnostics().chargedCounterSeen, true);
+  assert.equal(device.getEnergyDiagnostics().dischargedCounterSeen, false);
+  assert.equal(device.values['meter_power.charged'], 0);
+  await device.applyQuota({ accuChgEnergy: 5100 });
+  assert.equal(device.values['meter_power.charged'], 0.1);
+  await device.onTeardown();
+});
+
+test('invalid saved values cannot poison totals or pretend a raw counter was observed', async () => {
+  const device = await harness({ chargedWh: -10, dischargedWh: Infinity, chargedRawWh: null, dischargedRawWh: -1 });
+  assert.equal(device.values['meter_power.charged'], 0);
+  assert.equal(device.values['meter_power.discharged'], 0);
+  assert.equal(device.getEnergyDiagnostics().source, 'waiting');
+  await device.applyQuota({ accuChgEnergy: 1000 });
+  assert.equal(device.values['meter_power.charged'], 0);
+  await device.onTeardown();
+});
+
+test('checkpoint captures matching totals and raw baselines before an asynchronous store write', async () => {
+  const device = await harness();
+  await device.applyQuota({ accuChgEnergy: 1000 });
+  let release;
+  let started;
+  const entered = new Promise((resolve) => { started = resolve; });
+  device.setStoreValue = async (key, value) => {
+    if (key === 'chargedWh' && !release) {
+      started();
+      await new Promise((resolve) => { release = resolve; });
+    }
+    device.store[key] = value;
+  };
+  const flush = device.energyCheckpoint.flush();
+  await entered;
+  await device.applyQuota({ accuChgEnergy: 1100 });
+  release();
+  await flush;
+  assert.equal(device.store.chargedWh, 0);
+  assert.equal(device.store.chargedRawWh, 1000, 'snapshot may not mix an older total with a newer raw baseline');
+  await device.onTeardown();
+  assert.equal(device.store.chargedWh, 100);
+  assert.equal(device.store.chargedRawWh, 1100);
+});
+
+test('BK counter authority prevents power double counting, including partial counter frames', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const device = await harness();
+  await device.applyQuota({ powGetBpCms: 600 });
+  now += 60000;
+  await device.applyQuota({ powGetBpCms: 600 });
+  assert.equal(device.values['meter_power.charged'], 0.01);
+  await device.applyQuota({ accuChgEnergy: 1000, powGetBpCms: 600 });
+  now += 60000;
+  await device.applyQuota({ powGetBpCms: 600 });
+  assert.equal(device.values['meter_power.charged'], 0.01);
+  await device.applyQuota({ accuChgEnergy: 1100 });
+  await device.applyQuota({ accuDsgEnergy: 900 });
+  await device.applyQuota({ accuDsgEnergy: 1000 });
+  assert.equal(device.values['meter_power.charged'], 0.11);
+  assert.equal(device.values['meter_power.discharged'], 0.1);
+  assert.equal(device.getEnergyDiagnostics().skippedSamples, 1);
+  await device.onTeardown();
+});
+
+test('BK observed counter decreases preserve monotonic totals and record reset evidence', async () => {
+  const device = await harness({ chargedWh: 250, chargedRawWh: 1000, countersAvailable: true });
+  await device.applyQuota({ accuChgEnergy: 1100 });
+  await device.applyQuota({ accuChgEnergy: 20 });
+  await device.applyQuota({ accuChgEnergy: 30 });
+  assert.equal(device.values['meter_power.charged'], 0.38);
+  assert.equal(device.getEnergyDiagnostics().counterResets, 1);
+  await device.onTeardown();
+});
+
+test('BK power accounting uses receipt time, not delayed capability-write completion', async (t) => {
+  t.mock.method(Date, 'now', () => 900000);
+  const device = await harness();
+  await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 100000, source: 'mqtt' });
+  await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 160000, source: 'rest' });
+  assert.equal(device.values['meter_power.charged'], 0.01);
+  await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 160000, source: 'mqtt' });
+  assert.equal(device.values['meter_power.charged'], 0.01);
+  await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 8000000, source: 'mqtt' });
+  assert.equal(device.values['meter_power.charged'], 0.01);
+  assert.equal(device.getEnergyDiagnostics().ignoredGaps, 1);
+  await device.onTeardown();
+});
+
+test('BK failed store writes stay pending and retry without changing baseline values', async () => {
+  const device = await harness();
+  await device.applyQuota({ accuChgEnergy: 1000 });
+  let fail = true;
+  device.setStoreValue = async (key, value) => {
+    if (key === 'chargedRawWh' && fail) { fail = false; throw new Error('temporary store failure'); }
+    device.store[key] = value;
+  };
+  await assert.rejects(device.onTeardown(), /temporary store failure/);
+  assert.equal(device.getEnergyDiagnostics().checkpoint.pending, true);
+  await device.onTeardown();
+  assert.equal(device.store.chargedRawWh, 1000);
+  assert.equal(device.store.countersAvailable, true);
+  assert.equal(device.getEnergyDiagnostics().checkpoint.failures, 1);
+});

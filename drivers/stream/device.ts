@@ -1,8 +1,11 @@
 'use strict';
 
-import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
+import { BaseEcoFlowDevice, QuotaSampleContext } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
-import { integrateSignedPower, followResettableCounter, batteryEnergyMode } from '../../lib/energyIntegration';
+import {
+  integrateTimedSignedPower, followResettableCounter, batteryEnergyMode,
+  EnergyAccountingDiagnostic, MAX_GAP_MS,
+} from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
 import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
@@ -57,6 +60,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   // same energy is never counted twice into the monotonic Homey meters.
   private countersAvailable = false;
   private energyCheckpoint!: EnergyCheckpoint;
+  private energySamples = 0;
+  private skippedEnergySamples = 0;
+  private ignoredEnergyGaps = 0;
+  private counterResets = 0;
 
   protected getReadSn(): string {
     return this.getData().sn;
@@ -68,10 +75,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   protected async onReady(): Promise<void> {
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
-    this.chargedWh = (this.getStoreValue('chargedWh') as number) || 0;
-    this.dischargedWh = (this.getStoreValue('dischargedWh') as number) || 0;
-    this.chargedRawWh = this.getStoreValue('chargedRawWh') as number | undefined;
-    this.dischargedRawWh = this.getStoreValue('dischargedRawWh') as number | undefined;
+    const storedWh = (key: string) => {
+      const value = toFiniteNumber(this.getStoreValue(key));
+      return value !== undefined && value >= 0 ? value : undefined;
+    };
+    this.chargedWh = storedWh('chargedWh') ?? 0;
+    this.dischargedWh = storedWh('dischargedWh') ?? 0;
+    this.chargedRawWh = storedWh('chargedRawWh');
+    this.dischargedRawWh = storedWh('dischargedRawWh');
     this.countersAvailable = this.getStoreValue('countersAvailable') === true
       || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined;
     this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistBatteryStore());
@@ -122,7 +133,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     try {
       lat = this.homey.geolocation.getLatitude();
       lon = this.homey.geolocation.getLongitude();
-    } catch (e) {
+    } catch {
       return; // geolocation unavailable
     }
     if (typeof lat !== 'number' || typeof lon !== 'number') return;
@@ -257,7 +268,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.prevOnline = online;
   }
 
-  async applyQuota(quota: Record<string, any>): Promise<void> {
+  async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    const receivedAt = context?.receivedAt ?? Date.now();
     const values = mapStreamQuota(quota);
     // Charged/discharged energy is maintained by updateBatteryEnergy, so drop any
     // values mapped from absent device counters to avoid conflicts.
@@ -268,7 +280,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
     }
-    await this.updateBatteryEnergy(quota, values['measure_power']);
+    await this.updateBatteryEnergy(quota, values['measure_power'], receivedAt);
     this.fireTriggers(values);
     this.checkFaults(quota);
   }
@@ -276,49 +288,57 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private async updateBatteryEnergy(
     quota: Record<string, any>,
     batteryPowerW: number | boolean | string | undefined,
+    receivedAt: number,
   ): Promise<void> {
     const accuChg = toFiniteNumber(quota.accuChgEnergy);
     const accuDsg = toFiniteNumber(quota.accuDsgEnergy);
-    const hasChg = accuChg !== undefined;
-    const hasDsg = accuDsg !== undefined;
+    const hasChg = accuChg !== undefined && accuChg >= 0;
+    const hasDsg = accuDsg !== undefined && accuDsg >= 0;
+    this.energySamples += 1;
     const mode = batteryEnergyMode(hasChg || hasDsg, this.countersAvailable);
     // Counters are authoritative once seen: 'skip' means the source is counters but
     // this sample carries none, so we must not integrate power (double-count).
-    if (mode === 'skip') return;
+    if (mode === 'skip') {
+      this.skippedEnergySamples += 1;
+      return;
+    }
 
     // Capture the interval and re-anchor the timestamp SYNCHRONOUSLY (before any
     // await) so a concurrent applyQuota (poll + MQTT) can't double-count.
     if (mode === 'counter') {
-      this.lastEnergyTs = Date.now();
+      this.lastEnergyTs = receivedAt;
       this.countersAvailable = true;
       let changed = false;
       if (hasChg) {
+        if (this.chargedRawWh !== undefined && accuChg < this.chargedRawWh) this.counterResets += 1;
         const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
         if (r.totalWh !== this.chargedWh) changed = true;
         this.chargedWh = r.totalWh;
         this.chargedRawWh = r.lastRawWh;
       }
       if (hasDsg) {
+        if (this.dischargedRawWh !== undefined && accuDsg < this.dischargedRawWh) this.counterResets += 1;
         const r = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg as number);
         if (r.totalWh !== this.dischargedWh) changed = true;
         this.dischargedWh = r.totalWh;
         this.dischargedRawWh = r.lastRawWh;
       }
+      // Persist the first raw baselines and authoritative-source latch even
+      // when the first sample adds no energy, or a restart can re-enable fallback.
+      this.energyCheckpoint.mark();
       if (changed) await this.updateBatteryEnergyCapabilities();
       return;
     }
 
     // mode === 'integrate' — counters have never been seen; integrate power.
-    if (typeof batteryPowerW !== 'number') return;
-    const now = Date.now();
-    const dtMs = this.lastEnergyTs > 0 ? now - this.lastEnergyTs : 0;
-    this.lastEnergyTs = now;
-    if (dtMs <= 0) return;
-    const next = integrateSignedPower(
-      { posWh: this.chargedWh, negWh: this.dischargedWh },
+    if (typeof batteryPowerW !== 'number' || !Number.isFinite(batteryPowerW)) return;
+    if (this.lastEnergyTs > 0 && receivedAt - this.lastEnergyTs > MAX_GAP_MS) this.ignoredEnergyGaps += 1;
+    const next = integrateTimedSignedPower(
+      { posWh: this.chargedWh, negWh: this.dischargedWh, lastSampleAt: this.lastEnergyTs },
       batteryPowerW,
-      dtMs,
+      receivedAt,
     );
+    this.lastEnergyTs = next.lastSampleAt;
     if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
       this.chargedWh = next.posWh;
       this.dischargedWh = next.negWh;
@@ -333,11 +353,37 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private async persistBatteryStore(): Promise<void> {
-    await this.setStoreValue('chargedWh', this.chargedWh).catch(() => {});
-    await this.setStoreValue('dischargedWh', this.dischargedWh).catch(() => {});
-    if (this.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', this.chargedRawWh).catch(() => {});
-    if (this.dischargedRawWh !== undefined) await this.setStoreValue('dischargedRawWh', this.dischargedRawWh).catch(() => {});
-    if (this.countersAvailable) await this.setStoreValue('countersAvailable', true).catch(() => {});
+    // Snapshot before awaiting so totals and raw baselines describe one sample.
+    const snapshot = {
+      chargedWh: this.chargedWh,
+      dischargedWh: this.dischargedWh,
+      chargedRawWh: this.chargedRawWh,
+      dischargedRawWh: this.dischargedRawWh,
+      countersAvailable: this.countersAvailable,
+    };
+    await this.setStoreValue('chargedWh', snapshot.chargedWh);
+    await this.setStoreValue('dischargedWh', snapshot.dischargedWh);
+    if (snapshot.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', snapshot.chargedRawWh);
+    if (snapshot.dischargedRawWh !== undefined) await this.setStoreValue('dischargedRawWh', snapshot.dischargedRawWh);
+    if (snapshot.countersAvailable) await this.setStoreValue('countersAvailable', true);
+  }
+
+  getEnergyDiagnostics(): EnergyAccountingDiagnostic {
+    let source: EnergyAccountingDiagnostic['source'] = this.lastEnergyTs > 0 ? 'integrated_power' : 'waiting';
+    if (this.countersAvailable) source = 'device_counters';
+    return {
+      source,
+      samples: this.energySamples,
+      skippedSamples: this.skippedEnergySamples,
+      ignoredGaps: this.ignoredEnergyGaps,
+      counterResets: this.counterResets,
+      chargedCounterSeen: this.chargedRawWh !== undefined,
+      dischargedCounterSeen: this.dischargedRawWh !== undefined,
+      lastSampleAgeSec: this.lastEnergyTs > 0 ? Math.max(0, Math.round((Date.now() - this.lastEnergyTs) / 1000)) : null,
+      chargedKWh: this.chargedWh / 1000,
+      dischargedKWh: this.dischargedWh / 1000,
+      checkpoint: this.energyCheckpoint?.diagnostics(),
+    };
   }
 
   private fireTriggers(values: Record<string, number | boolean | string>): void {

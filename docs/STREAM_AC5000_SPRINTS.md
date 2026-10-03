@@ -2,12 +2,16 @@
 
 Status: code complete for the next test build. Live validation remains a release gate.
 
+This records the original beta sprints. The October 2026 API-review Sprint 1
+corrects their SoC fallback assumptions; see [current evidence and validation
+rules](STREAM_5000_API_REVIEW.md) before extending the beta.
+
 ## Sprint 1 — battery visibility and Homey Energy
 
 - The V1.1.4.35 telemetry layout is covered by the tester's redacted `254/39`
-  fixture. The serial-keyed float `f50.1.2` is preferred, with integer
-  `f54.1.2` as its fallback; the original `f11.5` and precise `f33.6` values
-  retain precedence.
+  fixture. Later linked-unit captures establish that `f11.5` is system SoC,
+  while `f33.6`, `f50.1.2` and `f54.1.2` are unit-scoped; they must not replace
+  a known system percentage. The legacy single-record fallback is provisional.
 - The AC 5000 installation is declared through `stream_5000_system` as a Homey
   Energy home battery with persistent charged/discharged meters.
 - `stream_5000_unit` is an optional physical monitor using custom power
@@ -54,8 +58,8 @@ Live test matrix:
 
 | State | EcoFlow evidence | Homey expectation |
 | --- | --- | --- |
-| Charging | positive charging watts and SoC | aggregate: positive `measure_power`; unit: positive custom battery flow; both `charging` |
-| Discharging | positive EcoFlow discharge magnitude | aggregate: negative `measure_power`; unit: negative custom battery flow; both `discharging` |
+| Charging | positive charging watts and SoC | aggregate: positive `measure_power` and `charging`; physical flow/state only for the legacy single-unit fallback, blank when linked direction is ambiguous |
+| Discharging | positive EcoFlow discharge magnitude | aggregate: negative `measure_power` and `discharging`; physical flow/state only for the legacy single-unit fallback, blank when linked direction is ambiguous |
 | Idle | zero or near-zero battery power | `idle` inside the 5 W deadband |
 | Connection loss | no current telemetry | unavailable after the configured age |
 | Reconnection | new MQTT telemetry | available with fresh values |
