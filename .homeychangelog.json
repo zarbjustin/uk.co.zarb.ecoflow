@@ -160,5 +160,8 @@
   },
   "1.10.17": {
     "en": "Simplified the supported-device names to STREAM Home Battery and STREAM Unit while preserving clear pairing guidance for aggregate and individual devices."
+  },
+  "1.10.18": {
+    "en": "Improves STREAM 5000 system and unit telemetry, strengthens battery energy checkpointing and stale-update handling, and adds privacy-safe setup and Energy diagnostics. Existing pairing is preserved; STREAM 5000 remains read-only."
   }
 }
