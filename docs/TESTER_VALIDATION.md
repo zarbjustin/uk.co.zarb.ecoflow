@@ -1,8 +1,10 @@
 # Next-wave tester validation
 
-Prepared 4 October 2026. This candidate is **local and unpublished**; v1.10.17
-on the existing test link does not include these new changes yet. Version/upload
-must be authorized separately before inviting testers to use the candidate.
+Published 4 October 2026: **v1.10.18 / build 33 / Test**.
+[Install the Test build](https://homey.app/a/uk.co.zarb.ecoflow/test/) and confirm
+the installed version before collecting evidence. Production remains v1.10.3 /
+build 18. No device was installed on a live Homey as part of publication; hardware
+validation and the on-device support endpoint remain to be checked.
 
 ## What changes, and what stays the same
 
@@ -104,5 +106,5 @@ be understood before implementing consolidation.
 Automated build/lint/tests/audit/Homey validation must pass. On-device settings
 and the support endpoint must work. Complete the relevant live matrices and soak,
 retain the unresolved calculation/picker reports until reproduced or explained,
-and seek explicit authorization to publish. No hardware pass is implied by a
+and seek explicit authorization to promote to production. No hardware pass is implied by a
 local test or a successfully uploaded package.

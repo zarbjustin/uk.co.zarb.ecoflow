@@ -7,7 +7,8 @@ validation and store deployment are separate milestones.
 ## Evidence and current release boundary
 
 - The [Homey developer dashboard](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow)
-  currently identifies build 18 / v1.10.3 as Live and build 32 / v1.10.17 as Test.
+  now identifies build 18 / v1.10.3 as Live and build 33 / v1.10.18 as Test;
+  build 32 / v1.10.17 is superseded.
   An uploaded test build is not automatically the production version.
 - The eight available build-18 reports are **manually submitted diagnostics**.
   Seven show repeated Developer API 1006 errors for ES22 devices paired through
@@ -30,7 +31,7 @@ not included here or used as public regression fixtures.
 
 ## Priority 0 — safe onboarding and support triage
 
-**Implemented locally:** settings distinguish the Homey integration from the
+**Implemented in Test v1.10.18:** settings distinguish the Homey integration from the
 EcoFlow mobile app; explain the test channel and pairing-only beta switch; make
 the one-installation Energy role and optional monitor explicit; discourage
 deleting existing devices before the correct replacement is visible. Regression
@@ -52,7 +53,7 @@ guidance produces one working installation Home Battery without duplicate Energy
 
 ## Sprint 1 — trustworthy monitoring and Energy accounting
 
-**Implemented locally:** serial-keyed records, correct system versus unit SOC,
+**Implemented in Test v1.10.18:** serial-keyed records, correct system versus unit SOC,
 capture-verified MPPT and socket flow edges, conservative ambiguous-unit power,
 role-specific availability, privacy redaction and replay/lifecycle coverage.
 Driver identities and existing kWh checkpoints are preserved. Physical monitors
@@ -61,7 +62,7 @@ Lifecycle replay verifies saved-total restoration, restart anchoring, duplicate
 timestamps and an oversized reconnect gap. A graceful-restart simulation is not
 proof that an abrupt process crash cannot lose unflushed checkpoint increments.
 
-**Next-wave code audit completed locally:** initial BK counter baselines now
+**Next-wave code audit included in Test v1.10.18:** initial BK counter baselines now
 checkpoint even before totals increase; failed persistence retries, concurrent
 writes serialize and each write snapshots totals/baselines before awaiting.
 Receipt timestamps govern integration, and newer MQTT suppresses superseded
@@ -157,7 +158,7 @@ monitoring success alone cannot certify control support.
 
 Every candidate passes build, lint, the full test suite, full dependency
 audit and Homey publish-level validation. Promotion still needs the relevant
-hardware gates and explicit authorization to version, commit/push and deploy.
+hardware gates and explicit authorization to promote to production.
 Do not ask users to re-pair simply for Sprint 1 telemetry or guidance changes.
 
 Earlier Sprint 1 verification on 4 October passed 220 tests. Next-wave build,
@@ -167,4 +168,19 @@ pass. Local browser rendering checks the support report at mobile width; this
 does not validate the endpoint on an actual Homey.
 The [tester checklist](TESTER_VALIDATION.md) records on-device settings, numerical
 Energy reproduction, restart/soak and mixed-generation positive/negative cases.
-No version bump, commit/push or deployment has been performed for these changes.
+
+## Test release handoff — 4 October 2026
+
+The user authorized the Test release. Implementation is committed/pushed on
+`codex/stream-next-wave-test`; GitHub CI, version and upload workflows passed.
+Homey build **33 / v1.10.18** is visibly **Test**, and build **18 / v1.10.3**
+remains **Live**. The uploaded manifest includes the support endpoint and retains
+installation-only Energy meters. No certification submission or hub installation
+was performed. Use the [Test link](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+with the tester checklist; do not delete/re-pair existing devices for this update.
+
+Remaining next step is hardware validation, including the on-device support view,
+numerical Energy/picker reproduction, restart and soak. Mixed-generation discovery
+uses [linked-positive and independent-negative cases](MIXED_GENERATION_VALIDATION.md)
+before any migration, grouping or 5000 controls. The tester request is a draft,
+not a posted community message.

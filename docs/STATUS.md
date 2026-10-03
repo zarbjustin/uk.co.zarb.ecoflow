@@ -6,10 +6,21 @@
 
 The October [community roadmap](COMMUNITY_FEEDBACK_ROADMAP.md) supersedes the
 historical sprint/current-version statements below. Sprint 1 and next-wave
-changes are being prepared on `codex/stream-next-wave-test`, based on v1.10.17.
-The user authorized a Test-channel release on 4 October. Production promotion,
-automatic grouping, live-device installation and control writes are not part of
-this release. The GitHub version workflow owns the upcoming patch version.
+changes are published as **v1.10.18 / build 33 / Test**, from
+`codex/stream-next-wave-test`, based on v1.10.17. The user authorized this
+Test-channel release on 4 October. Production remains **v1.10.3 / build 18 / Live**.
+Production promotion, automatic grouping, live-device installation and control
+writes are not part of this release. Existing pairing is preserved.
+
+- [Install Test v1.10.18](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+- Implementation commit: `2f7e14b755c96e5fa02e864a0f8102c7fed9562f`.
+- Version/tag commit: `a3ec1ff8d79e409876184f228a5dd8f52288adeb` / `v1.10.18`.
+- [GitHub validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37162940122),
+  [version workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37163119488)
+  and [upload workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37163190955)
+  passed. Homey developer UI confirmed Test publication; certification was not submitted.
+- Uploaded archive checked: version, support route, compiled support module and
+  system-only Energy meters. Store upload is not a live hardware/endpoint pass.
 
 - Telemetry corrections: [API review](STREAM_5000_API_REVIEW.md).
 - Next-wave accounting: persist initial BK counter baselines, retry failed
@@ -25,15 +36,15 @@ this release. The GitHub version workflow owns the upcoming patch version.
   API source/scope changes, history risks and a tester request draft (not sent).
 - Eight manual reports are not proven process crashes; Energy calculation and
   missing-picker reports remain open. No automatic grouping or 5000 controls.
-- Verified locally: build, lint, 242 tests, clean `npm ci`, full audit (zero
-  findings), whitespace checks and Homey publish-level validation. No hardware
+- Verified locally and in GitHub CI: build, lint, 242 tests, clean `npm ci`, full
+  audit (zero findings), whitespace checks and Homey verified/publish validation. No hardware
   or Homey endpoint verification is implied.
 
 Read the validation documents before inviting testers or promoting a build.
 
 ## Outstanding / next actions (resume here)
 
-- [ ] **STREAM AC 5000 live gate** — install the next Test build and complete the
+- [ ] **STREAM AC 5000 live gate** — install Test v1.10.18 and complete the
   charging/discharging/idle plus 24–48-hour soak matrix in
   `docs/STREAM_AC5000_SPRINTS.md`. Code-side Sprint 1–4 work is complete.
 - [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:

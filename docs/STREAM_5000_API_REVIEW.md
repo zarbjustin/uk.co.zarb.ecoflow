@@ -1,7 +1,8 @@
 # STREAM 5000 API review — Sprint 1 telemetry correctness
 
-Review date: 3 October 2026. Implementation is local and monitoring-only; it is
-not a release announcement or proof of live hardware validation.
+Review date: 3 October 2026. Monitoring-only changes were subsequently published
+to Test as v1.10.18 / build 33 on 4 October; this review is not proof of live
+hardware validation or an official ES22 API/control contract.
 
 ## Evidence boundary
 
@@ -127,7 +128,8 @@ saved charged/discharged totals, first-sample anchoring after restart, duplicate
 timestamps and a two-hour reconnect gap. This is simulated lifecycle coverage,
 not a hardware soak or proof of zero loss on an abrupt process crash; checkpoint
 writes are coalesced and an abrupt termination may lose unflushed increments.
-No version bump, commit/push or store publication was performed.
+At that checkpoint, no version bump, commit/push or store publication had been
+performed; the later Test publication is recorded below.
 
 ## Next-wave implementation — 4 October 2026
 
@@ -160,4 +162,14 @@ See [tester validation](TESTER_VALIDATION.md) and
 and verified command boundaries. No process-crash fix, numerical Energy-report
 resolution, automatic mixed-generation grouping or 5000 controls is claimed.
 Driver identities, pairing and stored totals remain unchanged; no re-pairing is
-required for this candidate. The changes are still local and unpublished.
+required for this candidate. These local checks preceded the release below.
+
+## Test publication — 4 October 2026
+
+GitHub validation and version/upload workflows passed on
+`codex/stream-next-wave-test`; Homey's UI confirms **v1.10.18 / build 33 / Test**.
+[Test install link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+Production remains **v1.10.3 / build 18 / Live**, with no certification submission.
+The uploaded package contains the support endpoint and compiled support module,
+and preserves Home Battery Energy meters without physical-unit Energy meters.
+Hardware, support-endpoint and mixed-generation validation remain open.

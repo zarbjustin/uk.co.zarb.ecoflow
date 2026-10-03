@@ -83,4 +83,7 @@ combined overview and individual batteries at the same time, device firmware and
 EcoFlow app versions, and Homey's local support report. We also need someone
 with independent installations on one account. Please do not link/unlink just
 for this test: EcoFlow's linking warning may involve deletion of system history.
-The exact Test candidate/version will be confirmed after publication.
+Please use Test **v1.10.18 / build 33**, published 4 October 2026:
+https://homey.app/a/uk.co.zarb.ecoflow/test/
+Confirm that version is installed; there is no need to delete or re-pair for this
+telemetry update. The on-device checks remain unverified until testers complete them.
