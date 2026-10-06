@@ -166,5 +166,8 @@
   },
   "1.10.19": {
     "en": "Add opt-in STREAM 5000 ES21 core monitoring, anonymous expansion and installation discovery diagnostics, improved lifecycle safety and guarded original STREAM Flow readback. Preserve installation-only Homey Energy; expansion, Gateway, STREAM 3000 pairing and 5000 controls remain disabled pending validation."
+  },
+  "1.10.20": {
+    "en": "Correct STREAM 5000 battery-to-backup-socket discharge accounting. Add read-only, session-only configuration diagnostics for power limits, mode, reserve, SOC limits and schedules, with receipt-age labels. Preserve existing pairing, saved counters and installation-only Homey Energy. ES21/ES22 remain monitoring-only beta; hardware validation is still required."
   }
 }
