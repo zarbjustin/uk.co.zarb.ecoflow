@@ -4,7 +4,24 @@
 
 ## Current handover — 6 October 2026
 
-**Latest local follow-up (unreleased):** the new six-sprint socket/configuration
+**Latest Test release: v1.10.21 / build 36**, published on 6 October 2026 from
+`codex/stream-next-wave-test`. The socket/configuration wave below is now in Test.
+Implementation: `4997c1f9edcf1d4cc05951e25908a842c5b45f9f`; store guidance:
+`0e6688ebe532aeee7fca6e25eced3b431b51e677`; version/tag:
+`740b14669738f8f4d46cf084c55825f7326d0fd9` / `v1.10.21`.
+[Version workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37507493785),
+[exact-version CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37507611559)
+and [upload workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37507798632)
+passed. Homey visibly confirmed Test publication. The downloaded archive contains
+schema 4, configuration diagnostics, ES21 store guidance and installation-only
+Energy roles, with an empty environment and no checked private auth paths.
+Build 35 / v1.10.20 remains an unpublished draft because its store guidance was
+outdated. Production remains v1.10.3 / build 18 / Live; `master` is unchanged.
+No certification submission, hub installation, control or re-pairing was done.
+Sprint 3's release gate is complete; independent ES21/ES22 hardware comparisons
+and a 24–48-hour soak remain pending. See [tester checklist](TESTER_VALIDATION.md).
+
+**Pre-release implementation record (superseded by the release above):** the new six-sprint socket/configuration
 wave is recorded in `COMMUNITY_FEEDBACK_ROADMAP.md`. Sprints 1–2 now implement
 battery-to-backup-socket accounting and session-only configuration diagnostics
 (support schema 4), with pinned public captures and lifecycle/privacy tests.

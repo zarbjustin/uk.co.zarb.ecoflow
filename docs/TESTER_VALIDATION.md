@@ -1,12 +1,13 @@
 # Next-wave tester validation
 
-## Pending socket/configuration candidate (not yet published)
+## Socket/configuration Test release: v1.10.21 / build 36
 
-The next local candidate corrects ES22 battery-to-backup-socket discharge and
+The published Test release corrects ES22 battery-to-backup-socket discharge and
 adds read-only configuration to **Show support report**, schema 4. Existing
 pairing, identity, saved counters and installation-only Homey Energy stay intact.
-Do not delete or re-pair devices for this increment. The Test link still installs
-the published baseline until a new release is confirmed.
+Do not delete or re-pair devices for this increment.
+[Install Test](https://homey.app/a/uk.co.zarb.ecoflow/test/); publication is confirmed,
+but hardware acceptance is not. Production has not been changed.
 
 After release, an owner should compare a normal safe backup-socket load in
 EcoFlow and Homey against the installation's signed battery power. With minimal

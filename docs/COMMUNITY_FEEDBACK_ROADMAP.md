@@ -41,17 +41,18 @@ shutdown races, and the still-open numerical Energy/picker/hardware gates.
 
 ## Evidence and current release boundary
 
-### Configuration/socket follow-up wave (6 October, local changes after v1.10.19)
+### Configuration/socket follow-up wave (6 October, v1.10.21 / build 36 / Test)
 
 This six-sprint wave supersedes the next-priority ordering, not the release
-history below. The current work is local on `codex/stream-next-wave-test`;
-no new version, Git sync, Test upload or hardware acceptance is implied.
+history below. The work is committed/pushed on `codex/stream-next-wave-test`
+and published to Test as v1.10.21 / build 36 after green exact-version CI.
+Production is unchanged. Hardware acceptance remains pending.
 
 | Sprint | Deliverable and acceptance gate | Status |
 | --- | --- | --- |
 | 1: battery accounting | Include captured f12.19 battery-to-socket outflow exactly once. Check net charging, grid isolation, idle/deltas, aggregate-only cumulative energy and restart preservation. Never rewrite historical counters. | Implemented and regression-verified locally; hardware acceptance pending. |
 | 2: configuration visibility | Subscription-source input/output limits, observed output ceiling, mode, socket enable, reserve, authoritative 32/2 SOC limits and full task lists. Session-only, per-field receipt age, no commands. | Implemented locally in support schema 4 and requested diagnostic snapshots. |
-| 3: hardware/Test acceptance | Green release checks followed by Test publication; ES21 and ES22 independently compare charge/discharge/socket/idle, restarts and 24–48-hour soak. | Pending publication and owner evidence; existing devices need no re-pair. |
+| 3: hardware/Test acceptance | Green release checks followed by Test publication; ES21 and ES22 independently compare charge/discharge/socket/idle, restarts and 24–48-hour soak. | Release gate complete: v1.10.21 / build 36 / Test. Owner evidence and soak pending; existing devices need no re-pair. |
 | 4: guarded controls | Start with ES22 grid-input limit only after safe bounds, target scope, fresh readback, recovery and measured power response are verified. | Gated; no 5000 writer added. ES21 input control is not proven by ES21 output captures. |
 | 5: mixed-generation installations | Collect already-linked BK/ES system and unit screenshots plus diagnostics; include independent installations in one account as a negative case. Establish membership, capacity and authoritative SOC/power. | Gated; no automatic merge or Energy-role changes. |
 | 6: additional models/automation | Model-specific evidence for expansion, Gateway and 3000, then schedule/tariff control acceptance. | Gated; no speculative model admission or schedule writes. |
@@ -76,12 +77,13 @@ Run `npm test`, `npm run lint`, `npm audit`, whitespace and Homey verified-level
 validation, then exact-version GitHub CI before publication. All six sprints
 are not complete merely because the software tests pass.
 This local increment passes 337 tests, lint, full audit (zero vulnerabilities),
-whitespace checks and Homey verified-level validation. Exact-version CI and a
-new Test upload have not been performed for this increment.
+whitespace checks and Homey verified-level validation. Exact-version CI and the
+new Test upload passed; Homey confirmed publication. See [release evidence](STATUS.md).
 
 - The [Homey developer dashboard](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow)
-  now identifies build 18 / v1.10.3 as Live and build 34 / v1.10.19 as Test;
-  build 33 / v1.10.18 is the previous Test baseline.
+  identifies build 18 / v1.10.3 as Live; build 36 / v1.10.21 is the latest Test.
+  Build 35 / v1.10.20 was left Draft while store guidance was corrected;
+  build 34 / v1.10.19 is the previous Test baseline.
   An uploaded test build is not automatically the production version.
 - The eight available build-18 reports are **manually submitted diagnostics**.
   Seven show repeated Developer API 1006 errors for ES22 devices paired through
