@@ -38,9 +38,9 @@ test('unit scope reports the inverter own grid feed (gridConnectionPower)', () =
   assert.strictEqual(v['onoff.ac2'], false);
 });
 
-test('unit grid falls back to powGetSysGrid when no own feed is present', () => {
+test('unit grid never borrows whole-home grid when own feed is absent', () => {
   const v = mapStreamQuota({ powGetSysGrid: 100 }, 'unit');
-  assert.strictEqual(v['measure_power.grid'], 100);
+  assert.strictEqual(v['measure_power.grid'], undefined);
 });
 
 test('unit scope reads per-unit SoC and ignores system cmsBattSoc', () => {
@@ -64,4 +64,32 @@ test('self_heating is mapped only when the device reports a heating field', () =
   assert.strictEqual(mapStreamQuota({}).self_heating, undefined);
   assert.strictEqual(mapStreamQuota({ bmsHeatingStatus: 1 }, 'unit').self_heating, true);
   assert.strictEqual(mapStreamQuota({ heatingStatus: 0 }, 'unit').self_heating, false);
+});
+
+test('unit SOC never overrides or substitutes for aggregate SOC', () => {
+  const q = { cmsBattSoc: 70, f32ShowSoc: 20, soc: 19, bmsBattSoc: 18 };
+  assert.strictEqual(mapStreamQuota(q).measure_battery, 70);
+  assert.strictEqual(mapStreamQuota(q, 'unit').measure_battery, 20);
+  assert.strictEqual(mapStreamQuota({ f32ShowSoc: 20, soc: 19 }).measure_battery, undefined);
+});
+
+test('aggregate battery power cannot masquerade as physical-unit power or charging state', () => {
+  const q = { powGetBpCms: -1200 };
+  assert.strictEqual(mapStreamQuota(q).measure_power, -1200);
+  const unit = mapStreamQuota(q, 'unit');
+  assert.strictEqual(unit.measure_power, undefined);
+  assert.strictEqual(unit.battery_charging_state, undefined);
+});
+
+test('malformed switches, feed mode and conflicting operating flags remain unknown', () => {
+  for (const relay of [NaN, Infinity, -1, 2, 'invalid']) {
+    assert.strictEqual(mapStreamQuota({ relay2Onoff: relay })['onoff.ac1'], undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ relay2Onoff: '1' })['onoff.ac1'], true);
+  assert.strictEqual(mapStreamQuota({ relay3Onoff: '0' })['onoff.ac2'], false);
+  assert.strictEqual(mapStreamQuota({ feedGridMode: 3 }).feed_in_control, undefined);
+  assert.strictEqual(mapStreamQuota({
+    'energyStrategyOperateMode.operateSelfPoweredOpen': true,
+    'energyStrategyOperateMode.operateIntelligentScheduleModeOpen': true,
+  }).operating_mode, undefined);
 });

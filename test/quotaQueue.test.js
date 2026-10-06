@@ -39,6 +39,30 @@ class QueueDevice extends BaseEcoFlowDevice {
   async onTeardown() { this.teardowns += 1; }
 }
 
+test('write gate refreshes rotated credentials before using the client', async () => {
+  const device = new QueueDevice(); await device.onInit();
+  let refreshed = false;
+  device.refreshClientCredentials = () => {
+    refreshed = true; device.client = { setQuota: async (payload) => payload };
+  };
+  assert.deepEqual(await device.writeQuota({ sn: device.getReadSn() }), { sn: device.getReadSn() });
+  assert.equal(refreshed, true);
+  await device.onUninit();
+});
+
+test('socket readback uses uncached documented targeted quota reads, not aggregate GET', async () => {
+  const device = new QueueDevice(); await device.onInit();
+  const calls = [];
+  device.refreshClientCredentials = () => {};
+  device.client = {
+    getQuota: async (sn, fields) => { calls.push({ sn, fields }); return { relay2Onoff: true }; },
+    getQuotaAll: async () => { throw new Error('wrong aggregate route'); },
+  };
+  assert.deepEqual(await device.readControlQuota('BK31SOCKET', ['relay2Onoff']), { relay2Onoff: true });
+  assert.deepEqual(calls, [{ sn: 'BK31SOCKET', fields: ['relay2Onoff'] }]);
+  await device.onUninit();
+});
+
 test('new MQTT in the same millisecond supersedes an in-flight REST counter reply', async (t) => {
   t.mock.method(Date, 'now', () => 100000);
   const device = new QueueDevice(); await device.onInit(); device.applied = [];

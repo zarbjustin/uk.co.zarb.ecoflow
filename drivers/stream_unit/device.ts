@@ -2,15 +2,19 @@
 
 import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
-import { streamModelFromSn } from '../../lib/streamModels';
-import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
+import { streamModelFromSn, streamAcOutletCount } from '../../lib/streamModels';
+import { OperatingMode } from '../../lib/streamProtocol';
+import { executeStreamControl, readStreamControlState, StreamControlIntent } from '../../lib/streamControls';
+
+type ControlWait = () => void;
 
 /**
  * A single physical STREAM inverter/battery unit. The device is tailored to its
  * exact model and its role in the system (detected from the serial number):
  *
- *  - Every unit shows its own battery, health, temperature, grid feed and AC
- *    outputs (AC1/AC2), and can switch those AC outputs (per-unit relays).
+ *  - Units show their own reported battery, health, temperature and grid-port
+ *    readings. Socket controls are tailored to the documented model matrix.
+ *    Aggregate battery power is not substituted for missing per-unit power.
  *  - Solar models (e.g. STREAM Ultra X) show their PV inputs; AC-coupled models
  *    (e.g. STREAM AC Pro) drop the solar tiles they can never report.
  *  - The system MAIN unit additionally exposes the whole-home controls and
@@ -23,6 +27,8 @@ import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/strea
  */
 module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private mainSn = '';
+  private controlGeneration = 0;
+  private readonly controlWaits = new Map<NodeJS.Timeout, ControlWait>();
 
   /** Whole-home controls + flow tiles, meaningful only on the system main unit. */
   private static readonly SYSTEM_CAPS = [
@@ -43,7 +49,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     'measure_power.from_grid',
   ];
 
-  /** AC outputs every STREAM unit has and can switch on its own. */
+  /** Candidate socket tiles, filtered by the model's supported outlet count. */
   private static readonly AC_CAPS = [
     'onoff.ac1',
     'onoff.ac2',
@@ -72,18 +78,32 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   };
 
   protected async onReady(): Promise<void> {
+    this.controlGeneration += 1;
     const sn = this.getData().sn as string;
     const spec = streamModelFromSn(sn);
     this.mainSn = (this.getStoreValue('mainSn') as string) || sn;
+    let roleResolved = !!this.getStoreValue('mainSn');
     try {
-      if (this.mainSn === sn) this.mainSn = await this.client.getMainSn(sn);
+      if (this.mainSn === sn) {
+        this.mainSn = await this.client.getMainSn(sn);
+        roleResolved = true;
+      }
     } catch (e) {
+      this.mainSn = '';
+      roleResolved = false;
       this.error('resolve main SN', e);
     }
-    const isMain = this.mainSn === sn;
+    const isMain = roleResolved && this.mainSn === sn;
 
     // Base per-unit capabilities every unit should have.
-    await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...StreamUnitDevice.AC_CAPS]);
+    const outlets = streamAcOutletCount(sn);
+    const acCaps = StreamUnitDevice.AC_CAPS.filter((cap) => (cap.endsWith('1') ? outlets >= 1 : outlets >= 2));
+    await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...acCaps]);
+    await this.removeCapabilities(StreamUnitDevice.AC_CAPS.filter((cap) => !acCaps.includes(cap)));
+    // Previous versions could copy aggregate battery power/state onto a unit.
+    // Clear persisted values: no proven signed per-unit path is exposed here.
+    await this.setCapabilityValue('stream_unit_power_battery_flow', null);
+    await this.setCapabilityValue('battery_charging_state', null);
     await this.removeCapabilities(['measure_power', 'measure_power.grid', 'meter_power.charged', 'meter_power.discharged']);
     await this.removeCapabilities(StreamUnitDevice.LEGACY_AC_POWER_CAPS);
 
@@ -96,7 +116,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     await this.removeCapabilities(StreamUnitDevice.LEGACY_SYSTEM_CAPS);
 
     this.registerControlListeners(isMain);
-    await this.refreshInfoSettings(sn, isMain).catch((e) => this.error('refresh info settings', e));
+    await this.refreshInfoSettings(sn, isMain, roleResolved).catch((e) => this.error('refresh info settings', e));
   }
 
   private async ensureCapabilities(caps: string[]): Promise<void> {
@@ -146,63 +166,68 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
    */
   private registerControlListeners(isMain: boolean): void {
     if (this.hasCapability('onoff.ac1')) {
-      this.registerCapabilityListener('onoff.ac1', async (v: boolean) => this.send(StreamCmd.ac1(this.getReadSn(), v)));
+      this.registerCapabilityListener('onoff.ac1', async (v: boolean) => this.runControl({ kind: 'ac1', value: v }));
     }
     if (this.hasCapability('onoff.ac2')) {
-      this.registerCapabilityListener('onoff.ac2', async (v: boolean) => this.send(StreamCmd.ac2(this.getReadSn(), v)));
+      this.registerCapabilityListener('onoff.ac2', async (v: boolean) => this.runControl({ kind: 'ac2', value: v }));
     }
     if (!isMain) return;
-    this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
-    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.applyBackupReserve(v));
-    this.registerCapabilityListener('charge_limit', async (v: number) => this.send(StreamCmd.chargeLimit(this.mainSn, v)));
-    this.registerCapabilityListener('discharge_limit', async (v: number) => this.send(StreamCmd.dischargeLimit(this.mainSn, v)));
-    this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
+    this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.runControl({ kind: 'mode', value: v }));
+    this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.runControl({ kind: 'reserve', value: v }));
+    this.registerCapabilityListener('charge_limit', async (v: number) => this.runControl({ kind: 'charge', value: v }));
+    this.registerCapabilityListener('discharge_limit', async (v: number) => this.runControl({ kind: 'discharge', value: v }));
+    this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.runControl({ kind: 'feed', value: v }));
   }
 
-  /** Send a STREAM set command and refresh state shortly after. */
-  private async send(payload: Record<string, any>): Promise<void> {
-    await this.writeQuota(payload);
-    this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
-  }
-
-  /**
-   * Apply a backup-reserve target safely (only the main unit exposes this). Lowers
-   * the discharge limit first when required so EcoFlow doesn't reject the reserve
-   * with error 8524, then verifies the device accepted it.
-   */
-  private async applyBackupReserve(targetSoc: number): Promise<void> {
-    const current = this.getCapabilityValue('discharge_limit');
-    const currentLimit = typeof current === 'number' && Number.isFinite(current) ? current : undefined;
-    const seq = backupReserveSequence(this.mainSn, targetSoc, currentLimit);
-    for (const cmd of seq.commands) {
-      // eslint-disable-next-line no-await-in-loop
-      await this.writeQuota(cmd);
+  /** Use the same fresh, serialized readback gate as the installation device. */
+  private async runControl(intent: StreamControlIntent): Promise<void> {
+    const socket = intent.kind === 'ac1' || intent.kind === 'ac2';
+    if (socket && streamAcOutletCount(this.getReadSn()) < (intent.kind === 'ac1' ? 1 : 2)) {
+      throw new Error('This STREAM model does not support that AC socket.');
     }
-    if (seq.newDischargeLimit !== undefined) {
-      await this.setCapabilityValue('discharge_limit', seq.newDischargeLimit).catch(() => {});
-    }
-    await new Promise<void>((resolve) => {
-      this.homey.setTimeout(resolve, 1500);
+    const target = socket ? this.getReadSn() : this.mainSn;
+    const generation = this.controlGeneration;
+    const active = () => !this.isShuttingDown() && generation === this.controlGeneration
+      && target === (socket ? this.getReadSn() : this.mainSn);
+    await executeStreamControl(target, intent, {
+      active,
+      read: async () => readStreamControlState(await this.readControlQuota(
+        target, socket ? [intent.kind === 'ac1' ? 'relay2Onoff' : 'relay3Onoff'] : undefined,
+      )),
+      write: (payload) => this.writeQuota(payload),
+      wait: () => new Promise((resolve) => {
+        const timer = this.homey.setTimeout(() => {
+          this.controlWaits.delete(timer);
+          resolve();
+        }, 1500);
+        this.controlWaits.set(timer, resolve);
+      }),
+      observed: async (state) => {
+        for (const [key, value] of Object.entries(state)) {
+          if (!active()) return;
+          if (this.hasCapability(key)) await this.setCapabilityValue(key, value);
+        }
+      },
     });
-    await this.poll();
-    const applied = this.getCapabilityValue('backup_reserve_soc');
-    const appliedNum = typeof applied === 'number' && Number.isFinite(applied) ? applied : undefined;
-    if (appliedNum === undefined || Math.abs(appliedNum - seq.reserve) > 2) {
-      throw new Error(
-        `EcoFlow did not apply the backup reserve (requested ${seq.reserve}%, device reports `
-        + `${appliedNum ?? 'unknown'}%). It must exceed the discharge limit by ~3%.`,
-      );
+  }
+
+  protected async onTeardown(): Promise<void> {
+    this.controlGeneration += 1;
+    for (const [timer, resolve] of this.controlWaits) {
+      this.homey.clearTimeout(timer);
+      resolve();
     }
-    await this.setCapabilityValue('backup_reserve_soc', seq.reserve).catch(() => {});
+    this.controlWaits.clear();
   }
 
   /** Populate the read-only model/serial/role settings shown on the device page. */
-  private async refreshInfoSettings(sn: string, isMain: boolean): Promise<void> {
+  private async refreshInfoSettings(sn: string, isMain: boolean, roleResolved: boolean): Promise<void> {
     const spec = streamModelFromSn(sn);
     await this.setSettings({
       model: spec.model,
       serial_number: sn,
-      system_role: isMain ? 'System main unit' : 'Member unit',
+      // eslint-disable-next-line no-nested-ternary
+      system_role: roleResolved ? (isMain ? 'System main unit' : 'Member unit') : 'Role unavailable — check connection',
       power_source: spec.energySource,
       ac_output: spec.acOutput,
     }).catch((e) => this.error('set info settings', e));

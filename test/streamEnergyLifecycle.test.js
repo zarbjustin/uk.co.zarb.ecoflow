@@ -39,6 +39,33 @@ async function harness(store = {}) {
   return device;
 }
 
+test('history response arriving after teardown cannot repopulate daily tiles', async () => {
+  const device = await harness();
+  device.homey.clock = { getTimezone: () => 'UTC' };
+  let release;
+  const reply = new Promise((resolve) => { release = resolve; });
+  device.client = { getHistory: () => reply };
+  let applied = false;
+  device.applyDailyEnergy = async () => { applied = true; };
+  const pending = device.refreshHistory();
+  await device.onTeardown();
+  release([{ indexValue: 100 }]);
+  await pending;
+  assert.equal(applied, false);
+});
+
+test('a new day clears unknown daily history rather than inventing zero consumption', async () => {
+  const device = await harness();
+  device.homey.clock = { getTimezone: () => 'UTC' };
+  device.historyDay = '2000-01-01';
+  device.values.energy_consumption_today = 1.2;
+  device.hasCapability = (cap) => cap === 'energy_consumption_today';
+  device.client = { getHistory: async () => [] };
+  await device.refreshHistory();
+  assert.equal(device.values.energy_consumption_today, null);
+  await device.onTeardown();
+});
+
 test('BK first counter baseline survives restart even when it adds no energy', async (t) => {
   t.mock.method(Date, 'now', () => 100000);
   const first = await harness();

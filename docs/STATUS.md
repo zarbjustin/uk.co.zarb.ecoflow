@@ -4,6 +4,14 @@
 
 ## Current handover — 6 October 2026
 
+**Original-series bug-bash candidate:** [API review and fixes](ORIGINAL_STREAM_BUG_BASH.md)
+on `codex/original-stream-bug-bash` follows the ecosystem wave's merge into GitHub
+master at `9c81abc`. Authenticated read-only BK account checks and current online
+documentation informed aggregate/unit separation, socket routing/layout, shared
+control readback, transport/cache and history fixes. Local tests pass 396 cases;
+lint/full audit pass. This candidate is not merged/published and its exact-commit
+CI/Homey packaging gate is still pending. Live controls were not exercised.
+
 **Latest development increment:** [ecosystem wave](STREAM_5000_ECOSYSTEM_WAVE.md)
 integrates per-reading expiry, restart clearing, read-only settings/Flow conditions,
 observed physical MPPT/socket tiles and stale-gap Energy re-anchoring. Local tests

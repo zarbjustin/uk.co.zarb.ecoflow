@@ -200,19 +200,23 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private async refreshHistory(): Promise<void> {
-    // On a calendar-day rollover, zero the existing daily tiles so a broken/empty
+    if (this.isShuttingDown()) return;
+    const generation = this.controlGeneration;
+    // On a calendar-day rollover, clear the existing daily tiles so a broken/empty
     // history feed can't keep showing yesterday's totals as "today"; fresh data
     // then overwrites them as it arrives.
     const tz = this.homey.clock.getTimezone();
     const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
     if (this.historyDay && this.historyDay !== today) {
       for (const cap of Object.keys(StreamDevice.HISTORY_TITLES)) {
-        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, 0).catch(() => {});
+        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
       }
     }
     this.historyDay = today;
     const prefix = (this.getSetting('history_prefix') as string) || 'BK621';
     const daily = await fetchDailyEnergy(this.client, this.mainSn, prefix, tz);
+    if (this.isShuttingDown() || generation !== this.controlGeneration
+      || today !== new Date().toLocaleDateString('en-CA', { timeZone: tz })) return;
     await this.applyDailyEnergy(daily);
   }
 

@@ -213,6 +213,7 @@ test('the shared write gate blocks an ES22 command target without quarantining a
     name: 'DeveloperApiQuarantineError',
     message: LOCALIZED_ES22_MESSAGE,
   });
+  device.enableAutomaticPollingState();
   assert.deepStrictEqual(await device.manualWrite(payload), payload);
   assert.strictEqual(device.writeCalls, 1);
   assert.deepStrictEqual(device.unavailableMessages, []);

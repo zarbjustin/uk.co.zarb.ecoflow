@@ -33,6 +33,7 @@ export class EcoFlowApiError extends Error {
  * Handles HMAC-SHA256 request signing and the documented endpoints.
  */
 export class EcoFlowClient {
+  private static readonly MAX_CACHE_ENTRIES = 256;
   private static readonly responseCache = new Map<string, { expires: number; value: any }>();
   private static readonly inFlight = new Map<string, Promise<any>>();
   private readonly accessKey: string;
@@ -56,7 +57,8 @@ export class EcoFlowClient {
   /** GET /iot-open/sign/device/list — devices bound to the account. */
   async getDeviceList(): Promise<EcoFlowDevice[]> {
     const data = await this.cachedRequest('device-list', 30000, () => this.request('GET', '/iot-open/sign/device/list'));
-    return (data as EcoFlowDevice[]) || [];
+    if (!Array.isArray(data)) throw new Error('EcoFlow API: invalid device-list response.');
+    return data as EcoFlowDevice[];
   }
 
   /**
@@ -67,7 +69,10 @@ export class EcoFlowClient {
     const data = await this.cachedRequest(`main-sn:${anySn}`, 5 * 60 * 1000, () => (
       this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn } })
     ));
-    return (data && (data.sn as string)) || anySn;
+    if (!data || typeof data.sn !== 'string' || !data.sn.trim()) {
+      throw new Error('EcoFlow API: main device identity unavailable.');
+    }
+    return data.sn;
   }
 
   /** GET /iot-open/sign/device/quota/all — all current quota fields (flat map). */
@@ -104,8 +109,13 @@ export class EcoFlowClient {
       body: { sn, params: { beginTime, endTime, code } },
     });
     // The history endpoint nests its payload under data.data.
+    if (data && !Array.isArray(data) && data.code !== undefined && String(data.code) !== '0') {
+      throw new EcoFlowApiError(String(data.code), 'History query failed');
+    }
     const inner = data && (data.data as HistoryPoint[] | undefined);
-    return (inner as HistoryPoint[]) || (data as HistoryPoint[]) || [];
+    if (Array.isArray(inner)) return inner;
+    if (Array.isArray(data)) return data;
+    throw new Error('EcoFlow API: invalid history response.');
   }
 
   // ----- Transport ---------------------------------------------------------
@@ -117,6 +127,17 @@ export class EcoFlowClient {
     const existing = EcoFlowClient.inFlight.get(fullKey);
     if (existing) return existing as Promise<T>;
     const request = load().then((value) => {
+      // Shared cache must not retain every retired account/serial indefinitely.
+      const now = Date.now();
+      for (const [entryKey, entry] of EcoFlowClient.responseCache) {
+        if (entry.expires <= now) EcoFlowClient.responseCache.delete(entryKey);
+      }
+      EcoFlowClient.responseCache.delete(fullKey);
+      while (EcoFlowClient.responseCache.size >= EcoFlowClient.MAX_CACHE_ENTRIES) {
+        const oldest = EcoFlowClient.responseCache.keys().next().value;
+        if (oldest === undefined) break;
+        EcoFlowClient.responseCache.delete(oldest);
+      }
       EcoFlowClient.responseCache.set(fullKey, { expires: Date.now() + ttlMs, value });
       return value;
     }).finally(() => EcoFlowClient.inFlight.delete(fullKey));
@@ -176,14 +197,33 @@ export class EcoFlowClient {
         },
         (res) => {
           const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
+          let bytes = 0;
+          res.on('error', reject);
+          res.on('aborted', () => reject(new Error('EcoFlow API: response interrupted.')));
+          res.on('data', (c) => {
+            const chunk = Buffer.isBuffer(c) ? c : Buffer.from(c);
+            bytes += chunk.length;
+            if (bytes > 4 * 1024 * 1024) {
+              req.destroy(new Error('EcoFlow API: response exceeded size limit.'));
+              return;
+            }
+            chunks.push(chunk);
+          });
           res.on('end', () => {
             const text = Buffer.concat(chunks).toString('utf8');
             let json: any;
             try {
               json = text ? JSON.parse(text) : {};
             } catch {
-              reject(new Error(`EcoFlow API: invalid JSON (HTTP ${res.statusCode}): ${text.slice(0, 200)}`));
+              reject(new Error(`EcoFlow API: invalid JSON (HTTP ${res.statusCode}).`));
+              return;
+            }
+            if (!json || typeof json !== 'object' || Array.isArray(json)) {
+              reject(new Error('EcoFlow API: invalid response envelope.'));
+              return;
+            }
+            if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+              reject(new EcoFlowApiError(String(res.statusCode), 'HTTP request failed'));
               return;
             }
             const code = String(json.code ?? '');

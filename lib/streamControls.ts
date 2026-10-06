@@ -8,6 +8,8 @@ import { toFiniteNumber } from './quota';
 import { DeveloperApiQuarantineError } from './developerApiCompatibility';
 
 export interface StreamControlState {
+  'onoff.ac1'?: boolean;
+  'onoff.ac2'?: boolean;
   charge_limit?: number;
   discharge_limit?: number;
   backup_reserve_soc?: number;
@@ -17,7 +19,7 @@ export interface StreamControlState {
 export type StreamControlKey = keyof StreamControlState;
 export type StreamControlIntent =
   | { kind: 'charge' | 'discharge' | 'reserve' | 'cheap_import' | 'peak_export'; value: number }
-  | { kind: 'feed'; value: boolean }
+  | { kind: 'feed' | 'ac1' | 'ac2'; value: boolean }
   | { kind: 'mode'; value: OperatingMode };
 export interface StreamControlStep {
   key: StreamControlKey;
@@ -38,6 +40,11 @@ const MODES: Array<[string, OperatingMode]> = [
 /** Strict reported control state; malformed/ambiguous fields cannot confirm a write. */
 export function readStreamControlState(quota: Record<string, unknown>): StreamControlState {
   const state: StreamControlState = {};
+  for (const [key, field] of [['onoff.ac1', 'relay2Onoff'], ['onoff.ac2', 'relay3Onoff']] as const) {
+    const value = quota[field];
+    if (value === true || value === 1 || value === '1') state[key] = true;
+    if (value === false || value === 0 || value === '0') state[key] = false;
+  }
   for (const [key, field, min, max] of [
     ['charge_limit', 'cmsMaxChgSoc', 50, 100],
     ['discharge_limit', 'cmsMinDsgSoc', 0, 30],
@@ -58,7 +65,9 @@ export function readStreamControlState(quota: Record<string, unknown>): StreamCo
 
 function step(sn: string, key: StreamControlKey, value: number | boolean | OperatingMode): StreamControlStep {
   let payload: StreamSetEnvelope;
-  if (key === 'charge_limit') payload = StreamCmd.chargeLimit(sn, value as number);
+  if (key === 'onoff.ac1') payload = StreamCmd.ac1(sn, value as boolean);
+  else if (key === 'onoff.ac2') payload = StreamCmd.ac2(sn, value as boolean);
+  else if (key === 'charge_limit') payload = StreamCmd.chargeLimit(sn, value as number);
   else if (key === 'discharge_limit') payload = StreamCmd.dischargeLimit(sn, value as number);
   else if (key === 'backup_reserve_soc') payload = StreamCmd.backupReserve(sn, value as number);
   else if (key === 'feed_in_control') payload = StreamCmd.feedIn(sn, value as boolean);
@@ -92,7 +101,12 @@ export function planStreamControl(sn: string, intent: StreamControlIntent, befor
     }
   } else {
     const key: StreamControlKey = {
-      charge: 'charge_limit', discharge: 'discharge_limit', feed: 'feed_in_control', mode: 'operating_mode',
+      charge: 'charge_limit',
+      discharge: 'discharge_limit',
+      feed: 'feed_in_control',
+      mode: 'operating_mode',
+      ac1: 'onoff.ac1',
+      ac2: 'onoff.ac2',
     }[intent.kind] as StreamControlKey;
     watched = [key];
     steps.push(step(sn, key, intent.value));
@@ -135,6 +149,8 @@ export function planStreamControlRestore(
   }
   if (keys.includes('feed_in_control') && before.feed_in_control !== false) add('feed_in_control');
   if (keys.includes('operating_mode')) add('operating_mode');
+  if (keys.includes('onoff.ac1')) add('onoff.ac1');
+  if (keys.includes('onoff.ac2')) add('onoff.ac2');
   return steps;
 }
 

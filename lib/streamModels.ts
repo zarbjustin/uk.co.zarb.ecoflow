@@ -93,3 +93,12 @@ export function streamModelFromSn(sn: string | undefined): StreamModelSpec {
   const prefix = (sn || '').slice(0, 4).toUpperCase();
   return SPECS[prefix] ?? UNKNOWN;
 }
+
+/** Documented controllable AC outlets; grid feed is not a socket switch. */
+export function streamAcOutletCount(sn: string | undefined): number {
+  const prefix = (sn || '').slice(0, 4).toUpperCase();
+  const counts: Record<string, number> = {
+    BK11: 2, BK12: 2, BK31: 2, BK41: 1, BK51: 0, BK61: 2,
+  };
+  return counts[prefix] ?? 0;
+}

@@ -90,7 +90,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     const secretKey = this.homey.settings.get('secretKey') as string;
     const host = this.homey.settings.get('host') as string | undefined;
     if (!accessKey || !secretKey) {
-      await this.setUnavailable('EcoFlow credentials missing — re-add the device.');
+      await this.setUnavailable('EcoFlow credentials missing — update the API keys in the app settings, then restart the app.');
       return;
     }
     this.client = new EcoFlowClient({
@@ -240,6 +240,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     const targetSn = typeof payload.sn === 'string' ? payload.sn : undefined;
     this.assertDeveloperApiSupported(targetSn);
     if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
+    this.refreshClientCredentials();
     return this.client.setQuota(payload);
   }
 
@@ -248,11 +249,13 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   /** Target-specific uncached control readback; failures must propagate. */
-  protected async readControlQuota(sn: string): Promise<Record<string, any>> {
+  protected async readControlQuota(sn: string, fields?: string[]): Promise<Record<string, any>> {
     this.assertDeveloperApiSupported(sn);
     if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
     this.refreshClientCredentials();
-    const quota = await this.client.getQuotaAll(sn, { fresh: true });
+    const quota = fields
+      ? await this.client.getQuota(sn, fields)
+      : await this.client.getQuotaAll(sn, { fresh: true });
     if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
     return quota;
   }

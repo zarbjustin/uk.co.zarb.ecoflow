@@ -33,10 +33,10 @@ function modeParams(mode: OperatingMode): Record<string, boolean> {
   return { [MODE_PARAM[mode]]: true };
 }
 
-/** STREAM set-command builders (all target the MAIN device SN). */
+/** System commands target MAIN; socket commands target the physical unit SN. */
 export const StreamCmd = {
-  ac1: (sn: string, on: boolean) => streamEnvelope(sn, { cfgRelay2Onoff: on }),
-  ac2: (sn: string, on: boolean) => streamEnvelope(sn, { cfgRelay3Onoff: on }),
+  ac1: (sn: string, on: boolean) => streamEnvelope(sn, { cfgRelay2Onoff: booleanValue(on) }),
+  ac2: (sn: string, on: boolean) => streamEnvelope(sn, { cfgRelay3Onoff: booleanValue(on) }),
   backupReserve: (sn: string, soc: number) => streamEnvelope(sn, { cfgBackupReverseSoc: percentage(soc, 3, 100) }),
   feedIn: (sn: string, on: boolean) => streamEnvelope(sn, { cfgFeedGridMode: booleanValue(on) ? 2 : 1 }),
   operatingMode: (sn: string, mode: OperatingMode) => streamEnvelope(sn, { cfgEnergyStrategyOperateMode: modeParams(mode) }),

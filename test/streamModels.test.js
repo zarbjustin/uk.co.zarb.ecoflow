@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { streamModelFromSn } = require('../.homeybuild/lib/streamModels.js');
+const { streamModelFromSn, streamAcOutletCount } = require('../.homeybuild/lib/streamModels.js');
 
 test('STREAM Ultra X (BK61) is a solar unit with PV inputs', () => {
   const spec = streamModelFromSn('BK61ZK1B2H720041');
@@ -48,4 +48,12 @@ test('unknown / missing serials fall back to a generic STREAM Unit', () => {
   assert.strictEqual(unknown.model, 'STREAM Unit');
   assert.strictEqual(unknown.icon, undefined);
   assert.strictEqual(streamModelFromSn(undefined).model, 'STREAM Unit');
+});
+
+test('socket controls match the documented model matrix, never grid-only output', () => {
+  for (const prefix of ['BK11', 'BK12', 'BK31', 'BK61']) assert.strictEqual(streamAcOutletCount(`${prefix}TEST`), 2);
+  assert.strictEqual(streamAcOutletCount('BK41TEST'), 1);
+  assert.strictEqual(streamAcOutletCount('BK51TEST'), 0);
+  assert.strictEqual(streamAcOutletCount('ZZ99TEST'), 0);
+  assert.strictEqual(streamAcOutletCount(undefined), 0);
 });

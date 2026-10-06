@@ -14,7 +14,8 @@ function num(q: Quota, keys: string[]): number | undefined {
 function bool(q: Quota, key: string): boolean | undefined {
   const v = q[key];
   if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
+  if (v === 1 || v === '1') return true;
+  if (v === 0 || v === '0') return false;
   return undefined;
 }
 
@@ -66,8 +67,8 @@ function operatingMode(q: Quota): string | undefined {
     ['energyStrategyOperateMode.operateScheduledOpen', 'scheduled'],
     ['energyStrategyOperateMode.operateTouModeOpen', 'tou'],
   ];
-  for (const [key, id] of modes) if (bool(q, key) === true) return id;
-  return undefined;
+  const selected = modes.filter(([key]) => bool(q, key) === true);
+  return selected.length === 1 ? selected[0][1] : undefined;
 }
 
 /**
@@ -87,13 +88,14 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   // Battery / energy
   set('measure_battery', scope === 'unit'
     ? num(q, ['f32ShowSoc', 'soc', 'actSoc']) // per-unit SoC (MQTT BMS); cmsBattSoc reads 0 on members
-    : num(q, ['f32ShowSoc', 'soc', 'cmsBattSoc', 'bmsBattSoc']));
+    : num(q, ['cmsBattSoc'])); // unit-only BMS deltas must not overwrite aggregate SOC
   set('battery_soh', num(q, ['soh', 'realSoh', 'cmsBattSoh', 'bmsBattSoh']));
   set('charge_limit', num(q, ['cmsMaxChgSoc']));
   set('discharge_limit', num(q, ['cmsMinDsgSoc']));
 
   // Power flows (Watts)
-  const batteryPower = num(q, ['powGetBpCms']); // + charging / - discharging
+  // Documented aggregate battery power is never a physical unit measurement.
+  const batteryPower = scope === 'system' ? num(q, ['powGetBpCms']) : undefined;
   set('measure_power', batteryPower);
   if (batteryPower !== undefined) {
     // eslint-disable-next-line no-nested-ternary
@@ -102,7 +104,7 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   // Solar: a unit shows its OWN strings; the system shows the firmware total.
   set('measure_power.pv', scope === 'unit' ? perPvSum(q) : pvSum(q));
   set('measure_power.grid', scope === 'unit'
-    ? num(q, ['gridConnectionPower', 'powGetSysGrid', 'sysGridConnectionPower'])
+    ? num(q, ['gridConnectionPower'])
     : num(q, ['powGetSysGrid', 'sysGridConnectionPower', 'gridConnectionPower']));
   set('measure_power.load', num(q, ['powGetSysLoad']));
 
@@ -122,7 +124,7 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   set('onoff.ac2', bool(q, 'relay3Onoff'));
   set('backup_reserve_soc', num(q, ['backupReverseSoc']));
   const feed = num(q, ['feedGridMode']);
-  if (feed !== undefined) set('feed_in_control', feed === 2);
+  if (feed === 1 || feed === 2) set('feed_in_control', feed === 2);
   set('operating_mode', operatingMode(q));
 
   // Extended telemetry (Sprint 9)
