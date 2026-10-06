@@ -154,6 +154,12 @@ tests are preparation, not completion of the hardware-dependent Sprints 4–6.
 
 ### Runtime advisory/diagnostic increment — 6 October
 
+Follow-up: the [ecosystem implementation wave](STREAM_5000_ECOSYSTEM_WAVE.md)
+now integrates freshness/reliability, read-only settings and conditions, observed
+physical MPPT/socket readings and conservative Energy recovery into runtime code.
+The document distinguishes these software changes from the still-open hardware,
+mixed-generation membership, control and new-product admission gates.
+
 The development branch now moves the coordination policy into a bounded,
 stateless app API: [`POST /coordination-preview`](STREAM_COORDINATION_PREVIEW.md).
 It accepts explicit caller readings/state, evaluates freshness, SOC hysteresis,

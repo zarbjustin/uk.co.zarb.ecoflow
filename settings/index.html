@@ -108,6 +108,10 @@
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
   <button id="supportSnapshot" type="button">Show support report</button>
+  <p class="help">STREAM 5000 configuration tiles are read-only and refer to the subscribed unit's
+    reported settings, not verified installation-wide limits. Stale readings clear rather than showing
+    zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
+    accessories have produced a positive reading; these do not add another Homey Energy source.</p>
   <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
 
   <script type="text/javascript">

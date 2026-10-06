@@ -1,0 +1,16 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Reported backup reserve"
+  },
+  "units": {
+    "en": "%"
+  },
+  "decimals": 0,
+  "min": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/reserve.svg",
+  "insights": true
+}

@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Backup socket power"
+  },
+  "units": {
+    "en": "W"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/ac-output.svg",
+  "insights": true
+}

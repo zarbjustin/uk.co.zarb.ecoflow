@@ -9,6 +9,13 @@ const { taskLists } = require('./helpers/stream5000ContractAudit');
 const captures = require('./fixtures/stream5000ContractAudit.json').captures;
 const SN = 'ES22TESTUNITAAAA';
 
+test('clock rollback makes configuration stale rather than apparently newly received', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(group(10, scalar(2, 1800))), 2000);
+  assert.equal(tracker.snapshot(1999).values.maxGridInputW.stale, true);
+  assert.equal(project(tracker.snapshot(1999)).values.maxGridInputW.stale, true);
+});
+
 function varint(value) {
   let n = BigInt(value);
   const bytes = [];

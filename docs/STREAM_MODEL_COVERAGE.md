@@ -1,5 +1,11 @@
 # STREAM model coverage and admission evidence
 
+**6 October development follow-up:** the unpublished [ecosystem candidate](STREAM_5000_ECOSYSTEM_WAVE.md)
+adds observed, serial-attributed physical MPPT/socket tiles for the already admitted
+ES21/ES22 adapters, freshness and read-only configuration. The historical offline-PV
+wording below records the earlier baseline; it is superseded for this development
+candidate, not a claim of hardware acceptance or a new product/model admission.
+
 6 October 2026. Local, unpublished increment on `codex/stream-next-wave-test`.
 Source version remains 1.10.18. Published build 33 does not contain ES21 admission
 or the local Sprint 1–4 follow-ups. No live installation, control write or Git push.

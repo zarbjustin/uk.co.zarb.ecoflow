@@ -109,6 +109,8 @@ test('socket discharge advances only aggregate energy and preserves totals acros
   await system.emit(payload);
   await unit.emit(payload);
   assert.equal(system.device.values.measure_power, -44);
+  assert.equal(unit.device.values.stream_5000_socket_power, 46);
+  assert.equal(system.device.hasCapability('stream_5000_socket_power'), false);
   assert.equal(system.device.values.battery_charging_state, 'discharging');
   assert.equal(unit.device.values.stream_unit_power_battery_flow, null,
     'linked public capture cannot establish signed power for one physical unit');
@@ -320,7 +322,7 @@ test('parsed but unprojectable unit delta cannot mark Home Battery online or ref
   await system.device.onUninit();
 });
 
-test('PV research readings cannot keep production devices online, add tiles or advance Energy totals', async () => {
+test('observed direct PV adds physical-only tiles without keeping battery online or advancing Energy', async () => {
   const system = await harness(classes.Stream5000UnitDevice);
   const unit = await harness(classes.Stream5000PhysicalUnitDevice);
   const initialSystemValues = { ...system.device.values };
@@ -341,11 +343,83 @@ test('PV research readings cannot keep production devices online, add tiles or a
   assert.equal(system.device.onlineTransitions, 0);
   assert.equal(unit.device.onlineTransitions, 0);
   assert.deepEqual(system.device.values, initialSystemValues);
-  assert.deepEqual(unit.device.values, initialUnitValues);
+  assert.deepEqual(unit.device.values, { ...initialUnitValues, stream_5000_direct_pv: 100, stream_unit_power_pv1: 100 });
+  assert.equal(unit.device.hasCapability('stream_unit_power_pv2'), false, 'absent string is not invented');
+  const night = frame(group(50, group(1, Buffer.concat([
+    group(1, Buffer.from(captures.pair.unit_a)), f(3, 0), f(9, 0),
+  ]))));
+  await unit.emit(night);
+  assert.equal(unit.device.values.stream_5000_direct_pv, 0);
+  assert.equal(unit.device.values.stream_unit_power_pv1, 0);
+  assert.equal(unit.device.hasCapability('stream_unit_power_pv2'), false);
   assert.equal(unit.device.hasCapability('meter_power.charged'), false);
   assert.equal(system.device.hasCapability('stream_unit_power_pv1'), false);
   await system.device.onUninit();
   await unit.device.onUninit();
+});
+
+test('ES21 public linked capture exposes only this unit MPPT, not the peer or an aggregate Energy source', async () => {
+  const samples = require('./fixtures/stream5000PvResearch.json');
+  const { device, emit } = await harness(classes.Stream5000PhysicalUnitDevice, {}, samples.unit_b);
+  const payload = frame(Buffer.from(samples.frames[2].pdata_hex, 'hex'));
+  await emit(payload);
+  assert.ok(Math.abs(device.values.stream_5000_direct_pv - 201.96947) < 0.001);
+  assert.ok(Math.abs(device.values.stream_unit_power_pv1 - 62.68369) < 0.001);
+  assert.notEqual(device.values.stream_5000_direct_pv, 216, 'never borrow peer total');
+  assert.equal(device.hasCapability('measure_power'), false);
+  assert.equal(device.hasCapability('meter_power.charged'), false);
+  await device.onUninit();
+});
+
+test('independent reading expiry clears stale power despite fresh temperature and preserves cumulative totals', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100, dischargedWh: 200 });
+  await device.queueTelemetry({ measure_power: 200, battery_charging_state: 'charging' }, now, true);
+  now += 1200001;
+  await device.queueTelemetry({ measure_temperature: 36 }, now, true);
+  device.lastTelemetryAt = now; // Synthetic accepted-temperature delta, normally assigned by the frame handler.
+  await device.checkAvailability();
+  assert.equal(device.values.measure_power, null);
+  assert.equal(device.values.battery_charging_state, null);
+  assert.equal(device.values.measure_temperature, 36);
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.values['meter_power.charged'], 0.1);
+  assert.equal(device.values['meter_power.discharged'], 0.2);
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, true);
+  await device.queueTelemetry({ measure_power: 400, battery_charging_state: 'charging' }, now + 1, true);
+  assert.equal(device.values.measure_power, 400);
+  assert.equal(device.values['meter_power.charged'], 0.1, 'returning positive power must not backfill stale interval');
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, true, 'future receipt fails closed until clock catches up');
+  now += 1;
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, false);
+  assert.equal(device.getEnergyDiagnostics().ignoredGaps, 1);
+  now += 60000;
+  await device.queueTelemetry({ measure_power: 400 }, now, true);
+  assert.ok(Math.abs(device.values['meter_power.charged'] - (0.1 + 400 / 60 / 1000)) < 1e-12);
+  await device.onUninit();
+});
+
+test('configuration tiles and conditions use fresh readback, never make a configuration-only frame battery data', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device, emit } = await harness(classes.Stream5000UnitDevice);
+  await assert.rejects(device.configurationModeIs('custom'), /unavailable/);
+  await assert.rejects(device.configurationReserveEnabled(), /unavailable/);
+  await emit(frame(Buffer.concat([varint(200), varint(2), group(30, Buffer.concat([varint(8), varint(1), varint(16), varint(20)]))])));
+  assert.equal(device.values.stream_5000_mode, 'custom');
+  assert.equal(device.values.stream_5000_backup_reserve, 20);
+  assert.equal(await device.configurationModeIs('custom'), true);
+  assert.equal(await device.configurationModeIs('self_powered'), false);
+  assert.equal(await device.configurationReserveEnabled(), true);
+  assert.equal(device.lastTelemetryAt, 0);
+  assert.equal(device.getEnergyDiagnostics().samples, 0);
+  now += 1200001;
+  await device.checkAvailability();
+  assert.equal(device.values.stream_5000_mode, null);
+  await assert.rejects(device.configurationModeIs('custom'), /unavailable/);
+  await assert.rejects(device.configurationReserveEnabled(), /unavailable/);
+  await device.onUninit();
 });
 
 test('real parsed peer frames feed private topology evidence without changing pairing, capability roles or persisted stores', async () => {

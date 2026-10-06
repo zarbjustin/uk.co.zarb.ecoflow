@@ -26,6 +26,14 @@ module.exports = class EcoFlowApp extends Homey.App {
   async onInit(): Promise<void> {
     this.stopping = false;
     this.streamDiscovery.clear();
+    if (this.homey.flow) {
+      this.homey.flow.getConditionCard('stream_5000_mode_is').registerRunListener(
+        (args: any) => args.device.configurationModeIs(args.mode),
+      );
+      this.homey.flow.getConditionCard('stream_5000_reserve_enabled').registerRunListener(
+        (args: any) => args.device.configurationReserveEnabled(),
+      );
+    }
     this.homey.settings.on('set', this.settingsHandler);
     // Removing the app-connected STREAM account is an 'unset', not a 'set' — the
     // app-auth session must be torn down for that too.

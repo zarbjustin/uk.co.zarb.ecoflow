@@ -31,6 +31,21 @@ function harness() {
   return { app, settings, timers };
 }
 
+test('5000 read-only conditions route to fresh device observations, not a control method', async () => {
+  const { app } = harness();
+  const listeners = new Map();
+  app.homey.flow = { getConditionCard: (id) => ({ registerRunListener: (fn) => listeners.set(id, fn) }) };
+  await app.onInit();
+  assert.deepEqual([...listeners.keys()], ['stream_5000_mode_is', 'stream_5000_reserve_enabled']);
+  const device = {
+    configurationModeIs: async (mode) => mode === 'custom',
+    configurationReserveEnabled: async () => { throw new Error('Fresh state unavailable'); },
+  };
+  assert.equal(await listeners.get('stream_5000_mode_is')({ device, mode: 'custom' }), true);
+  await assert.rejects(listeners.get('stream_5000_reserve_enabled')({ device }), /Fresh state unavailable/);
+  await app.onUninit();
+});
+
 test('app teardown detaches settings listeners and cancels pending reconnect callbacks', async () => {
   const { app, settings, timers } = harness();
   await app.onInit();

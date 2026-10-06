@@ -4,6 +4,7 @@ import { isStream5000BetaEnabled } from './stream5000Beta';
 import { streamDiscoverySnapshot } from './streamDiscovery';
 import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
 import { stream5000Assessment } from './stream5000Assessment';
+import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -98,6 +99,33 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
         ...stream5000Assessment(evidenceByDevice[deviceIndex],
           configuration.find((item) => item?.deviceIndex === deviceIndex), now),
       })),
+      readingFreshness: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        try {
+          const input = device.getReadingDiagnostics?.();
+          const readings = Object.fromEntries(STREAM_5000_LIVE_CAPABILITIES.filter((key) => input?.[key])
+            .map((key) => [key, { ageSec: safeNumber(input[key].ageSec), stale: input[key].stale !== false }]));
+          return { deviceIndex, readings };
+        } catch {
+          return { deviceIndex, readings: {} }; // No private getter or exception contents.
+        }
+      }),
+      connection: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        try {
+          const input = device.getConnectionDiagnostics?.();
+          if (!input) return null;
+          return {
+            deviceIndex,
+            subscriptionState: ['starting', 'active', 'waiting', 'stopped'].includes(input.subscriptionState)
+              ? input.subscriptionState : 'unknown',
+            frameAgeSec: safeNumber(input.frameAgeSec),
+            telemetryAgeSec: safeNumber(input.telemetryAgeSec),
+            subscriptionAttempts: safeNumber(input.subscriptionAttempts),
+            reconnectCount: safeNumber(input.reconnectCount),
+          };
+        } catch {
+          return null;
+        }
+      }).filter(Boolean),
     };
   });
   let platform = 'unknown';

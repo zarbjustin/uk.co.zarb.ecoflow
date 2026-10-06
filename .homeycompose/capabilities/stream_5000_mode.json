@@ -1,0 +1,31 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Operating mode"
+  },
+  "values": [
+    {
+      "id": "self_powered",
+      "title": {
+        "en": "Self-powered"
+      }
+    },
+    {
+      "id": "intelligent_plus",
+      "title": {
+        "en": "Intelligent Mode+"
+      }
+    },
+    {
+      "id": "custom",
+      "title": {
+        "en": "Custom"
+      }
+    }
+  ],
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/operating-mode.svg",
+  "insights": false
+}

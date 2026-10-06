@@ -1,0 +1,41 @@
+{
+  "id": "stream_5000_mode_is",
+  "title": {
+    "en": "Reported STREAM 5000 mode is"
+  },
+  "titleFormatted": {
+    "en": "Reported STREAM 5000 mode is [[mode]]"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=stream_5000_system|stream_5000_unit|stream_ac5000"
+    },
+    {
+      "name": "mode",
+      "type": "dropdown",
+      "title": { "en": "Operating mode" },
+      "values": [
+        {
+          "id": "self_powered",
+          "title": {
+            "en": "Self-powered"
+          }
+        },
+        {
+          "id": "intelligent_plus",
+          "title": {
+            "en": "Intelligent Mode+"
+          }
+        },
+        {
+          "id": "custom",
+          "title": {
+            "en": "Custom"
+          }
+        }
+      ]
+    }
+  ]
+}

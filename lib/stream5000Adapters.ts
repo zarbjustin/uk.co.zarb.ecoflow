@@ -11,6 +11,7 @@ import { createStreamAc5000Mapper, mapStreamAc5000 } from './streamAc5000Mapping
 import { parseStreamAc5000Frame } from './streamAc5000Protocol';
 import { Stream5000ModelSpec, Stream5000TelemetryAdapterId } from './stream5000Models';
 import { Es22TopologyTracker, StreamTopologyEvidence } from './streamTopology';
+import { stream5000CapabilityCandidates, Stream5000CapabilityCandidates } from './stream5000Capabilities';
 
 export type Stream5000CapabilityValues = Record<string, number | string | null>;
 
@@ -42,6 +43,7 @@ export interface Stream5000TelemetryAdapter {
   diagnosticLabel: string;
   requestedSnapshotCommand?: string;
   parse(payload: Buffer, serialNumber?: string): unknown | null;
+  accessories(telemetry: unknown, serialNumber: string): Stream5000CapabilityCandidates;
   map(telemetry: unknown): Stream5000CapabilityValues;
   createMapper(serialNumber: string, scope: 'system' | 'unit'): (telemetry: unknown) => Stream5000CapabilityValues;
   createTopologyTracker(serialNumber: string): Stream5000TopologyTracker;
@@ -57,6 +59,9 @@ const ES22_ADAPTER: Stream5000TelemetryAdapter = Object.freeze({
   diagnosticLabel: 'ES22',
   requestedSnapshotCommand: '254/39',
   parse: parseStreamAc5000Frame,
+  accessories: (telemetry: unknown, serialNumber: string) => stream5000CapabilityCandidates(
+    telemetry as Parameters<typeof stream5000CapabilityCandidates>[0], serialNumber,
+  ),
   map: (telemetry: unknown) => mapStreamAc5000(telemetry as Parameters<typeof mapStreamAc5000>[0]),
   createMapper: (serialNumber: string, scope: 'system' | 'unit') => {
     const mapper = createStreamAc5000Mapper(serialNumber, scope);

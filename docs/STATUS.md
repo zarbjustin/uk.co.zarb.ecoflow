@@ -4,6 +4,13 @@
 
 ## Current handover — 6 October 2026
 
+**Latest development increment:** [ecosystem wave](STREAM_5000_ECOSYSTEM_WAVE.md)
+integrates per-reading expiry, restart clearing, read-only settings/Flow conditions,
+observed physical MPPT/socket tiles and stale-gap Energy re-anchoring. Local tests
+pass 370 cases; runtime observation is not hardware acceptance. Model identities,
+saved counters and installation-only Homey Energy roles are preserved. Controls,
+automatic consolidation and new product adapters remain gated. No publication.
+
 **Development branch:** `codex/stream-charging-coordination` starts from the clean,
 synced Test handover tip `5c984770e805e4f2a2e192b7c92c64faab0eb9b2`. Community
 reply 33 adds BYD-priority and anti-reciprocal-charging requirements; see the

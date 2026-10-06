@@ -2,7 +2,7 @@
 
 import { Es22Telemetry, Stream5000PvTelemetry } from './streamAc5000Protocol';
 
-/** Research readings, not Homey capability values or an Energy source. */
+/** Serial-attributed readings; not a model admission rule or an Energy source. */
 export interface Stream5000CapabilityCandidates {
   directPv?: Stream5000PvTelemetry;
   acSocketW?: number;
@@ -21,8 +21,10 @@ function validPower(value: unknown): value is number {
  * totals require a matching source header; no peer count, record position or
  * installation SOC is used to borrow another battery's readings.
  *
- * This is deliberately outside the runtime adapter's map(): hardware admission
- * is still required before adding tiles, widgets or Energy contributions.
+ * This stays separate from battery map(): the development lifecycle can expose
+ * observed physical accessories, but cannot create another Energy source or
+ * admit an unknown model. Hardware comparison is still required before treating
+ * this development candidate as validated or promoting it to production.
  */
 export function stream5000CapabilityCandidates(
   telemetry: Es22Telemetry, serialNumber: string,

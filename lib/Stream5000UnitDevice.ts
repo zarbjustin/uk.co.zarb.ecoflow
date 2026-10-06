@@ -17,6 +17,11 @@ import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
 import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } from './energyIntegration';
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
+import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
+import {
+  STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
+  Stream5000ReadingAges, stream5000ConfigurationValues,
+} from './stream5000Readings';
 
 /**
  * Shared monitoring lifecycle for verified STREAM 5000-family units.
@@ -42,7 +47,7 @@ const DIAGNOSTIC_SUMMARY_EVERY_FRAMES = 100;
 const MONITORING_ONLY_FALLBACK = 'Monitoring only · controls intentionally disabled';
 
 const UNAVAILABLE_MESSAGE = 'No data from EcoFlow\'s app connection. Check the EcoFlow account in the app settings.';
-const NOT_CONNECTED_MESSAGE = 'EcoFlow app connection unavailable — delete and re-add this device to sign in again.';
+const NOT_CONNECTED_MESSAGE = 'EcoFlow app connection unavailable — check or update your EcoFlow account in the app settings.';
 const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as const;
 
 export class Stream5000UnitDevice extends Homey.Device {
@@ -77,6 +82,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private ignoredEnergyGaps = 0;
   private topologyTracker?: Stream5000TopologyTracker;
   private configurationTracker?: Stream5000ConfigurationTracker;
+  private readonly readingAges = new Stream5000ReadingAges();
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -116,6 +122,23 @@ export class Stream5000UnitDevice extends Homey.Device {
     } else {
       await this.initialisePhysicalUnitCapabilities();
     }
+    for (const capability of Object.values(STREAM_5000_CONFIGURATION_CAPABILITIES)) {
+      if (this.isStopped()) return;
+      if (!this.hasCapability(capability)) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.addCapability(capability);
+      }
+      // Clear persisted observations until this session actually reports them.
+      // eslint-disable-next-line no-await-in-loop
+      await this.setCapabilityValue(capability, null);
+    }
+    for (const capability of STREAM_5000_LIVE_CAPABILITIES) {
+      if (this.isStopped()) return;
+      if (this.hasCapability(capability)) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.setCapabilityValue(capability, null);
+      }
+    }
     if (this.isStopped()) return;
     const messageKey = this.monitoringOnlyMessageKey();
     const localizedStatus = this.homey.__(messageKey);
@@ -135,6 +158,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.bytesReceived += payload.length;
       this.lastFrameAt = Date.now();
       this.configurationTracker?.observe(payload, this.lastFrameAt);
+      this.queueConfiguration().catch((e) => this.error('apply configuration observations', e?.message || e));
       const telemetry = this.telemetryAdapter.parse(payload, sn);
       const diagnostic = this.telemetryAdapter.describe(payload, sn, telemetry ? 0 : undefined);
       if (!telemetry) {
@@ -146,6 +170,10 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       this.parsedFrames += 1;
       const receivedAt = Date.now();
+      if (!this.isEnergyAggregate()) {
+        this.queueAccessories(this.telemetryAdapter.accessories(telemetry, sn), receivedAt)
+          .catch((e) => this.error('apply accessory readings', e?.message || e));
+      }
       this.topologyTracker?.observe(telemetry, receivedAt);
       const values = mapTelemetry(telemetry);
       const roleValues = this.capabilityValuesForRole(values);
@@ -216,6 +244,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number, usable: boolean): Promise<void> {
     const run = async () => {
+      if (this.isStopped()) return;
       await this.applyTelemetry(values, receivedAt);
       if (usable) await this.setOnline();
     };
@@ -224,7 +253,9 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
+    if (this.isStopped()) return;
     const roleValues = this.capabilityValuesForRole(values);
+    this.readingAges.observe(Object.fromEntries(Object.entries(roleValues).filter(([key]) => this.hasCapability(key))), receivedAt);
     for (const [capability, value] of Object.entries(roleValues)) {
       if (!this.hasCapability(capability)) continue;
       if (this.lastValues[capability] === value && this.getCapabilityValue(capability) === value) continue;
@@ -235,6 +266,81 @@ export class Stream5000UnitDevice extends Homey.Device {
     if (this.isEnergyAggregate() && typeof batteryPowerW === 'number') {
       await this.updateEnergy(batteryPowerW, receivedAt);
     }
+  }
+
+  private queueConfiguration(): Promise<void> {
+    const run = async () => {
+      if (this.isStopped()) return;
+      const values = stream5000ConfigurationValues(this.configurationTracker?.snapshot());
+      for (const [capability, value] of Object.entries(values)) {
+        if (this.isStopped()) return;
+        if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== value) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.setCapabilityValue(capability, value);
+        }
+      }
+    };
+    this.applyChain = this.applyChain.then(run, run);
+    return this.applyChain;
+  }
+
+  /** Observed accessories only, physical monitor only, no solar/grid kWh source. */
+  private queueAccessories(candidates: Stream5000CapabilityCandidates, receivedAt: number): Promise<void> {
+    const values: Stream5000CapabilityValues = {};
+    if (candidates.acSocketW !== undefined) values.stream_5000_socket_power = candidates.acSocketW;
+    if (candidates.directPv?.totalW !== undefined) values.stream_5000_direct_pv = candidates.directPv.totalW;
+    for (const index of [1, 2, 3, 4] as const) {
+      const value = candidates.directPv?.[`string${index}W`];
+      if (value !== undefined) values[`stream_unit_power_pv${index}`] = value;
+    }
+    // Inferred solarNodeW deliberately stays out of production meters/tiles.
+    const run = async () => {
+      if (this.isStopped()) return;
+      for (const [capability, value] of Object.entries(values)) {
+        if (this.isStopped()) return;
+        if (!this.hasCapability(capability)) {
+          if (value === 0) continue; // Zero alone does not establish that an accessory is installed.
+          // eslint-disable-next-line no-await-in-loop
+          await this.addCapability(capability);
+        }
+        // eslint-disable-next-line no-await-in-loop
+        if (this.getCapabilityValue(capability) !== value) await this.setCapabilityValue(capability, value);
+      }
+      this.readingAges.observe(Object.fromEntries(Object.entries(values).filter(([key]) => this.hasCapability(key))), receivedAt);
+    };
+    this.applyChain = this.applyChain.then(run, run);
+    return this.applyChain;
+  }
+
+  getReadingDiagnostics(): Record<string, unknown> {
+    return this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
+  }
+
+  getConnectionDiagnostics(): Record<string, unknown> {
+    const now = Date.now();
+    const age = (at: number) => (at > 0 && at <= now ? Math.floor((now - at) / 1000) : null);
+    return {
+      subscriptionState: this.subscriptionState, // Registered subscription, not proof the remote socket is alive.
+      frameAgeSec: age(this.lastFrameAt),
+      telemetryAgeSec: age(this.lastTelemetryAt),
+      subscriptionAttempts: this.subscriptionAttempts,
+      reconnectCount: this.resubscribeCount,
+    };
+  }
+
+  /** Missing/stale configuration throws: returning false would pass an inverted Flow. */
+  async configurationModeIs(mode: string): Promise<boolean> {
+    if (!['self_powered', 'intelligent_plus', 'custom'].includes(mode)) throw new Error('Invalid STREAM mode');
+    const observed = stream5000ConfigurationValues(this.configurationTracker?.snapshot()).stream_5000_mode;
+    if (observed === null) throw new Error('Fresh STREAM operating mode is unavailable');
+    return observed === mode;
+  }
+
+  async configurationReserveEnabled(): Promise<boolean> {
+    const snapshot = this.configurationTracker?.snapshot() as any;
+    const entry = snapshot?.values?.backupReserveEnabled;
+    if (entry?.stale !== false || typeof entry.value !== 'boolean') throw new Error('Fresh STREAM backup reserve state is unavailable');
+    return entry.value;
   }
 
   private storedEnergyWh(key: string): number {
@@ -273,7 +379,11 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async updateEnergy(batteryPowerW: number, sampleAt: number): Promise<void> {
     this.energySamples += 1;
-    if (this.lastEnergySampleAt > 0 && sampleAt - this.lastEnergySampleAt > MAX_GAP_MS) this.ignoredEnergyGaps += 1;
+    if (this.lastEnergySampleAt > 0
+      && sampleAt - this.lastEnergySampleAt > Math.min(MAX_GAP_MS, this.unavailableAfterMs())) {
+      this.ignoredEnergyGaps += 1;
+      this.lastEnergySampleAt = 0; // Re-anchor, never backfill power that was already considered stale.
+    }
     const next = integrateTimedSignedPower({
       posWh: this.chargedWh,
       negWh: this.dischargedWh,
@@ -376,6 +486,20 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async checkAvailability(): Promise<void> {
+    await this.queueConfiguration();
+    const expire = async () => {
+      if (this.isStopped()) return;
+      for (const capability of this.readingAges.expired(Date.now(), this.unavailableAfterMs())) {
+        if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== null) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.setCapabilityValue(capability, null);
+          this.lastValues[capability] = null;
+        }
+      }
+    };
+    this.applyChain = this.applyChain.then(expire, expire);
+    await this.applyChain;
+    if (this.isStopped()) return;
     const limitMs = this.unavailableAfterMs();
     const reference = this.lastTelemetryAt || this.startedAt;
     const age = Date.now() - reference;

@@ -6,6 +6,21 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('per-reading freshness projection excludes identities and catches nested getter failures', () => {
+  const instance = homey();
+  let malicious = false;
+  instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getReadingDiagnostics: () => malicious ? { get measure_power() { throw new Error('PRIVATE'); } }
+      : { measure_power: { ageSec: 12, stale: false, sn: 'PRIVATE' }, 'PRIVATE': { ageSec: 2 } },
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  assert.deepEqual(report.drivers.find(d => d.id === 'stream_5000_unit').readingFreshness[0].readings,
+    { measure_power: { ageSec: 12, stale: false } });
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+  malicious = true;
+  assert.ok(!JSON.stringify(createSupportSnapshot(instance)).includes('PRIVATE'));
+});
+
 function homey() {
   return {
     version: '13.5.0', platform: 'local',

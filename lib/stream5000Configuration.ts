@@ -209,7 +209,7 @@ export class Stream5000ConfigurationTracker {
       values: Object.fromEntries([...this.entries].map(([key, entry]) => [key, {
         value: JSON.parse(JSON.stringify(entry.value)),
         ageSec: Math.max(0, Math.floor((now - entry.at) / 1000)),
-        stale: now - entry.at > STALE_AFTER_MS,
+        stale: entry.at > now || now - entry.at > STALE_AFTER_MS,
       }])),
     };
   }
@@ -261,7 +261,7 @@ export function stream5000ConfigurationSnapshot(input: any): Record<string, unkn
       if (!valid) continue;
       value = tasks;
     }
-    values[key] = { value, ageSec: Math.floor(entry.ageSec), stale: entry.ageSec * 1000 > STALE_AFTER_MS };
+    values[key] = { value, ageSec: Math.floor(entry.ageSec), stale: entry.stale === true || entry.ageSec * 1000 > STALE_AFTER_MS };
   }
   return {
     source: 'captured_app_protocol', scope: 'subscription_source', ordering: 'receipt_only', controlsEnabled: false, values,

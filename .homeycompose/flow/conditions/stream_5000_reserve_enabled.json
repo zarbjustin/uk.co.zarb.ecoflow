@@ -1,0 +1,13 @@
+{
+  "id": "stream_5000_reserve_enabled",
+  "title": {
+    "en": "Reported STREAM 5000 backup reserve is enabled"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=stream_5000_system|stream_5000_unit|stream_ac5000"
+    }
+  ]
+}
