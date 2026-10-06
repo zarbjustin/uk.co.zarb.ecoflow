@@ -4,6 +4,11 @@
 1.10.18. This observational increment is not new product support, a release or
 a real-hardware validation pass. Preserve the unpublished Sprint 1–4 and ES21 work.
 
+Release update: this combined candidate was committed, pushed and published to
+**Test v1.10.19 / build 34** on 6 October. The source-version/local wording above
+records the implementation baseline. See [release evidence](STATUS.md). Hardware
+acceptance remains open; publication does not admit expansion/Gateway/3000 models.
+
 ## Evidence and model boundaries
 
 - [EcoFlow's support FAQ](https://www.ecoflow.com/eu/stream-series-plug-and-play-solar-battery/support)

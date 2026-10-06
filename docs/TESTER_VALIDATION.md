@@ -1,10 +1,10 @@
 # Next-wave tester validation
 
-## Local expansion-discovery follow-up (not in published build 33)
+## Expansion-discovery follow-up (Test v1.10.19 / build 34)
 
 The [Sprint 5 candidate](SPRINT_5_EXPANSION_DISCOVERY.md) adds support schema 3:
 anonymous cached account inventory and serial-keyed peer-field visibility.
-After an authorized Test release, open a beta pairing device list and cancel
+After installing Test v1.10.19, open a beta pairing device list and cancel
 without adding/deleting anything, then use **Show support report**. Opening
 pairing uses its existing account-list request; the report itself makes none.
 Account inventory resets after app restart/account changes and may be stale.
@@ -18,11 +18,11 @@ configuration. Missing discovery entries do not prove absence of nested packs.
 No new pairing support, Energy meters or controls are enabled for these products.
 Do not change EcoFlow grouping or electrical configuration just for testing.
 
-## Local ES21 follow-up (not in published build 33)
+## ES21 follow-up (Test v1.10.19 / build 34)
 
 The [model expansion candidate](STREAM_MODEL_COVERAGE.md) adds STREAM 5000 ES21
-core monitoring through the two existing default-off beta choices. Release and
-hardware acceptance are separate, still-open gates. After an authorized Test
+core monitoring through the two existing default-off beta choices. Test publication
+is complete; hardware acceptance is still open. After installing this Test
 release, compare ES21 system/unit percentage, signed battery watts and counters
 through charging (including direct PV), discharging, idle, silence/reconnect and
 restart, then a 24–48-hour soak. Check linked units and independent installations
@@ -32,7 +32,7 @@ Use one installation Home Battery for Energy, with optional non-Energy monitors.
 
 ## Published Test baseline
 
-Published 4 October 2026: **v1.10.18 / build 33 / Test**.
+Published 6 October 2026: **v1.10.19 / build 34 / Test**.
 [Install the Test build](https://homey.app/a/uk.co.zarb.ecoflow/test/) and confirm
 the installed version before collecting evidence. Production remains v1.10.3 /
 build 18. No device was installed on a live Homey as part of publication; hardware
@@ -47,7 +47,8 @@ validation and the on-device support endpoint remain to be checked.
   replies, including equal-millisecond and queued-reply races.
 - Settings offer **Show support report**: installed app/Homey versions, beta
   access, packaged/registered drivers, anonymous accounting evidence.
-- No driver rename, immutable identity change, automatic grouping, new model
+- ES21 core monitoring is now admitted behind the default-off beta switch.
+- No driver rename, immutable identity change, automatic grouping, unverified model
   admission, unit Energy meters or 5000 control commands. Existing devices and
   counter checkpoints remain. Do not delete/re-pair simply to test this update.
 
@@ -118,10 +119,9 @@ decreases handled by the existing reset policy; it is not proof of a firmware re
 
 ## Mixed-generation research (no automatic merge)
 
-The unpublished [Sprint 2 candidate](SPRINT_2_TOPOLOGY_STATUS.md) adds support
-schema 2 with anonymous observed-peer counts/freshness and possible aggregate
-overlap. Test v1.10.18 does not include these additions. Once a newer candidate is
-released and installed, collect its report without deleting or re-pairing devices.
+The [Sprint 2 increment](SPRINT_2_TOPOLOGY_STATUS.md), now in Test v1.10.19, adds
+anonymous observed-peer counts/freshness and possible aggregate overlap. These
+are retained in support schema 3. Collect its report without deleting or re-pairing devices.
 Overlap hints are not verified membership; empty hints are not proof of independent
 systems. Continue to supply time-aligned screenshots and private redacted evidence.
 
@@ -140,9 +140,9 @@ reported aggregates may overlap. No automatic merge or migration is part of this
 candidate. Stable membership, authoritative SOC/capacity and disjoint power must
 be understood before implementing consolidation.
 
-## Original BK control candidate (Sprint 4, unpublished)
+## Original BK control candidate (Sprint 4, Test v1.10.19)
 
-Only test after a release is authorized and installed. Do not delete/re-pair for
+Only test after installing this Test release. Do not delete/re-pair for
 these changes. Use a controllable original BK installation, record prior mode,
 feed-in, charge/discharge limits and reserve, and resolve competing schedules/AI
 before testing. No 5000 control contract or write is admitted by this increment.
@@ -172,10 +172,10 @@ before testing. No 5000 control contract or write is admitted by this increment.
 
 ## Promotion gate (all increments)
 
-The local [Sprint 3 research increment](SPRINT_3_CAPABILITIES_STATUS.md) is not
-in Test v1.10.18 and does not add picker models or PV/socket tiles. ES21 users
-can contribute redacted, time-aligned EcoFlow device/system evidence, but should
-not pair through the AC-5000 adapter or change their installation for testing.
+The [Sprint 3 research increment](SPRINT_3_CAPABILITIES_STATUS.md) is in
+Test v1.10.19 but does not add PV/socket tiles. ES21 users can use the dedicated
+beta model admission and contribute redacted, time-aligned EcoFlow device/system
+evidence; do not force an AC-5000 identity or change an installation for testing.
 Distinguish direct MPPT strings from the solar-system node, and record each
 unit's page separately. Expansion/gateway evidence must show capacity units and
 whether expansion energy is already included in the installation total.

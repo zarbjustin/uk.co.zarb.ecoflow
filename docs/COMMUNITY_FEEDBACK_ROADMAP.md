@@ -4,6 +4,15 @@ Updated: 6 October 2026. This is the current priority order; older sprint docume
 remain historical records. Local implementation, automated verification, hardware
 validation and store deployment are separate milestones.
 
+**6 October release update:** the combined Sprint 1–5/ES21 work below is published
+as **v1.10.19 / build 34 / Test** on `codex/stream-next-wave-test`. Earlier
+local/unreleased descriptions are implementation history. Exact-version GitHub
+CI passed (313 tests, lint, full audit and Homey validation), and the uploaded
+archive was checked. Production remains v1.10.3 / build 18; hardware acceptance,
+mixed-generation consolidation and unverified-model/control gates remain open.
+See [release evidence](STATUS.md) and the [tester checklist](TESTER_VALIDATION.md).
+No new community post, certification submission or live-hub installation was made.
+
 [Sprint 5 expansion/installation discovery](SPRINT_5_EXPANSION_DISCOVERY.md) is
 implemented locally: anonymous cached account inventory and peer-field visibility
 in support schema 3. Expansion 5000/3000, STREAM 3000 hosts, Gateway and Dual CT
@@ -33,8 +42,8 @@ shutdown races, and the still-open numerical Energy/picker/hardware gates.
 ## Evidence and current release boundary
 
 - The [Homey developer dashboard](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow)
-  now identifies build 18 / v1.10.3 as Live and build 33 / v1.10.18 as Test;
-  build 32 / v1.10.17 is superseded.
+  now identifies build 18 / v1.10.3 as Live and build 34 / v1.10.19 as Test;
+  build 33 / v1.10.18 is the previous Test baseline.
   An uploaded test build is not automatically the production version.
 - The eight available build-18 reports are **manually submitted diagnostics**.
   Seven show repeated Developer API 1006 errors for ES22 devices paired through

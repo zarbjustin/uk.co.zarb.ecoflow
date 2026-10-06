@@ -4,6 +4,28 @@
 
 ## Current handover — 6 October 2026
 
+**Release update:** the combined Sprint 1–5/ES21 candidate is now published as
+**v1.10.19 / build 34 / Test**, from `codex/stream-next-wave-test`. This supersedes
+the local/unpublished wording below, which records each implementation stage.
+Production remains **v1.10.3 / build 18 / Live**; `master` was not changed.
+
+- Implementation commit: `34d097254e88d5e632224dd69782f5742ee1c93d`.
+- Version/tag commit: `c87813072428b421f62dce47d59137c6febf8a39` / `v1.10.19`.
+- [Exact-version CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37392187407),
+  [version workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37392089835)
+  and [upload workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37392358711)
+  passed. All 313 tests, lint, full audit and Homey validation passed.
+- Homey UI confirmed Test publication. The downloaded build-34 archive contains
+  v1.10.19, ES21 admission, discovery diagnostics and support schema 3. Its
+  manifest retains installation-only Energy meters and an empty environment;
+  no env.json, .env or Git directory is packaged.
+- [Install Test](https://homey.app/a/uk.co.zarb.ecoflow/test/). No certification,
+  production promotion or installation/control action on a live Homey was done.
+  ES21, mixed-generation, expansion/Gateway/3000 and BK control hardware gates
+  remain open. No deletion/re-pairing is required for existing devices.
+- Store README text still describes ES22-only beta support; refresh that listing
+  guidance before the next release. The v1.10.19 changelog describes ES21 correctly.
+
 The [Sprint 5 expansion-discovery increment](SPRINT_5_EXPANSION_DISCOVERY.md)
 adds anonymous cached account inventory and peer-field visibility to support
 schema 3. It adds no requests, new-model admission, capacity guesses, grouping
@@ -110,12 +132,12 @@ Read the validation documents before inviting testers or promoting a build.
 
 - [ ] Validate [Sprint 2 discovery](SPRINT_2_TOPOLOGY_STATUS.md) on already-linked
   mixed-generation hardware and independent installations before any consolidation.
-  Publish the local candidate to Test only with explicit authorization and green CI.
+  Test v1.10.19 now contains this candidate; hardware evidence remains required.
 
 - [ ] Complete the active [validation sprint](SPRINT_1_VALIDATION_STATUS.md):
   confirm installed Test/support report, investigate counter scope and the
   production startup timeout, reproduce Ed's mobile picker, then collect hardware evidence.
-- [ ] **STREAM AC 5000 live gate** — install Test v1.10.18 and complete the
+- [ ] **STREAM AC 5000 live gate** — install Test v1.10.19 and complete the
   charging/discharging/idle plus 24–48-hour soak matrix in
   `docs/STREAM_AC5000_SPRINTS.md`. Code-side Sprint 1–4 work is complete.
 - [ ] **Hardware verification** — run the HomeyScript probe in `docs/HARDWARE_VERIFICATION.md`:
