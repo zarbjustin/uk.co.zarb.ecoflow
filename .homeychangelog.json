@@ -172,5 +172,8 @@
   },
   "1.10.21": {
     "en": "Correct STREAM 5000 battery-to-backup-socket discharge accounting. Add read-only, session-only configuration diagnostics with receipt-age labels. Align ES21/ES22 Test pairing guidance. Preserve saved counters and installation-only Homey Energy; no re-pairing required. Hardware validation remains required."
+  },
+  "1.10.22": {
+    "en": "Improve STREAM 5000 reading freshness, read-only settings and physical solar/socket monitoring. Correct original STREAM aggregate/unit battery readings and socket support; harden control readback, connection handling and daily history. Existing pairing and cumulative counters are preserved. STREAM 5000 controls remain disabled."
   }
 }
