@@ -1,6 +1,6 @@
 {
   "name": "uk.co.zarb.ecoflow",
-  "version": "1.10.20",
+  "version": "1.10.21",
   "scripts": {
     "build": "tsc",
     "test": "tsc && node --test test/*.test.js",

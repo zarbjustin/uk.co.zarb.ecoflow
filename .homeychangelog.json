@@ -169,5 +169,8 @@
   },
   "1.10.20": {
     "en": "Correct STREAM 5000 battery-to-backup-socket discharge accounting. Add read-only, session-only configuration diagnostics for power limits, mode, reserve, SOC limits and schedules, with receipt-age labels. Preserve existing pairing, saved counters and installation-only Homey Energy. ES21/ES22 remain monitoring-only beta; hardware validation is still required."
+  },
+  "1.10.21": {
+    "en": "Correct STREAM 5000 battery-to-backup-socket discharge accounting. Add read-only, session-only configuration diagnostics with receipt-age labels. Align ES21/ES22 Test pairing guidance. Preserve saved counters and installation-only Homey Energy; no re-pairing required. Hardware validation remains required."
   }
 }
