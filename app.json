@@ -83,6 +83,10 @@
     "homey:manager:geolocation"
   ],
   "api": {
+    "coordinationPreview": {
+      "method": "POST",
+      "path": "/coordination-preview"
+    },
     "supportSnapshot": {
       "method": "GET",
       "path": "/support-snapshot"

@@ -8,8 +8,8 @@
 synced Test handover tip `5c984770e805e4f2a2e192b7c92c64faab0eb9b2`. Community
 reply 33 adds BYD-priority and anti-reciprocal-charging requirements; see the
 [next-wave branch and sprint plan](COMMUNITY_FEEDBACK_ROADMAP.md). Build 36 remains
-the Test baseline. This preparation changes documentation only, not runtime,
-5000 controls, Energy roles or production. Keep focused release hotfixes separate.
+the Test baseline. Development now includes runtime advisory/diagnostic code;
+5000 controls, Energy roles and production remain unchanged. Keep focused release hotfixes separate.
 
 Sprint 4A–6 research preparation now adds test-only ES22 input-payload replay,
 explicit-system topology review and new-product evidence gates. There is no
@@ -19,6 +19,16 @@ The simulation-only coordination policy adds stale-input rejection, SOC
 hysteresis and opposing-flow checks. Local verification passes 351 tests, lint,
 full audit (zero vulnerabilities) and whitespace checks. Hardware-dependent
 completion of Sprints 4–6 remains open; no build/version or channel change.
+
+The next development increment adds a stateless, non-actuating
+[`/coordination-preview` API](STREAM_COORDINATION_PREVIEW.md), support schema 5
+control/topology assessments, and category-specific product evidence requirements.
+The preview never accesses Homey devices or EcoFlow, persists state or grants
+command permission. Settings explains recent receipts versus verified behaviour.
+This is runtime preparation, not completion of hardware controls, automatic
+mixed-generation consolidation or new product adapters. Local validation passes
+361 tests, lint, whitespace checks and dependency audit (zero vulnerabilities).
+It is not published.
 
 **Latest Test release: v1.10.21 / build 36**, published on 6 October 2026 from
 `codex/stream-next-wave-test`. The socket/configuration wave below is now in Test.

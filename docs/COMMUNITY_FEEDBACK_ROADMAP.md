@@ -152,6 +152,27 @@ fresh readback correlation, actual power response, manual recovery and host/pack
 captures. Sprint 4B runtime policy integration is not implemented here. These offline
 tests are preparation, not completion of the hardware-dependent Sprints 4–6.
 
+### Runtime advisory/diagnostic increment — 6 October
+
+The development branch now moves the coordination policy into a bounded,
+stateless app API: [`POST /coordination-preview`](STREAM_COORDINATION_PREVIEW.md).
+It accepts explicit caller readings/state, evaluates freshness, SOC hysteresis,
+dwell/cooldown and opposing power flows, and returns an advisory only. It cannot
+send commands, discover BYD devices, persist state or enforce physical recovery.
+Unknown controller ownership blocks it; caller state is not control authorization.
+This does not contradict the hardware gate: no controller or charging Flow is enabled.
+
+Support report schema 5 interprets existing local evidence: recent configuration
+receipt is not physical verification; enabled tasks do not prove scheduler
+ownership; fresh mixed-family peers warrant review but do not authorize a merge.
+New-product hints include category-specific admission gaps without adding drivers.
+Identity, counters and installation-only Energy roles remain unchanged.
+
+Remaining acceptance: owner hardware pilot, model-specific limits and scope,
+command/readback correlation, physical response/recovery, actual system membership
+and host/pack identity/telemetry. These cannot be completed by advisory code.
+The community Test baseline remains build 36 and is not replaced by this increment.
+
 ### Configuration/socket follow-up wave (6 October, v1.10.21 / build 36 / Test)
 
 This six-sprint wave supersedes the next-priority ordering, not the release

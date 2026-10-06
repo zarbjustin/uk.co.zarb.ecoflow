@@ -3,6 +3,7 @@
 import { isStream5000BetaEnabled } from './stream5000Beta';
 import { streamDiscoverySnapshot } from './streamDiscovery';
 import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
+import { stream5000Assessment } from './stream5000Assessment';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -68,8 +69,9 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     } catch {
       // Report absence without returning exception text or private identifiers.
     }
+    const evidenceByDevice = devices.map(readStreamTopologyEvidence);
     const topology = devices.map((device, deviceIndex) => {
-      const evidence = readStreamTopologyEvidence(device);
+      const evidence = evidenceByDevice[deviceIndex];
       if (role === 'installation_energy') aggregates.push({ driverId: id, deviceIndex, evidence });
       return { deviceIndex, ...streamTopologySnapshot(evidence, now) };
     });
@@ -91,6 +93,11 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
       configuration,
+      assessment: id === 'stream' || id === 'stream_unit' ? [] : devices.map((_device, deviceIndex) => ({
+        deviceIndex,
+        ...stream5000Assessment(evidenceByDevice[deviceIndex],
+          configuration.find((item) => item?.deviceIndex === deviceIndex), now),
+      })),
     };
   });
   let platform = 'unknown';
@@ -100,7 +107,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     discovery = homey?.app?.getStreamDiscoveryEvidence?.();
   } catch { /* No private exception text. */ }
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,

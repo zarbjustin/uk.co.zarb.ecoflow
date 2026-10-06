@@ -42,6 +42,13 @@ function count(value: unknown): number {
     && value <= MAX_DISCOVERY_DEVICES ? value : 0;
 }
 
+function requiredProductEvidence(hint: string): string[] {
+  let scope = ['measurement_scope'];
+  if (hint.startsWith('expansion_')) scope = ['host_inclusion', 'capacity_units'];
+  if (hint === 'stream_3000') scope = ['model_specific_adapter', 'energy_direction'];
+  return ['model_identity', 'masked_telemetry', ...scope, 'hardware_validation'];
+}
+
 /** Strict public projection, including when the app getter is missing or malformed. */
 export function streamDiscoverySnapshot(input: any, now: number): Record<string, unknown> {
   const observedAt = typeof input?.observedAt === 'number' && Number.isFinite(input.observedAt)
@@ -78,6 +85,13 @@ export function streamDiscoverySnapshot(input: any, now: number): Record<string,
     invalidRecordCount: observedAt === null ? 0 : count(input?.invalidRecordCount),
     truncated: observedAt !== null && input?.truncated === true,
     groups,
+    productResearch: [...new Set(groups.map((group) => group.productHint).filter((hint) => hint !== 'none'))].map((hint) => ({
+      productHint: hint,
+      status: 'identity_and_hardware_evidence_pending',
+      pairingEnabled: false,
+      contributesToEnergy: false,
+      requiredEvidence: requiredProductEvidence(hint),
+    })),
   };
 }
 
