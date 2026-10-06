@@ -20,6 +20,10 @@ Test remains v1.10.21 / build 36; no production or installation changes.
    subscription source, not proven whole-installation limits. Expired or missing
    values clear. Two conditions check reported mode/reserve-enabled state;
    missing/stale evidence throws, including for inverted conditions.
+   Existing widgets consume the fresh reported mode/limits, honour reserve enable
+   state and suppress stale power. Usable-energy/runtime estimates remain unknown
+   if the reserve state or discharge floor is missing; installed capacity still
+   requires the user's setting, not inferred pack counts or mAh.
 3. **Observed physical accessories:** direct MPPT total/strings and backup-socket
    watts are added only to physical-unit monitors, on the first positive valid
    observation. Zero alone does not identify an installed accessory. Once added,

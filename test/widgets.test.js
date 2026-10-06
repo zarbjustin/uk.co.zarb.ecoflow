@@ -38,6 +38,45 @@ function homey(streamDevices, unitDevices = [], stream5000Systems = []) {
   };
 }
 
+test('5000 widgets consume fresh reported settings and honour reserve enabled state', () => {
+  const aggregate = device('five', '5000 Home Battery', { capabilities: { measure_battery: 80, measure_power: -400 },
+    settings: { installed_capacity_kwh: 5, discharge_efficiency_percent: 100 } });
+  let enabled = true;
+  aggregate.getConfigurationDiagnostics = () => ({ source: 'captured_app_protocol', values: {
+    mode: { value: 'custom', stale: false }, maxChargeSocPct: { value: 95, stale: false },
+    minDischargeSocPct: { value: 10, stale: false }, backupReservePct: { value: 30, stale: false },
+    backupReserveEnabled: { value: enabled, stale: false },
+  } });
+  const report = streamData(homey([], [], [aggregate]));
+  assert.equal(report.mode, 'custom');
+  assert.equal(report.chargeLimit, 95);
+  assert.equal(report.usableEnergyKwh, 2.5);
+  enabled = false;
+  assert.equal(streamData(homey([], [], [aggregate])).usableEnergyKwh, 3.5);
+  enabled = null;
+  assert.equal(streamData(homey([], [], [aggregate])).usableEnergyKwh, null);
+});
+
+test('5000 widget settings and power fail closed when stale, absent or diagnostics fail', () => {
+  const aggregate = device('five', '5000 Home Battery', { capabilities: { measure_battery: 80, measure_power: -400 },
+    settings: { installed_capacity_kwh: 5 } });
+  aggregate.getConfigurationDiagnostics = () => ({ source: 'captured_app_protocol', values: {
+    mode: { value: 'custom', stale: true }, backupReserveEnabled: { value: true, stale: true },
+    backupReservePct: { value: 30, stale: true }, minDischargeSocPct: { value: 10, stale: false },
+  } });
+  aggregate.getReadingDiagnostics = () => ({ measure_power: { stale: true } });
+  let report = streamData(homey([], [], [aggregate]));
+  assert.equal(report.battery, null);
+  assert.equal(report.mode, null);
+  assert.equal(report.usableEnergyKwh, null);
+  assert.equal(report.timeToEmpty, null);
+  aggregate.getConfigurationDiagnostics = () => { throw new Error('PRIVATE'); };
+  aggregate.getReadingDiagnostics = () => { throw new Error('PRIVATE'); };
+  report = streamData(homey([], [], [aggregate]));
+  assert.equal(report.soc, null);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('streamData selects a stable widget device id with index fallback', () => {
   const devices = [device('one', 'First'), device('two', 'Second')];
   assert.equal(streamData(homey(devices), { deviceId: 'two' }).name, 'Second');

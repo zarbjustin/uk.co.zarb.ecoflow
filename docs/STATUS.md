@@ -7,7 +7,8 @@
 **Latest development increment:** [ecosystem wave](STREAM_5000_ECOSYSTEM_WAVE.md)
 integrates per-reading expiry, restart clearing, read-only settings/Flow conditions,
 observed physical MPPT/socket tiles and stale-gap Energy re-anchoring. Local tests
-pass 370 cases; runtime observation is not hardware acceptance. Model identities,
+pass 372 cases; widgets use fresh reported settings and conservative reserve
+estimates. Runtime observation is not hardware acceptance. Model identities,
 saved counters and installation-only Homey Energy roles are preserved. Controls,
 automatic consolidation and new product adapters remain gated. No publication.
 

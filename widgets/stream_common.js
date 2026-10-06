@@ -24,10 +24,16 @@ function boundedNumber(value, min, max, fallback = null) {
 }
 
 function cap(device, id) {
+  try {
+    if (device.getReadingDiagnostics?.()?.[id]?.stale === true) return null;
+  } catch { return null; }
   return finite(device.getCapabilityValue(id));
 }
 
 function textCap(device, id) {
+  try {
+    if (device.getReadingDiagnostics?.()?.[id]?.stale === true) return null;
+  } catch { return null; }
   const value = device.getCapabilityValue(id);
   return value == null ? null : String(value);
 }
@@ -144,14 +150,26 @@ function streamData(homey, query = {}) {
   const solar = cap(d, 'measure_power.pv');
   const home = cap(d, 'measure_power.load');
   const soc = cap(d, 'measure_battery');
-  const backupReserve = cap(d, 'backup_reserve_soc');
-  const dischargeLimit = cap(d, 'discharge_limit');
+  const is5000 = typeof d.getConfigurationDiagnostics === 'function';
+  let configuration;
+  try { configuration = d.getConfigurationDiagnostics?.(); } catch { /* Unknown, no private errors. */ }
+  const reported = (key) => {
+    const entry = configuration?.source === 'captured_app_protocol' ? configuration.values?.[key] : null;
+    return entry?.stale === false ? entry.value : null;
+  };
+  const backupReserve = is5000 ? percentage(finite(reported('backupReservePct'))) : cap(d, 'backup_reserve_soc');
+  const dischargeLimit = is5000 ? percentage(finite(reported('minDischargeSocPct'))) : cap(d, 'discharge_limit');
+  const reserveEnabled = reported('backupReserveEnabled');
+  let reserveForEstimate = backupReserve;
+  if (is5000 && reserveEnabled === false) reserveForEstimate = 0;
+  if (is5000 && reserveEnabled !== true && reserveEnabled !== false) reserveForEstimate = null;
+  const floorKnown = !is5000 || (reserveForEstimate != null && dischargeLimit != null);
   const dischargeRemaining = cap(d, 'discharge_remaining');
   const energy = calculateEnergy({
     capacityKwh: setting(d, 'installed_capacity_kwh'),
     soc,
-    backupReserve,
-    dischargeLimit,
+    backupReserve: floorKnown ? reserveForEstimate : null,
+    dischargeLimit: floorKnown ? dischargeLimit : null,
   });
   const efficiency = efficiencyPercent(setting(d, 'discharge_efficiency_percent'));
   const runtime = selectRuntime({
@@ -175,10 +193,11 @@ function streamData(homey, query = {}) {
     batteryDischarge: battery == null ? null : Math.max(0, -battery),
     soc,
     state: textCap(d, 'battery_charging_state'),
-    mode: textCap(d, 'operating_mode'),
+    mode: is5000 ? (['self_powered', 'intelligent_plus', 'custom'].includes(reported('mode')) ? reported('mode') : null)
+      : textCap(d, 'operating_mode'),
     feedIn: d.getCapabilityValue('feed_in_control') === true,
     backupReserve,
-    chargeLimit: cap(d, 'charge_limit'),
+    chargeLimit: is5000 ? percentage(finite(reported('maxChargeSocPct'))) : cap(d, 'charge_limit'),
     dischargeLimit,
     chargeRemaining: cap(d, 'charge_remaining'),
     dischargeRemaining,
