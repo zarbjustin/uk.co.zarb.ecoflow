@@ -97,6 +97,61 @@ No new community reply or command was sent during this branch preparation. The
 current release already exposes read-only configuration with receipt-only ordering;
 late cloud observations must not be treated as authoritative command verification.
 
+### Sprint 4A–6 offline implementation — 6 October
+
+`test/helpers/streamNextWaveResearch.js` and `test/streamNextWaveResearch.test.js`
+implement the safe research portion of this wave. They are test-only, with no app
+import, transport, full routed command envelope, credentials or Homey registration.
+This does not replace build 36, enable controls, change the supported-model registry
+or modify existing pairing/counters/Energy roles.
+
+- **4A:** reproduce the grid-input payload byte-for-byte against all four public
+  masked ES22 app writes (1200, 2200, 2600 and 2500 W). Reject acknowledgements as
+  write evidence and reject output/unknown companion fields. The observed 2600 W
+  write is a replay case, not permission to set that power. No input ceiling is
+  proven. ES21 input, total charging caps and scheduled charging actuation remain
+  unverified; the review ledger always keeps controls disabled.
+- **5:** exercise explicit reported-system grouping with internal synthetic IDs,
+  consistent member lists and freshness. Reject incomplete, stale/future,
+  conflicting, duplicate, truncated and cross-system-overlap cases. Independent
+  installations stay separate. Account proximity and matching SOC do not group
+  anything. Output uses record-local indices, not serials. Even consistent
+  evidence permits only manual review, never automatic merge, capacity addition
+  or SOC averaging. This input contract is a research harness, not a newly
+  discovered EcoFlow endpoint; anonymous runtime reports alone cannot fill it.
+- **6:** product-specific evidence checklists for Expansion 5000/3000, STREAM 3000,
+  Gateway and Dual CT. Host-inclusion/capacity units are required for expansions;
+  measurement scope for Gateway/meters; a model-specific adapter and energy
+  direction for a 3000 host. Hints cannot enable pairing. Even a completed
+  checklist produces manual admission review only, not a new Energy source.
+- **4B preparation:** a simulation-only BYD-priority policy tests SOC hysteresis,
+  dwell/cooldown, missing/stale/future inputs, clock resets, manual-controller
+  ownership and opposing signed battery flows. Default research thresholds are
+  start 98%, stop 97%, one-minute dwell/cooldown and one-minute maximum input age;
+  these are configurable test choices, not manufacturer guidance. The output is
+  a review candidate, not a charging command or proof of available solar surplus.
+  No third-party credentials, integration, live controller or tariff schedule is
+  introduced. Stale inputs revoke the recommendation but cannot physically stop
+  a battery; recovery behaviour still needs its own verified control contract.
+
+Upstream `main` still resolves to pinned commit
+`6f3c327fcd3bc2cdd22b7c006bb4d19607ef7e61`. The source
+[command implementation](https://github.com/shuette42/ecoflow-energy-ha/blob/6f3c327fcd3bc2cdd22b7c006bb4d19607ef7e61/custom_components/ecoflow_energy/ecoflow/stream_ac5000_commands.py)
+and [model guidance](https://github.com/shuette42/ecoflow-energy-ha/blob/6f3c327fcd3bc2cdd22b7c006bb4d19607ef7e61/documentation/entities/stream-ac-5000.md)
+were checked again. They distinguish configuration acknowledgements, stored
+readback and measured behaviour. Scheduled charging has contrary physical-power
+evidence despite matching readback; schedule replacement can conflict with the
+EcoFlow app scheduler. Do not implement a whole-day schedule overwrite as a
+generic charging cap. The checked upstream tree contains no dedicated
+3000/Gateway/expansion implementation to adopt; that is not proof none exists
+elsewhere. The official portal's supplied document could not be retrieved by the
+web reader this turn, so no fresh official contract validation is claimed.
+
+Acceptance still needs model-specific safe limits, zero semantics, control scope,
+fresh readback correlation, actual power response, manual recovery and host/pack
+captures. Sprint 4B runtime policy integration is not implemented here. These offline
+tests are preparation, not completion of the hardware-dependent Sprints 4–6.
+
 ### Configuration/socket follow-up wave (6 October, v1.10.21 / build 36 / Test)
 
 This six-sprint wave supersedes the next-priority ordering, not the release

@@ -11,6 +11,15 @@ reply 33 adds BYD-priority and anti-reciprocal-charging requirements; see the
 the Test baseline. This preparation changes documentation only, not runtime,
 5000 controls, Energy roles or production. Keep focused release hotfixes separate.
 
+Sprint 4A–6 research preparation now adds test-only ES22 input-payload replay,
+explicit-system topology review and new-product evidence gates. There is no
+runtime import, routed writer or new pairing admission. See the roadmap's offline
+implementation section for verified source pointers and remaining acceptance.
+The simulation-only coordination policy adds stale-input rejection, SOC
+hysteresis and opposing-flow checks. Local verification passes 351 tests, lint,
+full audit (zero vulnerabilities) and whitespace checks. Hardware-dependent
+completion of Sprints 4–6 remains open; no build/version or channel change.
+
 **Latest Test release: v1.10.21 / build 36**, published on 6 October 2026 from
 `codex/stream-next-wave-test`. The socket/configuration wave below is now in Test.
 Implementation: `4997c1f9edcf1d4cc05951e25908a842c5b45f9f`; store guidance:
