@@ -1,7 +1,12 @@
-# STREAM 5000 ecosystem wave — development candidate
+# STREAM 5000 ecosystem wave
 
-6 October 2026, `codex/stream-charging-coordination`. Not published. Community
-Test remains v1.10.21 / build 36; no production or installation changes.
+Implemented 6 October 2026 on `codex/stream-charging-coordination`; subsequently
+merged into GitHub `master`. Release handover updated 7 October: this wave and
+the original STREAM bug bash are published to **Test v1.10.22 / build 37**.
+Exact-version CI and Homey validation passed; Test publication was confirmed in
+the developer portal. See [release evidence](STATUS.md). Production remains
+v1.10.3 / build 18. Hardware acceptance remains open; no live commands or
+installation changes were performed as part of the release.
 
 ## Software integrated
 

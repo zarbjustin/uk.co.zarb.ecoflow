@@ -1,8 +1,10 @@
 # Original STREAM API review and bug bash
 
 Reviewed 6 October 2026. Development branch: `codex/original-stream-bug-bash`,
-starting at `9c81abc` (now also GitHub master). No device command, live Flow,
-schedule, main merge or Homey publication was performed in this review.
+starting at `9c81abc`. The review itself sent no device commands and changed no
+live Flows or schedules. Release handover updated 7 October: implementation
+`7a2c551` is merged into GitHub `master` and published to Test as **v1.10.22 /
+build 37**, version/tag `a3c8c25`. Production remains v1.10.3 / build 18.
 
 ## Live account checks and online sources
 
@@ -87,13 +89,15 @@ vulnerabilities. Diff whitespace checks pass. Tests cover malformed transport,
 cache retirement, aggregate/unit scope, socket targets/layout, unapplied commands,
 fresh reserve planning, teardown cancellation and history recovery.
 
-Homey CLI is not installed in this shell. New-branch GitHub CI/Homey packaging
-validation has not run; passing CI on the earlier main commit is not validation
-of these changes. This branch is not published or merged into main.
+Homey CLI is not installed in this shell. GitHub CI/Homey validation passed for
+the implementation and again for the exact release version:
+[v1.10.22 validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37532011154).
+The upload workflow passed and build 37 was separately published to Test in the
+Homey portal. See [current handover](STATUS.md). This is software/package and
+channel evidence, not hardware control acceptance.
 
-Next checks before a Test release:
+Remaining checks during Test validation:
 
-- Run exact-commit CI/Homey validation after an authorized GitHub push.
 - Compare aggregate SOC, charging/discharging and controls with time-aligned
   original STREAM app readings. Readback proves reported settings, not physical
   response; manual recovery and multi-controller behaviour remain acceptance gates.

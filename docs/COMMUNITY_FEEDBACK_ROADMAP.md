@@ -1,12 +1,26 @@
 # Current development roadmap — community feedback and STREAM 5000
 
-Updated: 6 October 2026. This is the current priority order; older sprint documents
+Updated: 7 October 2026. This is the current priority order; older sprint documents
 remain historical records. Local implementation, automated verification, hardware
 validation and store deployment are separate milestones.
 
-**Latest release:** v1.10.21 / build 36 / Test includes the socket/configuration
-Sprints 1–2. Sprint 3 Test publication is complete; hardware acceptance remains
-open. See the six-sprint table below for current priorities.
+**Latest release:** v1.10.22 / build 37 / Test includes the ecosystem wave and
+original STREAM bug bash, now merged into GitHub `master`. Exact-version CI/Homey
+validation and Test publication passed. Production remains v1.10.3 / build 18.
+See [current release handover](STATUS.md). Hardware acceptance remains open.
+
+[Community post 34](https://community.homey.app/t/157399/34) announces the release;
+[post 35](https://community.homey.app/t/157399/35) requests Robert's linked battery
+models, combined/individual screenshots, diagnostics and available Fronius/BYD
+readings/controls. Both were publicly verified on 7 October. Await the response;
+do not duplicate the request. BYD-priority/anti-reciprocal charging remains an
+unimplemented live-control use case. Advisory policy code is not actuation.
+
+Next priorities: real-installation soak/readings, authoritative mixed-generation
+boundaries, whole-system charging semantics and original-series freshness/history
+follow-ups. Controls and additional product adapters remain evidence-gated.
+Older local/unpublished statements below record earlier implementation stages
+and are superseded by this release status.
 
 **Earlier 6 October release update:** the combined Sprint 1–5/ES21 work below is published
 as **v1.10.19 / build 34 / Test** on `codex/stream-next-wave-test`. Earlier

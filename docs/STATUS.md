@@ -2,7 +2,74 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Current handover — 6 October 2026
+## Current handover — 7 October 2026
+
+**Latest Test release: v1.10.22 / build 37.** Published to Homey Test on
+6 October 2026; the developer portal confirmed “Your app is currently available
+for testing.” Production remains **v1.10.3 / build 18 / Live**. No certification
+submission, live-hub installation or physical control acceptance was performed.
+
+- GitHub default branch is `master`, not `main`. Both the ecosystem wave and
+  original STREAM bug bash are merged there. Implementation tip: `7a2c551`;
+  version/tag: `a3c8c25e76851d0e8b2dbde2bcff08b5bff6e0a0` / `v1.10.22`.
+- [Version workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37531769282),
+  [exact-version CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37532011154)
+  and [upload workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37532286444)
+  passed. Exact-version CI includes tests, lint, dependency audit and Homey
+  validation. Upload created build 37; publishing its draft to Test was a
+  separate, verified browser action.
+- [Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+  Existing IDs, pairings and cumulative counters are preserved. No re-pair is
+  required. Home Battery remains the installation's Homey Energy contributor;
+  physical-unit monitors remain excluded to prevent double counting.
+- Release includes per-reading 5000 expiry/restart clearing, read-only reported
+  settings and Flow conditions, observed physical MPPT/backup-socket monitoring,
+  stale-gap energy re-anchoring, widget freshness/estimates, and the original
+  STREAM aggregate/unit, socket routing, command readback, transport and history
+  fixes. See [ecosystem wave](STREAM_5000_ECOSYSTEM_WAVE.md) and
+  [bug bash](ORIGINAL_STREAM_BUG_BASH.md).
+- [Community update, post 34](https://community.homey.app/t/157399/34) and
+  [reply to Robert, post 35](https://community.homey.app/t/157399/35) were publicly
+  verified on 7 October. They request model details, paired EcoFlow/Homey
+  screenshots, diagnostics and Fronius/BYD integration/control information.
+  Do not send duplicate follow-ups while awaiting a response.
+
+### Open acceptance and next work
+
+1. Compare ES21/ES22 and original STREAM readings on real installations: charge,
+   discharge, idle, backup socket, restart/reconnect and a 24–48-hour soak.
+   Review socket Flows on Max, AC and unidentified models after capability fixes.
+2. Robert's requested BYD-first charging policy is **not implemented as an
+   actuator**. `/coordination-preview` is stateless advisory preparation; it
+   does not read devices, send commands or coordinate either battery system.
+   Establish reliable BYD/grid inputs, actual linked models and whole-system
+   charge inhibition before designing a live controller. A grid-input limit is
+   not proof that all STREAM charging has stopped.
+3. Mixed-generation membership, combined SOC/capacity and per-unit boundaries
+   need already-linked hardware evidence. Do not automatically merge systems.
+4. 5000 commands and Expansion/Gateway/3000 pairing remain evidence-gated.
+   REST readback or automated tests do not prove physical response.
+5. Original-series per-reading freshness, empty-quota availability and history
+   timezone/granularity remain focused follow-ups. Do not turn missing data into
+   zero or silently backfill cumulative meters from historical totals.
+
+### Checkout and privacy handover
+
+Active checkout: `work/uk.co.zarb.ecoflow-energy`, branch
+`codex/original-stream-bug-bash`. Sync this branch and remote `master` normally;
+never force-push to resolve divergence. The separate `uk.co.zarb.ecoflow-icon`
+worktree has an older local `master` with local commits: preserve it, and do not
+reset it to the remote release. Fetch and inspect before any cross-device merge.
+
+Credentials, full serials, raw account responses, private diagnostics and browser
+sessions must stay out of Git. This handover contains project knowledge only,
+not a copy of the user's private memory store. Future releases must use the
+version workflow, exact-version green CI, upload, then verified Test publication.
+
+## Historical implementation and release records — 6 October 2026
+
+The entries below describe earlier stages. Unpublished/pending wording is
+superseded by the current release handover above, not a current release status.
 
 **Original-series bug-bash candidate:** [API review and fixes](ORIGINAL_STREAM_BUG_BASH.md)
 on `codex/original-stream-bug-bash` follows the ecosystem wave's merge into GitHub
