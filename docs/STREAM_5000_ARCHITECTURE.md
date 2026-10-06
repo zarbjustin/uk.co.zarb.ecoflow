@@ -9,10 +9,14 @@ monitor. The deprecated `stream_ac5000` ID has the same optional physical-unit r
 
 Current verified support is deliberately narrower than the product catalogue:
 
+Here, verified means corroborated identity/core telemetry, not completed Homey
+hardware acceptance. See [model evidence and release gates](STREAM_MODEL_COVERAGE.md).
+
 | Product | Serial evidence | Telemetry adapter | Pairable |
 |---|---|---|---|
 | STREAM AC 5000 | `ES22` | `es22` | Yes: one installation aggregate and an optional unit monitor |
-| STREAM 5000 | Community captures identify `ES21`; not admitted here | None registered | No |
+| STREAM 5000 | `ES21`, corroborated public masked captures | Dedicated `es21` core-monitoring adapter | Local opt-in beta; Homey hardware acceptance still open |
+| STREAM 3000 | Not yet verified | None | No |
 | STREAM Expansion Battery 5000 | Not yet verified | None | No |
 | STREAM Gateway | Not yet verified | None | No; likely a separate functional driver |
 
@@ -33,17 +37,24 @@ Unknown prefixes must remain absent from pairing even when their names contain
   existing device.
 - `lib/Stream5000UnitDevice.ts` owns transport-independent lifecycle,
   availability, role-specific capability application and cross-driver credential cleanup.
-- Model-specific protocol code remains isolated. ES22 continues to use
-  `streamAc5000Protocol`, `streamAc5000Mapping` and `streamAc5000Diagnostics`.
+- ES21 and ES22 have explicit runtime adapters. They share the corroborated
+  decoder/mapping subset in historically named `streamAc5000*` modules, not
+  control support or automatic admission for another model.
+- `streamPv5000Research.ts` is an ES21-only offline research adapter. It shares
+  only the capture-corroborated decoder subset, not model admission. ES21 core
+  monitoring is separately admitted in the runtime registry. Research
+  candidates in `stream5000Capabilities.ts` are not runtime Homey capabilities.
+  See [Sprint 3 admission evidence and gates](SPRINT_3_CAPABILITIES_STATUS.md).
 
 The model registry and adapter registry are intentionally separate. Adding a
 serial prefix without a registered parser is a build-time/code-review error;
-reusing the ES22 parser for an unverified product is not permitted.
+using the ES22 runtime adapter as a fallback for an unverified product is not
+permitted. Explicit offline capture research does not bypass admission.
 
 ## Driver policy
 
 - `stream_5000_system`: one Homey Energy Home Battery per verified 5000-family
-  installation. Pairing identity is still anchored to an ES22 serial, not a
+  installation. Pairing identity is still anchored to an admitted unit serial, not a
   proven group/gateway identifier. Linked-unit captures now demonstrate system
   totals: **do not pair an aggregate for every member of the same installation**.
   Sprint 2 must establish stable membership/deduplication before mixed-generation
@@ -102,7 +113,9 @@ of also integrating power. Never combine both sources for the same interval.
 
 ## Adding a product safely
 
-Complete all of the following before exposing another model:
+Local opt-in beta admission requires corroborated identity and telemetry plus
+the software checks below. Hardware acceptance must be recorded separately;
+complete all gates before promoting another model as validated support:
 
 1. Capture the app API device-list entry and establish an exact serial prefix.
    Remove account identifiers and all but a short serial suffix from evidence.

@@ -11,9 +11,9 @@
     "nl": "Batterij nu vrijgeven voor teruglevering"
   },
   "hint": {
-    "en": "Lowers the discharge limit and backup reserve to the minimum (in the correct order, avoiding EcoFlow error 8524) and enables grid feed-in, so the battery discharges/exports immediately — e.g. at the start of a peak-price window.",
-    "de": "Senkt Entladegrenze und Notstromreserve auf das Minimum (in der richtigen Reihenfolge, um EcoFlow-Fehler 8524 zu vermeiden) und aktiviert die Netzeinspeisung, damit die Batterie sofort entlädt/einspeist – z. B. zu Beginn eines Spitzenpreis-Zeitfensters.",
-    "nl": "Verlaagt de ontlaadlimiet en back-upreserve naar het minimum (in de juiste volgorde, om EcoFlow-fout 8524 te vermijden) en schakelt teruglevering aan het net in, zodat de batterij direct ontlaadt/teruglevert — bijv. aan het begin van een piektariefvenster."
+    "en": "Sets reserve to 3%, lowers the discharge limit first when required, and permits grid feed-in. Each setting is read back; physical export is not guaranteed. Review previous settings before restoring them.",
+    "de": "Setzt die Reserve auf 3 %, senkt bei Bedarf zuerst die Entladegrenze und erlaubt Netzeinspeisung. Jede Einstellung wird zurückgelesen; tatsächliche Einspeisung ist nicht garantiert. Vor dem Wiederherstellen vorherige Einstellungen prüfen.",
+    "nl": "Stelt de reserve op 3% in, verlaagt indien nodig eerst de ontlaadlimiet en staat teruglevering toe. Elke instelling wordt teruggelezen; fysieke teruglevering is niet gegarandeerd. Controleer eerdere instellingen vóór herstel."
   },
   "args": [
     {

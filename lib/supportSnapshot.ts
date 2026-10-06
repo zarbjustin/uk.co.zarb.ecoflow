@@ -1,6 +1,10 @@
 'use strict';
 
 import { isStream5000BetaEnabled } from './stream5000Beta';
+import { streamDiscoverySnapshot } from './streamDiscovery';
+import {
+  readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
+} from './streamTopology';
 
 const DRIVER_ROLES = {
   stream: 'installation_energy',
@@ -46,9 +50,11 @@ function accountingSnapshot(device: any): Record<string, unknown> | null {
   }
 }
 
-/** Read-only, local support evidence. No cloud requests, secrets, names or serials. */
+/** Read-only local evidence: no cloud requests, secrets, names or full serials (prefixes only). */
 export function createSupportSnapshot(homey: any): Record<string, unknown> {
   const manifest = homey?.manifest || homey?.app?.manifest || {};
+  const now = Date.now();
+  const aggregates: StreamAggregateEvidence[] = [];
   const drivers = Object.entries(DRIVER_ROLES).map(([id, role]) => {
     const entry = Array.isArray(manifest.drivers) ? manifest.drivers.find((candidate: any) => candidate.id === id) : undefined;
     let registered = false;
@@ -61,6 +67,11 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     } catch {
       // Report absence without returning exception text or private identifiers.
     }
+    const topology = devices.map((device, deviceIndex) => {
+      const evidence = readStreamTopologyEvidence(device);
+      if (role === 'installation_energy') aggregates.push({ driverId: id, deviceIndex, evidence });
+      return { deviceIndex, ...streamTopologySnapshot(evidence, now) };
+    });
     return {
       id,
       role,
@@ -69,16 +80,23 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       registered,
       pairedCount: devices.length,
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
+      topology,
     };
   });
   let platform = 'unknown';
   if (homey?.platform === 'cloud' || homey?.platform === 'local') platform = homey.platform;
+  let discovery = null;
+  try {
+    discovery = homey?.app?.getStreamDiscoveryEvidence?.();
+  } catch { /* No private exception text. */ }
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,
     betaPairingEnabled: isStream5000BetaEnabled(homey),
     drivers,
+    installationTopology: streamAggregateOverlapSnapshot(aggregates, now),
+    streamDiscovery: streamDiscoverySnapshot(discovery, now),
   };
 }

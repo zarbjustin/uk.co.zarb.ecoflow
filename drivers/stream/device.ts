@@ -7,18 +7,30 @@ import {
   EnergyAccountingDiagnostic, MAX_GAP_MS,
 } from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
-import { StreamCmd, OperatingMode, backupReserveSequence } from '../../lib/streamProtocol';
+import { OperatingMode } from '../../lib/streamProtocol';
+import {
+  executeStreamControl, readStreamControlState, StreamControlIntent, StreamControlFailure,
+} from '../../lib/streamControls';
+import { currentPriceIsFresh } from '../../lib/automationSafety';
+import { aboveBelow } from '../../lib/thresholds';
 import { fetchDailyEnergy, DailyEnergy } from '../../lib/streamHistory';
 import { fetchSolarRadiation, toForecast } from '../../lib/solarForecast';
 import { powerDirection, PowerDirection, startedDirection } from '../../lib/flowStates';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 import { DeveloperApiQuarantineError } from '../../lib/developerApiCompatibility';
+import { StreamTopologyEvidence } from '../../lib/streamTopology';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
+type ControlWaitResolver = () => void;
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
+  private controlStopped = false;
+  private controlGeneration = 0;
+  private controlWarning = false;
+  private controlWaits = new Map<NodeJS.Timeout, ControlWaitResolver>();
+  private priceUpdatedAt = 0;
 
   /**
    * Daily-history capabilities and their titles. These are NOT declared on the
@@ -69,11 +81,27 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return this.getData().sn;
   }
 
+  /** Address cached at init, not a live membership lookup or cross-generation identity. */
+  getTopologyEvidence(): StreamTopologyEvidence {
+    return {
+      source: 'bk_main_address',
+      addressSn: this.mainSn,
+      peers: [],
+      maxReportedRecordCount: 0,
+      lastPeerRecordAt: null,
+      systemSocObserved: false,
+      truncated: false,
+    };
+  }
+
   protected handlesStatus(): boolean {
     return true;
   }
 
   protected async onReady(): Promise<void> {
+    this.controlGeneration += 1;
+    this.controlStopped = false;
+    this.priceUpdatedAt = 0;
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     const storedWh = (key: string) => {
       const value = toFiniteNumber(this.getStoreValue(key));
@@ -208,50 +236,60 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private registerControlListeners(): void {
-    this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.send(StreamCmd.feedIn(this.mainSn, v)));
+    this.registerCapabilityListener('feed_in_control', async (v: boolean) => this.flowSetFeedIn(v));
     this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.applyBackupReserve(v));
-    this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.send(StreamCmd.operatingMode(this.mainSn, v)));
-    this.registerCapabilityListener('charge_limit', async (v: number) => this.send(StreamCmd.chargeLimit(this.mainSn, v)));
-    this.registerCapabilityListener('discharge_limit', async (v: number) => this.send(StreamCmd.dischargeLimit(this.mainSn, v)));
+    this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.flowSetOperatingMode(v));
+    this.registerCapabilityListener('charge_limit', async (v: number) => this.flowSetChargeLimit(v));
+    this.registerCapabilityListener('discharge_limit', async (v: number) => this.flowSetDischargeLimit(v));
   }
 
-  /** Send a STREAM set command and refresh state shortly after. */
-  private async send(payload: Record<string, any>): Promise<void> {
-    await this.writeQuota(payload);
-    this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
-  }
-
-  /**
-   * Apply a backup-reserve target safely. EcoFlow rejects a reserve that does not
-   * exceed the discharge limit by ~3 (error 8524) — a silent no-op via the flow
-   * layer — so the discharge limit is lowered first when needed, then the reserve
-   * is set and VERIFIED against the device (surfacing an otherwise-swallowed
-   * failure). Optional extra commands (e.g. feed-in) are appended to the sequence.
-   */
-  protected async applyBackupReserve(targetSoc: number, extra: Record<string, any>[] = []): Promise<void> {
-    const currentLimit = toFiniteNumber(this.getCapabilityValue('discharge_limit'));
-    const seq = backupReserveSequence(this.mainSn, targetSoc, currentLimit);
-    await this.sendSequence('Set backup reserve', [...seq.commands, ...extra]);
-    if (seq.newDischargeLimit !== undefined) {
-      await this.setCapabilityValue('discharge_limit', seq.newDischargeLimit).catch(() => {});
-    }
-    await this.verifyReserve(seq.reserve);
-  }
-
-  /** Poll and confirm the device actually accepted the reserve; throw if not. */
-  private async verifyReserve(target: number): Promise<void> {
-    await new Promise<void>((resolve) => {
-      this.homey.setTimeout(resolve, 1500);
+  private waitForControlReadback(): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = this.homey.setTimeout(() => {
+        this.controlWaits.delete(timer);
+        resolve();
+      }, 1500);
+      this.controlWaits.set(timer, resolve);
     });
-    await this.poll();
-    const applied = toFiniteNumber(this.getCapabilityValue('backup_reserve_soc'));
-    if (applied === undefined || Math.abs(applied - target) > 2) {
-      throw new Error(
-        `EcoFlow did not apply the backup reserve (requested ${target}%, device reports `
-        + `${applied ?? 'unknown'}%). It must exceed the discharge limit by ~3%.`,
-      );
+  }
+
+  /** Fresh main-target state and readback for every command; no optimistic tiles. */
+  private async runControl(intent: StreamControlIntent): Promise<void> {
+    const target = this.mainSn || this.getData().sn;
+    const generation = this.controlGeneration;
+    const active = () => !this.controlStopped && !this.isShuttingDown()
+      && generation === this.controlGeneration
+      && target === (this.mainSn || this.getData().sn);
+    try {
+      await executeStreamControl(target, intent, {
+        active,
+        read: async () => readStreamControlState(await this.readControlQuota(target)),
+        write: (payload) => this.writeQuota(payload),
+        wait: () => this.waitForControlReadback(),
+        observed: async (state) => {
+          for (const [key, value] of Object.entries(state)) {
+            if (!active()) return;
+            if (this.hasCapability(key)) await this.setCapabilityValue(key, value);
+          }
+        },
+      });
+      if (active() && this.controlWarning) {
+        await this.setWarning(null).catch(() => {});
+        this.controlWarning = false;
+      }
+    } catch (error) {
+      if (error instanceof DeveloperApiQuarantineError) throw error;
+      if (active() && error instanceof StreamControlFailure) {
+        const previous = Object.entries(error.before).map(([key, value]) => `${key}=${value}`).join(', ');
+        await this.setWarning(error.message + (previous ? ` Previous reported settings: ${previous}.` : '')).catch(() => {});
+        this.controlWarning = true;
+      }
+      throw error;
     }
-    await this.setCapabilityValue('backup_reserve_soc', target).catch(() => {});
+  }
+
+  protected async applyBackupReserve(targetSoc: number): Promise<void> {
+    await this.runControl({ kind: 'reserve', value: targetSoc });
   }
 
   /** Availability + online/offline flow triggers (overrides the base). */
@@ -504,17 +542,35 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
    * device's `price_unit` setting.
    */
   async flowSetElectricityPrice(price: number): Promise<void> {
+    if (this.controlStopped || this.isShuttingDown()) throw new Error('Device is shutting down.');
+    if (typeof price !== 'number' || !Number.isFinite(price)) throw new Error('Electricity price must be a finite number.');
+    const generation = this.controlGeneration;
+    const unit = (this.getSetting('price_unit') as string) || 'p/kWh';
     const cap = 'tariff_price_now';
     if (!this.hasCapability(cap)) await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
-    const unit = (this.getSetting('price_unit') as string) || 'p/kWh';
     await this.setCapabilityOptions(cap, { units: { en: unit } }).catch(() => {});
-    await this.setCapabilityValue(cap, price).catch((e) => this.error('set price', e));
+    await this.setCapabilityValue(cap, price);
+    if (this.controlStopped || this.isShuttingDown() || generation !== this.controlGeneration
+      || unit !== ((this.getSetting('price_unit') as string) || 'p/kWh')) {
+      throw new Error('Electricity price update interrupted; send a fresh price for the current session and unit.');
+    }
+    this.priceUpdatedAt = Date.now();
+  }
+
+  priceIs(direction: 'above' | 'below', threshold: number): boolean {
+    const price = this.getCapabilityValue('tariff_price_now');
+    if (!currentPriceIsFresh(price, this.priceUpdatedAt)) throw new Error('Electricity price missing or older than 90 minutes; update it before running this Flow.');
+    if ((direction !== 'above' && direction !== 'below') || typeof threshold !== 'number' || !Number.isFinite(threshold)) {
+      throw new Error('Electricity price comparison needs a valid direction and finite threshold.');
+    }
+    return aboveBelow(price, direction, threshold);
   }
 
   /** Condition: current electricity price is negative (paid to consume). */
   priceIsNegative(): boolean {
     const p = this.getCapabilityValue('tariff_price_now');
-    return typeof p === 'number' && Number.isFinite(p) && p < 0;
+    if (!currentPriceIsFresh(p, this.priceUpdatedAt)) throw new Error('Electricity price missing or older than 90 minutes; update it before running this Flow.');
+    return p < 0;
   }
 
   async flowRefresh(): Promise<void> {
@@ -523,8 +579,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async flowSetOperatingMode(mode: OperatingMode): Promise<void> {
-    await this.send(StreamCmd.operatingMode(this.mainSn, mode));
-    await this.setCapabilityValue('operating_mode', mode).catch(() => {});
+    await this.runControl({ kind: 'mode', value: mode });
   }
 
   async flowSetBackupReserve(level: number): Promise<void> {
@@ -532,67 +587,42 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async flowSetFeedIn(on: boolean): Promise<void> {
-    await this.send(StreamCmd.feedIn(this.mainSn, on));
-    await this.setCapabilityValue('feed_in_control', on).catch(() => {});
+    await this.runControl({ kind: 'feed', value: on });
   }
 
   async flowSetChargeLimit(level: number): Promise<void> {
-    await this.send(StreamCmd.chargeLimit(this.mainSn, level));
-    await this.setCapabilityValue('charge_limit', level).catch(() => {});
+    await this.runControl({ kind: 'charge', value: level });
   }
 
   async flowSetDischargeLimit(level: number): Promise<void> {
-    await this.send(StreamCmd.dischargeLimit(this.mainSn, level));
-    await this.setCapabilityValue('discharge_limit', level).catch(() => {});
+    await this.runControl({ kind: 'discharge', value: level });
   }
 
   /**
    * Tariff helper — "prepare for cheap import": raise the backup-reserve target
-   * (which pulls a charge from the grid) and lift the charge limit to 100% so the
-   * battery fills during a cheap window (e.g. Octopus Agile low-price slots).
+   * and lift the charge limit to 100%. This is a policy, not a watt target or
+   * proof of grid charging; EcoFlow mode/schedule/grid limits still apply.
    */
   async flowPrepareCheapImport(reserve: number): Promise<void> {
-    await this.send(StreamCmd.chargeLimit(this.mainSn, 100));
-    await this.setCapabilityValue('charge_limit', 100).catch(() => {});
-    await this.applyBackupReserve(reserve);
+    await this.runControl({ kind: 'cheap_import', value: reserve });
   }
 
   /**
    * Tariff helper — "prepare for peak/export": drop the backup reserve so the
-   * battery is free to discharge, and enable grid feed-in so surplus is exported
-   * during a high-price window.
+   * battery may discharge, and enable grid feed-in permission. This does not
+   * guarantee physical export during a high-price window.
    */
   async flowPreparePeakExport(reserve: number): Promise<void> {
-    await this.applyBackupReserve(reserve, [StreamCmd.feedIn(this.mainSn, true)]);
-    await this.setCapabilityValue('feed_in_control', true).catch(() => {});
+    await this.runControl({ kind: 'peak_export', value: reserve });
   }
 
   /**
    * Tariff helper — "release battery for export now": drop the reserve (and, in
    * the correct 8524-safe order, the discharge limit) to the minimum and enable
-   * feed-in so the battery exports immediately (e.g. at the start of a peak window).
+   * feed-in. This permits export; it does not force an immediate physical flow.
    */
   async flowReleaseForExport(): Promise<void> {
-    await this.applyBackupReserve(3, [StreamCmd.feedIn(this.mainSn, true)]);
-    await this.setCapabilityValue('feed_in_control', true).catch(() => {});
-  }
-
-  private async sendSequence(label: string, payloads: Record<string, any>[]): Promise<void> {
-    let completed = 0;
-    try {
-      for (const payload of payloads) {
-        await this.writeQuota(payload);
-        completed += 1;
-      }
-      await this.setWarning(null).catch(() => {});
-      this.homey.setTimeout(() => this.poll().catch((e) => this.error('post-set poll', e)), 1500);
-    } catch (e: any) {
-      if (e instanceof DeveloperApiQuarantineError) throw e;
-      const message = `${label} partly applied (${completed}/${payloads.length} commands). Check device state.`;
-      await this.setWarning(message).catch(() => {});
-      this.homey.setTimeout(() => this.poll().catch((pollError) => this.error('post-set poll', pollError)), 1500);
-      throw new Error(`${message} ${e?.message || e}`);
-    }
+    await this.runControl({ kind: 'peak_export', value: 3 });
   }
 
   /** Battery SoC condition helper. */
@@ -603,6 +633,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {
+    // A cached numeric value in the old unit must not trigger a new-unit threshold.
+    if (changedKeys.includes('price_unit')) this.priceUpdatedAt = 0;
     if (changedKeys.includes('enable_history')) {
       if (this.historyTimer) {
         this.homey.clearInterval(this.historyTimer);
@@ -617,6 +649,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.controlStopped = true;
+    this.controlGeneration += 1;
+    for (const [timer, resolve] of this.controlWaits) {
+      this.homey.clearTimeout(timer);
+      resolve();
+    }
+    this.controlWaits.clear();
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
     if (this.solarForecastTimer) this.homey.clearInterval(this.solarForecastTimer);
     await this.energyCheckpoint?.flush();

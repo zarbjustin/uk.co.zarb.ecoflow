@@ -108,3 +108,20 @@ test('streamAc5000Devices keeps only ES22 units, sorted by serial', () => {
     ['ES22ZEB1ABCD0001', 'ES22ZEB1ABCD0002'],
   );
 });
+
+test('ES21 is discovered from bound/shared metadata without widening legacy or unknown pairing', () => {
+  const devices = normalizeAppDeviceList({
+    bound: { ES21TESTUNIT0001: { productName: '', online: 1 }, ES22TESTUNIT0002: { online: 1 } },
+    share: {
+      ES21TESTUNIT0001: { online: 0 },
+      ES21TESTUNIT0003: { deviceName: 'Roof battery', online: 1 },
+      ES23UNVERIFIED: { productName: 'STREAM 5000', online: 1 },
+      ZZ99UNVERIFIED: { productName: 'STREAM 3000', online: 1 },
+    },
+  });
+  assert.strictEqual(devices[0].name, 'STREAM 5000 (0001)');
+  assert.strictEqual(devices[0].shared, false);
+  assert.deepStrictEqual(stream5000Devices(devices).map((d) => d.sn),
+    ['ES21TESTUNIT0001', 'ES21TESTUNIT0003', 'ES22TESTUNIT0002']);
+  assert.deepStrictEqual(streamAc5000Devices(devices).map((d) => d.sn), ['ES22TESTUNIT0002']);
+});

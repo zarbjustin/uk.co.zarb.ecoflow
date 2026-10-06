@@ -3,6 +3,11 @@
 Prepared 4 October 2026. Research and validation only: this Test candidate does
 not group installations, admit new models or enable STREAM 5000 writes.
 
+Local follow-up on 5 October: [Sprint 2 discovery status](SPRINT_2_TOPOLOGY_STATUS.md)
+documents anonymous peer/overlap diagnostics and a fresh official/upstream review.
+These additions are not yet published. Observations remain unverified membership;
+the validation cases below still require actual installations.
+
 ## Evidence and intended experience
 
 [Plug-In Solar's first-hand report](https://www.pluginsolarexplained.co.uk/blog/ecoflow-stream-5000-ultra-x-linked-one-system/)
@@ -74,7 +79,12 @@ may enter the repository. Missing fields mean unknown, not zero.
   before any new controls. Electrical/phase/breaker protections remain managed
   by EcoFlow, not speculative Homey commands.
 
-## Tester request draft — not sent
+## Detailed tester request template
+
+The broader release/mixed-generation request is already published in
+[community post 29](https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/29).
+The following is a more detailed follow-up template, not a claim that it was
+sent verbatim or that testers completed the checklist.
 
 We are testing telemetry/accounting fixes first, without changing your pairing
 or automatically combining Homey batteries. If you already have original STREAM

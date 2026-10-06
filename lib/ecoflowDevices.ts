@@ -4,6 +4,7 @@ import {
   isStreamAc5000Sn, knownDeveloperApiRole,
 } from './deviceIdentity';
 import { EcoFlowDevice, Quota } from './types';
+import { isSupportedStream5000Sn } from './stream5000Models';
 
 /**
  * Logical role of an EcoFlow device bound to an account.
@@ -14,7 +15,8 @@ import { EcoFlowDevice, Quota } from './types';
  *    different protocol from the BK-series STREAM, reachable through the
  *    app-auth path. Never handled by the BK-series drivers.
  *  - unsupported_stream_5000: a new-generation STREAM AC 5000 / STREAM 5000
- *    identified by name but without the confirmed ES22 serial prefix. It must
+ *    identified by name but without a confirmed model/adapter. Also covers
+ *    unverified 3000/expansion/gateway products. It must
  *    not be offered through the Developer API drivers.
  *  - other:        anything else (e.g. PowerStream)
  */
@@ -36,7 +38,7 @@ function nameRole(name: string): EcoFlowRole | undefined {
   // includes compound catalogue names such as "STREAM Expansion Battery
   // 5000" as well as the platform gateway. A name alone never proves that a
   // device speaks the older BK-series Developer API protocol.
-  if (/stream/.test(n) && (/(?:^|\D)5000(?:\D|$)/.test(n) || /\bgateway\b/.test(n))) {
+  if (/stream/.test(n) && (/(?:^|\D)(?:5000|3000)(?:\D|$)/.test(n) || /\b(?:gateway|expansion)\b/.test(n))) {
     return 'unsupported_stream_5000';
   }
   if (/stream/.test(n)) return 'stream_unit';
@@ -73,9 +75,12 @@ export function classifyDevice(d: EcoFlowDevice, quota?: Quota): EcoFlowRole {
   if (byPrefix) return byPrefix;
 
   // The serial prefix is exact evidence and a product name is a substring
-  // guess, so an ES22 is settled before any name matching: "STREAM AC 5000"
+  // guess, so a registry model is settled before any name matching: "STREAM AC 5000"
   // contains "stream" and would otherwise be treated as a BK-series unit.
-  if (isStreamAc5000Sn(d.sn)) return 'stream_5000_unit';
+  if (isSupportedStream5000Sn(d.sn)) return 'stream_5000_unit';
+  // Defensive exclusion only, NOT evidence for a model or parser. An unknown
+  // ESxx must not inherit BK control support even with misleading names/quota.
+  if (/^ES\d{2}/i.test(d.sn || '')) return 'unsupported_stream_5000';
 
   const byName = nameRole(d.productName || '') || nameRole(d.deviceName || '');
   if (byName) return byName;

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * EXPERIMENTAL — protobuf telemetry parser for the EcoFlow STREAM AC 5000 (ES22).
+ * EXPERIMENTAL — shared corroborated STREAM AC 5000 (ES22) / STREAM 5000 (ES21) decoder.
  *
  * Despite the shared product name this is NOT the BK-series STREAM protocol:
  * an ES22 sends no `254/21` frame, its telemetry rides on `254/39`, and it
@@ -13,6 +13,9 @@
  * field map was derived from captures of live ES22 hardware. Only the subset of
  * fields that project verified against hardware or the EcoFlow app is mapped
  * here — nothing is inferred or guessed.
+ * Serial-keyed PV candidates additionally follow pinned ES21 public captures
+ * reviewed in Sprint 3. They are not admitted Homey capabilities; model admission
+ * and the separate ES21 runtime adapter are documented in STREAM_MODEL_COVERAGE.md.
  *
  * This module is pure: no network, no Homey APIs, no logging.
  */
@@ -53,7 +56,7 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
     'f11.1': { key: 'homeW', type: 'float', scale: HALF_WATT },
     'f11.5': { key: 'socPct', type: 'int', scale: 1 },
     'f11.7': { key: 'acSocketW', type: 'float', scale: HALF_WATT },
-    // Watts, not half-watts. Absent on units with no PV wired to the EcoFlow.
+    // Separate solar-system node, not the direct MPPT/string total. Watts.
     'f11.9': { key: 'solarW', type: 'float', scale: 1 },
     // --- flow matrix edges (watts) ---
     'f12.2': { key: '_mpptToBattW', type: 'float', scale: 1 },
@@ -305,18 +308,29 @@ export function decodeFrameHeaders(frame: Buffer): Es22FrameHeader[] {
   return headers;
 }
 
+/** Direct MPPT readings from one serial-keyed f50.1 entry, not f11.9. */
+export interface Stream5000PvTelemetry {
+  totalW?: number;
+  string1W?: number;
+  string2W?: number;
+  string3W?: number;
+  string4W?: number;
+}
+
 export interface Es22UnitTelemetry {
   socPct?: number;
   socPrecisePct?: number;
   /** f54.1.4, half-watts normalized to watts; direction is NOT verified. */
   batteryPowerRawW?: number;
+  /** Capture-derived candidates; not yet admitted to Homey capabilities. */
+  pv?: Stream5000PvTelemetry;
 }
 
 /** System totals and serial-keyed unit telemetry; these are different scopes. */
 export interface Es22Telemetry {
   /** Whole-home consumption (W). */
   homeW?: number;
-  /** Solar generation reported by the unit (W). */
+  /** Separate solar-system node (f11.9), NOT direct MPPT production (W). */
   solarW?: number;
   /** Installation state of charge (%) from f11.5 only. */
   socPct?: number;
@@ -403,6 +417,34 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   return out;
 }
 
+const PV_FIELDS: Readonly<Record<number, keyof Stream5000PvTelemetry>> = Object.freeze({
+  3: 'totalW', 9: 'string1W', 10: 'string2W', 11: 'string3W', 12: 'string4W',
+});
+// Public relayed captures round individual strings; do not infer their residual.
+const PV_TOTAL_SLACK_W = 2.5;
+
+function completePvEntry(pv: Stream5000PvTelemetry, fieldsSeen: boolean, invalidFields: boolean): Stream5000PvTelemetry {
+  const values = Object.values(pv);
+  const total = pv.totalW;
+  const strings = (pv.string1W ?? 0) + (pv.string2W ?? 0) + (pv.string3W ?? 0) + (pv.string4W ?? 0);
+  // Empty entry is the captured night shape. A missing string in a relayed
+  // daylight entry is only zero when the stated total accounts for it. Invalid
+  // scalar fields must not turn into the empty/night shape.
+  if (!invalidFields && (!fieldsSeen || (values.every((value) => value >= 0)
+    && total !== undefined && Math.abs(total - strings) <= PV_TOTAL_SLACK_W))) {
+    return {
+      totalW: 0, string1W: 0, string2W: 0, string3W: 0, string4W: 0, ...pv,
+    };
+  }
+  return pv;
+}
+
+function mergeUnitTelemetry(previous: Es22UnitTelemetry | undefined, next: Es22UnitTelemetry): Es22UnitTelemetry {
+  const merged = { ...previous, ...next };
+  if (next.pv) merged.pv = { ...previous?.pv, ...next.pv };
+  return merged;
+}
+
 /** Read each f50/f54 entry independently; serial strings are never walked as messages. */
 function readUnitRecords(payload: Buffer): {
   units: Record<string, Es22UnitTelemetry>; count: number; soc?: number; sn?: string;
@@ -431,6 +473,9 @@ function readUnitRecords(payload: Buffer): {
       // A corrupt nested entry is contained; other units can still be read.
       try {
         const unit: Es22UnitTelemetry = {};
+        const pv: Stream5000PvTelemetry = {};
+        let pvFieldsSeen = false;
+        let invalidPvFields = false;
         let serial: string | undefined;
         let valuePos = 0;
         while (valuePos < entry.bytes.length) {
@@ -451,10 +496,16 @@ function readUnitRecords(payload: Buffer): {
           } else if (number === 54 && valueNumber === 4 && valueWire === 0) {
             const power = decodeScalar(valueWire, value.bytes, 'int');
             if (power !== undefined && Number.isFinite(power)) unit.batteryPowerRawW = power * HALF_WATT;
+          } else if (number === 50 && PV_FIELDS[valueNumber]) {
+            pvFieldsSeen = true;
+            const power = valueWire === 5 ? decodeScalar(valueWire, value.bytes, 'float') : undefined;
+            if (power !== undefined && Number.isFinite(power)) pv[PV_FIELDS[valueNumber]] = power;
+            else invalidPvFields = true;
           }
           // f50.1.4 latches at rest: deliberately never use it for battery power.
         }
-        if (serial) units[serial] = { ...units[serial], ...unit };
+        if (number === 50) unit.pv = completePvEntry(pv, pvFieldsSeen, invalidPvFields);
+        if (serial) units[serial] = mergeUnitTelemetry(units[serial], unit);
         const soc = unit.socPrecisePct ?? unit.socPct;
         if (soc !== undefined && (number === 50 || candidateSoc === undefined)) {
           candidateSoc = soc;
@@ -519,9 +570,9 @@ export function parseStreamAc5000Frame(frame: Buffer, expectedSerial?: string): 
     }
     matched = true;
     Object.assign(merged, decoded);
-    if (Object.keys(decoded).length > 0) sourceSn = header.deviceSn || expectedSerial || sourceSn;
+    if (Object.keys(decoded).length > 0 || records.count > 0) sourceSn = header.deviceSn || expectedSerial || sourceSn;
     for (const [sn, unit] of Object.entries(records.units)) {
-      unitsBySn[sn] = { ...unitsBySn[sn], ...unit };
+      unitsBySn[sn] = mergeUnitTelemetry(unitsBySn[sn], unit);
     }
     unitRecordCount = Math.max(unitRecordCount, records.count, Object.keys(unitsBySn).length);
     if (records.count === 1 && records.soc !== undefined) {

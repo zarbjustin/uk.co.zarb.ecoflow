@@ -1,7 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
-import { getApp } from './appApi';
+import { EcoFlowAppApi, getApp } from './appApi';
 import { AppFrameHandler } from './EcoFlowAppMqtt';
 import { clearSavedAppAuthCreds, hasSavedAppAuthCreds } from './appAuthPairing';
 import {
@@ -9,7 +9,9 @@ import {
   Stream5000FrameDiagnostic,
   stream5000TelemetryAdapter,
   Stream5000TelemetryAdapter,
+  Stream5000TopologyTracker,
 } from './stream5000Adapters';
+import { StreamTopologyEvidence } from './streamTopology';
 import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
 import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
 import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } from './energyIntegration';
@@ -46,6 +48,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private telemetryAdapter!: Stream5000TelemetryAdapter;
   private frameHandler?: AppFrameHandler;
   private subscribedSn?: string;
+  private realtimeApp?: EcoFlowAppApi;
   private lastFrameAt = 0;
   private lastTelemetryAt = 0;
   private startedAt = 0;
@@ -71,6 +74,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private energyCheckpoint?: EnergyCheckpoint;
   private energySamples = 0;
   private ignoredEnergyGaps = 0;
+  private topologyTracker?: Stream5000TopologyTracker;
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -87,6 +91,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    this.subscriptionState = 'starting';
     this.startedAt = Date.now();
     this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
     const sn = this.getData().sn as string;
@@ -97,6 +102,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       return;
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
+    this.topologyTracker = this.telemetryAdapter.createTopologyTracker(sn);
     const mapTelemetry = this.telemetryAdapter.createMapper(sn, this.isEnergyAggregate() ? 'system' : 'unit');
     this.sampleGate = this.telemetryAdapter.createSampleGate();
     if (this.isEnergyAggregate()) {
@@ -107,6 +113,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     } else {
       await this.initialisePhysicalUnitCapabilities();
     }
+    if (this.isStopped()) return;
     const messageKey = this.monitoringOnlyMessageKey();
     const localizedStatus = this.homey.__(messageKey);
 
@@ -117,6 +124,7 @@ export class Stream5000UnitDevice extends Homey.Device {
         ? localizedStatus
         : MONITORING_ONLY_FALLBACK,
     }).catch(() => {});
+    if (this.isStopped()) return;
 
     this.frameHandler = (payload, topic) => {
       if (this.subscriptionState === 'stopped') return;
@@ -134,6 +142,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       this.parsedFrames += 1;
       const receivedAt = Date.now();
+      this.topologyTracker?.observe(telemetry, receivedAt);
       const values = mapTelemetry(telemetry);
       const roleValues = this.capabilityValuesForRole(values);
       const usable = Object.entries(roleValues).some(([capability, value]) => value !== null && this.hasCapability(capability));
@@ -148,6 +157,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     };
 
     await this.subscribe();
+    if (this.isStopped()) return;
     this.watchdog = this.homey.setInterval(() => {
       this.checkAvailability().catch((e) => this.error('availability check', e?.message || e));
     }, WATCHDOG_INTERVAL_MS);
@@ -156,14 +166,24 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async subscribe(): Promise<void> {
+    if (this.isStopped()) return;
     const sn = this.getData().sn as string;
     let subscribed = false;
     this.subscriptionState = 'starting';
     this.subscriptionAttempts += 1;
+    const handler = this.frameHandler!;
+    let app: EcoFlowAppApi | undefined;
     try {
-      subscribed = await getApp(this.homey).subscribeAppRealtime(sn, this.frameHandler!);
+      app = getApp(this.homey);
+      this.realtimeApp = app;
+      subscribed = await app.subscribeAppRealtime(sn, handler);
     } catch (e: any) {
+      if (this.isStopped()) return;
       this.error('app-auth subscribe failed', e?.message || 'unknown error');
+    }
+    if (this.isStopped()) {
+      if (subscribed) app?.unsubscribeAppRealtime(sn, handler);
+      return;
     }
     if (subscribed) {
       this.subscribedSn = sn;
@@ -177,12 +197,17 @@ export class Stream5000UnitDevice extends Homey.Device {
     }
     this.subscriptionState = 'waiting';
     await this.setOffline(NOT_CONNECTED_MESSAGE);
+    if (this.isStopped()) return;
     if (!this.resubscribeTimer) {
       this.resubscribeTimer = this.homey.setInterval(() => {
         if (this.subscribedSn) return;
         this.subscribe().catch((e) => this.error('resubscribe', e?.message || e));
       }, RESUBSCRIBE_INTERVAL_MS);
     }
+  }
+
+  private isStopped(): boolean {
+    return this.subscriptionState === 'stopped';
   }
 
   private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number, usable: boolean): Promise<void> {
@@ -270,6 +295,11 @@ export class Stream5000UnitDevice extends Homey.Device {
     await this.setStoreValue('dischargedWh', dischargedWh);
   }
 
+  /** Private session evidence; supportSnapshot projects it without identifiers. */
+  getTopologyEvidence(): StreamTopologyEvidence | null {
+    return this.topologyTracker?.evidence() ?? null;
+  }
+
   getEnergyDiagnostics(): EnergyAccountingDiagnostic | null {
     if (!this.isEnergyAggregate()) return null;
     return {
@@ -353,9 +383,10 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async resubscribe(): Promise<void> {
+    if (this.isStopped()) return;
     this.resubscribeCount += 1;
     if (this.subscribedSn && this.frameHandler) {
-      getApp(this.homey).unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
+      this.realtimeApp?.unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
       this.subscribedSn = undefined;
     }
     await this.subscribe();
@@ -412,7 +443,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       );
     }
     if (this.subscribedSn && this.frameHandler) {
-      getApp(this.homey).unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
+      this.realtimeApp?.unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
       this.subscribedSn = undefined;
     }
     if (this.watchdog) {

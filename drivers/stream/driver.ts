@@ -39,7 +39,7 @@ module.exports = class StreamDriver extends Homey.Driver {
       (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_tomorrow'), args.direction, args.kwh),
     );
     flow.getConditionCard('electricity_price').registerRunListener(
-      (args: any) => aboveBelow(args.device.getCapabilityValue('tariff_price_now'), args.direction, args.price),
+      (args: any) => args.device.priceIs(args.direction, args.price),
     );
     flow.getConditionCard('electricity_price_negative').registerRunListener(
       (args: any) => args.device.priceIsNegative(),

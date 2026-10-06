@@ -1,8 +1,34 @@
 # Current development roadmap — community feedback and STREAM 5000
 
-Updated: 4 October 2026. This is the current priority order; older sprint documents
+Updated: 6 October 2026. This is the current priority order; older sprint documents
 remain historical records. Local implementation, automated verification, hardware
 validation and store deployment are separate milestones.
+
+[Sprint 5 expansion/installation discovery](SPRINT_5_EXPANSION_DISCOVERY.md) is
+implemented locally: anonymous cached account inventory and peer-field visibility
+in support schema 3. Expansion 5000/3000, STREAM 3000 hosts, Gateway and Dual CT
+remain evidence candidates, not newly paired products. The next acceptance wave
+needs already-configured hardware and authoritative system/pack boundaries.
+
+6 October model expansion: [ES21 core monitoring](STREAM_MODEL_COVERAGE.md) is
+now admitted locally through an explicit beta adapter. Hardware acceptance is
+still open. The earlier Sprint 3 offline-only model decision below is superseded;
+PV/string tiles, expansion/Gateway/3000 admission and controls remain gated.
+
+Sprint 4's [BK control safety increment](SPRINT_4_CONTROL_SAFETY_STATUS.md) is
+implemented locally: fresh target readback, serialized/no-op-aware writes,
+partial-failure review and tariff freshness. No automatic rollback or 5000
+controls. Sprint 1–3 hardware/support gates remain open; none of these local
+follow-ups has been released.
+
+Sprint 3's [model/capability preparation](SPRINT_3_CAPABILITIES_STATUS.md) is
+implemented locally, without new model pairing or Homey tiles. Hardware admission
+remains open. Sprint 2's read-only topology discovery increment is also local;
+see its [status and remaining gates](SPRINT_2_TOPOLOGY_STATUS.md). No automatic
+grouping or migration is enabled. Sprint 1's validation remains open. See the
+[Sprint 1 validation ledger](SPRINT_1_VALIDATION_STATUS.md) for fresh dashboard
+checks, the new non-manual production startup report, locally reproduced
+shutdown races, and the still-open numerical Energy/picker/hardware gates.
 
 ## Evidence and current release boundary
 
@@ -15,7 +41,9 @@ validation and store deployment are separate milestones.
   the original `stream` or `stream_unit` interface. One reports a Homey Energy
   charge/discharge calculation concern and contains upstream 500/504 and request
   timeouts. These reports do not establish a process crash or a crash stack.
-  Build 32 currently lists no reports. Do not infer error-free hardware behaviour.
+  On 5 October, build 18 also lists one non-manual SDK startup/cleanup report;
+  this is separate from those manual submissions. Build 33 lists zero reports
+  and 18 installations at this check. Do not infer error-free hardware behaviour.
 - Existing v1.10.17 code already excludes ES22 from BK pairing and quarantines
   wrongly paired ES22 devices before Developer API polling or writes. The current
   changes clarify the correct Home Battery route; they did not introduce this guard.
@@ -94,6 +122,13 @@ no historical counter rewriting, invented readings or unverified crash-fix claim
 
 ## Sprint 2 — mixed-generation installation topology
 
+**Implemented locally, not published:** adapter-owned peer observations,
+freshness/bounded session retention, cached BK routing-address evidence and
+anonymous support schema 2. Possible overlap between installation aggregates is
+flagged for review only; physical monitors are not mistaken for duplicate Energy
+sources. No account-wide grouping, new identity, Energy exclusion or migration.
+See [implementation, pinned sources and verification](SPRINT_2_TOPOLOGY_STATUS.md).
+
 The user reports that EcoFlow's app can combine original and new-generation
 batteries. Support that arrangement only after determining how the API represents
 membership, aggregate SOC/capacity and system power.
@@ -103,7 +138,9 @@ the user-supplied first-hand linked-system evidence, positive/negative cases,
 linking history risk, API-source/control-scope questions and implementation gates.
 Recruit already-linked installations first; do not ask users to link/unlink
 solely for testing or assume that the current AC-5000-only registry admits the
-PV-equipped STREAM 5000. The tester request is a draft, not a sent message.
+PV-equipped STREAM 5000. The broader tester request was published in
+[community post 29](https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/29);
+the detailed checklist remains available for follow-up, not proof of completed testing.
 
 - Obtain paired EcoFlow installation/device screenshots and redacted telemetry
   from an actual mixed BK/ES setup, including separate installations if possible.
@@ -121,6 +158,13 @@ case establish that grouping neither misses batteries nor double counts them.
 
 ## Sprint 3 — additional models and capability admission
 
+**Implemented locally, not published:** serial-keyed direct PV total/strings,
+conservative omission handling, separate socket/solar-node candidate projection
+and an isolated ES21 offline research adapter. Eleven new regression cases replay
+public masked night/day/relayed captures and verify admission stays closed.
+See [evidence, admission matrix and remaining gates](SPRINT_3_CAPABILITIES_STATUS.md).
+No new capability tile, widget, control, Energy source or paired identity.
+
 Use typed adapters and verified model identity, not marketing family names.
 ES21, expansion batteries and gateways remain research-gated. ES21 public captures
 are parser evidence, not sufficient pairing admission or proof of controls.
@@ -133,6 +177,15 @@ expansion battery twice when its capacity is already included in system totals.
 unsupported models stay out of the picker rather than falling through to ES22.
 
 ## Sprint 4 — useful automation, then verified 5000 controls
+
+**Implemented locally, not published:** the five BK controls and three existing
+helpers now require fresh target state and per-step readback. Required missing
+settings fail closed, accepted-but-unconfirmed writes stop the sequence, and
+warnings retain prior reported settings for manual recovery. No automatic restore.
+Price conditions reject missing/expired (>90-minute) session prices, including
+inverted conditions; restart/unit changes require a fresh applicable price.
+No wattage promise or external authority lock. See the
+[implementation and hardware gates](SPRINT_4_CONTROL_SAFETY_STATUS.md).
 
 - First audit existing BK Flow cards for Henry's cheap-tariff/surplus-charging use
   case. Document only supported commands and their actual semantics. External
@@ -182,5 +235,7 @@ with the tester checklist; do not delete/re-pair existing devices for this updat
 Remaining next step is hardware validation, including the on-device support view,
 numerical Energy/picker reproduction, restart and soak. Mixed-generation discovery
 uses [linked-positive and independent-negative cases](MIXED_GENERATION_VALIDATION.md)
-before any migration, grouping or 5000 controls. The tester request is a draft,
-not a posted community message.
+before any migration, grouping or 5000 controls. The community release/tester
+request is now published as post 29; no later replies are present at the
+5 October check. Local follow-up changes are recorded in the validation ledger
+and are not part of the already published build 33.

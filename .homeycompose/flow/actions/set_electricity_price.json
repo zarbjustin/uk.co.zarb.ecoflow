@@ -11,9 +11,9 @@
     "nl": "Huidige stroomprijs instellen op [[price]]"
   },
   "hint": {
-    "en": "Feed the current half-hourly price from any tariff app (Octopus, Tibber, aWATTar, …). The STREAM app then shows it and drives the electricity-price conditions.",
-    "de": "Speise den aktuellen halbstündlichen Preis aus einer beliebigen Tarif-App ein (Octopus, Tibber, aWATTar, …). Die STREAM-App zeigt ihn dann an und steuert die Strompreis-Bedingungen.",
-    "nl": "Voer de huidige halfuurlijkse prijs in vanuit elke tarief-app (Octopus, Tibber, aWATTar, …). De STREAM-app toont deze dan en stuurt de stroomprijs-voorwaarden aan."
+    "en": "Feed the currently applicable price from your tariff app, in the configured unit. Refresh at least hourly and after app restart; price conditions expire after 90 minutes.",
+    "de": "Übertrage den aktuell geltenden Preis aus deiner Tarif-App in der eingestellten Einheit. Mindestens stündlich und nach App-Neustart aktualisieren; Preisbedingungen laufen nach 90 Minuten ab.",
+    "nl": "Voer de momenteel geldende prijs uit je tarief-app in, in de ingestelde eenheid. Vernieuw minstens elk uur en na app-herstart; prijsvoorwaarden verlopen na 90 minuten."
   },
   "args": [
     {

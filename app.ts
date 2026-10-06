@@ -3,6 +3,8 @@
 import Homey from 'homey';
 import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
 import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
+import { StreamDiscoveryInventory } from './lib/streamDiscovery';
+import { AppDevice } from './lib/appDevices';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -17,16 +19,22 @@ module.exports = class EcoFlowApp extends Homey.App {
   private appMqttCredsKey = '';
   private settingsTimer: NodeJS.Timeout | null = null;
   private appSettingsTimer: NodeJS.Timeout | null = null;
+  private stopping = false;
+  private readonly streamDiscovery = new StreamDiscoveryInventory();
+  private readonly settingsHandler = (key: string) => this.onSettingChanged(key);
 
   async onInit(): Promise<void> {
-    this.homey.settings.on('set', (key: string) => this.onSettingChanged(key));
+    this.stopping = false;
+    this.streamDiscovery.clear();
+    this.homey.settings.on('set', this.settingsHandler);
     // Removing the app-connected STREAM account is an 'unset', not a 'set' — the
     // app-auth session must be torn down for that too.
-    this.homey.settings.on('unset', (key: string) => this.onSettingChanged(key));
+    this.homey.settings.on('unset', this.settingsHandler);
     this.log('EcoFlow app initialised');
   }
 
   private onSettingChanged(key: string): void {
+    if (this.stopping) return;
     if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
       if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
       this.settingsTimer = this.homey.setTimeout(() => {
@@ -35,6 +43,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       }, 250);
     }
     if (APP_AUTH_SETTINGS.includes(key)) {
+      this.streamDiscovery.clear();
       if (this.appSettingsTimer) this.homey.clearTimeout(this.appSettingsTimer);
       this.appSettingsTimer = this.homey.setTimeout(() => {
         this.appSettingsTimer = null;
@@ -44,6 +53,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   private async applyConnectionSettings(): Promise<void> {
+    if (this.stopping) return;
     if (this.homey.settings.get('mqtt_enabled') === false) {
       await this.mqtt?.end().catch(() => {});
       this.mqtt = null;
@@ -62,10 +72,16 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   async onUninit(): Promise<void> {
+    this.stopping = true;
+    this.streamDiscovery.clear();
+    this.homey.settings.removeListener('set', this.settingsHandler);
+    this.homey.settings.removeListener('unset', this.settingsHandler);
     // Close the shared MQTT session cleanly so EcoFlow's broker (one session per
     // account) doesn't reject the next start with a stale ghost connection.
     if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
     if (this.appSettingsTimer) this.homey.clearTimeout(this.appSettingsTimer);
+    this.settingsTimer = null;
+    this.appSettingsTimer = null;
     await this.mqtt?.end().catch(() => {});
     this.mqtt = null;
     await this.appMqtt?.end().catch(() => {});
@@ -83,6 +99,7 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   /** Lazily create and connect the shared MQTT client. Returns null if unconfigured/unavailable. */
   async getMqtt(): Promise<EcoFlowMqtt | null> {
+    if (this.stopping) return null;
     const { accessKey, secretKey, host } = this.getCredentials();
     if (!accessKey || !secretKey) return null;
     if (this.homey.settings.get('mqtt_enabled') === false) return null;
@@ -119,8 +136,9 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   /** Subscribe a device SN to realtime updates. Safe no-op if MQTT is unavailable. */
   async subscribeRealtime(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): Promise<boolean> {
+    if (this.stopping) return false;
     const mqtt = await this.getMqtt();
-    if (!mqtt) return false;
+    if (this.stopping || !mqtt) return false;
     mqtt.subscribe(sn, onQuota, onStatus);
     return true;
   }
@@ -131,6 +149,16 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   // ----- App-auth realtime (verified STREAM 5000-family adapters) ------------
 
+  /** Observe only an already-requested pairing list; no cloud call or subscription. */
+  beginStreamDiscoveryObservation(): (devices: AppDevice[]) => void {
+    if (this.stopping) return () => {};
+    return this.streamDiscovery.beginObservation();
+  }
+
+  getStreamDiscoveryEvidence(): Record<string, unknown> | null {
+    return this.streamDiscovery.evidenceSnapshot();
+  }
+
   /** Identity of the saved EcoFlow account, without exposing the password. */
   private appAuthCredsKey(): string {
     const { email, password, host } = getSavedAppAuthCreds(this.homey);
@@ -140,6 +168,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   private async applyAppAuthSettings(): Promise<void> {
+    if (this.stopping) return;
     const credsKey = this.appAuthCredsKey();
     if (!credsKey) {
       await this.appMqtt?.end().catch(() => {});
@@ -161,6 +190,7 @@ module.exports = class EcoFlowApp extends Homey.App {
    * there is no REST fallback for this path, so devices simply stay stale.
    */
   private async getAppMqtt(): Promise<EcoFlowAppMqtt | null> {
+    if (this.stopping) return null;
     const credsKey = this.appAuthCredsKey();
     if (!credsKey) return null;
 
@@ -194,8 +224,9 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   /** Subscribe a verified STREAM 5000-family SN to the app-auth telemetry feed. */
   async subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean> {
+    if (this.stopping) return false;
     const mqtt = await this.getAppMqtt();
-    if (!mqtt) return false;
+    if (this.stopping || !mqtt) return false;
     mqtt.subscribe(sn, onFrame);
     return true;
   }

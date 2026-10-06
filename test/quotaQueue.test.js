@@ -92,3 +92,49 @@ test('a REST reply arriving after teardown cannot change energy after the final 
   await device.applyChain;
   assert.deepEqual(device.applied, []);
 });
+
+test('initial REST completion after shutdown cannot restart polling or access a destroyed app', async () => {
+  const device = new QueueDevice();
+  const reply = deferred();
+  const entered = deferred();
+  device.onReady = async () => {
+    device.client = { getQuotaAll: () => { entered.resolve(); return reply.promise; } };
+  };
+  let intervals = 0;
+  device.homey.setInterval = () => { intervals += 1; return intervals; };
+  const init = device.onInit();
+  await entered.promise;
+  await device.onUninit();
+  Object.defineProperty(device.homey, 'app', { get() { throw new Error('app instance destroyed'); } });
+  reply.resolve({});
+  await init;
+  assert.equal(intervals, 0);
+  assert.deepEqual(device.applied, []);
+});
+
+test('late BK subscription releases captured handlers without accessing a destroyed app', async () => {
+  const device = new QueueDevice();
+  const reply = deferred();
+  const entered = deferred();
+  let intervals = 0;
+  let cleared = 0;
+  let unsubscribed = 0;
+  device.homey.setInterval = () => { intervals += 1; return intervals; };
+  device.homey.clearInterval = () => { cleared += 1; };
+  device.homey.app = {
+    subscribeRealtime: async () => { entered.resolve(); return reply.promise; },
+    unsubscribeRealtime: () => { unsubscribed += 1; },
+  };
+  const init = device.onInit();
+  await entered.promise;
+  await device.onUninit();
+  Object.defineProperty(device.homey, 'app', { get() { throw new Error('app instance destroyed'); } });
+  reply.resolve(true);
+  await init;
+  assert.equal(intervals, cleared);
+  assert.equal(unsubscribed, 2, 'unsubscribe before and after the pending connection settles');
+  let polls = 0;
+  device.client.getQuotaAll = async () => { polls += 1; return {}; };
+  await device.poll();
+  assert.equal(polls, 0);
+});

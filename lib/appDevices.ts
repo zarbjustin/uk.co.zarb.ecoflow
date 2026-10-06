@@ -14,8 +14,8 @@ export { isStreamAc5000Sn, STREAM_AC5000_PREFIX } from './deviceIdentity';
  *
  * This is deliberately separate from `lib/ecoflowDevices.ts`, which classifies
  * the Developer/Open API device list. Only products admitted by the STREAM 5000
- * model registry are consumed from this path; ES22 is the sole verified model
- * today and every other product remains excluded.
+ * model registry are consumed from this path: ES22 and ES21 have corroborated
+ * core telemetry. Other products remain excluded until separately verified.
  *
  * The response shape and the ES22 prefix mapping are adapted from the
  * MIT-licensed https://github.com/shuette42/ecoflow-energy-ha

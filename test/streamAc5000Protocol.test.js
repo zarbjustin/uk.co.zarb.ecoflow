@@ -354,9 +354,9 @@ test('linked ES22 capture keeps system 76% distinct from units 87% and 65%', () 
   }
 });
 
-test('MPPT capture includes direct PV-to-battery charge without enabling ES21 pairing', () => {
+test('MPPT capture includes direct PV-to-battery charge for the admitted ES21 adapter', () => {
   const { isSupportedStream5000Sn } = require('../.homeybuild/lib/stream5000Models');
-  assert.equal(isSupportedStream5000Sn('ES21TESTUNITAAAA'), false);
+  assert.equal(isSupportedStream5000Sn('ES21TESTUNITAAAA'), true);
   const expected = [438, 34, 28];
   for (const [index, captured] of captures.mppt.frames.entries()) {
     const t = parseStreamAc5000Frame(Buffer.from(captured.hex, 'hex'));
@@ -412,7 +412,10 @@ test('serial-keyed f50 and f54 merge by identity, not by position', () => {
   assert.equal(t.unitRecordCount, 2);
   assert.equal(t.singleUnitSocPct, undefined);
   assert.equal(mapStreamAc5000(t).measure_battery, undefined);
-  assert.deepEqual(t.unitsBySn[SN], { socPrecisePct: Math.fround(81.4), socPct: 81, batteryPowerRawW: -300 });
+  assert.deepEqual(t.unitsBySn[SN], {
+    socPrecisePct: Math.fround(81.4), socPct: 81, batteryPowerRawW: -300,
+    pv: { totalW: 0, string1W: 0, string2W: 0, string3W: 0, string4W: 0 },
+  });
   assert.equal(mapStreamAc5000(t, { scope: 'unit', serialNumber: SN }).measure_power, null);
   assert.equal(mapStreamAc5000(t, { scope: 'unit', serialNumber: other }).measure_power, null);
   assert.equal(mapStreamAc5000(t, { scope: 'unit', serialNumber: 'ES22UNLISTED' }).measure_power, null);

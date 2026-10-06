@@ -675,9 +675,9 @@
           "nl": "Stroomprijs is [[direction]] [[price]]"
         },
         "hint": {
-          "en": "Uses the price set via the 'Set current electricity price' action.",
-          "de": "Verwendet den über die Aktion 'Aktuellen Strompreis festlegen' gesetzten Preis.",
-          "nl": "Gebruikt de prijs die is ingesteld via de actie 'Huidige stroomprijs instellen'."
+          "en": "Uses the current price action. Missing prices or prices older than 90 minutes stop this Flow, including inverted conditions. Update after app restart or a price-unit change.",
+          "de": "Verwendet die Aktion für den aktuellen Preis. Fehlende oder über 90 Minuten alte Preise stoppen diesen Flow, auch bei umgekehrten Bedingungen. Nach App-Neustart oder Einheitenwechsel aktualisieren.",
+          "nl": "Gebruikt de actie voor de huidige prijs. Ontbrekende of meer dan 90 minuten oude prijzen stoppen deze Flow, ook bij omgekeerde voorwaarden. Werk bij na app-herstart of wijziging van de prijseenheid."
         },
         "args": [
           {
@@ -742,9 +742,9 @@
           "nl": "Stroomprijs !{{is|is niet}} negatief"
         },
         "hint": {
-          "en": "True when the price you feed in is below zero (you are paid to consume). Uses the 'Set current electricity price' action.",
-          "de": "Wahr, wenn der eingespeiste Preis unter null liegt (du wirst fürs Verbrauchen bezahlt). Verwendet die Aktion 'Aktuellen Strompreis festlegen'.",
-          "nl": "Waar wanneer de ingevoerde prijs onder nul ligt (je wordt betaald om te verbruiken). Gebruikt de actie 'Huidige stroomprijs instellen'."
+          "en": "Checks the current price against zero. Missing prices or prices older than 90 minutes stop this Flow, including 'is not negative'. Update after app restart or a price-unit change.",
+          "de": "Prüft den aktuellen Preis gegen null. Fehlende oder über 90 Minuten alte Preise stoppen diesen Flow, auch bei 'ist nicht negativ'. Nach App-Neustart oder Einheitenwechsel aktualisieren.",
+          "nl": "Controleert de huidige prijs ten opzichte van nul. Ontbrekende of meer dan 90 minuten oude prijzen stoppen deze Flow, ook bij 'is niet negatief'. Werk bij na app-herstart of wijziging van de prijseenheid."
         },
         "args": [
           {
@@ -1070,14 +1070,14 @@
           "nl": "Voorbereiden op goedkope netafname"
         },
         "titleFormatted": {
-          "en": "Prepare for cheap import (charge to [[reserve]]%)",
-          "de": "Für günstigen Bezug vorbereiten (auf [[reserve]]% laden)",
-          "nl": "Voorbereiden op goedkope afname (laden tot [[reserve]]%)"
+          "en": "Prepare for cheap import (reserve [[reserve]]%)",
+          "de": "Für günstigen Bezug vorbereiten (Reserve [[reserve]]%)",
+          "nl": "Voorbereiden op goedkope afname (reserve [[reserve]]%)"
         },
         "hint": {
-          "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile).",
-          "de": "Hebt die Ladegrenze auf 100 % an und setzt das Ziel für die Notstromreserve, damit die Batterie während eines günstigen Zeitfensters aus dem Netz lädt (z. B. Octopus Agile).",
-          "nl": "Verhoogt de laadlimiet naar 100% en stelt de back-upreserve in, zodat de batterij tijdens een goedkoop tariefvenster via het net laadt (bijv. Octopus Agile)."
+          "en": "Sets the charge limit to 100% and the chosen reserve, with reported-state readback. Charging still depends on EcoFlow mode, schedules and grid limits; no wattage target is set.",
+          "de": "Setzt die Ladegrenze auf 100 % und die gewählte Reserve mit Rückmeldung der Einstellungen. Das Laden hängt weiterhin von EcoFlow-Modus, Zeitplänen und Netzgrenzen ab; kein Watt-Sollwert.",
+          "nl": "Stelt de laadlimiet op 100% en de gekozen reserve in, met teruglezing van de instellingen. Laden blijft afhankelijk van EcoFlow-modus, schema's en netlimieten; er wordt geen wattdoel ingesteld."
         },
         "args": [
           {
@@ -1117,9 +1117,9 @@
           "nl": "Voorbereiden op piekteruglevering (reserve [[reserve]]%)"
         },
         "hint": {
-          "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window.",
-          "de": "Senkt die Notstromreserve, damit die Batterie entladen kann, und aktiviert die Netzeinspeisung für ein Hochpreis-Zeitfenster.",
-          "nl": "Verlaagt de back-upreserve zodat de batterij kan ontladen en schakelt teruglevering aan het net in tijdens een duur tariefvenster."
+          "en": "Sets the chosen reserve and permits grid feed-in, with reported-state readback. This does not force export or a particular power; EcoFlow mode, schedules and limits still apply.",
+          "de": "Setzt die gewählte Reserve und erlaubt Netzeinspeisung mit Rückmeldung der Einstellungen. Erzwingt weder Einspeisung noch eine bestimmte Leistung; EcoFlow-Modus, Zeitpläne und Grenzen gelten weiterhin.",
+          "nl": "Stelt de gekozen reserve in en staat teruglevering toe, met teruglezing van de instellingen. Dit forceert geen teruglevering of bepaald vermogen; EcoFlow-modus, schema's en limieten blijven gelden."
         },
         "args": [
           {
@@ -1174,9 +1174,9 @@
           "nl": "Batterij nu vrijgeven voor teruglevering"
         },
         "hint": {
-          "en": "Lowers the discharge limit and backup reserve to the minimum (in the correct order, avoiding EcoFlow error 8524) and enables grid feed-in, so the battery discharges/exports immediately — e.g. at the start of a peak-price window.",
-          "de": "Senkt Entladegrenze und Notstromreserve auf das Minimum (in der richtigen Reihenfolge, um EcoFlow-Fehler 8524 zu vermeiden) und aktiviert die Netzeinspeisung, damit die Batterie sofort entlädt/einspeist – z. B. zu Beginn eines Spitzenpreis-Zeitfensters.",
-          "nl": "Verlaagt de ontlaadlimiet en back-upreserve naar het minimum (in de juiste volgorde, om EcoFlow-fout 8524 te vermijden) en schakelt teruglevering aan het net in, zodat de batterij direct ontlaadt/teruglevert — bijv. aan het begin van een piektariefvenster."
+          "en": "Sets reserve to 3%, lowers the discharge limit first when required, and permits grid feed-in. Each setting is read back; physical export is not guaranteed. Review previous settings before restoring them.",
+          "de": "Setzt die Reserve auf 3 %, senkt bei Bedarf zuerst die Entladegrenze und erlaubt Netzeinspeisung. Jede Einstellung wird zurückgelesen; tatsächliche Einspeisung ist nicht garantiert. Vor dem Wiederherstellen vorherige Einstellungen prüfen.",
+          "nl": "Stelt de reserve op 3% in, verlaagt indien nodig eerst de ontlaadlimiet en staat teruglevering toe. Elke instelling wordt teruggelezen; fysieke teruglevering is niet gegarandeerd. Controleer eerdere instellingen vóór herstel."
         },
         "args": [
           {
@@ -1304,9 +1304,9 @@
           "nl": "Huidige stroomprijs instellen op [[price]]"
         },
         "hint": {
-          "en": "Feed the current half-hourly price from any tariff app (Octopus, Tibber, aWATTar, …). The STREAM app then shows it and drives the electricity-price conditions.",
-          "de": "Speise den aktuellen halbstündlichen Preis aus einer beliebigen Tarif-App ein (Octopus, Tibber, aWATTar, …). Die STREAM-App zeigt ihn dann an und steuert die Strompreis-Bedingungen.",
-          "nl": "Voer de huidige halfuurlijkse prijs in vanuit elke tarief-app (Octopus, Tibber, aWATTar, …). De STREAM-app toont deze dan en stuurt de stroomprijs-voorwaarden aan."
+          "en": "Feed the currently applicable price from your tariff app, in the configured unit. Refresh at least hourly and after app restart; price conditions expire after 90 minutes.",
+          "de": "Übertrage den aktuell geltenden Preis aus deiner Tarif-App in der eingestellten Einheit. Mindestens stündlich und nach App-Neustart aktualisieren; Preisbedingungen laufen nach 90 Minuten ab.",
+          "nl": "Voer de momenteel geldende prijs uit je tarief-app in, in de ingestelde eenheid. Vernieuw minstens elk uur en na app-herstart; prijsvoorwaarden verlopen na 90 minuten."
         },
         "args": [
           {

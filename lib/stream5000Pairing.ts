@@ -92,7 +92,10 @@ export function registerStream5000Pairing(
       throw new Error(options.noAccountMessage || 'No EcoFlow account is configured for STREAM 5000 Series pairing.');
     }
     const pairedSerials = pairedStream5000Serials(driver, duplicateDriverIds);
-    const devices = selectDevices(await client.getDeviceList())
+    const observe = driver?.homey?.app?.beginStreamDiscoveryObservation?.();
+    const accountDevices = await client.getDeviceList();
+    if (typeof observe === 'function') observe(accountDevices);
+    const devices = selectDevices(accountDevices)
       .filter((device) => !pairedSerials.has(device.sn));
     return devices.map((device) => {
       const model = stream5000ModelFromSn(device.sn);

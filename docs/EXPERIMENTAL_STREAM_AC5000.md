@@ -1,10 +1,13 @@
-# EcoFlow STREAM AC 5000 (ES22): monitoring-only app connection
+# EcoFlow STREAM AC 5000 (ES22) / STREAM 5000 (ES21): monitoring-only app connection
 
 > **Status: monitoring only. EcoFlow provides no supported public API for this model.**
-> Everything in this document applies to the ES22 adapter shared by the
+> Connection, security and role rules apply to the explicit ES22 and ES21 adapters used by the
 > installation-level `stream_5000_system` Home Battery, the physical
 > `stream_5000_unit` monitor and deprecated `stream_ac5000` monitor. See
 > `STREAM_5000_ARCHITECTURE.md` before adding another model.
+> ES21 core monitoring is a local unpublished beta increment; see
+> [current model coverage and evidence](STREAM_MODEL_COVERAGE.md). Public capture
+> replay is not Homey hardware acceptance. PV/string tiles remain offline candidates.
 > The STREAM Ultra / Pro / AC / AC Pro / Max / Ultra X (BK-series) and the Smart
 > Meter are unaffected and keep using the official EcoFlow Developer API.
 
@@ -19,22 +22,23 @@ and provided no information or timeline.
 
 The only working route is the app connection EcoFlow's own mobile app uses.
 This app implements a **read-only** subset of it, behind its own driver, so
-owners of an ES22 can at least monitor the unit from Homey.
+owners of an ES22, and ES21 beta testers, can monitor core battery telemetry from Homey.
 
 ## Relationship to the new 5 kWh STREAM family
 
 EcoFlow's UK and German launch pages describe several products in the same new
 generation. Marketing names are not sufficient evidence that they share a
-serial family or protobuf layout, so only the model verified from live captures
-is routed to this parser.
+serial family or protobuf layout, so only models with corroborated identity and
+telemetry are routed to named adapters. The specification table below records
+the August launch-page review, not current regional ratings or control limits.
 
 | Product | Officially published information | Protocol confidence |
 | --- | --- | --- |
 | STREAM AC 5000 | 5,024 Wh; 3,000 W AC input/output; no direct PV input | **Confirmed:** serial prefix `ES22`, separate parser implemented here |
-| STREAM 5000 | 5,024 Wh; 3,000 W AC input/output; 4,000 W PV across four MPPT inputs | Community captures now identify `ES21`; not yet admitted to this app's pairing allow-list |
+| STREAM 5000 | August launch-page specifications: 5,024 Wh; 3,000 W AC; four MPPT inputs | `ES21` core monitoring now admitted locally; extra PV tiles and Homey hardware acceptance remain gated |
 | STREAM Expansion Battery 5000 | 5,024 Wh expansion module for the new platform | Unknown whether it appears as an independent cloud device or as a nested pack under its host |
 | STREAM Gateway | EcoFlow describes it as enabling later system expansion without rewiring | Product confirmed, but discovery identity, topics and telemetry are unknown |
-| STREAM 3000 | Not listed as a distinct product on the referenced launch pages | The pages advertise 3,000 W output; STREAM Ultra X is listed separately at 3,084 Wh |
+| STREAM 3000 | Not established by the historical launch-page review | No corroborated identity/telemetry contract found in the October developer review; not admitted |
 
 The existing BK-series remains a different protocol family: `BK01` STREAM
 Micro, `BK11` Ultra, `BK31` AC Pro, `BK41` Max, `BK51` AC and `BK61` Ultra X.
@@ -55,7 +59,7 @@ privacy-safe discovery rather than guessed aliases:
    without the pack attached to determine whether it is nested or independent.
 5. Keep all new models monitoring-only until their read path is verified.
 
-The current build offers only `ES22` devices during **STREAM Home Battery (5000 Beta)**
+The local candidate offers `ES22` and `ES21` devices during **STREAM Home Battery (5000 Beta)**
 and **STREAM 5000 Series Unit (Beta)** pairing. Pairing is disabled by default
 until the user acknowledges the unsupported-API warning in the app settings.
 Unknown products are not subscribed or parsed yet; widening discovery is a
@@ -71,7 +75,7 @@ Official product references, accessed 9 August 2026:
 | Step | Endpoint / transport | Notes |
 | --- | --- | --- |
 | Sign in | `POST /auth/login` | Email + base64-encoded password, `scene: IOT_APP`, `userType: ECOFLOW`. Returns a token and a `userId`. |
-| Discover devices | `GET /iot-service/user/device` | Bearer token. Only `ES22…` serials are offered for pairing. |
+| Discover devices | `GET /iot-service/user/device` | Bearer token. Explicit `ES22…` and `ES21…` registry entries are offered for pairing. |
 | Broker credentials | `GET /iot-auth/enterprise-development/user/certification` | Bearer token. The response body is base64 **AES-256-CFB** encrypted: key `SHA-256(token)`, constant IV `ojsajkqjwk1w2dfg`, PKCS#7 padding. |
 | Telemetry | `wss://mqtt-e.ecoflow.com:8084/mqtt` | Subscribes to `/app/device/property/{sn}` and `/app/{userId}/{sn}/thing/property/get_reply`. Protobuf frames. |
 
@@ -167,13 +171,13 @@ Read this before you use it.
   rest on the Homey) under `appAuthEmail` / `appAuthPassword`, and are only ever
   sent to EcoFlow's own API. They are **never** written to device data or store,
   never logged, and never included in an error message or diagnostic.
-* Nothing is written until you actually add an ES22 device: the sign-in is held
+* Nothing is written until you actually add an admitted family device: the sign-in is held
   in memory for the duration of the pairing session, so cancelling it, finding no
-  ES22 on the account, or a failure part-way through leaves no account stored. If
+  admitted model on the account, or a failure part-way through leaves no account stored. If
   the device is never created after all, the account is removed again.
 * Tokens and the decrypted MQTT certificate live in memory only. The app logs a
   region and a connection state, never a credential.
-* Using the app API is **not sanctioned by EcoFlow's terms**. EcoFlow may change
+* The app API is **not a supported public Developer API contract**. EcoFlow may change
   or block it at any time, and may treat the sign-in as an unusual login. Use it
   knowingly, and prefer a dedicated/shared EcoFlow account if that matters to
   you.
@@ -187,7 +191,7 @@ Read this before you use it.
 2. Add a device → **EcoFlow STREAM Series** → **STREAM Home Battery (5000 Beta)**.
 3. Read the warning on the first pairing screen, then enter your **EcoFlow app**
    email address, password and region.
-4. Pick your ES22 unit(s) from the list. Multiple ES22 units on one account are
+4. Pick your admitted ES22/ES21 unit(s) from the list. Multiple units on one account are
    supported and share a single MQTT session. Your account is only saved once a
    unit is actually being added.
 
@@ -195,7 +199,7 @@ The implementation may change or stop working when EcoFlow releases its official
 API. Device roles, capabilities, Homey Energy behaviour and credentials may be
 revised, and re-pairing may be required.
 
-The account is asked for once. Adding a second ES22 later skips straight to the
+The account is asked for once. Adding a second admitted unit later skips straight to the
 device list.
 
 ## Removing it / re-pairing
@@ -227,7 +231,7 @@ unavailable until you re-pair.
 ## Attribution
 
 The app-auth flow, the AES-CFB certification decoding, the WSS ClientID scheme
-and the ES22 protobuf field map are adapted from the MIT-licensed
+and the ES22/ES21 corroborated protobuf field map are adapted from the MIT-licensed
 **[shuette42/ecoflow-energy-ha](https://github.com/shuette42/ecoflow-energy-ha)**
 Home Assistant integration — specifically `ecoflow/enhanced_auth.py`,
 `ecoflow/app_api.py`, `ecoflow/clientid.py`, `ecoflow/cloud_mqtt.py` and

@@ -2,7 +2,57 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Current handover — 4 October 2026
+## Current handover — 6 October 2026
+
+The [Sprint 5 expansion-discovery increment](SPRINT_5_EXPANSION_DISCOVERY.md)
+adds anonymous cached account inventory and peer-field visibility to support
+schema 3. It adds no requests, new-model admission, capacity guesses, grouping
+or controls. Account discovery is not installation membership. Expansion 5000/
+3000, Gateway/Dual CT and STREAM 3000 hardware/API validation remain open.
+This is local/unpublished; the existing ES21 and Sprint 1–4 changes are preserved.
+The combined candidate passes 313 tests, TypeScript/lint, full audit (zero
+findings), Homey publish-level validation and whitespace checks. No version,
+commit, push, store upload or physical validation occurred in this increment.
+
+The [model expansion increment](STREAM_MODEL_COVERAGE.md) now admits ES21 STREAM
+5000 core monitoring locally, behind the beta gate, with a dedicated adapter and
+both existing Energy roles. ES22/BK identities and counters remain unchanged.
+PV/string tiles, 3000, expansion, Gateway/Dual CT adapters, mixed-generation
+consolidation and 5000 controls are not enabled. This supersedes the earlier
+Sprint 3 ES21 offline-only decision below, not its extra-capability gates.
+ES21 Homey hardware acceptance remains open; nothing has been pushed or released.
+All 304 tests, build/lint, full audit (zero findings), whitespace checks and Homey
+publish-level validation pass locally for this combined candidate.
+
+Sprint 4's [original STREAM control safety increment](SPRINT_4_CONTROL_SAFETY_STATUS.md)
+is implemented locally: fresh main-target baseline/readback, per-target command
+serialization, partial-failure warnings and no optimistic control updates. Price
+conditions reject missing or >90-minute-old prices, including inverted conditions;
+refresh the current tariff at least hourly and after restart/unit changes. No
+automatic rollback, wattage target or 5000 write is added. All 294 tests, build,
+lint, full audit (zero findings) and Homey publish validation pass locally.
+No commit, push, version or publication was performed. Hardware
+validation remains open, and Sprint 1–3 changes below are preserved.
+
+The user authorized Sprint 3. The [capability preparation increment](SPRINT_3_CAPABILITIES_STATUS.md)
+adds serial-keyed PV parsing and isolated ES21 offline research, without enabling
+new models or Homey tiles. It remains local/unpublished with Sprint 1–2 changes.
+The full suite passes 272 tests, build/lint, full audit and Homey publish-level
+validation; hardware admission remains open.
+
+Sprint 2's read-only
+[topology discovery increment](SPRINT_2_TOPOLOGY_STATUS.md) is implemented locally:
+observed peers/freshness and anonymous overlap-review hints, with no grouping,
+identity change, Energy-role change or control write. It remains on
+`codex/stream-next-wave-test`, together with Sprint 1's unpublished fixes. Local
+Sprint 2 checks passed 261 tests, build/lint, full audit and Homey publish-level
+validation before the Sprint 3 additions above.
+
+The
+[Sprint 1 ledger](SPRINT_1_VALIDATION_STATUS.md) records a new non-manual
+production SDK startup report, a read-only numerical Energy lead and local
+shutdown-race fixes with regression tests. These follow-up changes are not
+published, versioned or pushed. Hardware/support/picker validation remains open.
 
 The October [community roadmap](COMMUNITY_FEEDBACK_ROADMAP.md) supersedes the
 historical sprint/current-version statements below. Sprint 1 and next-wave
@@ -33,8 +83,10 @@ writes are not part of this release. Existing pairing is preserved.
 - [Tester validation and mixed-generation evidence plan](TESTER_VALIDATION.md).
 - [Original STREAM Flow capability audit](BK_FLOW_CAPABILITY_AUDIT.md).
 - [Mixed-generation discovery plan](MIXED_GENERATION_VALIDATION.md), including
-  API source/scope changes, history risks and a tester request draft (not sent).
-- Eight manual reports are not proven process crashes; Energy calculation and
+  API source/scope changes and history risks. The broader tester request is
+  published in community post 29; no new reply was sent in this validation pass.
+- Eight manual reports are not proven process crashes; a new non-manual SDK
+  startup/cleanup report is tracked separately. Energy calculation and
   missing-picker reports remain open. No automatic grouping or 5000 controls.
 - Verified locally and in GitHub CI: build, lint, 242 tests, clean `npm ci`, full
   audit (zero findings), whitespace checks and Homey verified/publish validation. No hardware
@@ -44,6 +96,25 @@ Read the validation documents before inviting testers or promoting a build.
 
 ## Outstanding / next actions (resume here)
 
+- [ ] Complete [Sprint 5 host-plus-expansion and discovery validation](SPRINT_5_EXPANSION_DISCOVERY.md)
+  on existing configurations. Capture system/host/pack boundaries, capacity units,
+  negative account-only cases and Gateway/3000 identities before adding adapters.
+
+- [ ] Complete the [Sprint 4 BK hardware matrix](TESTER_VALIDATION.md), including
+  accepted-but-unapplied writes, EcoFlow policy conflicts, actual power response
+  and manual recovery. Release only with explicit authorization and green CI.
+
+- [ ] Complete [ES21 beta hardware acceptance](STREAM_MODEL_COVERAGE.md) and
+  [Sprint 3 capability admission](SPRINT_3_CAPABILITIES_STATUS.md) before exposing new socket/PV tiles. Expansion/gateway capacity and
+  identity remain unverified; no model-prefix guessing or control writes.
+
+- [ ] Validate [Sprint 2 discovery](SPRINT_2_TOPOLOGY_STATUS.md) on already-linked
+  mixed-generation hardware and independent installations before any consolidation.
+  Publish the local candidate to Test only with explicit authorization and green CI.
+
+- [ ] Complete the active [validation sprint](SPRINT_1_VALIDATION_STATUS.md):
+  confirm installed Test/support report, investigate counter scope and the
+  production startup timeout, reproduce Ed's mobile picker, then collect hardware evidence.
 - [ ] **STREAM AC 5000 live gate** — install Test v1.10.18 and complete the
   charging/discharging/idle plus 24–48-hour soak matrix in
   `docs/STREAM_AC5000_SPRINTS.md`. Code-side Sprint 1–4 work is complete.

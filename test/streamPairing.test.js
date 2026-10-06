@@ -19,6 +19,7 @@ function stubClient() {
         { sn: 'BK21Z1BB7H414289', deviceName: 'Smart Meter' },
         { sn: 'BK01Z11ACH4P0489', deviceName: 'STREAM Microinverter' },
         { sn: 'ES22ZE1B2J6W0110', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' },
+        { sn: 'ES21TESTUNITAAAA', productName: '' },
       ];
     },
     async getQuotaAll() { return {}; },
@@ -59,7 +60,9 @@ test('an ES22 is never probed for a quota during BK-series pairing', async () =>
   await collectStreamUnits(client);
   assert.ok(probed.length > 0);
   assert.ok(!probed.includes('ES22ZE1B2J6W0110'));
+  assert.ok(!probed.includes('ES21TESTUNITAAAA'));
   assert.ok(!resolved.includes('ES22ZE1B2J6W0110'));
+  assert.ok(!resolved.includes('ES21TESTUNITAAAA'));
 });
 
 test('STREAM AC 5000 and STREAM 5000 names are rejected before API probing', async () => {
@@ -69,6 +72,8 @@ test('STREAM AC 5000 and STREAM 5000 names are rejected before API probing', asy
       return [
         { sn: 'ZZ990001', productName: 'STREAM AC 5000' },
         { sn: 'ZZ990002', deviceName: 'EcoFlow STREAM 5000' },
+        { sn: 'ZZ990003', productName: 'STREAM 3000' },
+        { sn: 'ES23UNKNOWN', productName: '' },
       ];
     },
     async getQuotaAll() {

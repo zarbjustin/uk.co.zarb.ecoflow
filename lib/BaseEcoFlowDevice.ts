@@ -2,7 +2,7 @@
 
 import Homey from 'homey';
 import { EcoFlowApiError, EcoFlowClient } from './EcoFlowClient';
-import { getApp } from './appApi';
+import { EcoFlowAppApi, getApp } from './appApi';
 import { QuotaHandler, StatusHandler } from './EcoFlowMqtt';
 import {
   DEVELOPER_API_UNSUPPORTED_FALLBACK,
@@ -38,6 +38,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private quotaHandler?: QuotaHandler;
   private statusHandler?: StatusHandler;
   private subscribedSn?: string;
+  private realtimeApp?: EcoFlowAppApi;
   private clientCredentialsKey = '';
   private applyChain: Promise<void> = Promise.resolve();
   private pollPromise: Promise<void> | null = null;
@@ -98,8 +99,14 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.clientCredentialsKey = `${accessKey}:${secretKey}:${host || ''}`;
 
     await this.onReady();
+    if (this.stopping) {
+      // onReady may have created subclass timers while shutdown was awaiting it.
+      await this.onTeardown();
+      return;
+    }
 
     await this.poll();
+    if (this.stopping) return;
     this.startPollTimer();
 
     const sn = this.getReadSn();
@@ -117,14 +124,25 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       };
     }
     try {
-      await getApp(this.homey).subscribeRealtime(sn, this.quotaHandler, this.statusHandler);
+      const app = getApp(this.homey);
+      this.realtimeApp = app;
+      const { quotaHandler, statusHandler } = this;
+      await app.subscribeRealtime(sn, quotaHandler, statusHandler);
+      if (this.stopping) {
+        // Teardown can precede the connection completing. Use the captured app
+        // and handlers: Homey's app accessor may already have been destroyed.
+        app.unsubscribeRealtime(sn, quotaHandler, statusHandler);
+        return;
+      }
     } catch (e) {
+      if (this.stopping) return;
       this.error('mqtt subscribe failed', e);
     }
     this.log(`${this.constructor.name} ${sn} initialised`);
   }
 
   protected startPollTimer(): void {
+    if (this.stopping) return;
     if (this.pollTimer) this.homey.clearInterval(this.pollTimer);
     if (this.getDeveloperApiQuarantineReason()) {
       this.pollTimer = null;
@@ -137,6 +155,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   protected async poll(): Promise<void> {
+    if (this.stopping) return;
     this.assertDeveloperApiSupported();
     if (this.pollPromise) {
       await this.pollPromise;
@@ -163,6 +182,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       // Don't override a realtime MQTT "offline" with a possibly-stale REST 200.
       if (!this.mqttOffline) await this.setOnlineState(true);
     } catch (e: any) {
+      if (this.stopping) return;
       if (this.isUnknownUnsupportedApiFailure(e)) {
         this.consecutiveUnsupportedApiFailures += 1;
         if (this.consecutiveUnsupportedApiFailures >= UNSUPPORTED_API_FAILURE_LIMIT) {
@@ -219,7 +239,22 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   protected async writeQuota(payload: Record<string, any>): Promise<Record<string, any>> {
     const targetSn = typeof payload.sn === 'string' ? payload.sn : undefined;
     this.assertDeveloperApiSupported(targetSn);
+    if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
     return this.client.setQuota(payload);
+  }
+
+  protected isShuttingDown(): boolean {
+    return this.stopping;
+  }
+
+  /** Target-specific uncached control readback; failures must propagate. */
+  protected async readControlQuota(sn: string): Promise<Record<string, any>> {
+    this.assertDeveloperApiSupported(sn);
+    if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
+    this.refreshClientCredentials();
+    const quota = await this.client.getQuotaAll(sn, { fresh: true });
+    if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
+    return quota;
   }
 
   private getDeveloperApiQuarantineReason(): string | null {
@@ -273,7 +308,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
 
   private unsubscribeSupportedRealtime(): void {
     if (!this.subscribedSn) return;
-    getApp(this.homey).unsubscribeRealtime(this.subscribedSn, this.quotaHandler, this.statusHandler);
+    this.realtimeApp?.unsubscribeRealtime(this.subscribedSn, this.quotaHandler, this.statusHandler);
     this.subscribedSn = undefined;
     this.quotaHandler = undefined;
     this.statusHandler = undefined;

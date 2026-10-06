@@ -1,5 +1,10 @@
 # STREAM 5000 API review — Sprint 1 telemetry correctness
 
+**6 October model follow-up:** [coverage and evidence](STREAM_MODEL_COVERAGE.md)
+now admits ES21 core monitoring locally. Earlier ES21 non-admission statements
+below describe the original Sprint 1 boundary, not the current local registry.
+This does not establish an official app-protocol contract or enable controls.
+
 Review date: 3 October 2026. Monitoring-only changes were subsequently published
 to Test as v1.10.18 / build 33 on 4 October; this review is not proof of live
 hardware validation or an official ES22 API/control contract.

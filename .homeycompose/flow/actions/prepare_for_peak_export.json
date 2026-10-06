@@ -11,9 +11,9 @@
     "nl": "Voorbereiden op piekteruglevering (reserve [[reserve]]%)"
   },
   "hint": {
-    "en": "Lowers the backup reserve so the battery can discharge and enables grid feed-in, to export during a high-price window.",
-    "de": "Senkt die Notstromreserve, damit die Batterie entladen kann, und aktiviert die Netzeinspeisung für ein Hochpreis-Zeitfenster.",
-    "nl": "Verlaagt de back-upreserve zodat de batterij kan ontladen en schakelt teruglevering aan het net in tijdens een duur tariefvenster."
+    "en": "Sets the chosen reserve and permits grid feed-in, with reported-state readback. This does not force export or a particular power; EcoFlow mode, schedules and limits still apply.",
+    "de": "Setzt die gewählte Reserve und erlaubt Netzeinspeisung mit Rückmeldung der Einstellungen. Erzwingt weder Einspeisung noch eine bestimmte Leistung; EcoFlow-Modus, Zeitpläne und Grenzen gelten weiterhin.",
+    "nl": "Stelt de gekozen reserve in en staat teruglevering toe, met teruglezing van de instellingen. Dit forceert geen teruglevering of bepaald vermogen; EcoFlow-modus, schema's en limieten blijven gelden."
   },
   "args": [
     {

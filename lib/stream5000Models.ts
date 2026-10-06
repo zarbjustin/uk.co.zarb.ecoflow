@@ -10,7 +10,7 @@
  * "STREAM 5000".
  */
 
-export type Stream5000TelemetryAdapterId = 'es22';
+export type Stream5000TelemetryAdapterId = 'es22' | 'es21';
 
 export interface Stream5000ModelSpec {
   /** Stable internal model identifier stored with newly paired Homey devices. */
@@ -28,6 +28,9 @@ export interface Stream5000ModelSpec {
 export const STREAM_AC5000_MODEL_ID = 'stream_ac_5000';
 export const STREAM_AC5000_MODEL = 'STREAM AC 5000';
 export const STREAM_AC5000_PREFIX = 'ES22';
+export const STREAM_5000_MODEL_ID = 'stream_5000';
+export const STREAM_5000_MODEL = 'STREAM 5000';
+export const STREAM_5000_PREFIX = 'ES21';
 
 /** Driver IDs sharing one app-auth account. */
 export const STREAM_5000_SYSTEM_DRIVER_ID = 'stream_5000_system';
@@ -52,6 +55,16 @@ const MODELS: readonly Stream5000ModelSpec[] = Object.freeze([
     name: STREAM_AC5000_MODEL,
     serialPrefixes: Object.freeze([STREAM_AC5000_PREFIX]),
     telemetryAdapter: 'es22' as const,
+    monitoringOnly: true as const,
+  }),
+  // Model identity and shared core frame families corroborated by the pinned
+  // public ES21 captures in docs/STREAM_MODEL_COVERAGE.md. This admits read-only
+  // beta monitoring, not ES22 command inheritance or unverified PV tiles.
+  Object.freeze({
+    id: STREAM_5000_MODEL_ID,
+    name: STREAM_5000_MODEL,
+    serialPrefixes: Object.freeze([STREAM_5000_PREFIX]),
+    telemetryAdapter: 'es21' as const,
     monitoringOnly: true as const,
   }),
 ]);

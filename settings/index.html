@@ -80,8 +80,10 @@
   </div>
   <p class="help">
     Verified STREAM 5000-family units use EcoFlow's app connection because they are not available
-    through the supported public API. Today this supports the STREAM AC 5000
-    (<code>ES22&hellip;</code>). Your EcoFlow <em>account</em> sign-in is stored separately from the
+    through the supported public API. This beta supports STREAM AC 5000
+    (<code>ES22&hellip;</code>) and STREAM 5000 (<code>ES21&hellip;</code>) core battery monitoring.
+    ES21 still needs Homey hardware validation; direct PV/string tiles, expansion batteries,
+    STREAM 3000 and Gateway pairing are not enabled. Your EcoFlow <em>account</em> sign-in is stored separately from the
     keys above. Monitoring only &mdash; controls are intentionally disabled and no commands are sent.
     Removing the last STREAM 5000-family unit also clears it.
   </p>
@@ -91,8 +93,16 @@
 
   <h1 style="font-size:17px;">Setup and Energy diagnostics</h1>
   <p class="help">This local report shows the installed app and Homey versions, packaged/registered
-    battery drivers, beta pairing access and anonymous Energy accounting counters. It does not
-    contact EcoFlow or include credentials, device names or serial numbers. Copy it when reporting
+    battery drivers, beta pairing access, anonymous Energy accounting counters and observed battery
+    peer counts and which peer fields have been seen during this session. After opening an existing
+    beta pairing device list, it also includes a cached account inventory: model prefixes, counts and
+    unverified product-category hints for expansion batteries, STREAM 3000, Gateway and Dual CT.
+    You can cancel pairing without adding or deleting a device. The inventory is not an installation
+    membership list; a missing expansion entry does not mean no expansion is connected. Possible overlap between Home Batteries is a review hint, not confirmed membership;
+    this report does not combine or change devices. It does not
+    contact EcoFlow or include credentials, device names or complete serial numbers. Only four-character
+    product prefixes are shown. Inventory observations reset on account changes or app restart.
+    Copy it when reporting
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
   <button id="supportSnapshot" type="button">Show support report</button>

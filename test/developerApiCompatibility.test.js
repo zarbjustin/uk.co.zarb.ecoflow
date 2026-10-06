@@ -145,6 +145,7 @@ class TestDevice extends BaseEcoFlowDevice {
     this.clientCredentialsKey = 'access:secret:';
     this.pollTimer = {};
     this.subscribedSn = this.sn;
+    this.realtimeApp = this.homey.app;
     this.quotaHandler = () => {};
     this.statusHandler = () => {};
   }
@@ -161,6 +162,20 @@ test('the exact reported ES22 serial is quarantined from the Developer API', () 
   );
   assert.strictEqual(developerApiQuarantineMessageKey('es22ze1b2j6w0110'), ES22_WRONG_DRIVER_MESSAGE_KEY);
   assert.strictEqual(developerApiQuarantineMessageKey('BK61ZK1B2H720041'), null);
+  assert.strictEqual(developerApiQuarantineMessageKey('ES21TESTUNITAAAA'), ES22_WRONG_DRIVER_MESSAGE_KEY);
+});
+
+test('an ES21 in a legacy Developer driver cannot initialize, poll or write', async () => {
+  const device = new TestDevice('ES21TESTUNITAAAA');
+  await device.onInit();
+  assert.deepStrictEqual(device.unavailableMessages, [LOCALIZED_ES22_MESSAGE]);
+  await assert.rejects(device.manualPoll(), DeveloperApiQuarantineError);
+  await assert.rejects(device.manualWrite({ sn: device.sn }), DeveloperApiQuarantineError);
+  assert.strictEqual(device.settingsReads, 0);
+  assert.strictEqual(device.quotaCalls, 0);
+  assert.strictEqual(device.writeCalls, 0);
+  assert.strictEqual(device.subscribeCalls, 0);
+  assert.strictEqual(device.timerCalls, 0);
 });
 
 test('an already-paired ES22 stops before lifecycle setup and stays stopped', async () => {
@@ -268,7 +283,7 @@ test('backup-reserve quarantine errors are rethrown unchanged without warning or
   };
 
   await assert.rejects(
-    device.sendSequence('Set backup reserve', [{ sn: 'ES22ZE1B2J6W0110' }]),
+    device.flowSetBackupReserve(20),
     (error) => error instanceof DeveloperApiQuarantineError
       && error.message === LOCALIZED_ES22_MESSAGE,
   );

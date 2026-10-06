@@ -56,7 +56,22 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 1);
+  assert.equal(report.schemaVersion, 3);
+});
+
+test('support report re-projects cached discovery without network or identity access', () => {
+  const instance = homey();
+  const observedAt = Date.now() - 1000;
+  instance.app = { getStreamDiscoveryEvidence: () => ({ observedAt, token: 'PRIVATE', groups: [
+    { prefix: 'ZZ11', verifiedModel: 'unverified', productHint: 'expansion_5000', count: 1,
+      onlineCount: 1, sharedCount: 0, sn: 'PRIVATE' },
+  ] }) };
+  const report = createSupportSnapshot(instance);
+  assert.equal(report.streamDiscovery.groups[0].productHint, 'expansion_5000');
+  assert.equal(report.streamDiscovery.membership, 'unverified');
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+  instance.app.getStreamDiscoveryEvidence = () => { throw new Error('PRIVATE'); };
+  assert.equal(createSupportSnapshot(instance).streamDiscovery.source, 'unavailable');
 });
 
 test('old runtime omissions remain explicit rather than inventing a version/platform', () => {
@@ -65,4 +80,26 @@ test('old runtime omissions remain explicit rather than inventing a version/plat
   assert.equal(report.homeyVersion, null);
   assert.equal(report.platform, 'unknown');
   assert.equal(report.betaPairingEnabled, false);
+});
+
+test('topology report flags aggregate overlap anonymously and ignores optional physical monitor duplication', () => {
+  const instance = homey();
+  const bk = 'BK11SYNTHETIC0001';
+  const es = 'ES22SYNTHETIC0001';
+  const device = (source, addressSn, peers = []) => ({
+    getData() { throw new Error('support must use cached evidence, not identity access'); },
+    getTopologyEvidence: () => ({ source, addressSn, peers, lastPeerRecordAt: Date.now(),
+      systemSocObserved: true, maxReportedRecordCount: 2, password: 'PRIVATEPASSWORD' }),
+  });
+  const linked = device('es22_peer_records', es, [{ sn: bk, seenAt: Date.now() }]);
+  const devices = { stream: [device('bk_main_address', bk)], stream_5000_system: [linked], stream_5000_unit: [linked] };
+  instance.drivers.getDriver = (id) => ({ getDevices: () => devices[id] || [] });
+  const report = createSupportSnapshot(instance);
+  assert.equal(report.installationTopology.aggregateCount, 2);
+  assert.equal(report.installationTopology.potentialOverlapPairs.length, 1);
+  assert.equal(report.drivers.find((item) => item.id === 'stream_5000_unit').topology[0].observedPeerCount, 1);
+  assert.equal(report.installationTopology.autoGroupingEnabled, false);
+  const output = JSON.stringify(report);
+  assert.ok(!output.includes('SYNTHETIC'));
+  assert.ok(!output.includes('PRIVATE'));
 });

@@ -2,8 +2,15 @@
 
 Code review: 4 October 2026. Sources: `drivers/stream/device.ts`,
 `lib/streamProtocol.ts`, `app.ts` and `.homeycompose/flow/`. This describes the
-current implementation, not newly verified hardware behaviour. The 5000 beta
+implementation at that review, not newly verified hardware behaviour. The 5000 beta
 remains read-only and is excluded by these cards' `driver_id=stream` filters.
+
+6 October follow-up: the unpublished
+[Sprint 4 candidate](SPRINT_4_CONTROL_SAFETY_STATUS.md) adds fresh main-target
+baseline/readback to all five controls and three helpers, serialized writes and
+partial-failure review. Price conditions reject missing/expired session prices
+after 90 minutes; restart/unit changes invalidate them. The published v1.10.18
+does not contain these changes.
 
 | Action | Implemented command semantics | Important limit |
 | --- | --- | --- |
@@ -15,10 +22,12 @@ remains read-only and is excluded by these cards' `driver_id=stream` filters.
 | Set operating mode | Self-powered / AI / scheduled / TOU flags | Does not configure or validate a complete schedule |
 | Set grid feed-in | Grid-feed mode 1/2 | Export permission, not a charging switch or power setpoint |
 
-The reserve sequence protects against API 8524 and polls to verify reserve.
-Several other actions update their capability optimistically after API success;
-that is not proof of a physical response. Multi-command sequences can partially
-apply. Existing warning/readback handling is not automatic rollback.
+The reserve sequence preserves the ordering intended to avoid API 8524. Before
+Sprint 4, several actions updated capabilities optimistically after API success.
+The local candidate updates from observed state and checks each sequence step;
+this is still not proof of a physical power response. Sequences can partially
+apply; no automatic rollback is performed. Full prior settings require manual
+review and restoration, not just a reserve reset.
 
 ## Henry's cheap-price / external Enphase solar use case
 
@@ -30,7 +39,9 @@ its reported load, so it cannot reliably classify external Enphase surplus.
 
 Suggested recipe to validate manually before automating:
 
-1. Feed the current tariff price into **Set current electricity price**.
+1. Feed the currently applicable tariff price into **Set current electricity
+   price** at least hourly and after restart or changing units. In the local
+   candidate, stale price conditions stop the Flow, including inverted ones.
 2. On a cheap-price transition, if below the chosen SOC target, use **Prepare
    for cheap grid import** with a deliberately chosen reserve. Read back reserve,
    charge limit, state and actual battery power; do not infer charging from command
@@ -38,7 +49,9 @@ Suggested recipe to validate manually before automating:
 3. On leaving the window, restore previously recorded normal reserve, discharge
    limit, charge limit, operating mode and feed-in settings as appropriate.
    The reserve helper may alter discharge limit; restoring reserve alone is
-   not a full restore. Resolve conflicts with EcoFlow schedules/AI first.
+   not a full restore. Resolve conflicts with EcoFlow schedules/AI first. Include
+   explicit window-exit/failure handling independent of an expired price condition;
+   price expiry does not undo previously applied settings.
 4. For solar-surplus decisions, use the external solar/grid app's measurements,
    a deadband and dwell time to avoid rapid toggling. Validate import/export sign
    and whether those measurements include the battery before using them as triggers.

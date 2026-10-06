@@ -1,0 +1,37 @@
+{
+  "provenance": {
+    "repository": "https://github.com/shuette42/ecoflow-energy-ha",
+    "commit": "8cc4624f10a4fe2f75d5a389937982ca8deb9736",
+    "path": "tests/fixtures/stream_ac5000/es21_pair_pv_both_connections_masked.json",
+    "license": "MIT",
+    "transformation": "Only the verbatim f50 group of the 254/39 pdata is retained. Source-frame indexes and connections are preserved. Tests wrap this group with a synthetic source header taken from the fixture's connection metadata; that header is not captured device evidence. Upstream already masks both serials. No private diagnostic identifiers or credentials are included."
+  },
+  "unit_a": "ES21TESTUNITAAAA",
+  "unit_b": "ES21TESTUNITBBBB",
+  "frames": [
+    {
+      "index": 0,
+      "at": "2026-09-13T00:25:17.591966+00:00",
+      "connection": "unit_a",
+      "pdata_hex": "9203450a190a104553323154455354554e4954414141411500008c4228020a280a104553323154455354554e4954424242421500008a4225008096c3280235c2aa97433d00809643"
+    },
+    {
+      "index": 2,
+      "at": "2026-09-13T01:27:58.921074+00:00",
+      "connection": "unit_a",
+      "pdata_hex": "920300"
+    },
+    {
+      "index": 7,
+      "at": "2026-09-13T06:49:06.173265+00:00",
+      "connection": "unit_b",
+      "pdata_hex": "920386010a410a104553323154455354554e49544242424215000040421d2ff8494325c00b7e402802355e5f49433d000046434d18bc7a4255fd6e3e425d6a3d5342653c781b420a410a104553323154455354554e49544141414115000044421d00005843250000c842280235a5a3ee423d0000e8424d0000704255000078425d00007842650000f041"
+    },
+    {
+      "index": 17,
+      "at": "2026-09-13T07:36:38.005455+00:00",
+      "connection": "unit_b",
+      "pdata_hex": "920381010a410a104553323154455354554e49544242424215000048421d123071432580040c4028023570d86f433d00006f434d48b29b42558e385c425d6e628242654e5e2c420a3c0a104553323154455354554e49544141414115000044421d00006f43250000c442280235c8fa11433d00000d434d000090425500008e425d00009442"
+    }
+  ]
+}

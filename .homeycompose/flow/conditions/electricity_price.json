@@ -11,9 +11,9 @@
     "nl": "Stroomprijs is [[direction]] [[price]]"
   },
   "hint": {
-    "en": "Uses the price set via the 'Set current electricity price' action.",
-    "de": "Verwendet den über die Aktion 'Aktuellen Strompreis festlegen' gesetzten Preis.",
-    "nl": "Gebruikt de prijs die is ingesteld via de actie 'Huidige stroomprijs instellen'."
+    "en": "Uses the current price action. Missing prices or prices older than 90 minutes stop this Flow, including inverted conditions. Update after app restart or a price-unit change.",
+    "de": "Verwendet die Aktion für den aktuellen Preis. Fehlende oder über 90 Minuten alte Preise stoppen diesen Flow, auch bei umgekehrten Bedingungen. Nach App-Neustart oder Einheitenwechsel aktualisieren.",
+    "nl": "Gebruikt de actie voor de huidige prijs. Ontbrekende of meer dan 90 minuten oude prijzen stoppen deze Flow, ook bij omgekeerde voorwaarden. Werk bij na app-herstart of wijziging van de prijseenheid."
   },
   "args": [
     {

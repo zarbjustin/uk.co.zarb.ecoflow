@@ -182,7 +182,7 @@ test('pairing clearly explains the monitoring-only app connection', () => {
 test('wrong-device and monitoring-only copy is localized without driver terminology', () => {
   for (const locale of ['en', 'de', 'nl']) {
     const messages = require(`../locales/${locale}.json`);
-    assert.match(messages.errors.es22_wrong_driver, /STREAM AC 5000/);
+    assert.match(messages.errors.es22_wrong_driver, /STREAM[- ]5000/);
     assert.ok(!/driver|Treiber|stuurprogramma/i.test(messages.errors.es22_wrong_driver));
     assert.ok(messages.errors.developer_api_unsupported_device);
     assert.ok(messages.device.stream_ac5000.monitoring_only);

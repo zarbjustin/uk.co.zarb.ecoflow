@@ -6,14 +6,14 @@
     "nl": "Voorbereiden op goedkope netafname"
   },
   "titleFormatted": {
-    "en": "Prepare for cheap import (charge to [[reserve]]%)",
-    "de": "Für günstigen Bezug vorbereiten (auf [[reserve]]% laden)",
-    "nl": "Voorbereiden op goedkope afname (laden tot [[reserve]]%)"
+    "en": "Prepare for cheap import (reserve [[reserve]]%)",
+    "de": "Für günstigen Bezug vorbereiten (Reserve [[reserve]]%)",
+    "nl": "Voorbereiden op goedkope afname (reserve [[reserve]]%)"
   },
   "hint": {
-    "en": "Lifts the charge limit to 100% and sets the backup reserve target so the battery charges from the grid during a cheap window (e.g. Octopus Agile).",
-    "de": "Hebt die Ladegrenze auf 100 % an und setzt das Ziel für die Notstromreserve, damit die Batterie während eines günstigen Zeitfensters aus dem Netz lädt (z. B. Octopus Agile).",
-    "nl": "Verhoogt de laadlimiet naar 100% en stelt de back-upreserve in, zodat de batterij tijdens een goedkoop tariefvenster via het net laadt (bijv. Octopus Agile)."
+    "en": "Sets the charge limit to 100% and the chosen reserve, with reported-state readback. Charging still depends on EcoFlow mode, schedules and grid limits; no wattage target is set.",
+    "de": "Setzt die Ladegrenze auf 100 % und die gewählte Reserve mit Rückmeldung der Einstellungen. Das Laden hängt weiterhin von EcoFlow-Modus, Zeitplänen und Netzgrenzen ab; kein Watt-Sollwert.",
+    "nl": "Stelt de laadlimiet op 100% en de gekozen reserve in, met teruglezing van de instellingen. Laden blijft afhankelijk van EcoFlow-modus, schema's en netlimieten; er wordt geen wattdoel ingesteld."
   },
   "args": [
     {

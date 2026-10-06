@@ -1,5 +1,37 @@
 # Next-wave tester validation
 
+## Local expansion-discovery follow-up (not in published build 33)
+
+The [Sprint 5 candidate](SPRINT_5_EXPANSION_DISCOVERY.md) adds support schema 3:
+anonymous cached account inventory and serial-keyed peer-field visibility.
+After an authorized Test release, open a beta pairing device list and cancel
+without adding/deleting anything, then use **Show support report**. Opening
+pairing uses its existing account-list request; the report itself makes none.
+Account inventory resets after app restart/account changes and may be stale.
+It includes four-character prefixes and controlled product-category hints, not
+full serials/names. Peer-field flags describe fields seen during the session,
+not fresh readings, certified membership, expansion count or capacity.
+
+Owners of already-configured host-plus-expansion, Gateway, Dual CT or 3000
+systems can supply time-aligned system/host/pack screenshots and their actual
+configuration. Missing discovery entries do not prove absence of nested packs.
+No new pairing support, Energy meters or controls are enabled for these products.
+Do not change EcoFlow grouping or electrical configuration just for testing.
+
+## Local ES21 follow-up (not in published build 33)
+
+The [model expansion candidate](STREAM_MODEL_COVERAGE.md) adds STREAM 5000 ES21
+core monitoring through the two existing default-off beta choices. Release and
+hardware acceptance are separate, still-open gates. After an authorized Test
+release, compare ES21 system/unit percentage, signed battery watts and counters
+through charging (including direct PV), discharging, idle, silence/reconnect and
+restart, then a 24–48-hour soak. Check linked units and independent installations
+without changing their EcoFlow grouping. Extra PV/string tiles and controls are
+not enabled. Existing devices do not need deletion/re-pairing for model admission.
+Use one installation Home Battery for Energy, with optional non-Energy monitors.
+
+## Published Test baseline
+
 Published 4 October 2026: **v1.10.18 / build 33 / Test**.
 [Install the Test build](https://homey.app/a/uk.co.zarb.ecoflow/test/) and confirm
 the installed version before collecting evidence. Production remains v1.10.3 /
@@ -86,6 +118,13 @@ decreases handled by the existing reset policy; it is not proof of a firmware re
 
 ## Mixed-generation research (no automatic merge)
 
+The unpublished [Sprint 2 candidate](SPRINT_2_TOPOLOGY_STATUS.md) adds support
+schema 2 with anonymous observed-peer counts/freshness and possible aggregate
+overlap. Test v1.10.18 does not include these additions. Once a newer candidate is
+released and installed, collect its report without deleting or re-pairing devices.
+Overlap hints are not verified membership; empty hints are not proof of independent
+systems. Continue to supply time-aligned screenshots and private redacted evidence.
+
 Seek one volunteer with original BK and new ES batteries combined in EcoFlow,
 and a negative case where separate installations share an account. Request:
 
@@ -101,7 +140,45 @@ reported aggregates may overlap. No automatic merge or migration is part of this
 candidate. Stable membership, authoritative SOC/capacity and disjoint power must
 be understood before implementing consolidation.
 
-## Promotion gate
+## Original BK control candidate (Sprint 4, unpublished)
+
+Only test after a release is authorized and installed. Do not delete/re-pair for
+these changes. Use a controllable original BK installation, record prior mode,
+feed-in, charge/discharge limits and reserve, and resolve competing schedules/AI
+before testing. No 5000 control contract or write is admitted by this increment.
+
+- Compare the main target's reported controls before/after each action and UI
+  setting. Check normalization, already-matching no-op requests and reserve /
+  discharge ordering. Observe actual power separately: API/readback success does
+  not prove charging/export at any wattage.
+- Where safely reproducible, distinguish API acceptance from an unapplied
+  setting. Confirm read failure/missing required fields stops the action without
+  cached success; partial sequences stop without further commands. Review prior
+  settings in the warning and restore the complete normal configuration manually.
+  No automatic rollback or automatic retry of a write is expected.
+- Check concurrent Flows against one installation, another installation, and
+  an EcoFlow policy change between steps. This app serializes its own target
+  writes, but cannot lock other clients; don't deliberately stress live devices.
+- Restart/unload during readback: no subsequent command or queued operation
+  should resume from the old session. A sent command may still have applied;
+  review EcoFlow before retrying.
+- Feed a valid current negative, zero and positive price. Verify both price
+  conditions reject missing/>90-minute-old prices, including inverted conditions.
+  Restart or changing units also requires a fresh price. Refresh at least hourly.
+  The displayed last price is not freshness proof, and expiry must not be assumed
+  to undo an earlier charging policy. Test explicit normal-state/failure Flows.
+- Repeat charge, discharge and idle measurements after restoring normal settings;
+  preserve numerical Energy evidence and the separate 24–48-hour soak gate.
+
+## Promotion gate (all increments)
+
+The local [Sprint 3 research increment](SPRINT_3_CAPABILITIES_STATUS.md) is not
+in Test v1.10.18 and does not add picker models or PV/socket tiles. ES21 users
+can contribute redacted, time-aligned EcoFlow device/system evidence, but should
+not pair through the AC-5000 adapter or change their installation for testing.
+Distinguish direct MPPT strings from the solar-system node, and record each
+unit's page separately. Expansion/gateway evidence must show capacity units and
+whether expansion energy is already included in the installation total.
 
 Automated build/lint/tests/audit/Homey validation must pass. On-device settings
 and the support endpoint must work. Complete the relevant live matrices and soak,

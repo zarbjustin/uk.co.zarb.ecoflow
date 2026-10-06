@@ -22,7 +22,7 @@ class FakeDevice {
     this.logs = [];
   }
 
-  getData() { return { sn: captures.pair.unit_a }; }
+  getData() { return { sn: this.sn || captures.pair.unit_a }; }
   getSetting(key) { return this.settings[key]; }
   getStoreValue(key) { return this.store[key]; }
   getCapabilityValue(key) { return this.values[key]; }
@@ -70,8 +70,9 @@ function frame(pdata) {
   return group(1, Buffer.concat([group(1, pdata), varint(64), varint(254), varint(72), varint(39)]));
 }
 
-async function harness(DeviceClass, savedStore = {}) {
+async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a) {
   const device = new DeviceClass();
+  device.sn = sn;
   Object.assign(device.store, savedStore);
   let handler;
   let nextTimer = 0;
@@ -90,11 +91,139 @@ async function harness(DeviceClass, savedStore = {}) {
   return {
     device,
     emit: async (payload) => {
-      handler(payload, `/app/device/property/${captures.pair.unit_a}`);
+      handler(payload, `/app/device/property/${sn}`);
       await device.applyChain;
     },
   };
 }
+
+test('ES21 raw core captures replay through both real roles, with aggregate-only persistent energy', async (t) => {
+  const { decodeFrameHeaders } = require('../.homeybuild/lib/streamAc5000Protocol');
+  const samples = require('./fixtures/stream5000Es21Core.json').frames;
+  const sn = 'ES21TESTUNITAAAA';
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const system = await harness(classes.Stream5000UnitDevice, {}, sn);
+  const unit = await harness(classes.Stream5000PhysicalUnitDevice, {}, sn);
+  const replay = (index) => {
+    const sample = samples.find((entry) => entry.index === index);
+    const header = decodeFrameHeaders(Buffer.from(sample.hex, 'hex'))[0];
+    // Only test identity is substituted. Core numerical payload is verbatim.
+    const pdata = Buffer.from(header.pdata);
+    const masked = Buffer.from('XXXXXXXXXXXXXXXX');
+    let offset = pdata.indexOf(masked);
+    while (offset !== -1) {
+      Buffer.from(sn).copy(pdata, offset);
+      offset = pdata.indexOf(masked, offset + masked.length);
+    }
+    return group(1, Buffer.concat([
+      group(1, pdata), varint(64), varint(header.cmdFunc), varint(72), varint(header.cmdId), group(25, Buffer.from(sn)),
+    ]));
+  };
+  for (const target of [system, unit]) {
+    await target.emit(replay(0));
+    await target.emit(replay(1));
+    await target.emit(replay(3));
+    assert.equal(target.device.settings.model, 'STREAM 5000');
+    assert.equal(target.device.values.measure_battery, 74);
+    assert.equal(target.device.values.measure_temperature, 45);
+    assert.equal(target.device.values.battery_soh, 100);
+    assert.equal(target.device.available, true);
+  }
+  assert.equal(system.device.values.measure_power, -630);
+  assert.equal(unit.device.values.stream_unit_power_battery_flow, -630);
+  assert.equal(unit.device.hasCapability('measure_power'), false);
+  now += 60000;
+  await system.emit(replay(3));
+  await unit.emit(replay(3));
+  assert.equal(system.device.values['meter_power.discharged'], 0.0105);
+  assert.equal(unit.device.values['meter_power.discharged'], undefined);
+  const usableAt = system.device.lastTelemetryAt;
+  now += 1000;
+  await system.emit(replay(4));
+  assert.equal(system.device.lastTelemetryAt, usableAt, 'unknown 254/40 cannot renew availability');
+  await system.device.onUninit();
+  await unit.device.onUninit();
+  const restarted = await harness(classes.Stream5000UnitDevice, system.device.store, sn);
+  assert.equal(restarted.device.values['meter_power.discharged'], 0.0105);
+  await restarted.emit(replay(3));
+  assert.equal(restarted.device.values['meter_power.discharged'], 0.0105, 'restart does not integrate an outage');
+  await restarted.device.onUninit();
+});
+
+test('5000 subscription completing after shutdown cannot restart watchdogs or retain a handler', async () => {
+  const device = new classes.Stream5000PhysicalUnitDevice();
+  let complete;
+  let entered;
+  const subscribed = new Promise((resolve) => { complete = resolve; });
+  const started = new Promise((resolve) => { entered = resolve; });
+  let intervals = 0;
+  let unsubscribed = 0;
+  const app = {
+    subscribeAppRealtime: async () => { entered(); return subscribed; },
+    unsubscribeAppRealtime: () => { unsubscribed += 1; },
+  };
+  device.homey = {
+    __: (key) => key,
+    app,
+    setInterval: () => { intervals += 1; return intervals; },
+    clearInterval() {},
+  };
+  const init = device.onInit();
+  await started;
+  await device.onUninit();
+  Object.defineProperty(device.homey, 'app', { get() { throw new Error('app instance destroyed'); } });
+  complete(true);
+  await init;
+  assert.equal(intervals, 0);
+  assert.equal(device.subscriptionState, 'stopped');
+  assert.equal(unsubscribed, 1);
+});
+
+test('ES21 linked records preserve system SOC and attribute physical SOC without copying aggregate power', async (t) => {
+  const pv = require('./fixtures/stream5000PvResearch.json');
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const system = await harness(classes.Stream5000UnitDevice, {}, pv.unit_b);
+  const unit = await harness(classes.Stream5000PhysicalUnitDevice, {}, pv.unit_b);
+  const core = Buffer.from(require('./fixtures/stream5000Es21Core.json').frames[0].hex, 'hex');
+  await system.emit(core);
+  const systemAt = system.device.lastTelemetryAt;
+  now += 1000;
+  const linked = frame(Buffer.from(pv.frames[2].pdata_hex, 'hex'));
+  await system.emit(linked);
+  await unit.emit(linked);
+  assert.equal(system.device.values.measure_battery, 74);
+  assert.equal(system.device.lastTelemetryAt, systemAt, 'unit-only records cannot renew installation SOC');
+  assert.equal(unit.device.values.measure_battery, 48);
+  assert.equal(unit.device.values.stream_unit_power_battery_flow, null);
+  assert.equal(unit.device.getTopologyEvidence().source, 'es21_peer_records');
+  assert.equal(unit.device.hasCapability('meter_power.charged'), false);
+  await system.device.onUninit();
+  await unit.device.onUninit();
+});
+
+test('failed 5000 subscription completing after shutdown cannot start a retry timer', async () => {
+  const device = new classes.Stream5000PhysicalUnitDevice();
+  let complete;
+  let entered;
+  const subscribed = new Promise((resolve) => { complete = resolve; });
+  const started = new Promise((resolve) => { entered = resolve; });
+  let intervals = 0;
+  device.homey = {
+    __: (key) => key,
+    app: { subscribeAppRealtime: async () => { entered(); return subscribed; } },
+    setInterval: () => { intervals += 1; return intervals; },
+    clearInterval() {},
+  };
+  const init = device.onInit();
+  await started;
+  await device.onUninit();
+  complete(false);
+  await init;
+  assert.equal(intervals, 0);
+  assert.equal(device.subscriptionState, 'stopped');
+});
 
 test('real lifecycle applies different system/unit readings and only the aggregate integrates energy', async (t) => {
   let now = 100000;
@@ -142,6 +271,54 @@ test('parsed but unprojectable unit delta cannot mark Home Battery online or ref
   assert.equal(system.device.lastTelemetryAt, usableAt);
   assert.equal(system.device.values.measure_battery, 76);
   await system.device.onUninit();
+});
+
+test('PV research readings cannot keep production devices online, add tiles or advance Energy totals', async () => {
+  const system = await harness(classes.Stream5000UnitDevice);
+  const unit = await harness(classes.Stream5000PhysicalUnitDevice);
+  const initialSystemValues = { ...system.device.values };
+  const initialUnitValues = { ...unit.device.values };
+  const f = (number, value) => {
+    const bytes = Buffer.alloc(4);
+    bytes.writeFloatLE(value);
+    return Buffer.concat([varint(number * 8 + 5), bytes]);
+  };
+  const payload = frame(group(50, group(1, Buffer.concat([
+    group(1, Buffer.from(captures.pair.unit_a)), f(3, 100), f(9, 100),
+  ]))));
+  await system.emit(payload);
+  await unit.emit(payload);
+  assert.equal(system.device.parsedFrames, 1);
+  assert.equal(system.device.lastTelemetryAt, 0);
+  assert.equal(unit.device.lastTelemetryAt, 0);
+  assert.equal(system.device.onlineTransitions, 0);
+  assert.equal(unit.device.onlineTransitions, 0);
+  assert.deepEqual(system.device.values, initialSystemValues);
+  assert.deepEqual(unit.device.values, initialUnitValues);
+  assert.equal(unit.device.hasCapability('meter_power.charged'), false);
+  assert.equal(system.device.hasCapability('stream_unit_power_pv1'), false);
+  await system.device.onUninit();
+  await unit.device.onUninit();
+});
+
+test('real parsed peer frames feed private topology evidence without changing pairing, capability roles or persisted stores', async () => {
+  const system = await harness(classes.Stream5000UnitDevice);
+  const unit = await harness(classes.Stream5000PhysicalUnitDevice);
+  const payload = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+  const pairedBefore = system.device.getData();
+  await system.emit(payload);
+  await unit.emit(payload);
+  const evidence = system.device.getTopologyEvidence();
+  assert.equal(evidence.source, 'es22_peer_records');
+  assert.equal(evidence.systemSocObserved, true);
+  assert.ok(evidence.peers.length > 0);
+  assert.deepEqual(system.device.getData(), pairedBefore);
+  assert.equal(unit.device.hasCapability('meter_power.charged'), false);
+  assert.equal(unit.device.getEnergyDiagnostics(), null);
+  await system.device.onUninit();
+  await unit.device.onUninit();
+  assert.ok(!JSON.stringify(system.device.store).includes(captures.pair.unit_a), 'no serial membership is persisted');
+  assert.ok(!JSON.stringify(unit.device.store).includes(captures.pair.unit_a));
 });
 
 test('aggregate restores saved kWh across restart without integrating downtime or duplicate samples', async (t) => {

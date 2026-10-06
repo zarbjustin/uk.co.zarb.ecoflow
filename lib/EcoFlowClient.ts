@@ -71,10 +71,10 @@ export class EcoFlowClient {
   }
 
   /** GET /iot-open/sign/device/quota/all — all current quota fields (flat map). */
-  async getQuotaAll(sn: string): Promise<Quota> {
-    const data = await this.cachedRequest(`quota:${sn}`, 1500, () => (
-      this.request('GET', '/iot-open/sign/device/quota/all', { query: { sn } })
-    ));
+  async getQuotaAll(sn: string, options: { fresh?: boolean } = {}): Promise<Quota> {
+    const load = () => this.request('GET', '/iot-open/sign/device/quota/all', { query: { sn } });
+    // Control readback must not share a cached or pre-command in-flight poll.
+    const data = options.fresh ? await load() : await this.cachedRequest(`quota:${sn}`, 1500, load);
     return (data as Quota) || {};
   }
 

@@ -89,3 +89,17 @@ test('known STREAM prefixes are explicit evidence independent of names', () => {
   assert.strictEqual(hasKnownStreamUnitPrefix('ES22ZE1B2J6W0110'), false);
   assert.strictEqual(hasKnownStreamUnitPrefix('ZZ99AAAA'), false);
 });
+
+test('ES21 and unverified new-generation models never inherit BK telemetry or controls', () => {
+  const richQuota = { cmsBattSoc: 20, powGetSysLoad: 400, relay2Onoff: true };
+  assert.strictEqual(classifyDevice({ sn: 'ES21TESTUNITAAAA', productName: '' }, richQuota), 'stream_5000_unit');
+  assert.strictEqual(isStreamAc5000({ sn: 'ES21TESTUNITAAAA' }), false);
+  for (const model of [
+    { sn: 'ES23UNKNOWN', productName: 'STREAM Ultra' },
+    { sn: 'ZZ99UNKNOWN', productName: 'STREAM 3000' },
+    { sn: 'ZZ99UNKNOWN', productName: 'STREAM Expansion Battery' },
+    { sn: 'ZZ99UNKNOWN', productName: 'STREAM Gateway' },
+  ]) {
+    assert.strictEqual(classifyDevice(model, richQuota), 'unsupported_stream_5000');
+  }
+});
