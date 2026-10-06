@@ -4,6 +4,13 @@
 
 ## Current handover — 6 October 2026
 
+**Development branch:** `codex/stream-charging-coordination` starts from the clean,
+synced Test handover tip `5c984770e805e4f2a2e192b7c92c64faab0eb9b2`. Community
+reply 33 adds BYD-priority and anti-reciprocal-charging requirements; see the
+[next-wave branch and sprint plan](COMMUNITY_FEEDBACK_ROADMAP.md). Build 36 remains
+the Test baseline. This preparation changes documentation only, not runtime,
+5000 controls, Energy roles or production. Keep focused release hotfixes separate.
+
 **Latest Test release: v1.10.21 / build 36**, published on 6 October 2026 from
 `codex/stream-next-wave-test`. The socket/configuration wave below is now in Test.
 Implementation: `4997c1f9edcf1d4cc05951e25908a842c5b45f9f`; store guidance:

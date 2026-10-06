@@ -45,6 +45,58 @@ shutdown races, and the still-open numerical Energy/picker/hardware gates.
 
 ## Evidence and current release boundary
 
+### Next development branch and community follow-up (6 October)
+
+The frozen Test baseline is tag `v1.10.21`, commit
+`740b14669738f8f4d46cf084c55825f7326d0fd9`, build 36. Its handover branch
+`codex/stream-next-wave-test` was clean and matched origin at
+`5c984770e805e4f2a2e192b7c92c64faab0eb9b2`; CI passed for that documentation tip.
+Continue the next wave on `codex/stream-charging-coordination`, branched from
+that tip. Keep release hotfixes narrowly scoped on the Test branch; bring accepted
+hotfix commits into development by cherry-pick. Do not publish development into
+the shared Test channel while community acceptance of build 36 is in progress
+without an explicit decision to replace that baseline. `master` stays unchanged.
+
+[Community reply 32](https://community.homey.app/t/157399/32) announces build 36.
+[Reply 33](https://community.homey.app/t/157399/33) clarifies the requested behaviour:
+give Fronius/BYD charging priority below 98%, allow STREAM to use remaining surplus
+afterwards, and prevent reciprocal battery charging/discharging. The owner reports
+one AC 5000 plus two other STREAM batteries presented as a combined system.
+The other two models, authoritative membership, measured power and the actual
+control scope are not yet established. This is owner feedback, not a verified
+mixed-generation API contract. Do not preserve the quoted email footer or raw
+private reports in Git.
+
+The next work can proceed without hardware, but enabling commands cannot:
+
+1. **Sprint 4A — control contract investigation.** Audit ES22 grid-input limits
+   and scheduled-charge setpoints separately, including exact target, units,
+   allowed bounds, zero semantics, modes, acknowledgements, readback and recovery.
+   Existing `maxGridInputW` and task `chargeW` observations are not a total-system
+   charging cap. Decoder sanity ceilings are never electrical safety limits.
+   Produce offline replay/encoding tests only after a pinned command contract is
+   established. No transport, new Flow or writer is enabled in this step.
+2. **Sprint 4B — coordination policy preparation.** Specify an offline policy
+   for BYD priority with separate start/stop thresholds, fresh timestamped SOC and
+   signed power, dwell/cooldown and stale-data rejection. Decide how manual changes,
+   EcoFlow schedules and another controller are detected. Missing input must never
+   grant charging permission. Do not infer that a zero grid-input limit blocks PV
+   charging or that a command response proves the system is idle. Homey should
+   consume BYD inputs through explicit user-configured integration/Flows, not gain
+   Fronius credentials implicitly. Keep this out of the released runtime until
+   the control contract and physical response are verified.
+3. **Sprint 5 — topology evidence.** Use already-linked system and unit screenshots
+   plus reviewed diagnostics to establish models, membership, SOC/capacity/power
+   scope and whether the host already includes peers. Include independent systems
+   in the same account as a negative case. No automatic merge or re-pairing.
+4. **Sprint 6 — narrowly scoped hardware pilot.** After Sprint 3 owner acceptance,
+   test one opt-in, model-specific control against measured charging power and
+   manual recovery before offering coordination automation or additional models.
+
+No new community reply or command was sent during this branch preparation. The
+current release already exposes read-only configuration with receipt-only ordering;
+late cloud observations must not be treated as authoritative command verification.
+
 ### Configuration/socket follow-up wave (6 October, v1.10.21 / build 36 / Test)
 
 This six-sprint wave supersedes the next-priority ordering, not the release
