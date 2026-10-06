@@ -4,7 +4,11 @@ Updated: 6 October 2026. This is the current priority order; older sprint docume
 remain historical records. Local implementation, automated verification, hardware
 validation and store deployment are separate milestones.
 
-**6 October release update:** the combined Sprint 1–5/ES21 work below is published
+**Latest release:** v1.10.21 / build 36 / Test includes the socket/configuration
+Sprints 1–2. Sprint 3 Test publication is complete; hardware acceptance remains
+open. See the six-sprint table below for current priorities.
+
+**Earlier 6 October release update:** the combined Sprint 1–5/ES21 work below is published
 as **v1.10.19 / build 34 / Test** on `codex/stream-next-wave-test`. Earlier
 local/unreleased descriptions are implementation history. Exact-version GitHub
 CI passed (313 tests, lint, full audit and Homey validation), and the uploaded
