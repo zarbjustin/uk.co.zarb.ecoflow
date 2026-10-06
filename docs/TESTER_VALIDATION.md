@@ -1,5 +1,37 @@
 # Next-wave tester validation
 
+## Pending socket/configuration candidate (not yet published)
+
+The next local candidate corrects ES22 battery-to-backup-socket discharge and
+adds read-only configuration to **Show support report**, schema 4. Existing
+pairing, identity, saved counters and installation-only Homey Energy stay intact.
+Do not delete or re-pair devices for this increment. The Test link still installs
+the published baseline until a new release is confirmed.
+
+After release, an owner should compare a normal safe backup-socket load in
+EcoFlow and Homey against the installation's signed battery power. With minimal
+other flows, 45 W discharging for ten minutes adds about 0.0075 kWh to discharged
+energy, not charged energy or grid export. Changing PV/grid conditions require
+a time series rather than that constant-load approximation. Use equipment
+normally operated within manufacturer instructions; no wiring/grouping changes.
+Optional physical-unit monitors must remain outside Homey Energy. Linked-unit
+signed power may remain blank when attribution cannot be established.
+
+Capture configuration at the same time as EcoFlow settings screenshots:
+input/output limits, mode, reserve and schedules. Per-field age is receipt age,
+not device revision; old cloud replies may arrive late. Empty support values
+mean not observed this session, not disabled settings. Check task deletion,
+zero-watt tasks and overnight schedules by observing normal EcoFlow-app use.
+No Homey controls or new requests are added. Do not alter settings solely to
+test an unverified control. Review report contents before sharing: schedules
+and energy patterns can reveal household activity even without identifiers.
+
+Complete charge/discharge/idle, restart/reconnect and a 24–48-hour soak for ES21
+and ES22 separately. For mixed-generation research, use already-linked systems
+and compare authoritative system SOC with the unit percentages; account lists
+and matching SOC are not installation membership. An independent-installation
+negative case is required before any consolidation.
+
 ## Expansion-discovery follow-up (Test v1.10.19 / build 34)
 
 The [Sprint 5 candidate](SPRINT_5_EXPANSION_DISCOVERY.md) adds support schema 3:

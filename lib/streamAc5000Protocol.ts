@@ -69,6 +69,8 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
     'f12.9': { key: '_solarToBattW', type: 'float', scale: 1 },
     'f12.10': { key: '_solarToGridW', type: 'float', scale: 1 },
     'f12.18': { key: '_gridToSocketW', type: 'float', scale: 1 },
+    // ES22 socket capture issue #458: battery outflow, not grid export.
+    'f12.19': { key: '_battToSocketW', type: 'float', scale: 1 },
     // --- meter block: Tibber Pulse variant ---
     'f15.3': { key: '_meterNetW', type: 'float', scale: 1 },
     // --- meter block: EcoFlow P1 variant (a unit reports one or the other) ---
@@ -98,7 +100,7 @@ const FIELD_MAP: Record<string, Record<string, FieldSpec>> = {
  * would report its last power forever. An absent group means "unchanged".
  */
 const ZERO_FILL_PATHS: Record<string, string[]> = {
-  '254/39': ['f11.7', 'f11.9', 'f12.2', 'f12.4', 'f12.5', 'f12.6', 'f12.7', 'f12.18'],
+  '254/39': ['f11.7', 'f11.9', 'f12.2', 'f12.4', 'f12.5', 'f12.6', 'f12.7', 'f12.18', 'f12.19'],
 };
 
 function cmdKey(cmdFunc: number, cmdId: number): string {
@@ -409,7 +411,7 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   // battW out so the caller keeps the last known value.
   if (typeof homeFromBattW === 'number' && typeof battToGrid === 'number' && typeof gridToBatt === 'number') {
     const into = gridToBatt + (typeof solarToBatt === 'number' ? solarToBatt : 0) + (raw._mpptToBattW ?? 0);
-    out.battW = into - (homeFromBattW + battToGrid);
+    out.battW = into - (homeFromBattW + battToGrid + (raw._battToSocketW ?? 0));
     out.battChargePowerW = out.battW > 0 ? out.battW : 0;
     out.battDischargePowerW = out.battW < 0 ? Math.abs(out.battW) : 0;
   }

@@ -41,6 +41,44 @@ shutdown races, and the still-open numerical Energy/picker/hardware gates.
 
 ## Evidence and current release boundary
 
+### Configuration/socket follow-up wave (6 October, local changes after v1.10.19)
+
+This six-sprint wave supersedes the next-priority ordering, not the release
+history below. The current work is local on `codex/stream-next-wave-test`;
+no new version, Git sync, Test upload or hardware acceptance is implied.
+
+| Sprint | Deliverable and acceptance gate | Status |
+| --- | --- | --- |
+| 1: battery accounting | Include captured f12.19 battery-to-socket outflow exactly once. Check net charging, grid isolation, idle/deltas, aggregate-only cumulative energy and restart preservation. Never rewrite historical counters. | Implemented and regression-verified locally; hardware acceptance pending. |
+| 2: configuration visibility | Subscription-source input/output limits, observed output ceiling, mode, socket enable, reserve, authoritative 32/2 SOC limits and full task lists. Session-only, per-field receipt age, no commands. | Implemented locally in support schema 4 and requested diagnostic snapshots. |
+| 3: hardware/Test acceptance | Green release checks followed by Test publication; ES21 and ES22 independently compare charge/discharge/socket/idle, restarts and 24–48-hour soak. | Pending publication and owner evidence; existing devices need no re-pair. |
+| 4: guarded controls | Start with ES22 grid-input limit only after safe bounds, target scope, fresh readback, recovery and measured power response are verified. | Gated; no 5000 writer added. ES21 input control is not proven by ES21 output captures. |
+| 5: mixed-generation installations | Collect already-linked BK/ES system and unit screenshots plus diagnostics; include independent installations in one account as a negative case. Establish membership, capacity and authoritative SOC/power. | Gated; no automatic merge or Energy-role changes. |
+| 6: additional models/automation | Model-specific evidence for expansion, Gateway and 3000, then schedule/tariff control acceptance. | Gated; no speculative model admission or schedule writes. |
+
+Evidence is pinned to MIT-licensed `shuette42/ecoflow-energy-ha` revision
+`6f3c327fcd3bc2cdd22b7c006bb4d19607ef7e61`. The offline audit includes 31
+public masked frames. Four ES22 socket samples independently balance at
+-44/-45 W; previously the runtime reported zero. This fixes future observed
+energy only, not missed historical energy. Linked-unit power remains unknown
+where attribution is ambiguous; the installation alone supplies Homey Energy.
+
+Configuration is capture-derived, not a documented official whole-installation
+contract. A readback observation is neither a safe upper limit nor proof of
+physical control. Scheduled task collections replace as a whole when present;
+absent deltas preserve the last observation, explicit empty collections clear,
+zero-watt tasks remain real tasks and unknown task kinds cannot erase a known
+list. Device-revision ordering is unverified: late cloud replies can be older
+despite a recent receipt time. Reports explicitly label `ordering=receipt_only`;
+never use them as control acceptance. No restored configuration survives restart.
+
+Run `npm test`, `npm run lint`, `npm audit`, whitespace and Homey verified-level
+validation, then exact-version GitHub CI before publication. All six sprints
+are not complete merely because the software tests pass.
+This local increment passes 337 tests, lint, full audit (zero vulnerabilities),
+whitespace checks and Homey verified-level validation. Exact-version CI and a
+new Test upload have not been performed for this increment.
+
 - The [Homey developer dashboard](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow)
   now identifies build 18 / v1.10.3 as Live and build 34 / v1.10.19 as Test;
   build 33 / v1.10.18 is the previous Test baseline.

@@ -18,6 +18,22 @@ function homey() {
   };
 }
 
+test('support report projects anonymous read-only configuration with receipt age and no private fields', () => {
+  const instance = homey();
+  instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getConfigurationDiagnostics: () => ({ source: 'captured_app_protocol', sn: 'PRIVATE', values: {
+      maxGridInputW: { value: 1800, ageSec: 1201, token: 'PRIVATE' },
+      tasks: { value: [{ enabled: true, dischargeW: 0, sn: 'PRIVATE' }], ageSec: 2 },
+    } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const observation = report.drivers.find((item) => item.id === 'stream_5000_unit').configuration[0];
+  assert.equal(observation.deviceIndex, 0);
+  assert.equal(observation.values.maxGridInputW.stale, true);
+  assert.equal(observation.controlsEnabled, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('support report distinguishes packaged drivers from runtime registration', () => {
   const snapshot = createSupportSnapshot(homey());
   assert.equal(snapshot.appVersion, '1.10.17');
@@ -56,7 +72,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 3);
+  assert.equal(report.schemaVersion, 4);
 });
 
 test('support report re-projects cached discovery without network or identity access', () => {

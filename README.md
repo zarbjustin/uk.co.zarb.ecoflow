@@ -20,7 +20,14 @@ Pair **STREAM Unit** only when you also want separate per-device telemetry; phys
 do not contribute to Homey Energy and do not contain reliable whole-installation totals.
 
 ### STREAM 5000 Series Beta — ES22 and ES21 monitoring
-This local candidate supports **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** core battery monitoring through EcoFlow's app connection, not a verified official Developer-key API. ES21 admission is not in published Test build 33 and still needs Homey hardware validation. Enable **STREAM 5000 beta pairing** in this app's settings after acknowledging the warning. Pair **STREAM Home Battery (5000 Beta)** once per installation for Homey Energy: system percentage, signed power, cumulative charged/discharged energy and available house/grid/BMS readings. The optional **STREAM 5000 Series Unit (Beta)** is a physical monitor and does not contribute to Homey Energy. Both require your **EcoFlow account email and password**; no control commands are sent. Direct PV charging enters the battery power calculation, but PV/string tiles, STREAM 3000, expansion and Gateway/Dual CT adapters are not enabled. Roles, capabilities and pairing may change as the API becomes clearer. See [model coverage and evidence](docs/STREAM_MODEL_COVERAGE.md), [connection/security details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
+Test-channel support includes **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** core battery monitoring through EcoFlow's app connection, not a verified official Developer-key API. Hardware acceptance remains open for each model. Enable **STREAM 5000 beta pairing** in this app's settings after acknowledging the warning. Pair **STREAM Home Battery (5000 Beta)** once per installation for Homey Energy: system percentage, signed power, cumulative charged/discharged energy and available house/grid/BMS readings. The optional **STREAM 5000 Series Unit (Beta)** is a physical monitor and does not contribute to Homey Energy. Both require your **EcoFlow account email and password**; no control commands are sent. Direct PV charging enters the battery power calculation, but PV/string tiles, STREAM 3000, expansion and Gateway/Dual CT adapters are not enabled. Roles, capabilities and pairing may change as the API becomes clearer. See [model coverage and evidence](docs/STREAM_MODEL_COVERAGE.md), [connection/security details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
+
+The socket/configuration update includes battery-to-backup-socket discharge in
+the installation's power and future energy totals. It adds read-only configuration
+observations to **Show support report**: power limits, mode, reserve, SOC limits
+and schedules. These are subscription-source observations with receipt age,
+not verified whole-system limits or control readback. Existing devices and saved
+counters are preserved; there is no need to delete or re-pair for this update.
 
 ### Smart Meter (CT_EF_01)
 - Added as a **Homey Energy meter**. A device setting lets it show either **Grid power** (import/export) or **Home load** (total consumption).
@@ -89,7 +96,7 @@ See [`docs/STATUS.md`](docs/STATUS.md) for the full handoff. In short:
 - Per-phase Smart Meter values are only available on standalone meters; a meter integrated into a STREAM system reports a single whole-home grid figure.
 - Per-unit STREAM devices mainly expose their own grid feed and AC-output relays — full battery/solar/load aggregates are only reported on the system (main) device.
 - Power values use EcoFlow's documented public-API units (STREAM reports Watts directly).
-- **STREAM AC 5000 (ES22)** and the local **STREAM 5000 (ES21)** candidate are opt-in, monitoring-only beta integrations. They use EcoFlow's app connection, which may change or stop working. They need your EcoFlow account password, have no REST fallback (availability follows usable MQTT data age), and expose no controls or Flow cards. Implementation and pairing may change with official API support.
+- **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** are opt-in, monitoring-only beta integrations on Test. They use EcoFlow's app connection, which may change or stop working. They need your EcoFlow account password, have no REST fallback (availability follows usable MQTT data age), and expose no controls or Flow cards. Implementation and pairing may change with official API support.
 
 ## Credits
 Field/command mappings cross-referenced against the community

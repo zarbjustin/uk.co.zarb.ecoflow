@@ -4,6 +4,20 @@
 
 ## Current handover — 6 October 2026
 
+**Latest local follow-up (unreleased):** the new six-sprint socket/configuration
+wave is recorded in `COMMUNITY_FEEDBACK_ROADMAP.md`. Sprints 1–2 now implement
+battery-to-backup-socket accounting and session-only configuration diagnostics
+(support schema 4), with pinned public captures and lifecycle/privacy tests.
+Version remains 1.10.19; no counter reset, re-pair, Energy-role change, 5000
+control, automatic grouping, new model or network request is added. The
+read-only configuration observations have receipt age only, not authoritative
+device-revision ordering. Hardware and Test-release acceptance remain pending;
+do not treat this local source as the published build described next.
+Local checks: 337 tests pass, TypeScript/lint pass, full dependency audit reports
+zero vulnerabilities, whitespace checks pass and Homey verified-level package
+validation succeeds. No commit, push, version bump or upload occurred in this
+increment. The next step is the Sprint 3 Test-release/hardware gate, not controls.
+
 **Release update:** the combined Sprint 1–5/ES21 candidate is now published as
 **v1.10.19 / build 34 / Test**, from `codex/stream-next-wave-test`. This supersedes
 the local/unpublished wording below, which records each implementation stage.

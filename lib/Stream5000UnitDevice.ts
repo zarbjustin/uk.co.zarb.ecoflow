@@ -16,6 +16,7 @@ import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Model
 import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
 import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } from './energyIntegration';
 import { EnergyCheckpoint } from './EnergyCheckpoint';
+import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 
 /**
  * Shared monitoring lifecycle for verified STREAM 5000-family units.
@@ -75,6 +76,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private energySamples = 0;
   private ignoredEnergyGaps = 0;
   private topologyTracker?: Stream5000TopologyTracker;
+  private configurationTracker?: Stream5000ConfigurationTracker;
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -102,6 +104,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       return;
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
+    this.configurationTracker = new Stream5000ConfigurationTracker(sn);
     this.topologyTracker = this.telemetryAdapter.createTopologyTracker(sn);
     const mapTelemetry = this.telemetryAdapter.createMapper(sn, this.isEnergyAggregate() ? 'system' : 'unit');
     this.sampleGate = this.telemetryAdapter.createSampleGate();
@@ -131,6 +134,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.framesReceived += 1;
       this.bytesReceived += payload.length;
       this.lastFrameAt = Date.now();
+      this.configurationTracker?.observe(payload, this.lastFrameAt);
       const telemetry = this.telemetryAdapter.parse(payload, sn);
       const diagnostic = this.telemetryAdapter.describe(payload, sn, telemetry ? 0 : undefined);
       if (!telemetry) {
@@ -300,6 +304,10 @@ export class Stream5000UnitDevice extends Homey.Device {
     return this.topologyTracker?.evidence() ?? null;
   }
 
+  getConfigurationDiagnostics(): Record<string, unknown> | null {
+    return this.configurationTracker?.snapshot() ?? null;
+  }
+
   getEnergyDiagnostics(): EnergyAccountingDiagnostic | null {
     if (!this.isEnergyAggregate()) return null;
     return {
@@ -345,7 +353,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.diagnosticCaptureNext = false;
     this.log(
       `[diag] ${this.telemetryAdapter.diagnosticLabel} requested snapshot topic=${this.telemetryAdapter.topicKind(topic)} `
-      + `values=${this.telemetryAdapter.formatSnapshot(this.lastValues)}`,
+      + `values=${this.telemetryAdapter.formatSnapshot(this.lastValues)} configuration=${JSON.stringify(this.getConfigurationDiagnostics())}`,
     );
     this.setSettings({ diagnostic_capture_next: false }).catch(() => {});
   }

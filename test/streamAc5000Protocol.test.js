@@ -48,6 +48,25 @@ function frame(messages) {
 
 const SN = 'ES22ZEB1ABCD0001';
 
+test('socket battery outflow contributes once to discharge, not grid export, including simultaneous charging', () => {
+  const flow = (edges) => frame([{ cmdFunc: 254, cmdId: 39, sn: SN,
+    pdata: lField(12, Buffer.concat(Object.entries(edges).map(([number, value]) => fField(Number(number), value)))) }]);
+  const socket = parseStreamAc5000Frame(flow({ 19: 45 }));
+  assert.strictEqual(socket.battW, -45);
+  assert.strictEqual(socket.battDischargePowerW, 45);
+  assert.strictEqual(socket.gridExportPowerW, 0);
+  assert.strictEqual(socket.gridImportPowerW, 0);
+  const combined = parseStreamAc5000Frame(flow({ 2: 100, 7: 50, 9: 10, 4: 20, 5: 5, 18: 7, 19: 45 }));
+  assert.strictEqual(combined.battW, 90);
+  assert.strictEqual(combined.battChargePowerW, 90);
+  assert.strictEqual(combined.battDischargePowerW, 0);
+  assert.strictEqual(combined.gridImportPowerW, 57);
+  assert.strictEqual(combined.gridExportPowerW, 5);
+  assert.strictEqual(parseStreamAc5000Frame(flow({})).battW, 0, 'present empty flow clears socket outflow');
+  const absent = parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, sn: SN, pdata: lField(11, vField(5, 50)) }]));
+  assert.strictEqual(absent.battW, undefined, 'absent flow cannot invent an idle sample');
+});
+
 // --- header decoding ---------------------------------------------------------
 
 test('decodeFrameHeaders reads cmd_func, cmd_id, serial and pdata', () => {

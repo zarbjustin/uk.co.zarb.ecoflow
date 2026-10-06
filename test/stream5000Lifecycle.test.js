@@ -97,6 +97,53 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a) 
   };
 }
 
+test('socket discharge advances only aggregate energy and preserves totals across restart', async (t) => {
+  const { decodeFrameHeaders } = require('../.homeybuild/lib/streamAc5000Protocol');
+  const sample = require('./fixtures/stream5000ContractAudit.json').captures.es22SocketBattery.frames[0];
+  const header = decodeFrameHeaders(Buffer.from(sample.hex, 'hex')).find((entry) => entry.cmdFunc === 254 && entry.cmdId === 39);
+  const payload = frame(header.pdata); // public masked bytes, only outer test identity omitted
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const system = await harness(classes.Stream5000UnitDevice, { chargedWh: 10, dischargedWh: 20 });
+  const unit = await harness(classes.Stream5000PhysicalUnitDevice);
+  await system.emit(payload);
+  await unit.emit(payload);
+  assert.equal(system.device.values.measure_power, -44);
+  assert.equal(system.device.values.battery_charging_state, 'discharging');
+  assert.equal(unit.device.values.stream_unit_power_battery_flow, null,
+    'linked public capture cannot establish signed power for one physical unit');
+  now += 60000;
+  await system.emit(payload);
+  await unit.emit(payload);
+  assert.equal(system.device.values['meter_power.charged'], 0.01);
+  assert.ok(Math.abs(system.device.values['meter_power.discharged'] - (20 + 44 / 60) / 1000) < 1e-12);
+  assert.equal(unit.device.values['meter_power.discharged'], undefined);
+  await system.device.onUninit();
+  await unit.device.onUninit();
+  const restarted = await harness(classes.Stream5000UnitDevice, system.device.store);
+  const previous = restarted.device.values['meter_power.discharged'];
+  now += 3600000;
+  await restarted.emit(payload);
+  assert.equal(restarted.device.values['meter_power.discharged'], previous, 'first sample never backfills downtime');
+  await restarted.device.onUninit();
+});
+
+test('configuration-only frames populate diagnostics without availability, power samples or Energy changes', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const system = await harness(classes.Stream5000UnitDevice, { dischargedWh: 20 });
+  const config = frame(group(10, Buffer.concat([varint(16), varint(1800)])));
+  await system.emit(config);
+  assert.equal(system.device.getConfigurationDiagnostics().values.maxGridInputW.value, 1800);
+  assert.equal(system.device.lastTelemetryAt, 0);
+  assert.equal(system.device.getAvailable(), false);
+  assert.equal(system.device.getEnergyDiagnostics().samples, 0);
+  assert.equal(system.device.values['meter_power.discharged'], 0.02);
+  now += 1200001;
+  assert.equal(system.device.getConfigurationDiagnostics().values.maxGridInputW.stale, true);
+  await system.device.onUninit();
+});
+
 test('ES21 raw core captures replay through both real roles, with aggregate-only persistent energy', async (t) => {
   const { decodeFrameHeaders } = require('../.homeybuild/lib/streamAc5000Protocol');
   const samples = require('./fixtures/stream5000Es21Core.json').frames;

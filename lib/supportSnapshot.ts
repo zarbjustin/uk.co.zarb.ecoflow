@@ -2,6 +2,7 @@
 
 import { isStream5000BetaEnabled } from './stream5000Beta';
 import { streamDiscoverySnapshot } from './streamDiscovery';
+import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -72,6 +73,14 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       if (role === 'installation_energy') aggregates.push({ driverId: id, deviceIndex, evidence });
       return { deviceIndex, ...streamTopologySnapshot(evidence, now) };
     });
+    const configuration = id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+      try {
+        const snapshot = stream5000ConfigurationSnapshot(device.getConfigurationDiagnostics?.());
+        return snapshot ? { deviceIndex, ...snapshot } : null;
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
     return {
       id,
       role,
@@ -81,6 +90,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       pairedCount: devices.length,
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
+      configuration,
     };
   });
   let platform = 'unknown';
@@ -90,7 +100,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     discovery = homey?.app?.getStreamDiscoveryEvidence?.();
   } catch { /* No private exception text. */ }
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,
