@@ -163,5 +163,8 @@
   },
   "1.10.18": {
     "en": "Improves STREAM 5000 system and unit telemetry, strengthens battery energy checkpointing and stale-update handling, and adds privacy-safe setup and Energy diagnostics. Existing pairing is preserved; STREAM 5000 remains read-only."
+  },
+  "1.10.19": {
+    "en": "Add opt-in STREAM 5000 ES21 core monitoring, anonymous expansion and installation discovery diagnostics, improved lifecycle safety and guarded original STREAM Flow readback. Preserve installation-only Homey Energy; expansion, Gateway, STREAM 3000 pairing and 5000 controls remain disabled pending validation."
   }
 }
