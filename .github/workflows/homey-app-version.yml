@@ -28,11 +28,13 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Update Homey App Version
-        uses: athombv/github-action-homey-app-version@3342f092b437550e78074797b52fac6467a456e1
         id: update_app_version
-        with:
-          version: ${{ inputs.version }}
-          changelog: ${{ inputs.changelog }}
+        env:
+          RELEASE_INCREMENT: ${{ inputs.version }}
+          RELEASE_CHANGELOG: ${{ inputs.changelog }}
+        run: |
+          npx --yes homey@4.5.3 app version "$RELEASE_INCREMENT" --changelog "$RELEASE_CHANGELOG"
+          echo "version=$(jq --raw-output .version app.json)" >> "$GITHUB_OUTPUT"
 
       - name: Sync package version
         run: npm version "${{ steps.update_app_version.outputs.version }}" --no-git-tag-version
