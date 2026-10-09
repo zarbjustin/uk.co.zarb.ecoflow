@@ -175,5 +175,8 @@
   },
   "1.10.22": {
     "en": "Improve STREAM 5000 reading freshness, read-only settings and physical solar/socket monitoring. Correct original STREAM aggregate/unit battery readings and socket support; harden control readback, connection handling and daily history. Existing pairing and cumulative counters are preserved. STREAM 5000 controls remain disabled."
+  },
+  "1.10.23": {
+    "en": "Improve support reports with anonymous cached battery and power readings, plus original STREAM reporting-source and receipt-age diagnostics. No pairing, Energy accounting or battery control changes."
   }
 }
