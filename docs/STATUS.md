@@ -4,15 +4,37 @@
 
 ## Current handover — 9 October 2026
 
+### Latest Test release — v1.10.25 / build 40
+
+Published to Test and verified in the developer portal on 9 October 2026:
+“Your app is currently available for testing.”
+[Test link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+Production remains v1.10.3/build 18; no certification submission or hub install
+was performed. This release supersedes the build 39 Test status below.
+
+- Release source/tag: `fad5d64882180259b2e9229b20344eb576ece371` / `v1.10.25`.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37998965819),
+  [exact-version validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37999128465)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37999282609)
+  succeeded. Tests, lint, dependency audit and verified-level Homey validation passed.
+- [Build 40](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/40)
+  includes the optional BK PV3/4 read-only decoder, independent freshness/stale
+  clearing and reporting/topology regression follow-up described below.
+  Energy accounting and control gates remain unchanged. Existing pairings are
+  preserved. Physical port ordering, live app-transport validation and Robert's
+  report remain pending; Test availability is not hardware acceptance.
+- Mainline `master` and the diagnostic branch contain the release version.
+  The separate local `master` worktree remains deliberately untouched.
+
 ### Mainline integration
 
 The user approved promoting the diagnostic branch (reporting improvements,
 regression/API audit and optional BK PV diagnostics) to the GitHub mainline,
 which is named `master`. The remote is an ancestor, so promotion is fast-forward;
 the separate local `master` worktree is deliberately left untouched. This is a
-source integration only: no Homey version bump, Test upload, production release
-or hardware acceptance. Robert's report and physical PV-port verification are
-still pending. Check exact-commit GitHub validation before a subsequent release.
+source integration was followed by the v1.10.25 Test release recorded above;
+there is no production release or hardware acceptance. Robert's report and
+physical PV-port verification are still pending.
 
 ### Local follow-up — reporting/topology regression and fresh API audit
 
@@ -27,7 +49,7 @@ configured app login requires device/app restart to establish this optional
 subscription. App frames never enter quota/power/energy accounting. Support JSON
 exports only fixed-list receipt ages/staleness. Synthetic decoder/lifecycle/privacy
 regressions pass: 418 tests total, lint and diff checks pass. Hardware port ordering
-and live app-transport validation remain open; no version bump or deployment.
+and live app-transport validation remain open; now included in Test build 40.
 Pinned Homey CLI 4.5.3 also passed verified-level validation and TypeScript
 compilation. It warned that local Node 22 is below its declared Node >=24 engine;
 release CI should still perform validation on its configured supported runtime.
