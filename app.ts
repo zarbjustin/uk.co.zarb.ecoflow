@@ -230,7 +230,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     }
   }
 
-  /** Subscribe a verified STREAM 5000-family SN to the app-auth telemetry feed. */
+  /** Subscribe an admitted STREAM model to the read-only app-auth telemetry feed. */
   async subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean> {
     if (this.stopping) return false;
     const mqtt = await this.getAppMqtt();

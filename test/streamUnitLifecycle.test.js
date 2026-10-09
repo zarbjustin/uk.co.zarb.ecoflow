@@ -13,7 +13,7 @@ try {
   StreamUnit = require('../.homeybuild/drivers/stream_unit/device');
 } finally { Module._load = originalLoad; }
 
-async function harness(sn, mainSn = sn) {
+async function harness(sn, mainSn = sn, app) {
   const d = new StreamUnit();
   const caps = new Set(['onoff.ac1', 'onoff.ac2', 'stream_unit_power_ac1', 'stream_unit_power_ac2']);
   const values = {}; const listeners = {}; const writes = []; const reads = [];
@@ -26,7 +26,9 @@ async function harness(sn, mainSn = sn) {
   d.registerCapabilityListener = (cap, callback) => { listeners[cap] = callback; };
   d.setSettings = async () => {}; d.error = () => {};
   d.client = { getMainSn: async () => { if (mainSn === null) throw new Error('offline'); return mainSn; } };
-  d.homey = { setTimeout: (fn) => { queueMicrotask(fn); return 1; }, clearTimeout() {} };
+  const intervals = new Map();
+  d.homey = { app, setTimeout: (fn) => { queueMicrotask(fn); return 1; }, clearTimeout() {},
+    setInterval: (fn) => { intervals.set(1, fn); return 1; }, clearInterval: (id) => intervals.delete(id) };
   d.readControlQuota = async (target, fields) => {
     reads.push({ target, fields });
     return fields ? Object.fromEntries(fields.map((field) => [field, state[field]])) : { ...state };
@@ -39,8 +41,70 @@ async function harness(sn, mainSn = sn) {
     if ('cfgBackupReverseSoc' in payload.params) state.backupReverseSoc = payload.params.cfgBackupReverseSoc;
   };
   await d.onReady();
-  return { d, caps, values, listeners, writes, reads, setState: (next) => { state = next; } };
+  return { d, caps, values, listeners, writes, reads, intervals, setState: (next) => { state = next; } };
 }
+
+function pvFrame(value) {
+  // Synthetic wrapper: pdata field 998 (float), cmdFunc 254, cmdId 21.
+  const data = Buffer.alloc(6); data[0] = 0xb5; data[1] = 0x3e; data.writeFloatLE(value, 2);
+  return Buffer.concat([Buffer.from([0x0a, 13, 0x0a, 6]), data, Buffer.from([0x40, 0xfe, 1, 0x48, 21])]);
+}
+
+test('optional BK app diagnostics clear stale components and never touch power or energy', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  let handler; let unsubscribed = 0;
+  const sn = 'BK61SYNTHETIC0001';
+  const app = { subscribeAppRealtime: async (_sn, callback) => { handler = callback; return true; },
+    unsubscribeAppRealtime: () => { unsubscribed += 1; } };
+  const h = await harness(sn, sn, app);
+  h.values.stream_unit_power_pv3 = 123;
+  h.values['meter_power.charged'] = 4;
+  handler(pvFrame(32), `/app/device/property/${sn}`);
+  await h.d.pvChain;
+  assert.equal(h.values.stream_unit_pv3_voltage, 32);
+  assert.equal(h.caps.has('stream_unit_pv3_current'), false);
+  assert.equal(h.values.stream_unit_power_pv3, 123);
+  assert.equal(h.values['meter_power.charged'], 4);
+  handler(pvFrame(50), '/app/device/property/BK61OTHER0001');
+  await h.d.pvChain;
+  assert.equal(h.values.stream_unit_pv3_voltage, 32);
+  now += 20 * 60 * 1000 + 1;
+  h.intervals.get(1)(); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_pv3_voltage, null);
+  await h.d.onTeardown();
+  assert.equal(unsubscribed, 1); assert.equal(h.intervals.size, 0);
+  handler(pvFrame(60), `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_pv3_voltage, null);
+  await h.d.onReady();
+  assert.equal(h.values.stream_unit_pv3_voltage, null);
+  assert.deepEqual(h.d.getReadingDiagnostics(), {});
+  await h.d.onTeardown();
+});
+
+test('BK subscription finishing after teardown is removed and cannot start a watchdog', async () => {
+  let release; let unsubscribed = 0;
+  const pending = new Promise(resolve => { release = resolve; });
+  const sn = 'BK61SYNTHETIC0001';
+  const h = await harness(sn);
+  h.d.homey.app = { subscribeAppRealtime: () => pending, unsubscribeAppRealtime: () => { unsubscribed += 1; } };
+  const init = h.d.startPvDiagnostics(sn);
+  await Promise.resolve();
+  await h.d.onTeardown();
+  release(true); await init;
+  assert.ok(unsubscribed >= 1); assert.equal(h.intervals.size, 0);
+});
+
+test('REST-only BK unit stays usable without starting an app-diagnostic watchdog', async () => {
+  const h = await harness('BK61SYNTHETIC0001', 'BK61SYNTHETIC0001', {
+    subscribeAppRealtime: async () => false, unsubscribeAppRealtime() {},
+  });
+  assert.equal(h.intervals.size, 0);
+  assert.equal(h.caps.has('stream_unit_pv3_voltage'), false);
+  await h.d.applyQuota({ powGetPv3: 42 });
+  assert.equal(h.values.stream_unit_power_pv3, 42);
+  await h.d.onTeardown();
+});
 
 test('physical unit socket layout follows documented Max and AC model differences', async () => {
   const max = await harness('BK41TEST');

@@ -4312,6 +4312,66 @@
       "icon": "/assets/capabilities/solar-meter.svg",
       "insights": true
     },
+    "stream_unit_pv3_current": {
+      "type": "number",
+      "title": {
+        "en": "PV 3 current (candidate port)"
+      },
+      "units": {
+        "en": "A"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": false
+    },
+    "stream_unit_pv3_voltage": {
+      "type": "number",
+      "title": {
+        "en": "PV 3 voltage (candidate port)"
+      },
+      "units": {
+        "en": "V"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": false
+    },
+    "stream_unit_pv4_current": {
+      "type": "number",
+      "title": {
+        "en": "PV 4 current (candidate port)"
+      },
+      "units": {
+        "en": "A"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": false
+    },
+    "stream_unit_pv4_voltage": {
+      "type": "number",
+      "title": {
+        "en": "PV 4 voltage (candidate port)"
+      },
+      "units": {
+        "en": "V"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/pv-input.svg",
+      "insights": false
+    },
     "tariff_price_now": {
       "type": "number",
       "title": {

@@ -6,6 +6,20 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('BK PV freshness support fields are fixed-list and never forward identities or power', () => {
+  const instance = homey();
+  instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream_unit' ? [{
+    getReadingDiagnostics: () => ({ stream_unit_pv3_voltage: { ageSec: 3, stale: false, sn: 'PRIVATE' },
+      stream_unit_pv4_current: { ageSec: 2000, stale: true }, PRIVATE: { ageSec: 0 },
+      measure_power: { ageSec: 0, stale: false } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const readings = report.drivers.find(d => d.id === 'stream_unit').readingFreshness[0].readings;
+  assert.deepEqual(readings, { stream_unit_pv3_voltage: { ageSec: 3, stale: false },
+    stream_unit_pv4_current: { ageSec: 2000, stale: true } });
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('cached SOC after restart is not a fresh receipt or proof of a current installation reporter', () => {
   const instance = homey();
   instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream' ? [{

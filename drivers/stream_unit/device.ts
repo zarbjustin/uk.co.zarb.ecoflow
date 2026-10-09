@@ -5,6 +5,9 @@ import { mapStreamQuota } from '../../lib/streamMapping';
 import { streamModelFromSn, streamAcOutletCount } from '../../lib/streamModels';
 import { OperatingMode } from '../../lib/streamProtocol';
 import { executeStreamControl, readStreamControlState, StreamControlIntent } from '../../lib/streamControls';
+import { EcoFlowAppApi, getApp } from '../../lib/appApi';
+import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
+import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/streamBkPvDiagnostics';
 
 type ControlWait = () => void;
 
@@ -29,6 +32,76 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private mainSn = '';
   private controlGeneration = 0;
   private readonly controlWaits = new Map<NodeJS.Timeout, ControlWait>();
+  private pvReceipts = new BkPvReceipts();
+  private pvTimer: NodeJS.Timeout | null = null;
+  private pvApp?: EcoFlowAppApi;
+  private pvHandler?: AppFrameHandler;
+  private pvSn = '';
+  private pvChain: Promise<void> = Promise.resolve();
+
+  getReadingDiagnostics(): Record<string, unknown> {
+    return this.pvReceipts.snapshot(Date.now());
+  }
+
+  private async startPvDiagnostics(sn: string): Promise<void> {
+    const generation = this.controlGeneration;
+    const active = () => generation === this.controlGeneration && !this.isShuttingDown();
+    this.pvReceipts = new BkPvReceipts();
+    for (const cap of BK_PV_CAPS) {
+      if (!active()) return;
+      if (this.hasCapability(cap)) {
+        const port = cap.includes('pv3') ? 3 : 4;
+        if (!/^(BK11|BK12|BK61)/i.test(sn) || port > streamModelFromSn(sn).solarInputs) {
+          await this.removeCapability(cap);
+        } else await this.setCapabilityValue(cap, null);
+      }
+    }
+    if (!active() || !/^(BK11|BK12|BK61)/i.test(sn)) return;
+    const expire = async () => {
+      for (const cap of this.pvReceipts.expired(Date.now())) {
+        if (!active()) return;
+        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null);
+        this.pvReceipts.forget(cap);
+      }
+    };
+    let app: EcoFlowAppApi;
+    try {
+      app = getApp(this.homey);
+    } catch {
+      return;
+    }
+    if (!app?.subscribeAppRealtime) return;
+    const handler: AppFrameHandler = (payload, topic) => {
+      if (!active() || !(topic === `/app/device/property/${sn}`
+        || (/^\/app\/[^/]+\/[^/]+\/thing\/property\/get_reply$/.test(topic)
+          && topic.split('/')[3] === sn))) return;
+      const at = Date.now();
+      const values = decodeBkPvDiagnostics(payload, sn);
+      this.pvChain = this.pvChain.then(async () => {
+        if (!active()) return;
+        for (const [cap, value] of Object.entries(values)) {
+          if (!active() || !this.pvReceipts.observe(cap, at, Date.now())) continue;
+          if (!this.hasCapability(cap)) await this.addCapability(cap);
+          if (!active()) return;
+          await this.setCapabilityValue(cap, value);
+        }
+        await expire();
+      }).catch(() => { /* Optional diagnostics must not disrupt the official quota path. */ });
+    };
+    this.pvApp = app; this.pvSn = sn; this.pvHandler = handler;
+    let subscribed = false;
+    try {
+      subscribed = await app.subscribeAppRealtime(sn, handler);
+    } catch { /* REST-only remains usable. */ }
+    if (!active() || !subscribed) {
+      app.unsubscribeAppRealtime(sn, handler);
+      if (this.pvHandler === handler) this.pvHandler = undefined;
+      return;
+    }
+    this.pvTimer = this.homey.setInterval(() => {
+      this.pvChain = this.pvChain.then(expire).catch(() => {});
+    }, 60000);
+  }
 
   /** Whole-home controls + flow tiles, meaningful only on the system main unit. */
   private static readonly SYSTEM_CAPS = [
@@ -117,6 +190,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
     this.registerControlListeners(isMain);
     await this.refreshInfoSettings(sn, isMain, roleResolved).catch((e) => this.error('refresh info settings', e));
+    await this.startPvDiagnostics(sn).catch(() => {});
   }
 
   private async ensureCapabilities(caps: string[]): Promise<void> {
@@ -213,6 +287,12 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
   protected async onTeardown(): Promise<void> {
     this.controlGeneration += 1;
+    if (this.pvTimer) this.homey.clearInterval(this.pvTimer);
+    this.pvTimer = null;
+    if (this.pvHandler) this.pvApp?.unsubscribeAppRealtime(this.pvSn, this.pvHandler);
+    this.pvHandler = undefined;
+    await this.pvChain;
+    this.pvReceipts = new BkPvReceipts();
     for (const [timer, resolve] of this.controlWaits) {
       this.homey.clearTimeout(timer);
       resolve();

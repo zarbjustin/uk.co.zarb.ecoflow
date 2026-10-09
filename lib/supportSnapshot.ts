@@ -6,6 +6,7 @@ import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
 import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import { reportingSnapshot } from './streamReportingDiagnostics';
+import { BK_PV_CAPS } from './streamBkPvDiagnostics';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -101,10 +102,11 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
         ...stream5000Assessment(evidenceByDevice[deviceIndex],
           configuration.find((item) => item?.deviceIndex === deviceIndex), now),
       })),
-      readingFreshness: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+      readingFreshness: id === 'stream' ? [] : devices.map((device, deviceIndex) => {
         try {
           const input = device.getReadingDiagnostics?.();
-          const readings = Object.fromEntries(STREAM_5000_LIVE_CAPABILITIES.filter((key) => input?.[key])
+          const allowed = id === 'stream_unit' ? BK_PV_CAPS : STREAM_5000_LIVE_CAPABILITIES;
+          const readings = Object.fromEntries(allowed.filter((key) => input?.[key])
             .map((key) => [key, { ageSec: safeNumber(input[key].ageSec), stale: input[key].stale !== false }]));
           return { deviceIndex, readings };
         } catch {

@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "PV 3 voltage (candidate port)"
+  },
+  "units": {
+    "en": "V"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/pv-input.svg",
+  "insights": false
+}

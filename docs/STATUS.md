@@ -4,7 +4,33 @@
 
 ## Current handover — 9 October 2026
 
+### Mainline integration
+
+The user approved promoting the diagnostic branch (reporting improvements,
+regression/API audit and optional BK PV diagnostics) to the GitHub mainline,
+which is named `master`. The remote is an ancestor, so promotion is fast-forward;
+the separate local `master` worktree is deliberately left untouched. This is a
+source integration only: no Homey version bump, Test upload, production release
+or hardware acceptance. Robert's report and physical PV-port verification are
+still pending. Check exact-commit GitHub validation before a subsequent release.
+
 ### Local follow-up — reporting/topology regression and fresh API audit
+
+Implemented optional original-BK app telemetry PV3/4 diagnostics locally on this
+branch. `streamBkPvDiagnostics` decodes only four float fields from 254/21; shared
+header framing is reused, not ES telemetry mapping. Known-model limits admit
+BK11/BK61 PV3/4 and BK12 PV3. Observed voltage/current tiles are read-only,
+candidate-port-labelled and excluded from Insights; each expires after 20 minutes
+(watchdog every minute), clears on restart and appears only when observed.
+No app login means the existing REST/JSON path still works unchanged. A newly
+configured app login requires device/app restart to establish this optional
+subscription. App frames never enter quota/power/energy accounting. Support JSON
+exports only fixed-list receipt ages/staleness. Synthetic decoder/lifecycle/privacy
+regressions pass: 418 tests total, lint and diff checks pass. Hardware port ordering
+and live app-transport validation remain open; no version bump or deployment.
+Pinned Homey CLI 4.5.3 also passed verified-level validation and TypeScript
+compilation. It warned that local Node 22 is below its declared Node >=24 engine;
+release CI should still perform validation on its configured supported runtime.
 
 Added seven synthetic regression tests on the diagnostic branch; no runtime or
 release changes. [Audit and next evidence](STREAM_REPORTING_API_AUDIT_2026_10_09.md)

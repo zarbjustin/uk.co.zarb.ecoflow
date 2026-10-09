@@ -159,3 +159,22 @@ Recommended implementation sequence, not implemented by this investigation:
    before removing the candidate mapping caveat or publishing new tiles.
 
 No parser/capability changes, live control writes, release or merge were made.
+
+### Subsequent implementation on the diagnostic branch
+
+The recommended decoder and optional physical-unit voltage/current tiles are now
+implemented locally (not in build 39). The earlier investigation-only statements
+above describe their respective checkpoints. Runtime changes are confined to the
+four diagnostic fields; no watts, solar total, battery or energy values are
+produced by the decoder. Known models enforce port counts, receipt timestamps
+are independent, zero is retained, future/out-of-order receipts are rejected,
+and stale values clear after 20 minutes on a one-minute watchdog. Restarts clear
+saved diagnostic values; late callbacks/subscriptions are generation-guarded and
+teardown removes subscriptions/timers. REST-only installations remain functional.
+Newly saving app-login credentials requires restart for this optional subscription.
+
+Nine additional tests cover decoder limits, model/envelope/source attribution,
+partial/zero/nonfinite/malformed frames, receipt clocks, lifecycle cleanup,
+unchanged power/energy values, REST-only operation and fixed-list support JSON.
+All 418 tests, lint and diff checks pass. The candidate port label stays visible
+pending physical port validation. No live hardware settings were changed.
