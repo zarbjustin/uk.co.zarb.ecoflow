@@ -104,3 +104,58 @@ cross-connection ES PV tests; real mixed-generation reporter transitions; and
 expansion/meter samples with exact model and transport provenance. Controls remain
 separate hardware-gated work. A negative account read or a peer record must not be
 turned into a claim about the entire product range.
+
+## PV3/4 follow-up investigation
+
+The reporting tests and initial audit were pushed as `8824265` on the diagnostic
+branch. A subsequent investigation independently decoded the six public masked
+samples in upstream
+[bk_pv34_voltage_current.json](https://github.com/shuette42/ecoflow-energy-ha/blob/12509ef6f198f57675a98872b08a870fc009943d/tests/fixtures/stream/bk_pv34_voltage_current.json).
+No owner serials or private frames were downloaded into the repository.
+
+In status envelope `254/21`, fields 996/997 are the candidate string powers and
+998/999 and 1000/1001 are their paired voltage/current readings. All six use
+protobuf wire type 5 (32-bit little-endian float), without a milli-unit scale.
+The complete BK61 property sample independently gives approximately 21.2286 W
+and 39.3299 W; voltage times current matches both within floating-point rounding.
+Partial property samples omit one or more components. BK11/BK61 get_reply
+samples have materially different products from their reported watts, so those
+replies do not establish simultaneous physical readings. BK12 idle readings
+contain roughly 2.6 V but zero current/power, not evidence of connected panels.
+
+The upstream parser itself still marks the physical PV3 versus PV4 ordering
+unverified. Preserve that caveat until a labelled app screenshot/port test proves
+it. Issue 522 also mentions BK31 alongside PV models: do not copy that admission;
+our BK31 AC Pro definition is AC-coupled with no direct PV inputs. Restrict any
+implementation to known model port counts (BK11/BK61 four, BK12 three), and do
+not infer a fourth usable input merely because the firmware includes a field.
+
+A fresh targeted POST quota read on an authorised BK61 requested `powGetPv3`,
+`powGetPv4`, `plugInInfoPv3Vol`, `plugInInfoPv3Amp`, `plugInInfoPv4Vol` and
+`plugInInfoPv4Amp`. None was returned. This repeats the transport limitation;
+it does not invalidate the public app-telemetry samples.
+
+Code-path review: original STREAM currently consumes official REST/JSON MQTT in
+`BaseEcoFlowDevice`/`EcoFlowMqtt`. Its PV watts mapper already accepts named
+voltage/current pairs, but has no original-BK binary app-frame decoder or separate
+PV voltage/current tiles. The existing app transport is used by the ES devices.
+Wiring ES parsing into BK would be incorrect: these are different envelopes.
+
+Recommended implementation sequence, not implemented by this investigation:
+
+1. Add a narrowly scoped read-only BK `254/21` decoder with field presence,
+   finite/range checks, envelope/source attribution and synthetic regressions.
+2. Route observed unit readings to physical STREAM Units only, using the existing
+   app-account transport where configured. Keep REST-only installations working;
+   Developer access/secret keys alone are not app-login credentials.
+3. Expose model-limited diagnostic voltage/current readings with independent
+   receipt freshness. Missing fields stay unknown, observed zero stays zero,
+   stale persisted readings clear on restart/expiry. Voltage alone must not
+   change panel-presence or generation status.
+4. Keep directly reported watts authoritative. Do not recompute power or energy
+   from independently cached voltage and current; a product is a same-frame
+   diagnostic check only. Do not change Home Battery accounting or topology.
+5. Validate physical port ordering with simultaneous app screenshots/known ports
+   before removing the candidate mapping caveat or publishing new tiles.
+
+No parser/capability changes, live control writes, release or merge were made.
