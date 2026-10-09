@@ -4,7 +4,38 @@
 
 ## Current handover — 9 October 2026
 
-### Local follow-up — report sharing and control diagnostics (not released)
+### Latest Test release — v1.10.24 / build 39
+
+Published and verified in the developer portal on 9 October 2026: “Your app is
+currently available for testing.” [Test link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+Production remains v1.10.3/build 18. No certification submission or hub install
+was performed. `master` remains unchanged; work is on
+`codex/mixed-generation-reporting-diagnostics`.
+
+- Release source/tag: `7dfe9ad6d5d2b9ff07c9da8d7da67869f64c550a` / `v1.10.24`.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37991704150),
+  [exact-version validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37991909121)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37992320031)
+  succeeded. Tests, lint, dependency audit and verified-level Homey validation
+  passed; local tests passed 402 cases.
+- [Build 39](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/39)
+  was separately published to Test. Includes Copy report, manual-copy guidance
+  and safe fixed-list control-failure reason/action/count diagnostics. It does
+  not change grouping, energy accounting, command plans or control safeguards.
+- Docker Hub 429 failures were resolved by replacing the three Athom Docker
+  wrappers with their equivalent pinned `homey@4.5.3` CLI commands in existing
+  GitHub workflows (`f0141b257a04fffe1da1a36e5d13a877fc8ad5cf`). Official pinned
+  action entrypoints were inspected first. Authentication uses the existing
+  GitHub secret; no validation gate was bypassed.
+- [Community reply 45](https://community.homey.app/t/157399/45) was posted and
+  verified. Robert was asked to update in place, wait five minutes, send copied
+  Show support report JSON privately after review, a fresh Homey app-log ID,
+  concurrent screenshots and the original warning action/Flow. No re-pair or
+  control retry was requested. Await his response; do not send duplicates.
+- Robert's 0% combined reading remains unresolved. Ed gets better report
+  sharing, not Solis control or battery coordination. Hardware gates remain.
+
+### Earlier release attempt — report sharing and control diagnostics (superseded)
 
 Implementation is pushed as `c7e82b97722659b65d97c438ccb835bb00487430` on the
 diagnostic branch; local 402 tests and lint passed. Release attempt on 9 October
@@ -60,7 +91,7 @@ version/tag: `175ad1d4dcae728d657d64c2a8765861059ae067` / `v1.10.23`.
   “Capaciteit” percentage represents battery SOC. Charging inhibition and
   Solis/BYD coordination remain unimplemented and hardware-gated.
 
-### Diagnostic increment — 9 October 2026 (released to Test)
+### Diagnostic increment — 9 October 2026 (v1.10.23, superseded)
 
 Community replies 41–42 clarify that the mixed-generation installation was
 linked after its original Homey pairing, and that the Solis integration provides
