@@ -6,6 +6,19 @@
 
 ### Local follow-up — report sharing and control diagnostics (not released)
 
+Implementation is pushed as `c7e82b97722659b65d97c438ccb835bb00487430` on the
+diagnostic branch; local 402 tests and lint passed. Release attempt on 9 October
+is blocked by Docker Hub `429 Too Many Requests` building Athom action containers.
+[Version run 37991299242](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37991299242)
+failed initially and on retry before any version changes;
+[validation run 37991352859](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37991352859)
+also failed at container preparation. No new upload or Test publication occurred.
+Test remains v1.10.23/build 38. Resume version workflow, exact-version validation,
+upload and portal publication when registry access recovers; do not bypass CI.
+Robert's follow-up has not been posted. Once released, request copied displayed
+report AND fresh Homey app-log ID, screenshots and the original warning trigger;
+do not ask him to retry controls or re-pair.
+
 Post 44 and manual log `ed73698e-c303-40fe-9783-7810e2366f01` confirm individual
 SOC readings around 9–10% while the original aggregate remains 0%. The emailed
 screenshots are available under the collapsed attachments section. The manual
