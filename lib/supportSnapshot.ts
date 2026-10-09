@@ -5,6 +5,7 @@ import { streamDiscoverySnapshot } from './streamDiscovery';
 import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
 import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
+import { reportingSnapshot } from './streamReportingDiagnostics';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -91,6 +92,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       deprecated: entry?.deprecated === true,
       registered,
       pairedCount: devices.length,
+      reporting: devices.map((device, deviceIndex) => ({ deviceIndex, ...reportingSnapshot(device, now) })),
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
       configuration,
@@ -135,7 +137,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     discovery = homey?.app?.getStreamDiscoveryEvidence?.();
   } catch { /* No private exception text. */ }
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,

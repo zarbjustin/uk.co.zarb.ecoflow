@@ -19,6 +19,7 @@ import { powerDirection, PowerDirection, startedDirection } from '../../lib/flow
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 import { DeveloperApiQuarantineError } from '../../lib/developerApiCompatibility';
 import { StreamTopologyEvidence } from '../../lib/streamTopology';
+import { REPORTING_CAPABILITIES, ReportingObservation } from '../../lib/streamReportingDiagnostics';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -26,6 +27,7 @@ type ControlWaitResolver = () => void;
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
+  private reportingObservations: Record<string, ReportingObservation> = {};
   private controlStopped = false;
   private controlGeneration = 0;
   private controlWarning = false;
@@ -81,6 +83,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return this.getData().sn;
   }
 
+  /** Session-only receipts, not device timestamps or verified installation membership. */
+  getReportingDiagnostics() {
+    return {
+      readAddressMatchesSavedMain: this.mainSn ? this.getReadSn() === this.mainSn : null,
+      observations: this.reportingObservations,
+    };
+  }
+
   /** Address cached at init, not a live membership lookup or cross-generation identity. */
   getTopologyEvidence(): StreamTopologyEvidence {
     return {
@@ -102,6 +112,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.controlGeneration += 1;
     this.controlStopped = false;
     this.priceUpdatedAt = 0;
+    this.reportingObservations = {};
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     const storedWh = (key: string) => {
       const value = toFiniteNumber(this.getStoreValue(key));
@@ -313,6 +324,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
     const receivedAt = context?.receivedAt ?? Date.now();
     const values = mapStreamQuota(quota);
+    for (const key of REPORTING_CAPABILITIES) {
+      const value = values[key];
+      const previous = this.reportingObservations[key];
+      if (typeof value === 'number' && Number.isFinite(value) && Number.isFinite(receivedAt)
+        && receivedAt > 0 && receivedAt <= Date.now() && (!previous || receivedAt >= previous.receivedAt)) {
+        this.reportingObservations[key] = { value, receivedAt, source: context?.source ?? 'unknown' };
+      }
+    }
     // Charged/discharged energy is maintained by updateBatteryEnergy, so drop any
     // values mapped from absent device counters to avoid conflicts.
     delete values['meter_power.charged'];

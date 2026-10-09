@@ -6,6 +6,47 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('reporting projection distinguishes reported zero, missing values and signed flow without identity reads', () => {
+  const instance = homey();
+  const now = Date.now();
+  instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream' ? [{
+    getData() { throw new Error('PRIVATE'); },
+    getCapabilityValue: (key) => ({ measure_battery: 0, measure_power: -315, 'measure_power.pv': NaN })[key],
+    getReportingDiagnostics: () => ({ readAddressMatchesSavedMain: true, sn: 'PRIVATE', observations: {
+      measure_battery: { value: 0, receivedAt: now - 2000, source: 'mqtt', token: 'PRIVATE' },
+      measure_power: { value: -315, receivedAt: now - 1000, source: 'rest' },
+      'measure_power.pv': { value: 12, receivedAt: now + 60000, source: 'mqtt' },
+      'PRIVATE': { value: 0, receivedAt: now, source: 'mqtt' },
+    } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const entry = report.drivers.find(d => d.id === 'stream').reporting[0];
+  assert.equal(entry.currentReadings.measure_battery, 0);
+  assert.equal(entry.currentReadings.measure_power, -315);
+  assert.equal(entry.currentReadings['measure_power.pv'], null);
+  assert.equal(entry.currentReadings['measure_power.grid'], null);
+  assert.equal(entry.observations.measure_battery.value, 0);
+  assert.equal(entry.observations.measure_battery.source, 'mqtt');
+  assert.ok(entry.observations.measure_battery.ageSec >= 2);
+  assert.equal(entry.observations['measure_power.pv'], undefined);
+  assert.equal(entry.readAddressMatchesSavedMain, true);
+  assert.equal(entry.currentInstallationReporterVerified, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('reporting failures stay anonymous and absent receipt evidence stays unknown', () => {
+  const instance = homey();
+  instance.drivers.getDriver = () => ({ getDevices: () => [{
+    getCapabilityValue() { throw new Error('PRIVATE'); },
+    getReportingDiagnostics: () => ({ observations: { get measure_battery() { throw new Error('PRIVATE'); } } }),
+  }] });
+  const report = createSupportSnapshot(instance);
+  const entry = report.drivers[0].reporting[0];
+  assert.equal(entry.readAddressMatchesSavedMain, null);
+  assert.deepEqual(entry.observations, {});
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('per-reading freshness projection excludes identities and catches nested getter failures', () => {
   const instance = homey();
   let malicious = false;
@@ -87,7 +128,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 5);
+  assert.equal(report.schemaVersion, 6);
 });
 
 test('support report re-projects cached discovery without network or identity access', () => {

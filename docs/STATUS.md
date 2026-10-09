@@ -4,6 +4,31 @@
 
 ## Current handover — 7 October 2026
 
+### Local investigation increment — 9 October 2026 (not released)
+
+Community replies 41–42 clarify that the mixed-generation installation was
+linked after its original Homey pairing, and that the Solis integration provides
+readings/conditions but no action cards. The original STREAM aggregate still
+uses its paired serial for reads; a changed reporting device is a hypothesis,
+not a confirmed cause of the reported zero totals. Preserve existing pairings.
+
+Support schema 6 adds an anonymous `reporting` section per device with fixed-list
+cached capability values. The original STREAM aggregate additionally records
+session-only per-reading receipt age/source and whether its read address matches
+the saved main address. Missing readings remain null; explicit zero and signed
+power are preserved. Receipt age is not device-time freshness or proof of current
+installation membership. Restart clears receipt evidence; unrelated deltas do
+not refresh it. No cloud requests, full serials, raw quota, names or secrets are
+included. 5000 readings retain their existing independent freshness section;
+absent receipt observations must not be inferred from cached capability values.
+
+This increment does not change reporting addresses, aggregation, counters,
+availability, controls, pairing or Energy roles. It does not repair Robert's
+installation yet. Obtain the existing support report first; if insufficient,
+release this diagnostic increment to Test through the usual gates and compare
+the aggregate and individual devices with simultaneous EcoFlow screenshots.
+No uninstall/re-pair, hardware controls or publication was undertaken.
+
 **Latest Test release: v1.10.22 / build 37.** Published to Homey Test on
 6 October 2026; the developer portal confirmed “Your app is currently available
 for testing.” Production remains **v1.10.3 / build 18 / Live**. No certification

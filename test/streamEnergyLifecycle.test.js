@@ -39,6 +39,24 @@ async function harness(store = {}) {
   return device;
 }
 
+test('aggregate reporting receipts survive unrelated deltas but reset on initialization', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const device = await harness({ mainSn: 'BK11OTHER000001' });
+  await device.applyQuota({ cmsBattSoc: 0, powGetBpCms: -315 }, { receivedAt: 98000, source: 'mqtt' });
+  await device.applyQuota({ cmsBattSoc: 98 }, { receivedAt: 97000, source: 'rest' });
+  await device.applyQuota({ f32ShowSoc: 99, batteryTemp: 30 }, { receivedAt: 99000, source: 'mqtt' });
+  const report = device.getReportingDiagnostics();
+  assert.equal(report.readAddressMatchesSavedMain, false);
+  assert.deepEqual(report.observations.measure_battery, { value: 0, receivedAt: 98000, source: 'mqtt' });
+  assert.deepEqual(report.observations.measure_power, { value: -315, receivedAt: 98000, source: 'mqtt' });
+  assert.equal(report.observations['measure_power.pv'], undefined);
+  assert.ok(!JSON.stringify(report).includes('OTHER'));
+  await device.onTeardown();
+  await device.onReady();
+  assert.deepEqual(device.getReportingDiagnostics().observations, {});
+  await device.onTeardown();
+});
+
 test('history response arriving after teardown cannot repopulate daily tiles', async () => {
   const device = await harness();
   device.homey.clock = { getTimezone: () => 'UTC' };
