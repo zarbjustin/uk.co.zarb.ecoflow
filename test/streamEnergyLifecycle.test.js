@@ -57,6 +57,35 @@ test('aggregate reporting receipts survive unrelated deltas but reset on initial
   await device.onTeardown();
 });
 
+test('cached main-address mismatch never silently reroutes the paired reporting address', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const device = await harness({ mainSn: 'BK11OTHER000001' });
+  const paired = device.getData().sn;
+  assert.equal(device.getReadSn(), paired);
+  await device.applyQuota({ cmsBattSoc: 0, powGetBpCms: 0 }, { receivedAt: 99000, source: 'rest' });
+  assert.equal(device.getReportingDiagnostics().readAddressMatchesSavedMain, false);
+  assert.equal(device.getReadSn(), paired);
+  await device.onTeardown();
+  await device.onReady();
+  assert.equal(device.getReadSn(), paired);
+  assert.equal(device.getReportingDiagnostics().readAddressMatchesSavedMain, false);
+  assert.deepEqual(device.getReportingDiagnostics().observations, {});
+  await device.onTeardown();
+});
+
+test('individual SOC and future receipt time cannot manufacture aggregate reporting evidence', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const device = await harness();
+  await device.applyQuota({ soc: 86, f32ShowSoc: 86 }, { receivedAt: 99000, source: 'mqtt' });
+  assert.equal(device.getReportingDiagnostics().observations.measure_battery, undefined);
+  await device.applyQuota({ cmsBattSoc: 86 }, { receivedAt: 101000, source: 'rest' });
+  assert.equal(device.getReportingDiagnostics().observations.measure_battery, undefined);
+  await device.applyQuota({ cmsBattSoc: 0 }, { receivedAt: 100000, source: 'rest' });
+  assert.deepEqual(device.getReportingDiagnostics().observations.measure_battery,
+    { value: 0, receivedAt: 100000, source: 'rest' });
+  await device.onTeardown();
+});
+
 test('history response arriving after teardown cannot repopulate daily tiles', async () => {
   const device = await harness();
   device.homey.clock = { getTimezone: () => 'UTC' };

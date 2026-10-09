@@ -11,6 +11,48 @@ const ES = 'ES22SYNTHETIC0001';
 const BK = 'BK11SYNTHETIC0001';
 const OTHER = 'ES22SYNTHETIC0002';
 
+test('a reporter address change retains only review evidence, not verified membership', () => {
+  const tracker = new Es22TopologyTracker(ES);
+  tracker.observe({ unitsBySn: { [BK]: {} } }, 1000);
+  const changedMain = 'BK61SYNTHETIC0002';
+  const report = streamAggregateOverlapSnapshot([
+    aggregate('stream', 0, bkEvidence(changedMain)),
+    aggregate('stream_5000_system', 0, tracker.evidence()),
+  ], 2000);
+  assert.deepEqual(report.potentialOverlapPairs, []);
+  assert.equal(report.stableMembershipVerified, false);
+  assert.equal(report.autoGroupingEnabled, false);
+  assert.equal(streamTopologySnapshot(tracker.evidence(), 2000).observedPeerCount, 1);
+});
+
+test('ES21 and ES22 shared peers require fresh evidence from both reporters', () => {
+  const pv = new Es22TopologyTracker('ES21SYNTHETIC0001');
+  const ac = new Es22TopologyTracker(ES);
+  pv.observe({ unitsBySn: { [BK]: { socPct: 0 } } }, 1000);
+  const now = 1001 + TOPOLOGY_STALE_AFTER_MS;
+  ac.observe({ unitsBySn: { [BK]: { socPct: 0 } } }, now);
+  const report = streamAggregateOverlapSnapshot([
+    aggregate('stream_5000_system', 0, pv.evidence()),
+    aggregate('stream_5000_system', 1, ac.evidence()),
+  ], now);
+  assert.equal(report.potentialOverlapPairs.length, 1);
+  assert.equal(report.potentialOverlapPairs[0].freshEvidence, false);
+  assert.equal(report.potentialOverlapPairs[0].action, 'review_only');
+  assert.equal(report.stableMembershipVerified, false);
+});
+
+test('returned peer objects cannot mutate tracker observations or receipt timestamps', () => {
+  const tracker = new Es22TopologyTracker(ES);
+  tracker.observe({ unitsBySn: { [BK]: { socPct: 0 } } }, 1000);
+  const returned = tracker.evidence();
+  returned.peers[0].seenAt = 999999;
+  returned.peers[0].socObserved = false;
+  returned.peers[0].sn = OTHER;
+  assert.equal(tracker.evidence().peers[0].seenAt, 1000);
+  assert.equal(tracker.evidence().peers[0].socObserved, true);
+  assert.equal(tracker.evidence().peers[0].sn, BK);
+});
+
 function aggregate(driverId, deviceIndex, evidence) {
   return { driverId, deviceIndex, evidence };
 }

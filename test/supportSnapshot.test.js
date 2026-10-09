@@ -6,6 +6,34 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('cached SOC after restart is not a fresh receipt or proof of a current installation reporter', () => {
+  const instance = homey();
+  instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream' ? [{
+    getCapabilityValue: (key) => key === 'measure_battery' ? 86 : null,
+    getReportingDiagnostics: () => ({ readAddressMatchesSavedMain: true, observations: {} }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const entry = report.drivers.find(d => d.id === 'stream').reporting[0];
+  assert.equal(entry.currentReadings.measure_battery, 86);
+  assert.deepEqual(entry.observations, {});
+  assert.equal(entry.currentInstallationReporterVerified, false);
+});
+
+test('support projection preserves cached versus observed SOC disagreement without promoting either', () => {
+  const instance = homey();
+  instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream' ? [{
+    getData() { throw new Error('PRIVATE'); },
+    getCapabilityValue: (key) => key === 'measure_battery' ? 0 : null,
+    getReportingDiagnostics: () => ({ readAddressMatchesSavedMain: false,
+      observations: { measure_battery: { value: 10, receivedAt: Date.now() - 1000, source: 'mqtt' } } }),
+  }] : [] });
+  const entry = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream').reporting[0];
+  assert.equal(entry.currentReadings.measure_battery, 0);
+  assert.equal(entry.observations.measure_battery.value, 10);
+  assert.equal(entry.readAddressMatchesSavedMain, false);
+  assert.equal(entry.currentInstallationReporterVerified, false);
+});
+
 test('reporting projection distinguishes reported zero, missing values and signed flow without identity reads', () => {
   const instance = homey();
   const now = Date.now();

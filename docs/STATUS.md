@@ -4,6 +4,15 @@
 
 ## Current handover — 9 October 2026
 
+### Local follow-up — reporting/topology regression and fresh API audit
+
+Added seven synthetic regression tests on the diagnostic branch; no runtime or
+release changes. [Audit and next evidence](STREAM_REPORTING_API_AUDIT_2026_10_09.md)
+records fresh read-only Developer API calls and independent ES21/ES22 upstream
+evidence, including the official-versus-app transport distinction and new BK
+PV3/4 diagnostic candidates. Await Robert's report; preserve pairings, control
+gates and beta labels. This follow-up is not included in Test build 39.
+
 ### Latest Test release — v1.10.24 / build 39
 
 Published and verified in the developer portal on 9 October 2026: “Your app is
