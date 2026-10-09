@@ -25,8 +25,25 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   }
   let observations: Record<string, unknown> = {};
   let readAddressMatchesSavedMain: boolean | null = null;
+  let lastControlFailure: Record<string, unknown> | null = null;
   try {
     const input = device.getReportingDiagnostics?.();
+    const failure = input?.lastControlFailure;
+    if (failure) {
+      const reason = ['read_failed', 'cancelled', 'observation_failed', 'preflight_rejected',
+        'write_failed', 'wait_failed', 'conflicting_readback', 'readback_mismatch'].includes(failure.reason)
+        ? failure.reason : 'unknown';
+      const requestedAction = ['charge', 'discharge', 'reserve', 'cheap_import', 'peak_export',
+        'feed', 'ac1', 'ac2', 'mode'].includes(failure.requestedAction) ? failure.requestedAction : 'unknown';
+      const count = (value: unknown) => (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null);
+      lastControlFailure = {
+        reason,
+        requestedAction,
+        attempted: count(failure.attempted),
+        accepted: count(failure.accepted),
+        verified: count(failure.verified),
+      };
+    }
     if (typeof input?.readAddressMatchesSavedMain === 'boolean') {
       readAddressMatchesSavedMain = input.readAddressMatchesSavedMain;
     }
@@ -44,9 +61,11 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   } catch {
     observations = {};
     readAddressMatchesSavedMain = null;
+    lastControlFailure = null;
   }
   return {
     currentReadings,
+    lastControlFailure,
     observations,
     readAddressMatchesSavedMain,
     // Matching addresses do not establish that EcoFlow still uses that reporter.

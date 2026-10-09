@@ -12,6 +12,19 @@ const { StreamCmd } = require('../.homeybuild/lib/streamProtocol');
 
 const SN = 'BK61TESTCONTROL01';
 const baseline = { charge_limit: 80, discharge_limit: 10, backup_reserve_soc: 20, feed_in_control: false, operating_mode: 'self_powered' };
+
+test('missing operating mode is a safe preflight rejection with no writes', async () => {
+  const h = ioHarness({ state: { operating_mode: undefined } });
+  await assert.rejects(executeStreamControl(SN, { kind: 'mode', value: 'ai' }, h.io), error => {
+    assert.equal(error.reason, 'preflight_rejected');
+    assert.equal(error.requestedAction, 'mode');
+    assert.equal(error.attempted, 0);
+    assert.equal(error.accepted, 0);
+    assert.ok(!error.message.includes(SN));
+    return true;
+  });
+  assert.equal(h.writes.length, 0);
+});
 function ioHarness(options = {}) {
   let state = { ...baseline, ...options.state };
   const writes = [];
@@ -86,6 +99,8 @@ test('accepted but unapplied commands fail after bounded fresh readbacks, withou
     assert.ok(error instanceof StreamControlFailure);
     assert.equal(error.accepted, 1);
     assert.equal(error.verified, 0);
+    assert.equal(error.reason, 'readback_mismatch');
+    assert.equal(error.requestedAction, 'charge');
     assert.equal(error.before.charge_limit, 80);
     return true;
   });
@@ -99,6 +114,8 @@ test('poll failures or absent readback fields cannot confirm a command using mat
   h.io.read = async () => { throw new Error(`server error for ${SN}: secret`); };
   await assert.rejects(executeStreamControl(SN, { kind: 'charge', value: 100 }, h.io), (error) => {
     assert.equal(error.attempted, 0);
+    assert.equal(error.reason, 'read_failed');
+    assert.equal(error.requestedAction, 'charge');
     assert.ok(!error.message.includes(SN));
     assert.ok(!error.message.includes('secret'));
     return true;

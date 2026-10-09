@@ -119,6 +119,32 @@ test('removing the EcoFlow account clears every credential key', async () => {
   assert.match(state, /No EcoFlow account stored/);
 });
 
+test('support report copies displayed JSON only and handles unavailable clipboard', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey();
+  homey.api = (_method, _url, _body, cb) => cb(null, { schemaVersion: 6, drivers: [] });
+  const copied = [];
+  context.navigator = { clipboard: { writeText: async text => copied.push(text) } };
+  context.onHomeyReady(homey);
+  const show = context.document.getElementById('supportSnapshot');
+  const copy = context.document.getElementById('copySupportSnapshot');
+  await copy.click();
+  assert.equal(copied.length, 0);
+  await show.click();
+  assert.equal(copy.disabled, false);
+  await copy.click();
+  assert.equal(copied[0], context.document.getElementById('supportSnapshotResult').textContent);
+  assert.deepEqual(JSON.parse(copied[0]), { schemaVersion: 6, drivers: [] });
+  context.navigator.clipboard.writeText = async () => { throw new Error('PRIVATE'); };
+  await copy.click();
+  assert.match(context.document.getElementById('supportCopyStatus').textContent, /copy it manually/);
+  homey.api = (_method, _url, _body, cb) => cb(new Error('PRIVATE'));
+  await show.click();
+  assert.equal(copy.disabled, true);
+  await copy.click();
+  assert.equal(copied.length, 1, 'an old report is never copied after a failed refresh');
+});
+
 test('a failing unset is reported instead of a false success', async () => {
   const homey = fakeHomey({
     values: storedAccount(),

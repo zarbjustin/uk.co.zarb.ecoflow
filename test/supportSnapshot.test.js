@@ -47,6 +47,28 @@ test('reporting failures stay anonymous and absent receipt evidence stays unknow
   assert.ok(!JSON.stringify(report).includes('PRIVATE'));
 });
 
+test('control diagnostics project only safe reasons, actions and counts', () => {
+  const instance = homey();
+  instance.drivers.getDriver = () => ({ getDevices: () => [{
+    getReportingDiagnostics: () => ({ lastControlFailure: {
+      reason: 'preflight_rejected', requestedAction: 'mode', attempted: 0, accepted: 0, verified: 0,
+      raw: 'PRIVATE',
+    } }),
+  }, {
+    getReportingDiagnostics: () => ({ lastControlFailure: {
+      reason: 'PRIVATE', requestedAction: 'PRIVATE', attempted: 'PRIVATE', accepted: -1, verified: Infinity,
+    } }),
+  }] });
+  const report = createSupportSnapshot(instance);
+  assert.deepEqual(report.drivers[0].reporting[0].lastControlFailure, {
+    reason: 'preflight_rejected', requestedAction: 'mode', attempted: 0, accepted: 0, verified: 0,
+  });
+  assert.deepEqual(report.drivers[0].reporting[1].lastControlFailure, {
+    reason: 'unknown', requestedAction: 'unknown', attempted: null, accepted: null, verified: null,
+  });
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('per-reading freshness projection excludes identities and catches nested getter failures', () => {
   const instance = homey();
   let malicious = false;

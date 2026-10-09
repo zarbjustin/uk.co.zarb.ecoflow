@@ -108,6 +108,11 @@
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
   <button id="supportSnapshot" type="button">Show support report</button>
+  <button id="copySupportSnapshot" type="button" disabled>Copy report</button>
+  <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
+    Click Show support report, then Copy report and paste the text into your support message
+    (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
+  <p id="supportCopyStatus" role="status" aria-live="polite"></p>
   <p class="help">STREAM 5000 configuration tiles are read-only and refer to the subscribed unit's
     reported settings, not verified installation-wide limits. Stale readings clear rather than showing
     zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
@@ -136,14 +141,32 @@
       }
       refreshAppAuthState();
 
+      var reportText = '';
+      var copyButton = document.getElementById('copySupportSnapshot');
+      var copyStatus = document.getElementById('supportCopyStatus');
+      copyButton.addEventListener('click', async function () {
+        if (!reportText) return;
+        try {
+          await navigator.clipboard.writeText(reportText);
+          copyStatus.textContent = 'Report copied. Review it before pasting it into your support message.';
+        } catch (err) {
+          copyStatus.textContent = 'Copy is unavailable here. Select the displayed report and copy it manually.';
+        }
+      });
+
       document.getElementById('supportSnapshot').addEventListener('click', function () {
         var button = document.getElementById('supportSnapshot');
         var output = document.getElementById('supportSnapshotResult');
         button.disabled = true;
+        reportText = '';
+        copyButton.disabled = true;
+        copyStatus.textContent = '';
         output.textContent = 'Reading local diagnostics...';
         Homey.api('GET', '/support-snapshot', null, function (err, report) {
           button.disabled = false;
-          output.textContent = err ? 'Could not read local diagnostics. Please try again.' : JSON.stringify(report, null, 2);
+          reportText = err ? '' : JSON.stringify(report, null, 2);
+          output.textContent = err ? 'Could not read local diagnostics. Please try again.' : reportText;
+          copyButton.disabled = !reportText;
         });
       });
 

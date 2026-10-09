@@ -4,6 +4,24 @@
 
 ## Current handover — 9 October 2026
 
+### Local follow-up — report sharing and control diagnostics (not released)
+
+Post 44 and manual log `ed73698e-c303-40fe-9783-7810e2366f01` confirm individual
+SOC readings around 9–10% while the original aggregate remains 0%. The emailed
+screenshots are available under the collapsed attachments section. The manual
+log shows live ES22 telemetry and established transports, but does not contain
+the displayed schema-6 support snapshot. Ask for that JSON separately; preserve
+pairings and identify the action/Flow which produced the no-commands warning.
+
+Local changes add Copy report with clipboard-failure/manual-copy guidance and
+explicitly distinguish the displayed JSON from Homey's log ID. Control failures
+retain only fixed safe reason/action codes; the original Home Battery exposes
+the latest failure counts in its session-only reporting diagnostics, reset on
+initialisation or successful warning-clearing control. Raw exceptions are not
+returned. These changes do not alter command plans, aggregation or safeguards.
+They are not included in the published v1.10.23 build and have not been posted
+to the community. A new release would need the normal validation/upload gates.
+
 **Latest Test release: v1.10.23 / build 38.** The developer portal confirmed
 “Your app is currently available for testing” on 9 October. Production remains
 v1.10.3 / build 18; no certification submission or hub installation was made.

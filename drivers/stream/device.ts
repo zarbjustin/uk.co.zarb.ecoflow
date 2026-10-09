@@ -31,6 +31,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private controlStopped = false;
   private controlGeneration = 0;
   private controlWarning = false;
+  private lastControlFailure: { reason: string; requestedAction: string; attempted: number; accepted: number; verified: number } | null = null;
   private controlWaits = new Map<NodeJS.Timeout, ControlWaitResolver>();
   private priceUpdatedAt = 0;
 
@@ -88,6 +89,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return {
       readAddressMatchesSavedMain: this.mainSn ? this.getReadSn() === this.mainSn : null,
       observations: this.reportingObservations,
+      lastControlFailure: this.lastControlFailure,
     };
   }
 
@@ -113,6 +115,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.controlStopped = false;
     this.priceUpdatedAt = 0;
     this.reportingObservations = {};
+    this.lastControlFailure = null;
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     const storedWh = (key: string) => {
       const value = toFiniteNumber(this.getStoreValue(key));
@@ -291,10 +294,18 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       if (active() && this.controlWarning) {
         await this.setWarning(null).catch(() => {});
         this.controlWarning = false;
+        this.lastControlFailure = null;
       }
     } catch (error) {
       if (error instanceof DeveloperApiQuarantineError) throw error;
       if (active() && error instanceof StreamControlFailure) {
+        this.lastControlFailure = {
+          reason: error.reason,
+          requestedAction: error.requestedAction,
+          attempted: error.attempted,
+          accepted: error.accepted,
+          verified: error.verified,
+        };
         const previous = Object.entries(error.before).map(([key, value]) => `${key}=${value}`).join(', ');
         await this.setWarning(error.message + (previous ? ` Previous reported settings: ${previous}.` : '')).catch(() => {});
         this.controlWarning = true;
