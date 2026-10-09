@@ -2,9 +2,34 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Current handover — 7 October 2026
+## Current handover — 9 October 2026
 
-### Local investigation increment — 9 October 2026 (not released)
+**Latest Test release: v1.10.23 / build 38.** The developer portal confirmed
+“Your app is currently available for testing” on 9 October. Production remains
+v1.10.3 / build 18; no certification submission or hub installation was made.
+
+The diagnostic release is on `codex/mixed-generation-reporting-diagnostics`;
+`master` is unchanged. Implementation commit: `f618c229914166a9bc4ead158a0087d154dce938`;
+version/tag: `175ad1d4dcae728d657d64c2a8765861059ae067` / `v1.10.23`.
+
+- [Version workflow](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37986052851),
+  [exact-version CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37986141316)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/37986479957)
+  succeeded. CI passed 399 tests, lint, audit and verified-level Homey validation.
+- [Build 38](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/38)
+  was separately published to [Test](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+- Ask Robert and Ed to update in place, confirm v1.10.23, run for approximately
+  five minutes and provide **Show support report** with concurrent EcoFlow/Homey
+  screenshots. Preserve devices, pairing history, counters and Flows.
+  [Community post 43](https://community.homey.app/t/157399/43) was published and
+  verified on 9 October with these instructions. Await their response rather
+  than sending duplicate follow-ups.
+- Ed benefits from cached EcoFlow readings in the report, not new controls.
+  Solis has no THEN actions in his reported integration; confirm whether its
+  “Capaciteit” percentage represents battery SOC. Charging inhibition and
+  Solis/BYD coordination remain unimplemented and hardware-gated.
+
+### Diagnostic increment — 9 October 2026 (released to Test)
 
 Community replies 41–42 clarify that the mixed-generation installation was
 linked after its original Homey pairing, and that the Solis integration provides
@@ -24,10 +49,11 @@ absent receipt observations must not be inferred from cached capability values.
 
 This increment does not change reporting addresses, aggregation, counters,
 availability, controls, pairing or Energy roles. It does not repair Robert's
-installation yet. Obtain the existing support report first; if insufficient,
-release this diagnostic increment to Test through the usual gates and compare
+installation yet. Collect the new support report and compare
 the aggregate and individual devices with simultaneous EcoFlow screenshots.
-No uninstall/re-pair, hardware controls or publication was undertaken.
+No uninstall/re-pair or hardware controls were undertaken.
+
+### Previous release handover — 7 October 2026
 
 **Latest Test release: v1.10.22 / build 37.** Published to Homey Test on
 6 October 2026; the developer portal confirmed “Your app is currently available
@@ -81,7 +107,7 @@ submission, live-hub installation or physical control acceptance was performed.
 ### Checkout and privacy handover
 
 Active checkout: `work/uk.co.zarb.ecoflow-energy`, branch
-`codex/original-stream-bug-bash`. Sync this branch and remote `master` normally;
+`codex/mixed-generation-reporting-diagnostics`. Sync this branch normally;
 never force-push to resolve divergence. The separate `uk.co.zarb.ecoflow-icon`
 worktree has an older local `master` with local commits: preserve it, and do not
 reset it to the remote release. Fetch and inspect before any cross-device merge.
