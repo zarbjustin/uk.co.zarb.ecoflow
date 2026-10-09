@@ -181,5 +181,8 @@
   },
   "1.10.24": {
     "en": "Add a Copy report button and clearer support-report sharing instructions. Improve safe control failure diagnostics without changing battery grouping, Energy accounting or control safeguards."
+  },
+  "1.10.25": {
+    "en": "Add read-only original STREAM PV3/4 voltage and current diagnostics with model-specific port limits, independent freshness and stale-value clearing. Improve support reporting and regression coverage. Energy accounting is unchanged; physical PV port ordering remains provisional."
   }
 }
