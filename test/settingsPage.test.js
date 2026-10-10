@@ -19,6 +19,8 @@ function loadSettingsScript() {
   const context = vm.createContext({
     console, setTimeout, Promise, document: fakeDocument(),
   });
+  context.window = context;
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'meter-status.js'), 'utf8'), context);
   vm.runInContext(source, context);
   return context;
 }
@@ -28,6 +30,7 @@ function fakeDocument() {
   const elements = new Map();
   return {
     elements,
+    createElement() { return { textContent: '' }; },
     getElementById(id) {
       if (!elements.has(id)) {
         elements.set(id, {
@@ -35,6 +38,9 @@ function fakeDocument() {
           value: '',
           checked: true,
           textContent: '',
+          ownerDocument: this,
+          children: [],
+          appendChild(child) { this.children.push(child); },
           style: {},
           handlers: {},
           addEventListener(event, handler) {
@@ -64,7 +70,7 @@ function fakeHomey({
   const homey = {
     store,
     ready() {},
-    __(key) { return require('../locales/en.json').settings.support[key.split('.').pop()] || key; },
+    __(key) { return key.split('.').reduce((value, part) => value?.[part], require('../locales/en.json')) || key; },
     get(key, cb) {
       cb(null, store.has(key) ? store.get(key) : undefined);
     },

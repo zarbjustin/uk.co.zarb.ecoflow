@@ -1,5 +1,24 @@
 {
   "settings": {
+    "meter": {
+      "title": "Smart Meter readings",
+      "help": "Show the integration support report to refresh this local snapshot. The Smart Meter measures the grid; Home Battery measures battery charging and discharging. Keep one authoritative meter for each grid connection. If another device reports that same grid connection, review its Exclude from Energy setting to avoid duplicate grid accounting.",
+      "refresh": "Show the integration support report to see current meter evidence.",
+      "none": "No paired Smart Meter is present in this report.",
+      "meter": "Meter",
+      "waiting": "Waiting for usable grid data",
+      "stale": "Grid reading is stale or unavailable",
+      "direct_meter": "Direct meter reading",
+      "linked_installation": "Linked-installation fallback",
+      "unknown": "Source unknown",
+      "age": "Reading age at snapshot",
+      "power": "Grid power (import + / export −)",
+      "direct_help": "Grid power comes from this meter's Developer MQTT feed. Phase readings have their own freshness limits.",
+      "fallback_help": "Grid power comes from the linked STREAM installation. This does not confirm a direct meter connection or fresh phase readings.",
+      "missing_help": "Check the meter's connection in EcoFlow, Developer API credentials and MQTT setting. Refresh this report after a new reading arrives; do not delete or re-pair the device just because data is missing.",
+      "accounting": "Energy totals remain calculated from observed grid power. Unseen gaps are not filled; native EcoFlow counters are not used.",
+      "snapshot": "This is a snapshot, not a live connection indicator. Refresh the report to check again."
+    },
     "support": {
       "show": "Show integration support report",
       "copy": "Copy integration support report",

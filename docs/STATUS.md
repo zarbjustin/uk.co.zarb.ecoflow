@@ -2,6 +2,27 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Diagnostic meter Sprint 3 — 10 October 2026 (publication hold)
+
+The diagnostic branch `codex/mixed-generation-reporting-diagnostics` now includes
+the original-meter direct MQTT/fallback implementation, counter evidence checks
+and meter UX follow-up. App settings show anonymous direct/fallback/missing/stale
+grid summaries with receipt ages and EN/DE/NL guidance. Energy accounting remains
+integrated power; native counter migration, topology repair and Dual CT admission
+remain disabled. Existing device IDs and pairings are preserved.
+
+All 456 tests, lint and local verified-level Homey validation passed; Chromium
+mobile-width summary rendering was checked. No installed hardware acceptance is
+claimed. See [meter roadmap and evidence gates](SMART_METER_DUAL_CT_PLAN.md).
+
+Publishing to Test is explicitly on hold. The earlier uploaded Build 41 contains
+the artwork/name release only, not these subsequent meter/reporting changes.
+To test the new diagnostic code through the store, first approve a new versioned
+release from this branch, validate that exact release commit, upload a new build
+and then publish it to Test. Do not publish Build 41 expecting it to contain Sprint
+3. Last verified store status below is historical, not rechecked by this Git sync.
+Mainline `master`, release version and store channels remain unchanged.
+
 ## Artwork and display-name update — 10 October 2026
 
 Owner requested photo-derived AC 5000 wireframe artwork and removal of Beta
@@ -15,8 +36,9 @@ Local 419 tests, lint and verified-level Homey validation passed. Release status
 is v1.10.26 / uploaded Build 41, NOT verified as published to Test. The developer
 portal first returned Failed to fetch, then the browser connection timed out
 twice before the Publish to Test action could be taken. Last verified Test remains
-v1.10.25 / Build 40; Live remains v1.10.3 / Build 18. Do not re-run the version or
-upload workflows: recover the portal and publish the existing Build 41 to Test.
+v1.10.25 / Build 40; Live remains v1.10.3 / Build 18. This earlier release plan is
+superseded by the diagnostic publication hold above; Build 41 does not contain
+the subsequent meter sprints.
 
 - Source/tag: `93fc6e951d47a33025dbbc8588cf2b9458b42d2a` / `v1.10.26`.
 - [Version](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38051359738),

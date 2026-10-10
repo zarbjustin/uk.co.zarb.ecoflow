@@ -30,9 +30,10 @@ not verified whole-system limits or control readback. Existing devices and saved
 counters are preserved; there is no need to delete or re-pair for this update.
 
 ### Smart Meter (CT_EF_01)
-- Added as a **Homey Energy meter**. A device setting lets it show either **Grid power** (import/export) or **Home load** (total consumption).
-- When the meter is part of a STREAM system its own serial returns no data, so the reading is taken from the system's main SN (`powGetSysGrid` / `powGetSysLoad`) automatically.
-- Cumulative **imported/exported energy** is derived from the live power as monotonic counters (the public API does not expose grid kWh totals). Standalone meters that report per-phase power/voltage/current have those values surfaced automatically.
+- Added as a **Homey Energy grid meter**. Native power always represents grid import/export. The device setting can also show a separate **Home load** reading when the linked STREAM installation supplies it; this is not a second CT channel.
+- Subscribes to the meter's own Developer MQTT feed. Fresh direct grid power takes priority over linked-installation REST fallback. Phase readings are exposed only when the meter supplies them and clear when stale.
+- Cumulative **imported/exported energy** remains derived from observed grid power. Native counter candidates are diagnostic evidence only, not adopted energy totals; unseen gaps are not filled.
+- App settings provide a local meter-source/freshness summary when the integration report is refreshed. It distinguishes direct readings, installation fallback and missing/stale data. Keep one authoritative grid meter per connection; Home Battery has a separate battery-energy role.
 
 ### Automation
 - **Triggers:** solar/grid power changed, grid import/export started, grid import/export **rises above** a threshold, charging/discharging started, battery level crossed, operating mode changed, fault raised/cleared, device online/offline.

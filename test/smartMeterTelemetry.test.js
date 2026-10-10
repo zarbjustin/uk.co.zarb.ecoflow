@@ -6,6 +6,21 @@ const { SmartMeterTelemetry } = require('../.homeybuild/lib/smartMeterTelemetry'
 const mqtt = (receivedAt) => ({ source: 'mqtt', receivedAt });
 const rest = (receivedAt) => ({ source: 'rest', receivedAt });
 
+test('active grid diagnostics distinguish direct, fallback, stale, restart and clock reversal', () => {
+  const t = new SmartMeterTelemetry();
+  assert.equal(t.snapshot(1000).activeGrid, null);
+  t.observe({ powGetSysGrid: 0 }, mqtt(1000), 1000);
+  assert.deepEqual(t.snapshot(2000).activeGrid, { source: 'direct_meter', value: 0, ageSec: 1, stale: false });
+  assert.equal(t.snapshot(91001).readings.measure_power.stale, true);
+  assert.equal(t.snapshot(91001).activeGrid.value, null);
+  t.observe({ powGetSysGrid: -100 }, rest(92000), 92000);
+  assert.deepEqual(t.snapshot(93000).activeGrid, { source: 'linked_installation', value: -100, ageSec: 1, stale: false });
+  t.observe({ powGetSysGrid: 20 }, mqtt(94000), 94000);
+  assert.equal(t.snapshot(94000).activeGrid.source, 'direct_meter');
+  assert.deepEqual(t.snapshot(93000).activeGrid, { source: 'direct_meter', value: null, ageSec: null, stale: true });
+  assert.equal(new SmartMeterTelemetry().snapshot(95000).activeGrid, null);
+});
+
 test('direct MQTT wins over host REST until its own grid field expires', () => {
   const t = new SmartMeterTelemetry();
   assert.equal(t.observe({ powGetSysGrid: 0 }, mqtt(1000), 1000).measure_power, 0);

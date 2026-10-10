@@ -77,11 +77,21 @@ export class SmartMeterTelemetry {
 
   snapshot(now = Date.now()): Record<string, unknown> {
     const project = (items: Map<string, { value: number; at: number }>) => Object.fromEntries([...items]
-      .map(([key, item]) => [key, { value: item.value, ageSec: Math.max(0, (now - item.at) / 1000), stale: item.at > now || now - item.at > METER_DETAIL_FRESH_MS }]));
+      .map(([key, item]) => [key, {
+        value: item.value,
+        ageSec: item.at > now ? null : (now - item.at) / 1000,
+        stale: item.at > now || now - item.at > (key === 'measure_power' ? METER_FRESH_MS : METER_DETAIL_FRESH_MS),
+      }]));
     return {
       transport: 'developer_mqtt',
       samples: this.samples,
       directGridFresh: this.lastDirectGridAt > 0 && now >= this.lastDirectGridAt && now - this.lastDirectGridAt <= METER_FRESH_MS,
+      activeGrid: this.grid ? {
+        source: this.grid.source === 'mqtt' ? 'direct_meter' : 'linked_installation',
+        value: this.freshGrid(now),
+        ageSec: this.grid.at > now ? null : (now - this.grid.at) / 1000,
+        stale: this.freshGrid(now) === null,
+      } : null,
       readings: project(this.fields),
       counterCandidates: project(this.counters),
       counterEvidence: this.counterEvidence.snapshot(now),

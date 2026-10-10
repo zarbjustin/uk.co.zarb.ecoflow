@@ -73,6 +73,13 @@ function meterSnapshot(device: any): Record<string, unknown> | null {
     return {
       samples: safeNumber(input.samples),
       directGridFresh: input.directGridFresh === true,
+      activeGrid: input.activeGrid ? {
+        source: ['direct_meter', 'linked_installation'].includes(input.activeGrid.source) ? input.activeGrid.source : 'unknown',
+        value: input.activeGrid.stale === false && safeNumber(input.activeGrid.ageSec) !== null && input.activeGrid.ageSec <= 90
+          && typeof input.activeGrid.value === 'number' && Number.isFinite(input.activeGrid.value) ? input.activeGrid.value : null,
+        ageSec: safeNumber(input.activeGrid.ageSec),
+        stale: input.activeGrid.stale !== false || safeNumber(input.activeGrid.ageSec) === null || input.activeGrid.ageSec > 90,
+      } : null,
       accountingSource: 'integrated_power',
       nativeCounterMigrationEnabled: false,
       counterEvidence: {

@@ -31,7 +31,7 @@ unpublished implementation based on a fresh read-only authenticated audit:
 | --- | --- |
 | 1: Original telemetry | Direct meter Developer MQTT; linked-host REST fallback; source arbitration; per-field receipt ages; stale phase/grid values cleared; serialised expiry and lifecycle teardown. Physical screenshot comparison/reconnect acceptance still needed. |
 | 2: Native energy | Allowlisted raw counter candidates in diagnostics only. Existing integrated totals remain authoritative, with duplicate-source suppression and gap/source-change anchoring. Native migration is disabled pending direction/midnight/restart evidence and baseline continuity design. |
-| 3: Meter UX | Native power always grid, optional separate home-load capability; existing setting ID retained with clearer labels; fresh signed import/export threshold condition. No meter writes or protective automation. |
+| 3: Meter UX | Native power always grid, optional separate home-load capability; retained setting ID; fresh signed threshold condition. Local settings summary distinguishes direct grid, linked-installation fallback, missing/stale data and receipt age, with EN/DE/NL guidance on grid-versus-battery Energy roles. No meter writes or protective automation. |
 | 4: Dual CT discovery | Separate staged artwork and explicit metadata quarantine already present. Identity, channel role and direct-versus-host capture require an authorised installation. No guessed prefix or channel admission. |
 | 5: Dual CT adapter | Not implemented without the sprint 4 contract; second-channel PV/load must remain distinct from grid and independently configured. |
 | 6: Acceptance/release | Regression coverage implemented locally; deployment/installed-state and hardware validation remain separate gates. No publication or certification action authorised by this work. |
@@ -47,6 +47,30 @@ receipts, explicit zeros, partial-frame ages, unknown power factor, expiry,
 teardown, optional home load, fresh Flow conditions, privacy projection and
 non-migration of existing counters. The new original-meter code has no device
 write path. Existing battery energy accounting and topology repair are unchanged.
+
+### Sprint 3: source/freshness guidance (diagnostic branch, unpublished)
+
+The app settings now show an anonymous numbered meter summary above the raw
+integration report. It refreshes only with the existing report actions: no new
+cloud calls, polling, device changes or automatic Energy exclusions. The summary
+shows the selected grid source and its receipt age, including linked-installation
+fallback when direct meter data is absent. Explicit zero and signed export remain
+valid; stale, future, malformed or missing readings cannot appear as current power.
+The direct-grid diagnostic freshness label now matches the driver's existing
+90-second acceptance limit rather than the 180-second phase/detail limit.
+
+English, German and Dutch guidance explains missing-data checks, that the report
+is a snapshot rather than a live connection indicator, and that native counters
+remain unadopted. One authoritative grid meter per connection is recommended;
+Home Battery measures battery energy, not the same grid-meter role. No phase-state
+enums are promoted to user-facing capabilities without verified semantics.
+
+All 456 tests, lint and local Homey verified validation passed. A real Chromium
+settings-page check exercised direct/fallback/waiting summaries at 420px without
+horizontal overflow. This is software verification, not installed acceptance.
+Energy accounting, paired identities, master, version and Test publication remain
+unchanged. Counter midnight/export evidence and Dual CT hardware discovery remain
+the next acceptance gates.
 
 ### Sprint 2: counter evidence and continuity design
 

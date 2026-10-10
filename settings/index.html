@@ -121,8 +121,12 @@
     reported settings, not verified installation-wide limits. Stale readings clear rather than showing
     zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
     accessories have produced a positive reading; these do not add another Homey Energy source.</p>
+  <h2 id="meterStatusTitle" style="font-size:17px;">Smart Meter readings</h2>
+  <p id="meterStatusHelp" class="help"></p>
+  <div id="meterStatus" role="status" aria-live="polite"></div>
   <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
 
+  <script src="meter-status.js"></script>
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
@@ -152,6 +156,14 @@
       copyButton.textContent = Homey.__('settings.support.copy');
       document.getElementById('refreshReporterDiagnostics').textContent = Homey.__('settings.support.check');
       document.getElementById('reporterHelp').textContent = Homey.__('settings.support.instructions');
+      document.getElementById('meterStatusTitle').textContent = Homey.__('settings.meter.title');
+      document.getElementById('meterStatusHelp').textContent = Homey.__('settings.meter.help');
+      function renderMeterStatus(report) {
+        window.EcoFlowMeterStatus.render(document.getElementById('meterStatus'), report, function (key) {
+          return Homey.__('settings.meter.' + key);
+        });
+      }
+      renderMeterStatus(null);
       copyButton.addEventListener('click', async function () {
         if (!reportText) return;
         try {
@@ -170,11 +182,13 @@
         copyButton.disabled = true;
         copyStatus.textContent = '';
         output.textContent = 'Reading local diagnostics...';
+        renderMeterStatus(null);
         Homey.api('GET', '/support-snapshot', null, function (err, report) {
           button.disabled = false;
           reportText = err ? '' : JSON.stringify(report, null, 2);
           output.textContent = err ? 'Could not read local diagnostics. Please try again.' : reportText;
           copyButton.disabled = !reportText;
+          renderMeterStatus(err ? null : report);
         });
       });
 
@@ -184,12 +198,14 @@
         copyButton.disabled = true;
         reportText = '';
         document.getElementById('supportSnapshotResult').textContent = 'Checking reporter resolution; no commands are sent...';
+        renderMeterStatus(null);
         Homey.api('POST', '/reporter-diagnostics', {}, function (err, report) {
           button.disabled = false;
           reportText = err ? '' : JSON.stringify(report, null, 2);
           document.getElementById('supportSnapshotResult').textContent = err
             ? 'Could not check the reporter. Use the local support report instead.' : reportText;
           copyButton.disabled = !reportText;
+          renderMeterStatus(err ? null : report);
         });
       });
 

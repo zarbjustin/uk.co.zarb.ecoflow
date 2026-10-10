@@ -1,5 +1,24 @@
 {
   "settings": {
+    "meter": {
+      "title": "Smart Meter-metingen",
+      "help": "Toon het integratierapport om deze lokale momentopname te vernieuwen. De Smart Meter meet het net; Home Battery meet laden en ontladen. Gebruik één leidende meter per netaansluiting. Rapporteert een ander apparaat dezelfde netaansluiting, controleer dan de instelling Uitsluiten van Energy om dubbele nettelling te voorkomen.",
+      "refresh": "Toon het integratierapport om actuele metergegevens te zien.",
+      "none": "Dit rapport bevat geen gekoppelde Smart Meter.",
+      "meter": "Meter",
+      "waiting": "Wachten op bruikbare netgegevens",
+      "stale": "Netmeting is verouderd of niet beschikbaar",
+      "direct_meter": "Directe metermeting",
+      "linked_installation": "Terugvalwaarde van gekoppelde installatie",
+      "unknown": "Bron onbekend",
+      "age": "Leeftijd van meting bij momentopname",
+      "power": "Netvermogen (afname + / teruglevering −)",
+      "direct_help": "Netvermogen komt uit de Developer MQTT-feed van deze meter. Fasemetingen hebben hun eigen versheidsgrenzen.",
+      "fallback_help": "Netvermogen komt uit de gekoppelde STREAM-installatie. Dit bevestigt geen directe meterverbinding of actuele fasemetingen.",
+      "missing_help": "Controleer de meterverbinding in EcoFlow, Developer API-inloggegevens en MQTT-instelling. Vernieuw dit rapport na een nieuwe meting; verwijder of koppel het apparaat niet opnieuw alleen omdat gegevens ontbreken.",
+      "accounting": "Energietotalen blijven berekend uit waargenomen netvermogen. Onbekende perioden worden niet aangevuld; native EcoFlow-tellers worden niet gebruikt.",
+      "snapshot": "Dit is een momentopname, geen live verbindingsindicator. Vernieuw het rapport om opnieuw te controleren."
+    },
     "support": {
       "show": "Integratierapport tonen",
       "copy": "Integratierapport kopiëren",

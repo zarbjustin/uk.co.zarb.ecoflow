@@ -1,5 +1,24 @@
 {
   "settings": {
+    "meter": {
+      "title": "Smart-Meter-Messwerte",
+      "help": "Den Integrationsbericht anzeigen, um diese lokale Momentaufnahme zu aktualisieren. Der Smart Meter misst das Netz; die Hausbatterie misst Laden und Entladen. Pro Netzanschluss nur einen maßgeblichen Zähler verwenden. Meldet ein anderes Gerät denselben Netzanschluss, dessen Einstellung zum Ausschluss aus Energy prüfen, um doppelte Netzwerte zu vermeiden.",
+      "refresh": "Den Integrationsbericht anzeigen, um aktuelle Zählerdaten zu sehen.",
+      "none": "Dieser Bericht enthält keinen gekoppelten Smart Meter.",
+      "meter": "Zähler",
+      "waiting": "Warten auf nutzbare Netzwerte",
+      "stale": "Netzwert veraltet oder nicht verfügbar",
+      "direct_meter": "Direkter Zählerwert",
+      "linked_installation": "Ersatzwert der verknüpften Anlage",
+      "unknown": "Quelle unbekannt",
+      "age": "Alter des Messwerts bei der Momentaufnahme",
+      "power": "Netzleistung (Bezug + / Einspeisung −)",
+      "direct_help": "Die Netzleistung stammt aus dem Developer-MQTT-Datenstrom dieses Zählers. Phasenwerte haben eigene Aktualitätsgrenzen.",
+      "fallback_help": "Die Netzleistung stammt aus der verknüpften STREAM-Anlage. Dies bestätigt weder eine direkte Zählerverbindung noch aktuelle Phasenwerte.",
+      "missing_help": "Zählerverbindung in EcoFlow, Developer-API-Zugangsdaten und MQTT-Einstellung prüfen. Nach einem neuen Messwert den Bericht aktualisieren; das Gerät nicht allein wegen fehlender Daten löschen oder neu koppeln.",
+      "accounting": "Energiesummen werden weiterhin aus beobachteter Netzleistung berechnet. Unbeobachtete Lücken werden nicht aufgefüllt; native EcoFlow-Zähler werden nicht verwendet.",
+      "snapshot": "Dies ist eine Momentaufnahme, keine Live-Verbindungsanzeige. Den Bericht zur erneuten Prüfung aktualisieren."
+    },
     "support": {
       "show": "Integrationsbericht anzeigen",
       "copy": "Integrationsbericht kopieren",

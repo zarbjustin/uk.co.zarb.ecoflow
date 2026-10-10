@@ -6,6 +6,22 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('active meter source projection is private and rejects stale or malformed readings', () => {
+  for (const ageSec of [0, 91, -1, null, NaN]) {
+    const instance = homey();
+    instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
+      getMeterDiagnostics: () => ({ activeGrid: { source: 'linked_installation', value: -10, ageSec,
+        stale: false, sn: 'PRIVATE', secret: 'PRIVATE' } }),
+    }] : [] });
+    const report = createSupportSnapshot(instance);
+    const grid = report.smartMeters[0].evidence.activeGrid;
+    assert.equal(grid.value, ageSec === 0 ? -10 : null);
+    assert.equal(grid.stale, ageSec !== 0);
+    assert.equal(grid.source, 'linked_installation');
+    assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+  }
+});
+
 test('counter support projection cannot promote native migration or malformed freshness', () => {
   const instance = homey();
   instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
