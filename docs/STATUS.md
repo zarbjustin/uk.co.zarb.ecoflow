@@ -2,7 +2,30 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Latest Test release — v1.10.27 / Build 42, 10 October 2026
+## Latest Test release — v1.10.28 / Build 43, 10 October 2026
+
+Both STREAM 5000 Series Unit and STREAM Home Battery (5000) store cards now
+show the supplied actual AC 5000 product photo on white, visually verified on
+the refreshed Test listing. The shared wireframe SVG icons remain byte-for-byte
+unchanged. Photo preparation and wireframe raster preparation now target separate
+directories to prevent accidental replacement of store photos.
+
+- Source/tag: `18b0b54fe2c001e247b9c4fdc0e18cb20f85041f` / `v1.10.28`;
+  photo fix commit `8ed98d0` on `codex/mixed-generation-reporting-diagnostics`.
+- All 459 local tests, lint and verified Homey validation passed.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064896023),
+  [exact-release validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064956742)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38065084696)
+  succeeded for this release.
+- [Build 43](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/43)
+  is published to Test; portal confirmed "Your app is currently available for
+  testing." Store version and both photos were verified after refreshing.
+- No pairing, runtime, Energy accounting or control changes. No re-pairing is
+  required. Mainline `master` and Live are unchanged; no certification, hub
+  install or physical acceptance was performed. Existing hardware acceptance
+  gates below remain open.
+
+## Previous Test release — v1.10.27 / Build 42, 10 October 2026
 
 Owner approved lifting the publication hold for this diagnostic release. Build
 42 is published to Test and verified in the developer portal: "Your app is
