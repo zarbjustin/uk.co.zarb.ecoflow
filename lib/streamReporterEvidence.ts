@@ -1,5 +1,8 @@
 'use strict';
 
+const reporterSource = (key: string) => (key === 'socPct'
+  ? 'app_protocol_system_soc' : 'derived_app_protocol_flow_matrix');
+
 /** Session-only system observations, independent of physical monitor capabilities. */
 export class StreamReporterObservations {
   private values: Record<string, { value: number; receivedAt: number }> = {};
@@ -23,7 +26,7 @@ export class StreamReporterObservations {
         value: v.value,
         ageSec: Math.floor((now - v.receivedAt) / 1000),
         stale: now - v.receivedAt > 180000,
-        source: 'app_protocol_system_field',
+        source: reporterSource(key),
       }]));
   }
 }
@@ -54,7 +57,7 @@ export function systemReporterSnapshot(input: any): Record<string, any> {
       value: v.value,
       ageSec: v.ageSec,
       stale: v.stale !== false || v.ageSec > 180,
-      source: 'app_protocol_system_field',
+      source: reporterSource(key),
     }]];
   }));
 }

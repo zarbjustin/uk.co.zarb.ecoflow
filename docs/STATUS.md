@@ -2,6 +2,27 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unreleased — mixed-generation reporter shadow comparison, 10 October 2026
+
+Implemented on `codex/mixed-generation-reporting-diagnostics`; not published,
+merged to `master`, installed on a hub or physically accepted. The Test baseline
+below remains unchanged. See [the comparison and acceptance plan](REPORTER_SHADOW_VALIDATION.md).
+
+- Support schema 8 adds a UTC `capturedAt` and anonymous `reporterShadow`
+  comparisons. Exact main-serial resolution and fresh peer correlation must agree;
+  model-family similarity alone cannot select a reporter. Duplicate paired
+  representations remain ambiguous instead of silently choosing one.
+- Resolved identity is session-only and private. Teardown/reinitialization and
+  failed lookups invalidate it; late lookup completions cannot restore it.
+- Original aggregate observations and candidate system SOC/power are compared
+  per field, with freshness and receipt skew. SOC is a reported system field;
+  battery power is derived from app-protocol flow data. Neither is promoted to
+  verified installation-wide evidence by the comparison.
+- No accounting, history, device identity, Flow, control target, grouping or
+  pairing changes. No extra subscriptions, polling timers or automatic lookups.
+- Local build, lint, Homey verified validation and all 474 tests passed. Hardware acceptance and an explicit
+  decision to publish a diagnostic Test build are still required.
+
 ## Latest Test release — v1.10.28 / Build 43, 10 October 2026
 
 Both STREAM 5000 Series Unit and STREAM Home Battery (5000) store cards now

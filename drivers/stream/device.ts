@@ -30,6 +30,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private reportingObservations: Record<string, ReportingObservation> = {};
   private mainResolution: { status: string; receivedAt: number; family: string } | null = null;
   private resolutionPending: Promise<void> | null = null;
+  private resolvedReporter: { sn: string; readSn: string; receivedAt: number } | null = null;
 
   /** Explicit read-only check; never changes the read/control address or counters. */
   async refreshReporterDiagnostics(): Promise<void> {
@@ -37,18 +38,26 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       await this.resolutionPending;
       return;
     }
-    if (this.mainResolution && Date.now() - this.mainResolution.receivedAt < 60000) return;
+    const resolutionAge = this.mainResolution ? Date.now() - this.mainResolution.receivedAt : null;
+    if (resolutionAge !== null && resolutionAge >= 0 && resolutionAge < 60000) return;
+    const generation = this.controlGeneration;
+    const readSn = this.getReadSn();
+    const active = () => !this.isShuttingDown() && generation === this.controlGeneration && readSn === this.getReadSn();
     const run = async () => {
       try {
         if (!this.client || this.isShuttingDown()) return;
-        const resolved = await this.client.getMainSn(this.getReadSn(), { fresh: true });
-        if (this.isShuttingDown()) return;
+        const resolved = await this.client.getMainSn(readSn, { fresh: true });
+        if (!active()) return;
+        const receivedAt = Date.now();
+        this.resolvedReporter = { sn: resolved.toUpperCase(), readSn: readSn.toUpperCase(), receivedAt };
         this.mainResolution = {
-          status: resolved.toUpperCase() === this.getReadSn().toUpperCase() ? 'matched' : 'changed',
-          receivedAt: Date.now(),
+          status: resolved.toUpperCase() === readSn.toUpperCase() ? 'matched' : 'changed',
+          receivedAt,
           family: streamTopologyFamily(resolved.toUpperCase()),
         };
       } catch {
+        if (!active()) return;
+        this.resolvedReporter = null;
         this.mainResolution = { status: 'failed', receivedAt: Date.now(), family: 'unknown' };
       }
     };
@@ -124,6 +133,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     };
   }
 
+  /** Private session-only join key; supportSnapshot must never serialize this object. */
+  getResolvedReporterEvidence() {
+    return this.resolvedReporter ? { ...this.resolvedReporter, currentReadSn: this.getReadSn() } : null;
+  }
+
   /** Address cached at init, not a live membership lookup or cross-generation identity. */
   getTopologyEvidence(): StreamTopologyEvidence {
     return {
@@ -147,6 +161,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.priceUpdatedAt = 0;
     this.reportingObservations = {};
     this.mainResolution = null;
+    this.resolvedReporter = null;
     this.lastControlFailure = null;
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     const storedWh = (key: string) => {
@@ -717,6 +732,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   protected async onTeardown(): Promise<void> {
     this.controlStopped = true;
     this.controlGeneration += 1;
+    this.resolvedReporter = null;
+    this.mainResolution = null;
     for (const [timer, resolve] of this.controlWaits) {
       this.homey.clearTimeout(timer);
       resolve();

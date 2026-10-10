@@ -15,6 +15,8 @@ test('system-only receipts preserve genuine zero, reject unit fallback and age f
   tracker.observe({ socPct: 10, battW: Infinity }, 'ES22SYNTHETIC', 1000001);
   assert.equal(tracker.snapshot(1000000).socPct.value, 0);
   assert.equal(tracker.snapshot(1000000).batteryW.value, 0);
+  assert.equal(tracker.snapshot(1000000).socPct.source, 'app_protocol_system_soc');
+  assert.equal(tracker.snapshot(1000000).batteryW.source, 'derived_app_protocol_flow_matrix');
   tracker.observe({ socPct: 10 }, 'ES22SYNTHETIC', 1000000);
   const aged = tracker.snapshot(1185000);
   assert.equal(aged.socPct.stale, true);

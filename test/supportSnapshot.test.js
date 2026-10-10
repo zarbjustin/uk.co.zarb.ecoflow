@@ -240,7 +240,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 7);
+  assert.equal(report.schemaVersion, 8);
 });
 
 test('support report re-projects cached discovery without network or identity access', () => {

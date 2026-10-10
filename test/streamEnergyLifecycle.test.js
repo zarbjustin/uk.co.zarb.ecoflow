@@ -54,8 +54,68 @@ test('read-only reporter resolution is throttled and leaves identity, address an
   assert.equal(device.getReadSn(), device.getData().sn);
   assert.equal(JSON.stringify(device.store), before);
   assert.ok(!JSON.stringify(device.getReportingDiagnostics()).includes('SYNTHETIC'));
+  assert.equal(device.getResolvedReporterEvidence().sn, 'ES22SYNTHETIC');
   await device.onTeardown();
+  assert.equal(device.getResolvedReporterEvidence(), null);
   await device.onReady();
+  assert.equal(device.getReportingDiagnostics().mainResolution, null);
+  await device.onTeardown();
+});
+
+test('late reporter resolution and failures cannot repopulate evidence after teardown or reinitialization', async () => {
+  for (const failure of [false, true]) {
+    const device = await harness();
+    let resolve; let reject;
+    device.client = { getMainSn: () => new Promise((yes, no) => { resolve = yes; reject = no; }) };
+    const pending = device.refreshReporterDiagnostics();
+    await device.onTeardown();
+    await device.onReady();
+    if (failure) reject(new Error('PRIVATE_FAILURE'));
+    else resolve('ES22SYNTHETIC');
+    await pending;
+    assert.equal(device.getResolvedReporterEvidence(), null);
+    assert.equal(device.getReportingDiagnostics().mainResolution, null);
+    await device.onTeardown();
+  }
+});
+
+test('failed resolution clears an earlier private join key without touching accounting', async (t) => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const device = await harness({ chargedWh: 1234, dischargedWh: 5678 });
+  device.client = { getMainSn: async () => 'ES22SYNTHETIC' };
+  const before = JSON.stringify(device.store);
+  await device.refreshReporterDiagnostics();
+  now += 60001;
+  device.client.getMainSn = async () => { throw new Error('PRIVATE_FAILURE'); };
+  await device.refreshReporterDiagnostics();
+  assert.equal(device.getResolvedReporterEvidence(), null);
+  assert.equal(device.getReportingDiagnostics().mainResolution.status, 'failed');
+  assert.equal(JSON.stringify(device.store), before);
+  await device.onTeardown();
+});
+
+test('reporter check retries after clock rollback rather than treating a future result as fresh', async (t) => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const device = await harness();
+  let reads = 0;
+  device.client = { getMainSn: async () => { reads++; return 'ES22SYNTHETIC'; } };
+  await device.refreshReporterDiagnostics();
+  now -= 10000;
+  await device.refreshReporterDiagnostics();
+  assert.equal(reads, 2);
+  assert.equal(device.getResolvedReporterEvidence().receivedAt, now);
+  await device.onTeardown();
+});
+
+test('an address change during lookup cannot attach a result to a different read address', async () => {
+  const device = await harness();
+  let resolve;
+  device.client = { getMainSn: () => new Promise((yes) => { resolve = yes; }) };
+  const pending = device.refreshReporterDiagnostics();
+  device.getData = () => ({ sn: 'BK31OTHER' });
+  resolve('ES22SYNTHETIC');
+  await pending;
+  assert.equal(device.getResolvedReporterEvidence(), null);
   assert.equal(device.getReportingDiagnostics().mainResolution, null);
   await device.onTeardown();
 });

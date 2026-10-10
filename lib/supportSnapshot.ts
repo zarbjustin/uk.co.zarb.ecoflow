@@ -8,6 +8,7 @@ import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
 import { reporterRepairPreview, systemReporterSnapshot } from './streamReporterEvidence';
+import { reporterShadowSnapshot } from './streamReporterShadow';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -111,6 +112,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
   const manifest = homey?.manifest || homey?.app?.manifest || {};
   const now = Date.now();
   const aggregates: StreamAggregateEvidence[] = [];
+  const shadowAggregates: Array<{ driverId: string; deviceIndex: number; addressSn?: string; resolution: any; reporting: any }> = [];
   const reporters: Array<{ driverId: string; deviceIndex: number; evidence: any; system: Record<string, any> }> = [];
   const drivers = Object.entries(DRIVER_ROLES).map(([id, role]) => {
     const entry = Array.isArray(manifest.drivers) ? manifest.drivers.find((candidate: any) => candidate.id === id) : undefined;
@@ -125,6 +127,22 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       // Report absence without returning exception text or private identifiers.
     }
     const evidenceByDevice = devices.map(readStreamTopologyEvidence);
+    const reporting = devices.map((device, deviceIndex) => ({ deviceIndex, ...reportingSnapshot(device, now) }));
+    if (id === 'stream') {
+      devices.forEach((device, deviceIndex) => {
+        let resolution = null;
+        try {
+          resolution = device.getResolvedReporterEvidence?.();
+        } catch { /* No private errors forwarded. */ }
+        shadowAggregates.push({
+          driverId: id,
+          deviceIndex,
+          addressSn: evidenceByDevice[deviceIndex]?.addressSn,
+          resolution,
+          reporting: reporting[deviceIndex],
+        });
+      });
+    }
     const systemReporter = id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
       let system = {};
       try {
@@ -155,7 +173,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       deprecated: entry?.deprecated === true,
       registered,
       pairedCount: devices.length,
-      reporting: devices.map((device, deviceIndex) => ({ deviceIndex, ...reportingSnapshot(device, now) })),
+      reporting,
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
       systemReporter,
@@ -207,7 +225,8 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
+    capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,
@@ -215,6 +234,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     drivers,
     smartMeters,
     installationTopology: streamAggregateOverlapSnapshot(aggregates, now),
+    reporterShadow: reporterShadowSnapshot(shadowAggregates, reporters, now),
     reporterRepair: reporters.map((reporter) => {
       const matches = aggregates.filter((aggregate) => aggregate.evidence?.addressSn
         && reporter.evidence?.peers?.some((peer: any) => peer.sn === aggregate.evidence!.addressSn
