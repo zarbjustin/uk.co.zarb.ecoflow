@@ -184,5 +184,8 @@
   },
   "1.10.25": {
     "en": "Add read-only original STREAM PV3/4 voltage and current diagnostics with model-specific port limits, independent freshness and stale-value clearing. Improve support reporting and regression coverage. Energy accounting is unchanged; physical PV port ordering remains provisional."
+  },
+  "1.10.26": {
+    "en": "Refresh STREAM 5000 icons and store artwork from the AC 5000 product photo. Rename the devices to STREAM 5000 Series Unit and STREAM Home Battery (5000), without the Beta suffix. Existing pairings, monitoring-only safeguards and Homey Energy accounting are unchanged."
   }
 }
