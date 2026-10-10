@@ -190,5 +190,8 @@
   },
   "1.10.27": {
     "en": "Improve original Smart Meter telemetry with direct MQTT readings and linked-installation fallback, fresh per-phase measurements, and clear meter-source diagnostics. Add read-only battery reporter and counter evidence checks. Energy accounting, existing pairings and control safeguards remain unchanged; Dual CT support is not enabled."
+  },
+  "1.10.28": {
+    "en": "Correct the STREAM 5000 Series Unit and STREAM Home Battery (5000) store pictures to use the supplied AC 5000 product photo on white. Keep the existing wireframe device icons. No pairing, Energy accounting or control changes."
   }
 }
