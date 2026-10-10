@@ -187,5 +187,8 @@
   },
   "1.10.26": {
     "en": "Refresh STREAM 5000 icons and store artwork from the AC 5000 product photo. Rename the devices to STREAM 5000 Series Unit and STREAM Home Battery (5000), without the Beta suffix. Existing pairings, monitoring-only safeguards and Homey Energy accounting are unchanged."
+  },
+  "1.10.27": {
+    "en": "Improve original Smart Meter telemetry with direct MQTT readings and linked-installation fallback, fresh per-phase measurements, and clear meter-source diagnostics. Add read-only battery reporter and counter evidence checks. Energy accounting, existing pairings and control safeguards remain unchanged; Dual CT support is not enabled."
   }
 }
