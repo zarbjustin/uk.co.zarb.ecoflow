@@ -13,7 +13,8 @@ async function main() {
   if (!source) throw new Error('Usage: node scripts/prepare-stream-5000-artwork.cjs <transparent-line-art.png> [standalone-output-directory]');
   // Standalone mode stages future product assets without touching active drivers.
   const standalone = process.argv[3] ? path.resolve(process.argv[3]) : null;
-  const images = standalone ? path.join(standalone, 'images') : path.join(root, 'drivers/stream_ac5000/assets/images');
+  // Active listings use actual product photos, not these wireframe raster previews.
+  const images = standalone ? path.join(standalone, 'images') : path.join(root, 'docs/assets/stream-ac-5000/wireframe-images');
   await fs.mkdir(images, { recursive: true });
   const normalized = await sharp(source).trim().resize(860, 860, { fit: 'inside' }).png().toBuffer();
   const square = await sharp({ create: { width: 1000, height: 1000, channels: 4, background: '#00000000' } })

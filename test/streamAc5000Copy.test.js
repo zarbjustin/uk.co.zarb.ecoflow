@@ -100,7 +100,7 @@ test('both 5000 roles share store artwork, with clean names and unchanged pairin
       const png = fs.readFileSync(path.join(root, driver.images[size]));
       assert.strictEqual(png.readUInt32BE(16), pixels);
       assert.strictEqual(png.readUInt32BE(20), pixels);
-      assert.strictEqual(png[25], 6, 'store artwork should preserve RGBA transparency');
+      assert.strictEqual(png[25], 2, 'store photos should use opaque RGB on a white backdrop');
     }
   }
 });
