@@ -1,7 +1,8 @@
 # Mixed-generation reporter comparison and repair gates
 
-10 October 2026. Local, read-only diagnostic increment on
-`codex/mixed-generation-reporting-diagnostics`. Test publication is on hold.
+10 October 2026. Read-only diagnostic increment on
+`codex/mixed-generation-reporting-diagnostics`, published and verified on Test
+as v1.10.29 / Build 44. Hardware acceptance and any reporter repair remain pending.
 
 ## What this addresses
 
@@ -49,8 +50,9 @@ existing source/baselines remain untouched.
 
 ## Next acceptance wave
 
-1. After review and approval, publish this increment to Test. Do not ask testers
-   to delete or re-pair their existing devices merely to gather this evidence.
+1. Test publication is complete. Update the installed app to v1.10.29 and allow
+   fresh readings to arrive. Do not ask testers to delete or re-pair their existing
+   devices merely to gather this evidence, or add duplicate Home Battery devices.
 2. On a mixed-generation installation, use the reporter check, copy its displayed
    JSON and send the separate Homey diagnostic app-log ID. Capture EcoFlow's
    combined battery screen and Homey's existing Home Battery close to that UTC

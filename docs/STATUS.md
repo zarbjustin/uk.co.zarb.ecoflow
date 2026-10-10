@@ -2,11 +2,22 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Unreleased — mixed-generation reporter shadow comparison, 10 October 2026
+## Latest Test release — v1.10.29 / Build 44, 10 October 2026
 
-Implemented on `codex/mixed-generation-reporting-diagnostics`; not published,
-merged to `master`, installed on a hub or physically accepted. The Test baseline
-below remains unchanged. See [the comparison and acceptance plan](REPORTER_SHADOW_VALIDATION.md).
+Published to Test from `codex/mixed-generation-reporting-diagnostics` and
+verified in the portal and refreshed store listing. Mainline `master` is unchanged;
+Live remains v1.10.3 / Build 18. No certification submission, hub installation or
+physical acceptance was performed. See [the comparison and acceptance plan](REPORTER_SHADOW_VALIDATION.md).
+
+- Exact source/tag: `82fedeaad159896ee1b87025f38e226b0ce9105b` / `v1.10.29`;
+  implementation commit `c50ca99f81fb10bb045116ef7a467431b585699f`.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38077544151),
+  [exact-release validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38077593274)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38077674719)
+  succeeded. CI passed tests, lint, dependency audit and verified Homey validation.
+- [Build 44](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/44)
+  confirmed "Your app is currently available for testing";
+  [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/) showed v1.10.29.
 
 - Support schema 8 adds a UTC `capturedAt` and anonymous `reporterShadow`
   comparisons. Exact main-serial resolution and fresh peer correlation must agree;
@@ -20,10 +31,11 @@ below remains unchanged. See [the comparison and acceptance plan](REPORTER_SHADO
   verified installation-wide evidence by the comparison.
 - No accounting, history, device identity, Flow, control target, grouping or
   pairing changes. No extra subscriptions, polling timers or automatic lookups.
-- Local build, lint, Homey verified validation and all 474 tests passed. Hardware acceptance and an explicit
-  decision to publish a diagnostic Test build are still required.
+- Local build, lint, Homey verified validation and all 474 tests passed.
+  Mixed-generation captures and hardware acceptance remain required; this release
+  does not repair the aggregate source or change Homey Energy accounting.
 
-## Latest Test release — v1.10.28 / Build 43, 10 October 2026
+## Previous Test release — v1.10.28 / Build 43, 10 October 2026
 
 Both STREAM 5000 Series Unit and STREAM Home Battery (5000) store cards now
 show the supplied actual AC 5000 product photo on white, visually verified on
