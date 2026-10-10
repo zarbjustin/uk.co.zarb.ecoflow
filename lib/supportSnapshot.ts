@@ -75,6 +75,20 @@ function meterSnapshot(device: any): Record<string, unknown> | null {
       directGridFresh: input.directGridFresh === true,
       accountingSource: 'integrated_power',
       nativeCounterMigrationEnabled: false,
+      counterEvidence: {
+        status: ['waiting', 'incomplete', 'invalid', 'consistent', 'counter_decrease'].includes(input.counterEvidence?.status)
+          ? input.counterEvidence.status : 'waiting',
+        validRecords: safeNumber(input.counterEvidence?.validRecords),
+        lastRecordAgeSec: safeNumber(input.counterEvidence?.lastRecordAgeSec),
+        stale: input.counterEvidence?.stale !== false || safeNumber(input.counterEvidence?.lastRecordAgeSec) === null
+          || input.counterEvidence.lastRecordAgeSec > 180,
+        importAdvanceObserved: input.counterEvidence?.importAdvanceObserved === true,
+        exportAdvanceObserved: input.counterEvidence?.exportAdvanceObserved === true,
+        counterDecreaseObserved: input.counterEvidence?.counterDecreaseObserved === true,
+        unitsVerified: false,
+        midnightBehaviourVerified: false,
+        migrationAllowed: false,
+      },
       readings: project(['measure_power', 'power_factor', ...[1, 2, 3].flatMap((phase) => [
         `measure_power.l${phase}`, `measure_voltage.l${phase}`, `measure_current.l${phase}`, `gridConnectionFlagL${phase}`,
       ]), 'gridConnectionSta'], input.readings),

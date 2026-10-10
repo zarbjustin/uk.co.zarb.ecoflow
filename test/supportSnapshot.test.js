@@ -6,6 +6,22 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('counter support projection cannot promote native migration or malformed freshness', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
+    getMeterDiagnostics: () => ({ counterEvidence: { status: 'consistent', stale: false,
+      lastRecordAgeSec: -1, migrationAllowed: true, unitsVerified: true, midnightBehaviourVerified: true,
+      secret: 'PRIVATE' } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const evidence = report.smartMeters[0].evidence.counterEvidence;
+  assert.equal(evidence.stale, true);
+  assert.equal(evidence.migrationAllowed, false);
+  assert.equal(evidence.unitsVerified, false);
+  assert.equal(evidence.midnightBehaviourVerified, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('original-meter support evidence retains signed values but never forwards private fields', () => {
   const instance = homey();
   instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{

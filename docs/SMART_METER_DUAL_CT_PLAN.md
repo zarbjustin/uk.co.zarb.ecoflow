@@ -48,6 +48,45 @@ teardown, optional home load, fresh Flow conditions, privacy projection and
 non-migration of existing counters. The new original-meter code has no device
 write path. Existing battery energy accounting and topology repair are unchanged.
 
+### Sprint 2: counter evidence and continuity design
+
+The diagnostic branch now checks complete counter records atomically: all three
+candidate import/export/net fields must be present in the same record, finite,
+and arithmetically consistent. Negative net energy is allowed; negative import
+or export is not. Partial records are not merged, and missing export is not
+filled with zero. It records observed directional advances and counter decreases,
+with receipt age and restart-safe absence of cached evidence. The report continues
+to state `migrationAllowed: false`, `unitsVerified: false` and
+`midnightBehaviourVerified: false` regardless of how many consistent records arrive.
+
+A pure, test-only continuity preview anchors the old Homey total to a new raw
+baseline, then adds only subsequent positive deltas. A raw regression is blocked
+instead of interpreted automatically as a reset. No live device calls this preview;
+native counters still cannot replace the integrated meters. Battery accounting
+and the publication hold are unchanged.
+
+A separate 20-second read-only Developer MQTT probe replayed actual original
+meter records through the new evidence tracker: ten complete records were
+consistent, import advanced, export did not advance, and no counter decrease was
+observed. This is transport/parser evidence only, not a midnight/export or native
+energy migration acceptance. No raw samples or account counter values were saved.
+Local lint and Homey verified-level validation passed; all 451 automated tests
+passed. This does not claim a new store release or installed hardware behaviour.
+
+Remaining acceptance before designing an active migration:
+
+1. Privately compare complete records with EcoFlow meter import/export values,
+   including ordinary naturally occurring import/export periods; establish units.
+2. Obtain a bounded observation spanning local midnight, keeping counter receipts
+   separate from local daily views. A daily-looking API name is not sufficient.
+3. Validate reconnect/restart persistence and explicit zero behaviour. Investigate
+   any regression as firmware/reset/source evidence, not automatic consumption.
+4. Decide the fallback contract after counter adoption: no simultaneous power
+   integration, and no filling counter gaps from unobserved power. Preserve the
+   current Homey baseline and record the accounting source separately.
+5. Hardware acceptance and explicit release approval remain required. Do not
+   create experimental export, calibration or reset commands to collect evidence.
+
 For Dual CT capture, record (privately) discovery product identifiers, CT role
 configuration and simultaneous EcoFlow screenshots; subscribe only to that
 owner's devices. Collect unused/zero/disconnected channels, direction changes,

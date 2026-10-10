@@ -3,6 +3,7 @@
 import { mapSmartMeterQuota } from './smartMeterMapping';
 import type { QuotaSampleContext } from './BaseEcoFlowDevice';
 import { toFiniteNumber } from './quota';
+import { SmartMeterCounterEvidence } from './smartMeterCounterEvidence';
 
 export const METER_FRESH_MS = 90000;
 export const METER_DETAIL_FRESH_MS = 180000;
@@ -14,6 +15,7 @@ export class SmartMeterTelemetry {
   private counters = new Map<string, { value: number; at: number }>();
   private lastDirectGridAt = 0;
   private samples = 0;
+  private counterEvidence = new SmartMeterCounterEvidence();
   private grid: { value: number; at: number; source: 'mqtt' | 'rest' } | null = null;
 
   observe(quota: Record<string, any>, context: QuotaSampleContext, now = Date.now()): Record<string, number | null> {
@@ -48,6 +50,7 @@ export class SmartMeterTelemetry {
       out.power_factor = null;
     }
     const record = quota.gridConnectionDataRecord;
+    this.counterEvidence.observe(record, at, now);
     if (record && typeof record === 'object' && !Array.isArray(record)) {
       for (const key of COUNTER_KEYS) {
         const value = toFiniteNumber(record[key]);
@@ -81,6 +84,7 @@ export class SmartMeterTelemetry {
       directGridFresh: this.lastDirectGridAt > 0 && now >= this.lastDirectGridAt && now - this.lastDirectGridAt <= METER_FRESH_MS,
       readings: project(this.fields),
       counterCandidates: project(this.counters),
+      counterEvidence: this.counterEvidence.snapshot(now),
       accountingSource: 'integrated_power',
       nativeCounterMigrationEnabled: false,
     };
