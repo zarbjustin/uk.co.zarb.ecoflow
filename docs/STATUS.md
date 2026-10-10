@@ -12,7 +12,19 @@ equivalents and matching current UI/readme references. Driver IDs, saved device
 names, pairing opt-in, API warnings, read-only gates and Energy roles are unchanged.
 No re-pairing is required. See [artwork provenance](STREAM_5000_ARTWORK.md).
 Local 419 tests, lint and verified-level Homey validation passed. Release status
-will be recorded separately after exact-version CI and portal verification.
+is v1.10.26 / uploaded Build 41, NOT verified as published to Test. The developer
+portal first returned Failed to fetch, then the browser connection timed out
+twice before the Publish to Test action could be taken. Last verified Test remains
+v1.10.25 / Build 40; Live remains v1.10.3 / Build 18. Do not re-run the version or
+upload workflows: recover the portal and publish the existing Build 41 to Test.
+
+- Source/tag: `93fc6e951d47a33025dbbc8588cf2b9458b42d2a` / `v1.10.26`.
+- [Version](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38051359738),
+  [exact-version validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38051419457)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38051500730)
+  succeeded. Upload log confirms `uk.co.zarb.ecoflow@1.10.26 successfully uploaded`
+  and gives [Build 41](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/41).
+  No certification, Live publication, hub install or physical acceptance.
 
 ## Current handover — 9 October 2026
 
