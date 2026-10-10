@@ -31,9 +31,9 @@ test('the public STREAM AC 5000 driver name has no experimental qualifier', () =
 
 test('the replacement driver represents the STREAM 5000 unit family', () => {
   assert.deepStrictEqual(familyCompose.name, {
-    en: 'STREAM 5000 Series Unit (Beta)',
-    de: 'STREAM-5000-Serieneinheit (Beta)',
-    nl: 'STREAM 5000-serie-unit (bèta)',
+    en: 'STREAM 5000 Series Unit',
+    de: 'STREAM-5000-Serieneinheit',
+    nl: 'STREAM 5000-serie-unit',
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
@@ -56,9 +56,9 @@ test('the STREAM 5000 installation aggregate is the sole Homey Energy battery', 
     meterPowerExportedCapability: 'meter_power.discharged',
   };
   assert.deepStrictEqual(systemCompose.name, {
-    en: 'STREAM Home Battery (5000 Beta)',
-    de: 'STREAM-Hausbatterie (5000 Beta)',
-    nl: 'STREAM-thuisbatterij (5000-bèta)',
+    en: 'STREAM Home Battery (5000)',
+    de: 'STREAM-Hausbatterie (5000)',
+    nl: 'STREAM-thuisbatterij (5000)',
   });
   assert.deepStrictEqual(systemCompose.energy, expectedEnergy);
   assert.ok(systemCompose.capabilities.includes('measure_power'));
@@ -88,6 +88,21 @@ test('the STREAM 5000 family driver uses the AC 5000 product artwork as its icon
   assert.strictEqual(systemIcon, ac5000Icon);
   assert.match(familyIcon, /viewBox=\"0 0 1000 1000\"/);
   assert.match(familyIcon, /<path fill=\"#15171A\"/);
+  assert.ok(!/<image\b|<script\b|<foreignObject\b/.test(familyIcon), 'driver icon must be self-contained vector geometry');
+});
+
+test('both 5000 roles share store artwork, with clean names and unchanged pairing safeguards', () => {
+  for (const driver of [familyCompose, systemCompose]) {
+    assert.ok(!/beta|bèta/i.test(JSON.stringify(driver.name)));
+    assert.deepStrictEqual(driver.images, compose.images);
+    assert.strictEqual(driver.pair[0].id, 'beta_access');
+    for (const [size, pixels] of [['small', 75], ['large', 500], ['xlarge', 1000]]) {
+      const png = fs.readFileSync(path.join(root, driver.images[size]));
+      assert.strictEqual(png.readUInt32BE(16), pixels);
+      assert.strictEqual(png.readUInt32BE(20), pixels);
+      assert.strictEqual(png[25], 6, 'store artwork should preserve RGBA transparency');
+    }
+  }
 });
 
 test('the generated app manifest has clean public copy and monitoring-only disclosure', () => {
@@ -156,7 +171,7 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   assert.match(familyHtml, /verified serial prefixes and telemetry/i);
   assert.match(familyHtml, /Monitoring only/i);
   assert.match(familyHtml, /does not contribute to Homey Energy/i);
-  assert.match(familyHtml, /STREAM Home Battery \(5000 Beta\)/i);
+  assert.match(familyHtml, /STREAM Home Battery \(5000\)/i);
 
   const systemHtml = fs.readFileSync(
     path.join(root, 'drivers', 'stream_5000_system', 'pair', 'app_credentials.html'),
@@ -236,7 +251,7 @@ test('settings explain the beta gate, test channel and Energy role without promi
   assert.match(html, /Homey EcoFlow integration/);
   assert.match(html, /https:\/\/homey\.app\/a\/uk\.co\.zarb\.ecoflow\/test\//);
   assert.match(html, /does not install or update the app or dynamically add device types/);
-  assert.match(html, /STREAM Home Battery \(5000 Beta\)/);
+  assert.match(html, /STREAM Home Battery \(5000\)/);
   assert.match(html, /not a second Energy battery/);
   assert.match(html, /do not delete existing devices/);
   assert.match(html, /Homey mobile-app version/);

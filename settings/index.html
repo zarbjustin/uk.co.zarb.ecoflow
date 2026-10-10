@@ -70,8 +70,8 @@
       <li>Install a Homey app version that includes the beta choices. They are currently available in the
         <a href="https://homey.app/a/uk.co.zarb.ecoflow/test/" target="_blank" rel="noopener noreferrer">Homey test version</a>.</li>
       <li>Enable beta pairing above, then open <strong>Add device &rarr; EcoFlow STREAM Series</strong>.</li>
-      <li>Choose <strong>STREAM Home Battery (5000 Beta)</strong> once for the installation's Homey Energy readings.</li>
-      <li>Optionally choose <strong>STREAM 5000 Series Unit (Beta)</strong> for a physical monitor, not a second Energy battery.</li>
+      <li>Choose <strong>STREAM Home Battery (5000)</strong> once for the installation's Homey Energy readings.</li>
+      <li>Optionally choose <strong>STREAM 5000 Series Unit</strong> for a physical monitor, not a second Energy battery.</li>
     </ol>
     <p>This switch permits pairing only; it does not install or update the app or dynamically add device types.
       If the two beta choices are missing, report the installed EcoFlow Homey app version, Homey OS version,
@@ -221,7 +221,7 @@
         try {
           await saveSetting(Homey, 'stream5000BetaEnabled', enabled);
           status.textContent = enabled
-            ? 'Beta pairing enabled. Choose STREAM Home Battery (5000 Beta) for Homey Energy; the physical unit monitor is optional.'
+            ? 'Beta pairing enabled. Choose STREAM Home Battery (5000) for Homey Energy; the physical unit monitor is optional.'
             : 'Beta pairing disabled. Existing paired devices will continue to run.';
         } catch (err) {
           checkbox.checked = !enabled;

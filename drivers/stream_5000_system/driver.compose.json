@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Home Battery (5000 Beta)",
-    "de": "STREAM-Hausbatterie (5000 Beta)",
-    "nl": "STREAM-thuisbatterij (5000-bèta)"
+    "en": "STREAM Home Battery (5000)",
+    "de": "STREAM-Hausbatterie (5000)",
+    "nl": "STREAM-thuisbatterij (5000)"
   },
   "class": "battery",
   "platforms": [

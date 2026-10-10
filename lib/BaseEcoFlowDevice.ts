@@ -80,7 +80,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     if (quarantineReason) {
       await this.quarantineDeveloperApi(
         quarantineReason,
-        'ES22 device quarantined from the Developer API; enable STREAM 5000 beta pairing, then add STREAM Home Battery (5000 Beta) for Homey Energy. The physical unit monitor is optional.',
+        'ES22 device quarantined from the Developer API; enable STREAM 5000 beta pairing, then add STREAM Home Battery (5000) for Homey Energy. The physical unit monitor is optional.',
         false,
       );
       return;

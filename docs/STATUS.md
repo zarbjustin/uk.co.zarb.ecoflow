@@ -2,6 +2,18 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Artwork and display-name update — 10 October 2026
+
+Owner requested photo-derived AC 5000 wireframe artwork and removal of Beta
+from the two active driver names. Shared icon SVG and 75/500/1000px transparent
+store images now derive from the supplied photo through one contour-art source.
+Names are STREAM 5000 Series Unit and STREAM Home Battery (5000), with DE/NL
+equivalents and matching current UI/readme references. Driver IDs, saved device
+names, pairing opt-in, API warnings, read-only gates and Energy roles are unchanged.
+No re-pairing is required. See [artwork provenance](STREAM_5000_ARTWORK.md).
+Local 419 tests, lint and verified-level Homey validation passed. Release status
+will be recorded separately after exact-version CI and portal verification.
+
 ## Current handover — 9 October 2026
 
 ### Latest Test release — v1.10.25 / build 40
