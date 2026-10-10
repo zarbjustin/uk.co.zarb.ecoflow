@@ -193,5 +193,8 @@
   },
   "1.10.28": {
     "en": "Correct the STREAM 5000 Series Unit and STREAM Home Battery (5000) store pictures to use the supplied AC 5000 product photo on white. Keep the existing wireframe device icons. No pairing, Energy accounting or control changes."
+  },
+  "1.10.29": {
+    "en": "Add read-only mixed-generation reporter comparisons with exact identity correlation, per-field freshness, UTC support report timestamps and safer lookup lifecycle handling. Homey Energy accounting and controls remain unchanged."
   }
 }
