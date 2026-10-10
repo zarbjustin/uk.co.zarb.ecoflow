@@ -10,8 +10,11 @@ const sharp = require('sharp');
 async function main() {
   const root = path.resolve(__dirname, '..');
   const source = process.argv[2];
-  if (!source) throw new Error('Usage: node scripts/prepare-stream-5000-artwork.cjs <transparent-line-art.png>');
-  const images = path.join(root, 'drivers/stream_ac5000/assets/images');
+  if (!source) throw new Error('Usage: node scripts/prepare-stream-5000-artwork.cjs <transparent-line-art.png> [standalone-output-directory]');
+  // Standalone mode stages future product assets without touching active drivers.
+  const standalone = process.argv[3] ? path.resolve(process.argv[3]) : null;
+  const images = standalone ? path.join(standalone, 'images') : path.join(root, 'drivers/stream_ac5000/assets/images');
+  await fs.mkdir(images, { recursive: true });
   const normalized = await sharp(source).trim().resize(860, 860, { fit: 'inside' }).png().toBuffer();
   const square = await sharp({ create: { width: 1000, height: 1000, channels: 4, background: '#00000000' } })
     .composite([{ input: normalized, gravity: 'centre' }]).png().toBuffer();
@@ -39,13 +42,17 @@ async function main() {
   }
   const outline = rectangles.map((r) => `M${r.x} ${r.y}h${r.width}v${r.height}h-${r.width}Z`).join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">\n  <path fill="#15171A" d="${outline}"/>\n</svg>\n`;
-  for (const id of ['stream_ac5000', 'stream_5000_unit', 'stream_5000_system']) {
-    await fs.writeFile(path.join(root, 'drivers', id, 'assets/icon.svg'), svg);
+  if (standalone) {
+    await fs.writeFile(path.join(standalone, 'icon.svg'), svg);
+  } else {
+    for (const id of ['stream_ac5000', 'stream_5000_unit', 'stream_5000_system']) {
+      await fs.writeFile(path.join(root, 'drivers', id, 'assets/icon.svg'), svg);
+    }
   }
   // A white-backed preview is for visual QA only, never used as a driver icon.
   await sharp(square).flatten({ background: '#fff' }).resize(500).png()
-    .toFile(path.join(os.tmpdir(), 'stream-5000-wireframe-preview.png'));
-  console.log(`Prepared shared STREAM 5000 artwork and ${rectangles.length} traced icon rectangles.`);
+    .toFile(standalone ? path.join(standalone, 'wireframe-preview.png') : path.join(os.tmpdir(), 'stream-5000-wireframe-preview.png'));
+  console.log(`Prepared ${standalone ? 'standalone' : 'shared driver'} STREAM artwork and ${rectangles.length} traced icon rectangles.`);
 }
 
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });

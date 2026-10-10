@@ -1,4 +1,12 @@
 {
+  "settings": {
+    "support": {
+      "show": "Show integration support report",
+      "copy": "Copy integration support report",
+      "check": "Check current battery reporter (read-only)",
+      "instructions": "In this app's settings, show and copy the integration report. Homey's Create diagnostic report button produces a separate app-log ID; send both. The optional reporter check reads EcoFlow's API for up to eight existing original Home Batteries. It does not change devices, controls, counters or grouping. A match does not verify installation-wide reporting. Do not delete or re-pair devices while investigating. Review reports before sharing privately."
+    }
+  },
   "errors": {
     "es22_wrong_driver": "This STREAM 5000-series device was added in the wrong place. Enable STREAM 5000 beta pairing in the app settings, then delete this device and add it again as STREAM Home Battery (5000).",
     "developer_api_unsupported_device": "This EcoFlow device is not supported through the Developer API. Delete it and add it again using its dedicated EcoFlow device type."

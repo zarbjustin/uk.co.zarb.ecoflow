@@ -90,6 +90,10 @@
       "method": "GET",
       "path": "/support-snapshot"
     },
+    "refreshReporterDiagnostics": {
+      "method": "POST",
+      "path": "/reporter-diagnostics"
+    },
     "validateCredentials": {
       "method": "POST",
       "path": "/validate-credentials"

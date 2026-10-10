@@ -1,4 +1,12 @@
 {
+  "settings": {
+    "support": {
+      "show": "Integratierapport tonen",
+      "copy": "Integratierapport kopiëren",
+      "check": "Huidige batterijbron controleren (alleen lezen)",
+      "instructions": "Toon en kopieer het integratierapport in de instellingen van deze app. Homey's Diagnoserapport maken levert een aparte app-log-ID op; stuur beide. De optionele controle leest EcoFlows API voor maximaal acht bestaande oorspronkelijke thuisbatterijen. Apparaten, bediening, tellers en groepering blijven ongewijzigd. Een overeenkomend adres bevestigt geen metingen voor de hele installatie. Verwijder of koppel apparaten niet opnieuw tijdens het onderzoek. Controleer rapporten voordat u ze privé deelt."
+    }
+  },
   "errors": {
     "es22_wrong_driver": "Dit apparaat uit de STREAM 5000-serie is op de verkeerde plaats toegevoegd. Schakel eerst STREAM 5000-bètakoppeling in via de appinstellingen, verwijder het apparaat en voeg het opnieuw toe als ‘STREAM-thuisbatterij (5000)’.",
     "developer_api_unsupported_device": "Dit EcoFlow-apparaat wordt niet ondersteund via de Developer API. Verwijder het en voeg het opnieuw toe met het bijbehorende EcoFlow-apparaattype."

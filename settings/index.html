@@ -107,12 +107,16 @@
     A recent setting receipt is not proof that a command changed physical power. Copy it when reporting
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
-  <button id="supportSnapshot" type="button">Show support report</button>
-  <button id="copySupportSnapshot" type="button" disabled>Copy report</button>
+  <button id="supportSnapshot" type="button">Show integration support report</button>
+  <button id="copySupportSnapshot" type="button" disabled>Copy integration support report</button>
+  <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
   <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
-    Click Show support report, then Copy report and paste the text into your support message
+    Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
+  <p class="help" id="reporterHelp">The optional reporter check makes a read-only EcoFlow API request for each existing original Home Battery (up to eight).
+    It does not change devices, controls, counters or grouping. A match is not proof of installation-wide reporting.
+    Do not delete or re-pair devices while investigating. Homey's Create diagnostic report button supplies a separate app-log ID; please send both.</p>
   <p class="help">STREAM 5000 configuration tiles are read-only and refer to the subscribed unit's
     reported settings, not verified installation-wide limits. Stale readings clear rather than showing
     zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
@@ -144,6 +148,10 @@
       var reportText = '';
       var copyButton = document.getElementById('copySupportSnapshot');
       var copyStatus = document.getElementById('supportCopyStatus');
+      document.getElementById('supportSnapshot').textContent = Homey.__('settings.support.show');
+      copyButton.textContent = Homey.__('settings.support.copy');
+      document.getElementById('refreshReporterDiagnostics').textContent = Homey.__('settings.support.check');
+      document.getElementById('reporterHelp').textContent = Homey.__('settings.support.instructions');
       copyButton.addEventListener('click', async function () {
         if (!reportText) return;
         try {
@@ -166,6 +174,21 @@
           button.disabled = false;
           reportText = err ? '' : JSON.stringify(report, null, 2);
           output.textContent = err ? 'Could not read local diagnostics. Please try again.' : reportText;
+          copyButton.disabled = !reportText;
+        });
+      });
+
+      document.getElementById('refreshReporterDiagnostics').addEventListener('click', function () {
+        var button = document.getElementById('refreshReporterDiagnostics');
+        button.disabled = true;
+        copyButton.disabled = true;
+        reportText = '';
+        document.getElementById('supportSnapshotResult').textContent = 'Checking reporter resolution; no commands are sent...';
+        Homey.api('POST', '/reporter-diagnostics', {}, function (err, report) {
+          button.disabled = false;
+          reportText = err ? '' : JSON.stringify(report, null, 2);
+          document.getElementById('supportSnapshotResult').textContent = err
+            ? 'Could not check the reporter. Use the local support report instead.' : reportText;
           copyButton.disabled = !reportText;
         });
       });

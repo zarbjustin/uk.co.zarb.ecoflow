@@ -1,5 +1,7 @@
 'use strict';
 
+import { mainResolutionSnapshot } from './streamReporterEvidence';
+
 /** Fixed projection: never include quota objects, names, serials or exception text. */
 export const REPORTING_CAPABILITIES = [
   'measure_battery', 'measure_power', 'measure_power.pv', 'measure_power.grid',
@@ -26,8 +28,10 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   let observations: Record<string, unknown> = {};
   let readAddressMatchesSavedMain: boolean | null = null;
   let lastControlFailure: Record<string, unknown> | null = null;
+  let mainResolution = mainResolutionSnapshot(null, now);
   try {
     const input = device.getReportingDiagnostics?.();
+    mainResolution = mainResolutionSnapshot(input?.mainResolution, now);
     const failure = input?.lastControlFailure;
     if (failure) {
       const reason = ['read_failed', 'cancelled', 'observation_failed', 'preflight_rejected',
@@ -66,6 +70,7 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   return {
     currentReadings,
     lastControlFailure,
+    mainResolution,
     observations,
     readAddressMatchesSavedMain,
     // Matching addresses do not establish that EcoFlow still uses that reporter.

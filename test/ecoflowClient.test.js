@@ -78,6 +78,18 @@ test('missing main identity never silently promotes the queried member to main',
   await assert.rejects(c.getMainSn('BK31NOIDENTITYTEST'), /identity unavailable/);
 });
 
+test('explicit reporter diagnostic resolution bypasses a cached main without replacing it', async () => {
+  EcoFlowClient.responseCache.clear();
+  const c = client(); let calls = 0;
+  c.request = async () => ({ sn: ++calls === 1 ? 'BK11SYNTHETIC' : 'ES22SYNTHETIC' });
+  assert.equal(await c.getMainSn('BK31SYNTHETIC'), 'BK11SYNTHETIC');
+  assert.equal(await c.getMainSn('BK31SYNTHETIC'), 'BK11SYNTHETIC');
+  assert.equal(await c.getMainSn('BK31SYNTHETIC', { fresh: true }), 'ES22SYNTHETIC');
+  assert.equal(calls, 2);
+  assert.equal(await c.getMainSn('BK31SYNTHETIC'), 'BK11SYNTHETIC');
+  EcoFlowClient.responseCache.clear();
+});
+
 test('shared API cache is bounded and expired entries are retired', async (t) => {
   EcoFlowClient.responseCache.clear();
   let now = 100000; t.mock.method(Date, 'now', () => now);

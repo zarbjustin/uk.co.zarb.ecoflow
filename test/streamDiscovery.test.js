@@ -7,6 +7,15 @@ const { StreamDiscoveryInventory, streamDiscoverySnapshot, MAX_DISCOVERY_DEVICES
 
 const device = (sn, productName = '', extra = {}) => ({ sn, productName, name: 'PRIVATE NAME', online: 1, shared: false, ...extra });
 
+test('Dual CT metadata is research-only even if an old-meter prefix is reused', () => {
+  const inventory = new StreamDiscoveryInventory();
+  inventory.beginObservation()([device('BK21SYNTHETIC', 'EcoFlow Smart Meter Dual CT')], 1000);
+  const report = streamDiscoverySnapshot(inventory.evidenceSnapshot(), 2000);
+  assert.equal(report.groups[0].verifiedModel, 'unverified');
+  assert.equal(report.productResearch[0].pairingEnabled, false);
+  assert.equal(report.productResearch[0].contributesToEnergy, false);
+});
+
 test('inventory reports known models and unverified catalogue hints without admitting them', () => {
   const inventory = new StreamDiscoveryInventory();
   inventory.beginObservation()([

@@ -36,7 +36,7 @@ test('5000 read-only conditions route to fresh device observations, not a contro
   const listeners = new Map();
   app.homey.flow = { getConditionCard: (id) => ({ registerRunListener: (fn) => listeners.set(id, fn) }) };
   await app.onInit();
-  assert.deepEqual([...listeners.keys()], ['stream_5000_mode_is', 'stream_5000_reserve_enabled']);
+  assert.deepEqual([...listeners.keys()], ['smartmeter_grid_power_above', 'stream_5000_mode_is', 'stream_5000_reserve_enabled']);
   const device = {
     configurationModeIs: async (mode) => mode === 'custom',
     configurationReserveEnabled: async () => { throw new Error('Fresh state unavailable'); },

@@ -65,7 +65,7 @@ export function streamDiscoverySnapshot(input: any, now: number): Record<string,
       groups.push({
         prefix: item.prefix,
         // Identity is still registry-derived even if an internal getter is malformed.
-        verifiedModel: verifiedModel(item.prefix),
+        verifiedModel: item.productHint === 'dual_ct_meter' ? 'unverified' : verifiedModel(item.prefix),
         productHint: item.productHint,
         count: n,
         onlineCount: Math.min(count(item.onlineCount), n),
@@ -123,8 +123,8 @@ export class StreamDiscoveryInventory {
         if (seen.has(sn)) continue;
         seen.add(sn);
         const prefix = sn.slice(0, 4);
-        const model = verifiedModel(sn);
         const hint = productHint(item.productName);
+        const model = hint === 'dual_ct_meter' ? 'unverified' : verifiedModel(sn);
         const key = `${prefix}:${model}:${hint}`;
         const group = groups.get(key) || {
           prefix,

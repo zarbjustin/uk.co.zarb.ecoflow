@@ -20,6 +20,17 @@ module.exports = {
   async supportSnapshot({ homey }: { homey: unknown }): Promise<Record<string, unknown>> {
     return createSupportSnapshot(homey);
   },
+  async refreshReporterDiagnostics({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    // Fixed driver, sequential and capped: no supplied serials or account enumeration.
+    const devices = homey.drivers.getDriver('stream').getDevices();
+    for (const device of devices.slice(0, 8)) {
+      if (typeof device.refreshReporterDiagnostics === 'function') {
+        // eslint-disable-next-line no-await-in-loop
+        await device.refreshReporterDiagnostics();
+      }
+    }
+    return createSupportSnapshot(homey);
+  },
   async validateCredentials({ body }: { body: Record<string, unknown> }): Promise<{ ok: true }> {
     const accessKey = typeof body.accessKey === 'string' ? body.accessKey.trim() : '';
     const secretKey = typeof body.secretKey === 'string' ? body.secretKey.trim() : '';

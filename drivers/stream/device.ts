@@ -18,7 +18,7 @@ import { fetchSolarRadiation, toForecast } from '../../lib/solarForecast';
 import { powerDirection, PowerDirection, startedDirection } from '../../lib/flowStates';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 import { DeveloperApiQuarantineError } from '../../lib/developerApiCompatibility';
-import { StreamTopologyEvidence } from '../../lib/streamTopology';
+import { StreamTopologyEvidence, streamTopologyFamily } from '../../lib/streamTopology';
 import { REPORTING_CAPABILITIES, ReportingObservation } from '../../lib/streamReportingDiagnostics';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
@@ -28,6 +28,36 @@ type ControlWaitResolver = () => void;
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
   private reportingObservations: Record<string, ReportingObservation> = {};
+  private mainResolution: { status: string; receivedAt: number; family: string } | null = null;
+  private resolutionPending: Promise<void> | null = null;
+
+  /** Explicit read-only check; never changes the read/control address or counters. */
+  async refreshReporterDiagnostics(): Promise<void> {
+    if (this.resolutionPending) {
+      await this.resolutionPending;
+      return;
+    }
+    if (this.mainResolution && Date.now() - this.mainResolution.receivedAt < 60000) return;
+    const run = async () => {
+      try {
+        if (!this.client || this.isShuttingDown()) return;
+        const resolved = await this.client.getMainSn(this.getReadSn(), { fresh: true });
+        if (this.isShuttingDown()) return;
+        this.mainResolution = {
+          status: resolved.toUpperCase() === this.getReadSn().toUpperCase() ? 'matched' : 'changed',
+          receivedAt: Date.now(),
+          family: streamTopologyFamily(resolved.toUpperCase()),
+        };
+      } catch {
+        this.mainResolution = { status: 'failed', receivedAt: Date.now(), family: 'unknown' };
+      }
+    };
+    this.resolutionPending = run().finally(() => {
+      this.resolutionPending = null;
+    });
+    await this.resolutionPending;
+  }
+
   private controlStopped = false;
   private controlGeneration = 0;
   private controlWarning = false;
@@ -90,6 +120,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       readAddressMatchesSavedMain: this.mainSn ? this.getReadSn() === this.mainSn : null,
       observations: this.reportingObservations,
       lastControlFailure: this.lastControlFailure,
+      mainResolution: this.mainResolution,
     };
   }
 
@@ -115,6 +146,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.controlStopped = false;
     this.priceUpdatedAt = 0;
     this.reportingObservations = {};
+    this.mainResolution = null;
     this.lastControlFailure = null;
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     const storedWh = (key: string) => {

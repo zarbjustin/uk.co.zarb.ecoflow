@@ -6,6 +6,22 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('original-meter support evidence retains signed values but never forwards private fields', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
+    getMeterDiagnostics: () => ({ samples: 2, directGridFresh: true, sn: 'PRIVATE',
+      readings: { measure_power: { value: -100, ageSec: 1, stale: false, token: 'PRIVATE' }, PRIVATE: {} },
+      counterCandidates: { todayActive: { value: 500, ageSec: 2, stale: false }, PRIVATE: {} },
+      nativeCounterMigrationEnabled: true }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const evidence = report.smartMeters[0].evidence;
+  assert.equal(evidence.readings.measure_power.value, -100);
+  assert.equal(evidence.counterCandidates.todayActive.value, 500);
+  assert.equal(evidence.nativeCounterMigrationEnabled, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('BK PV freshness support fields are fixed-list and never forward identities or power', () => {
   const instance = homey();
   instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream_unit' ? [{
@@ -192,7 +208,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 6);
+  assert.equal(report.schemaVersion, 7);
 });
 
 test('support report re-projects cached discovery without network or identity access', () => {

@@ -64,6 +64,7 @@ function fakeHomey({
   const homey = {
     store,
     ready() {},
+    __(key) { return require('../locales/en.json').settings.support[key.split('.').pop()] || key; },
     get(key, cb) {
       cb(null, store.has(key) ? store.get(key) : undefined);
     },
@@ -98,6 +99,19 @@ function fakeHomey({
 function storedAccount() {
   return { appAuthEmail: 'tester@example.invalid', appAuthPassword: 'not-a-real-password', appAuthHost: 'https://api.ecoflow.com' };
 }
+
+test('read-only reporter check uses the fixed endpoint and enables copying only its returned report', async () => {
+  const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, cb) => {
+    calls.push([method, url]); cb(null, { schemaVersion: 7, reporterRepair: [] });
+  };
+  const context = loadSettingsScript(); context.onHomeyReady(homey);
+  await context.document.getElementById('refreshReporterDiagnostics').click();
+  assert.deepEqual(calls, [['POST', '/reporter-diagnostics']]);
+  assert.equal(context.document.getElementById('copySupportSnapshot').disabled, false);
+  assert.equal(JSON.parse(context.document.getElementById('supportSnapshotResult').textContent).schemaVersion, 7);
+  assert.match(context.document.getElementById('reporterHelp').textContent, /does not change/);
+});
 
 async function clickRemove(homey) {
   const context = loadSettingsScript();

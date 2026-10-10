@@ -7,6 +7,7 @@ import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
+import { reporterRepairPreview, systemReporterSnapshot } from './streamReporterEvidence';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -55,11 +56,41 @@ function accountingSnapshot(device: any): Record<string, unknown> | null {
   }
 }
 
+/** Fixed-list original-meter evidence, distinct from battery/topology roles. */
+function meterSnapshot(device: any): Record<string, unknown> | null {
+  try {
+    const input = device.getMeterDiagnostics?.();
+    if (!input) return null;
+    const project = (keys: string[], values: any) => Object.fromEntries(keys.filter((key) => values?.[key])
+      .map((key) => {
+        const field = values[key];
+        return [key, {
+          value: typeof field.value === 'number' && Number.isFinite(field.value) ? field.value : null,
+          ageSec: safeNumber(field.ageSec),
+          stale: field.stale !== false || safeNumber(field.ageSec) === null,
+        }];
+      }));
+    return {
+      samples: safeNumber(input.samples),
+      directGridFresh: input.directGridFresh === true,
+      accountingSource: 'integrated_power',
+      nativeCounterMigrationEnabled: false,
+      readings: project(['measure_power', 'power_factor', ...[1, 2, 3].flatMap((phase) => [
+        `measure_power.l${phase}`, `measure_voltage.l${phase}`, `measure_current.l${phase}`, `gridConnectionFlagL${phase}`,
+      ]), 'gridConnectionSta'], input.readings),
+      counterCandidates: project(['todayActive', 'totalReactiveEnergy', 'totalActiveEnergy'], input.counterCandidates),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Read-only local evidence: no cloud requests, secrets, names or full serials (prefixes only). */
 export function createSupportSnapshot(homey: any): Record<string, unknown> {
   const manifest = homey?.manifest || homey?.app?.manifest || {};
   const now = Date.now();
   const aggregates: StreamAggregateEvidence[] = [];
+  const reporters: Array<{ driverId: string; deviceIndex: number; evidence: any; system: Record<string, any> }> = [];
   const drivers = Object.entries(DRIVER_ROLES).map(([id, role]) => {
     const entry = Array.isArray(manifest.drivers) ? manifest.drivers.find((candidate: any) => candidate.id === id) : undefined;
     let registered = false;
@@ -73,6 +104,16 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       // Report absence without returning exception text or private identifiers.
     }
     const evidenceByDevice = devices.map(readStreamTopologyEvidence);
+    const systemReporter = id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+      let system = {};
+      try {
+        system = systemReporterSnapshot(device.getSystemReporterDiagnostics?.());
+      } catch { /* Private getter errors omitted. */ }
+      reporters.push({
+        driverId: id, deviceIndex, evidence: evidenceByDevice[deviceIndex], system,
+      });
+      return { deviceIndex, fields: system, installationScopeVerified: false };
+    });
     const topology = devices.map((device, deviceIndex) => {
       const evidence = evidenceByDevice[deviceIndex];
       if (role === 'installation_energy') aggregates.push({ driverId: id, deviceIndex, evidence });
@@ -96,6 +137,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       reporting: devices.map((device, deviceIndex) => ({ deviceIndex, ...reportingSnapshot(device, now) })),
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
+      systemReporter,
       configuration,
       assessment: id === 'stream' || id === 'stream_unit' ? [] : devices.map((_device, deviceIndex) => ({
         deviceIndex,
@@ -138,14 +180,31 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
   try {
     discovery = homey?.app?.getStreamDiscoveryEvidence?.();
   } catch { /* No private exception text. */ }
+  let smartMeters: any[] = [];
+  try {
+    const devices = homey.drivers.getDriver('smartmeter')?.getDevices?.();
+    if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
+  } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,
     betaPairingEnabled: isStream5000BetaEnabled(homey),
     drivers,
+    smartMeters,
     installationTopology: streamAggregateOverlapSnapshot(aggregates, now),
+    reporterRepair: reporters.map((reporter) => {
+      const matches = aggregates.filter((aggregate) => aggregate.evidence?.addressSn
+        && reporter.evidence?.peers?.some((peer: any) => peer.sn === aggregate.evidence!.addressSn
+          && peer.seenAt <= now && now - peer.seenAt <= 180000));
+      return {
+        driverId: reporter.driverId,
+        deviceIndex: reporter.deviceIndex,
+        correlatedAggregates: matches.map(({ driverId, deviceIndex }) => ({ driverId, deviceIndex })),
+        ...reporterRepairPreview(reporter.system, matches.length),
+      };
+    }),
     streamDiscovery: streamDiscoverySnapshot(discovery, now),
   };
 }

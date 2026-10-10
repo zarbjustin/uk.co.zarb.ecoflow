@@ -1,0 +1,29 @@
+{
+  "id": "smartmeter_grid_power_above",
+  "title": {
+    "en": "Grid import/export power is above",
+    "de": "Netzbezug/-einspeisung liegt über",
+    "nl": "Netafname/-teruglevering is boven"
+  },
+  "titleFormatted": {
+    "en": "Grid [[direction]] power is above [[watts]] W",
+    "de": "Netzleistung ([[direction]]) liegt über [[watts]] W",
+    "nl": "Netvermogen ([[direction]]) is boven [[watts]] W"
+  },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=smartmeter" },
+    {
+      "type": "dropdown", "name": "direction",
+      "title": { "en": "Direction", "de": "Richtung", "nl": "Richting" },
+      "values": [
+        { "id": "import", "title": { "en": "import", "de": "Bezug", "nl": "afname" } },
+        { "id": "export", "title": { "en": "export", "de": "Einspeisung", "nl": "teruglevering" } }
+      ]
+    },
+    {
+      "type": "number", "name": "watts", "min": 0,
+      "title": { "en": "Power", "de": "Leistung", "nl": "Vermogen" },
+      "placeholder": { "en": "W", "de": "W", "nl": "W" }
+    }
+  ]
+}

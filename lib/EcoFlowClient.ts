@@ -65,10 +65,9 @@ export class EcoFlowClient {
    * GET /iot-open/sign/device/system/main/sn — resolve the MAIN device SN of a
    * multi-device STREAM/BKW system. Most STREAM commands target the main SN.
    */
-  async getMainSn(anySn: string): Promise<string> {
-    const data = await this.cachedRequest(`main-sn:${anySn}`, 5 * 60 * 1000, () => (
-      this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn } })
-    ));
+  async getMainSn(anySn: string, options: { fresh?: boolean } = {}): Promise<string> {
+    const load = () => this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn } });
+    const data = options.fresh ? await load() : await this.cachedRequest(`main-sn:${anySn}`, 5 * 60 * 1000, load);
     if (!data || typeof data.sn !== 'string' || !data.sn.trim()) {
       throw new Error('EcoFlow API: main device identity unavailable.');
     }

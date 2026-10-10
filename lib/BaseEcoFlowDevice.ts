@@ -51,6 +51,11 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   /** The SN whose quota this device reads/polls and subscribes to over MQTT. */
   protected abstract getReadSn(): string;
 
+  /** Some meters publish directly while their REST fallback lives on a host. */
+  protected getRealtimeSn(): string {
+    return this.getReadSn();
+  }
+
   /** Apply a quota payload (from poll or MQTT) to this device's capabilities. */
   abstract applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void>;
 
@@ -72,6 +77,15 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   /** Subclass-specific teardown (e.g. extra timers). */
   protected onTeardown(): Promise<void> {
     return Promise.resolve();
+  }
+
+  /** Serialize subclass maintenance with telemetry writes and shutdown. */
+  protected queueDeviceWork(work: () => Promise<void>): Promise<void> {
+    const run = async () => {
+      if (!this.stopping && !this.developerApiQuarantineReason) await work();
+    };
+    this.applyChain = this.applyChain.then(run, run);
+    return this.applyChain;
   }
 
   async onInit(): Promise<void> {
@@ -109,7 +123,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     if (this.stopping) return;
     this.startPollTimer();
 
-    const sn = this.getReadSn();
+    const sn = this.getRealtimeSn();
     this.subscribedSn = sn;
     this.quotaHandler = (q) => {
       this.lastRealtimeAt = Date.now();

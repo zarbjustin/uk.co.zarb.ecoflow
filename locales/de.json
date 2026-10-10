@@ -1,4 +1,12 @@
 {
+  "settings": {
+    "support": {
+      "show": "Integrationsbericht anzeigen",
+      "copy": "Integrationsbericht kopieren",
+      "check": "Aktuellen Batterie-Melder prüfen (nur lesen)",
+      "instructions": "In den Einstellungen dieser App den Integrationsbericht anzeigen und kopieren. Homeys Diagnosebericht erstellen liefert eine separate App-Protokoll-ID; bitte beides senden. Die optionale Prüfung liest EcoFlows API für bis zu acht vorhandene ursprüngliche Hausbatterien. Geräte, Steuerung, Zähler und Gruppierung bleiben unverändert. Eine übereinstimmende Adresse bestätigt keine anlagenweiten Messwerte. Während der Untersuchung keine Geräte löschen oder neu koppeln. Berichte vor dem privaten Teilen prüfen."
+    }
+  },
   "errors": {
     "es22_wrong_driver": "Dieses Gerät der STREAM-5000-Serie wurde an der falschen Stelle hinzugefügt. Aktiviere zuerst die STREAM-5000-Beta-Kopplung in den App-Einstellungen, lösche das Gerät und füge es erneut als „STREAM-Hausbatterie (5000)“ hinzu.",
     "developer_api_unsupported_device": "Dieses EcoFlow-Gerät wird von der Developer API nicht unterstützt. Lösche es und füge es erneut mit dem passenden EcoFlow-Gerätetyp hinzu."

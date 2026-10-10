@@ -1,6 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
+import { StreamReporterObservations } from './streamReporterEvidence';
 import { EcoFlowAppApi, getApp } from './appApi';
 import { AppFrameHandler } from './EcoFlowAppMqtt';
 import { clearSavedAppAuthCreds, hasSavedAppAuthCreds } from './appAuthPairing';
@@ -52,6 +53,7 @@ const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as
 
 export class Stream5000UnitDevice extends Homey.Device {
   private telemetryAdapter!: Stream5000TelemetryAdapter;
+  private reporterObservations = new StreamReporterObservations();
   private frameHandler?: AppFrameHandler;
   private subscribedSn?: string;
   private realtimeApp?: EcoFlowAppApi;
@@ -99,6 +101,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    this.reporterObservations = new StreamReporterObservations();
     this.subscriptionState = 'starting';
     this.startedAt = Date.now();
     this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
@@ -175,6 +178,7 @@ export class Stream5000UnitDevice extends Homey.Device {
           .catch((e) => this.error('apply accessory readings', e?.message || e));
       }
       this.topologyTracker?.observe(telemetry, receivedAt);
+      this.reporterObservations.observe(telemetry, sn, receivedAt);
       const values = mapTelemetry(telemetry);
       const roleValues = this.capabilityValuesForRole(values);
       const usable = Object.entries(roleValues).some(([capability, value]) => value !== null && this.hasCapability(capability));
@@ -314,6 +318,10 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   getReadingDiagnostics(): Record<string, unknown> {
     return this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
+  }
+
+  getSystemReporterDiagnostics(): Record<string, unknown> {
+    return this.reporterObservations.snapshot(Date.now());
   }
 
   getConnectionDiagnostics(): Record<string, unknown> {

@@ -1,7 +1,8 @@
 'use strict';
 
-import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
-import { mapSmartMeterQuota, accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
+import { BaseEcoFlowDevice, QuotaSampleContext } from '../../lib/BaseEcoFlowDevice';
+import { METER_DETAIL_FRESH_MS, METER_FRESH_MS, SmartMeterTelemetry } from '../../lib/smartMeterTelemetry';
+import { accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
 import { toFiniteNumber } from '../../lib/quota';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 
@@ -17,6 +18,7 @@ const DYNAMIC_TITLES: Record<string, string> = {
   'measure_current.l2': 'Current L2',
   'measure_current.l3': 'Current L3',
   power_factor: 'Power factor',
+  'measure_power.home_load': 'Home load',
 };
 
 module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
@@ -26,6 +28,10 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private lastTs = 0;
   private pendingCaps = new Set<string>();
   private energyCheckpoint!: EnergyCheckpoint;
+  private telemetry = new SmartMeterTelemetry();
+  private detailTimer: NodeJS.Timeout | null = null;
+  private powerSource: 'mqtt' | 'rest' | null = null;
+  private lastLoadAt = 0;
 
   private static readonly LIVE_POWER_CAPS = [
     'measure_power',
@@ -45,7 +51,27 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     return (this.getStoreValue('sourceSn') as string) || this.getData().sn;
   }
 
+  protected getRealtimeSn(): string {
+    return this.getData().sn;
+  }
+
+  getMeterDiagnostics(): Record<string, unknown> {
+    return this.telemetry.snapshot();
+  }
+
+  gridPowerAbove(direction: string, watts: number): boolean {
+    const grid = this.telemetry.freshGrid();
+    // Throw rather than false: an inverted stale condition must not pass.
+    if (grid === null) throw new Error('Fresh grid power unavailable. Check the Smart Meter connection.');
+    if (!['import', 'export'].includes(direction) || !Number.isFinite(watts) || watts < 0) throw new Error('Invalid grid threshold.');
+    return (direction === 'import' ? grid : -grid) > watts;
+  }
+
   protected async onReady(): Promise<void> {
+    this.telemetry = new SmartMeterTelemetry();
+    this.lastTs = 0;
+    this.powerSource = null;
+    this.lastLoadAt = 0;
     this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
     this.importWh = (this.getStoreValue('importWh') as number) || 0;
     this.exportWh = (this.getStoreValue('exportWh') as number) || 0;
@@ -58,17 +84,39 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
     await this.applyMeterSourceTitle();
+    this.detailTimer = this.homey.setInterval(() => {
+      this.queueDeviceWork(async () => {
+        for (const cap of this.telemetry.expired()) {
+          if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+        }
+        if (this.telemetry.freshGrid() === null) {
+          for (const cap of SmartMeterDevice.LIVE_POWER_CAPS) {
+            if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+          }
+        }
+        if (this.hasCapability('measure_power.home_load')
+          && (this.lastLoadAt <= 0 || Date.now() < this.lastLoadAt || Date.now() - this.lastLoadAt > METER_DETAIL_FRESH_MS)) {
+          await this.setCapabilityValue('measure_power.home_load', null).catch(() => {});
+        }
+      }).catch((e) => this.error('meter freshness', e));
+    }, 30000);
   }
 
-  async applyQuota(quota: Record<string, any>): Promise<void> {
-    const values = mapSmartMeterQuota(quota);
+  async applyQuota(quota: Record<string, any>, context: QuotaSampleContext = { source: 'rest', receivedAt: Date.now() }): Promise<void> {
+    if (!Number.isFinite(context.receivedAt) || context.receivedAt <= 0 || context.receivedAt > Date.now()
+      || Date.now() - context.receivedAt > METER_DETAIL_FRESH_MS) return;
+    const values = this.telemetry.observe(quota, context);
 
-    const gridW = toFiniteNumber(quota.powGetSysGrid) ?? toFiniteNumber(quota.gridConnectionPower);
+    const gridW = typeof values.measure_power === 'number' ? values.measure_power : undefined;
     const loadW = toFiniteNumber(quota.powGetSysLoad);
-    // The live tile shows either grid power or home load; the cumulative meters
-    // ALWAYS track grid import/export, so switching the display mode can never
-    // corrupt the (monotonic) energy totals.
-    const power = this.meterSource === 'load' ? loadW : gridW;
+    // Homey Energy's native power and cumulative meters always describe grid.
+    // The optional home-load capability is a separate installation reading.
+    const power = gridW;
+    if (this.meterSource === 'load' && context.source === 'rest' && loadW !== undefined && loadW >= 0
+      && context.receivedAt >= this.lastLoadAt) {
+      values['measure_power.home_load'] = loadW;
+      this.lastLoadAt = context.receivedAt;
+    }
 
     const split = splitGridPower(gridW);
     if (split) {
@@ -89,10 +137,13 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     }
 
     if (typeof gridW === 'number') {
-      const now = Date.now();
+      const now = context.receivedAt;
+      // Switching sources anchors a new interval; never fill an unseen gap.
+      if (this.powerSource !== context.source) this.lastTs = 0;
+      this.powerSource = context.source;
       const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
       this.lastTs = now;
-      if (dtMs > 0) {
+      if (dtMs > 0 && dtMs <= METER_FRESH_MS) {
         const next = accumulateEnergy({ importWh: this.importWh, exportWh: this.exportWh }, gridW, dtMs);
         if (next.importWh !== this.importWh || next.exportWh !== this.exportWh) {
           this.importWh = next.importWh;
@@ -112,6 +163,8 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    if (this.detailTimer) this.homey.clearInterval(this.detailTimer);
+    this.detailTimer = null;
     await this.energyCheckpoint?.flush();
   }
 
@@ -124,9 +177,13 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   }
 
   private async applyMeterSourceTitle(): Promise<void> {
-    const title = this.meterSource === 'load' ? 'Home load' : 'Grid power';
-    await this.setCapabilityOptions('measure_power', { title: { en: title } }).catch(() => {});
-    await this.setCapabilityOptions('smartmeter_power_grid', { title: { en: title } }).catch(() => {});
+    const title = { en: 'Grid power', de: 'Netzleistung', nl: 'Netvermogen' };
+    await this.setCapabilityOptions('measure_power', { title }).catch(() => {});
+    await this.setCapabilityOptions('smartmeter_power_grid', { title }).catch(() => {});
+    if (this.meterSource !== 'load' && this.hasCapability('measure_power.home_load')) {
+      this.lastLoadAt = 0;
+      await this.setCapabilityValue('measure_power.home_load', null).catch(() => {});
+    }
   }
 
   private async ensureCapabilities(caps: string[]): Promise<void> {

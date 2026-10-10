@@ -20,7 +20,7 @@ or the local Sprint 1–4 follow-ups. No live installation, control write or Git
 | STREAM 3000 | No corroborated prefix/telemetry contract found | Not admitted | Identity, captures, units and scope |
 | STREAM Expansion Battery 5000 | Product exists; nested versus independent identity unresolved | No separate pairing or automatic capacity mapping | Host-plus-expansion inclusion rules |
 | STREAM Expansion Battery 3000 | Official support FAQ identifies AC 5000 stacking compatibility; distinct from the standalone 3000 host | Discovery hint only; no prefix admission or separate Energy battery | Verified pack identity, host inclusion and explicit capacity units |
-| STREAM Gateway / Smart Meter Dual CT | Catalogue is not a cloud identity/role contract | No new adapter; existing meter support is not proof of support for a new meter | Exact identity, protocol and Energy role |
+| STREAM Gateway / Smart Meter Dual CT | Catalogue is not a cloud identity/role contract | No new adapter; existing meter support is not proof of support for a new meter. Dual CT assets and [integration plan](SMART_METER_DUAL_CT_PLAN.md) staged; explicit Dual CT metadata cannot inherit the old meter driver | Exact identity, protocol and Energy role |
 
 ES21 adds system percentage, signed battery power/state, house/grid readings and
 local BMS temperature/health when present. Direct MPPT charging enters the

@@ -39,6 +39,27 @@ async function harness(store = {}) {
   return device;
 }
 
+test('read-only reporter resolution is throttled and leaves identity, address and energy stores untouched', async (t) => {
+  t.mock.method(Date, 'now', () => 1000000);
+  const device = await harness({ chargedWh: 499775, dischargedWh: 474818, mainSn: 'BK61TEST00000001' });
+  let reads = 0;
+  device.client = { getMainSn: async (sn, options) => {
+    reads++; assert.equal(sn, device.getData().sn); assert.equal(options.fresh, true); return 'ES22SYNTHETIC';
+  } };
+  const before = JSON.stringify(device.store);
+  await Promise.all([device.refreshReporterDiagnostics(), device.refreshReporterDiagnostics()]);
+  await device.refreshReporterDiagnostics();
+  assert.equal(reads, 1);
+  assert.equal(device.getReportingDiagnostics().mainResolution.status, 'changed');
+  assert.equal(device.getReadSn(), device.getData().sn);
+  assert.equal(JSON.stringify(device.store), before);
+  assert.ok(!JSON.stringify(device.getReportingDiagnostics()).includes('SYNTHETIC'));
+  await device.onTeardown();
+  await device.onReady();
+  assert.equal(device.getReportingDiagnostics().mainResolution, null);
+  await device.onTeardown();
+});
+
 test('aggregate reporting receipts survive unrelated deltas but reset on initialization', async (t) => {
   t.mock.method(Date, 'now', () => 100000);
   const device = await harness({ mainSn: 'BK11OTHER000001' });

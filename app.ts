@@ -27,6 +27,9 @@ module.exports = class EcoFlowApp extends Homey.App {
     this.stopping = false;
     this.streamDiscovery.clear();
     if (this.homey.flow) {
+      this.homey.flow.getConditionCard('smartmeter_grid_power_above').registerRunListener(
+        (args: any) => args.device.gridPowerAbove(args.direction, args.watts),
+      );
       this.homey.flow.getConditionCard('stream_5000_mode_is').registerRunListener(
         (args: any) => args.device.configurationModeIs(args.mode),
       );

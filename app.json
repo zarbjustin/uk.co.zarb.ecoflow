@@ -91,6 +91,10 @@
       "method": "GET",
       "path": "/support-snapshot"
     },
+    "refreshReporterDiagnostics": {
+      "method": "POST",
+      "path": "/reporter-diagnostics"
+    },
     "validateCredentials": {
       "method": "POST",
       "path": "/validate-credentials"
@@ -867,6 +871,68 @@
         ]
       },
       {
+        "id": "smartmeter_grid_power_above",
+        "title": {
+          "en": "Grid import/export power is above",
+          "de": "Netzbezug/-einspeisung liegt über",
+          "nl": "Netafname/-teruglevering is boven"
+        },
+        "titleFormatted": {
+          "en": "Grid [[direction]] power is above [[watts]] W",
+          "de": "Netzleistung ([[direction]]) liegt über [[watts]] W",
+          "nl": "Netvermogen ([[direction]]) is boven [[watts]] W"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=smartmeter"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "import",
+                "title": {
+                  "en": "import",
+                  "de": "Bezug",
+                  "nl": "afname"
+                }
+              },
+              {
+                "id": "export",
+                "title": {
+                  "en": "export",
+                  "de": "Einspeisung",
+                  "nl": "teruglevering"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "title": {
+              "en": "Power",
+              "de": "Leistung",
+              "nl": "Vermogen"
+            },
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            }
+          }
+        ]
+      },
+      {
         "id": "solar_forecast_today",
         "title": {
           "en": "Solar forecast today is above/below",
@@ -1558,33 +1624,33 @@
           "id": "meter_source",
           "type": "dropdown",
           "label": {
-            "en": "Energy meter shows",
-            "de": "Energiezähler zeigt",
-            "nl": "Energiemeter toont"
+            "en": "Additional home-load reading",
+            "de": "Zusätzlicher Hausverbrauchswert",
+            "nl": "Extra huisverbruikswaarde"
           },
           "value": "grid",
           "values": [
             {
               "id": "grid",
               "label": {
-                "en": "Grid power (import / export)",
-                "de": "Netzleistung (Bezug / Einspeisung)",
-                "nl": "Netvermogen (afname / teruglevering)"
+                "en": "Grid readings only",
+                "de": "Nur Netzwerte",
+                "nl": "Alleen netwaarden"
               }
             },
             {
               "id": "load",
               "label": {
-                "en": "Home load (total consumption)",
-                "de": "Hauslast (Gesamtverbrauch)",
-                "nl": "Huisbelasting (totaalverbruik)"
+                "en": "Also show home load when available",
+                "de": "Hausverbrauch anzeigen, wenn verfügbar",
+                "nl": "Ook huisverbruik tonen indien beschikbaar"
               }
             }
           ],
           "hint": {
-            "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive).",
-            "de": "Netz = Nettofluss zum/vom Netz (Import positiv, Export negativ). Hauslast = Gesamtleistung, die dein Zuhause gerade verbraucht (immer positiv).",
-            "nl": "Net = nettostroom van/naar het net (import positief, export negatief). Huisbelasting = het totale vermogen dat je huis nu gebruikt (altijd positief)."
+            "en": "Homey Energy always uses grid power (import positive, export negative). Home load is an optional separate reading from the linked STREAM installation, not another CT channel.",
+            "de": "Homey Energy nutzt immer die Netzleistung (Bezug positiv, Einspeisung negativ). Hausverbrauch ist ein optionaler separater Wert der STREAM-Anlage, kein zusätzlicher CT-Kanal.",
+            "nl": "Homey Energy gebruikt altijd netvermogen (afname positief, teruglevering negatief). Huisverbruik is een optionele aparte waarde van de STREAM-installatie, geen extra CT-kanaal."
           }
         },
         {
