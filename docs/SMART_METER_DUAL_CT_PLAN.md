@@ -1,7 +1,8 @@
 # Smart Meter Dual CT — asset and integration assessment
 
 Reviewed 10 October 2026. No new driver, pairing admission, control, capability
-or Energy source is enabled. Test publication remains on hold.
+or Energy source is enabled. The owner subsequently approved v1.10.27 / Build 42
+for Test on 10 October 2026; it is now published. Dual CT pairing remains disabled.
 
 ## Next-wave implementation status — original meter and Dual CT
 
@@ -48,7 +49,7 @@ teardown, optional home load, fresh Flow conditions, privacy projection and
 non-migration of existing counters. The new original-meter code has no device
 write path. Existing battery energy accounting and topology repair are unchanged.
 
-### Sprint 3: source/freshness guidance (diagnostic branch, unpublished)
+### Sprint 3: source/freshness guidance (diagnostic branch, Test Build 42)
 
 The app settings now show an anonymous numbered meter summary above the raw
 integration report. It refreshes only with the existing report actions: no new
@@ -68,8 +69,11 @@ enums are promoted to user-facing capabilities without verified semantics.
 All 456 tests, lint and local Homey verified validation passed. A real Chromium
 settings-page check exercised direct/fallback/waiting summaries at 420px without
 horizontal overflow. This is software verification, not installed acceptance.
-Energy accounting, paired identities, master, version and Test publication remain
-unchanged. Counter midnight/export evidence and Dual CT hardware discovery remain
+At implementation, energy accounting, paired identities, master, version and
+Test publication were unchanged. The owner then approved the versioned v1.10.27
+release: exact-release CI passed and Build 42 was published to Test. Mainline,
+Live, energy accounting and control gates remain unchanged. Counter midnight/export
+evidence and Dual CT hardware discovery remain
 the next acceptance gates.
 
 ### Sprint 2: counter evidence and continuity design

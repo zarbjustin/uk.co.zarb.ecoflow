@@ -2,6 +2,31 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Latest Test release — v1.10.27 / Build 42, 10 October 2026
+
+Owner approved lifting the publication hold for this diagnostic release. Build
+42 is published to Test and verified in the developer portal: "Your app is
+currently available for testing." [Test link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+Source remains on `codex/mixed-generation-reporting-diagnostics`; mainline
+`master` was not merged or changed. Live remains v1.10.3 / Build 18, verified
+in the portal before publishing. No certification, hub install or physical
+acceptance was performed.
+
+- Exact source/tag: `85d8fb7ecf823548f8281c2379dbff2b47f0a931` / `v1.10.27`.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38063812285),
+  [exact-release validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064181883)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064286184)
+  succeeded. CI passed tests, lint, dependency audit and verified Homey validation.
+- [Build 42](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/42)
+  includes Sprint 3 source/freshness guidance, original-meter direct MQTT and
+  host fallback, reporter/counter diagnostics, and the prior AC 5000 artwork/name
+  changes. No re-pairing is required. Energy accounting and control safeguards
+  remain unchanged; native counter migration and Dual CT admission stay disabled.
+- Next acceptance: installed meter source/freshness checks, Robert's integration
+  report plus separate app-log ID, original-meter midnight/export/restart evidence,
+  and authorised Dual CT channel discovery. Software checks do not establish
+  installation-wide reporting, CT roles or physical control behaviour.
+
 ## Diagnostic meter Sprint 3 — 10 October 2026 (publication hold)
 
 The diagnostic branch `codex/mixed-generation-reporting-diagnostics` now includes
@@ -15,7 +40,8 @@ All 456 tests, lint and local verified-level Homey validation passed; Chromium
 mobile-width summary rendering was checked. No installed hardware acceptance is
 claimed. See [meter roadmap and evidence gates](SMART_METER_DUAL_CT_PLAN.md).
 
-Publishing to Test is explicitly on hold. The earlier uploaded Build 41 contains
+At this implementation checkpoint, publishing to Test was explicitly on hold;
+the owner subsequently approved Build 42 above. The earlier uploaded Build 41 contains
 the artwork/name release only, not these subsequent meter/reporting changes.
 To test the new diagnostic code through the store, first approve a new versioned
 release from this branch, validate that exact release commit, upload a new build
