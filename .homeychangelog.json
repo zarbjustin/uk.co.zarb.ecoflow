@@ -202,5 +202,8 @@
   },
   "1.10.31": {
     "en": "Improved mixed-generation diagnostics with anonymous per-battery readings and independent freshness checks. Clarified reported grid-meter versus flow-derived grid power, and added regression tests. Battery controls and energy accounting remain unchanged."
+  },
+  "1.10.32": {
+    "en": "Improved support-report timeouts and snapshot-age labels, added clock-recovery safeguards and bounded monitoring reliability summaries, and expanded outage/restart regression tests. Battery controls and energy accounting remain unchanged."
   }
 }
