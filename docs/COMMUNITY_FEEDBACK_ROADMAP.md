@@ -1,4 +1,20 @@
-# Current development roadmap — community feedback and STREAM 5000
+# Community feedback — historical roadmap and current entry point
+
+Updated 11 October 2026. The historical release/sprint descriptions below are
+not current release status. Use [STATUS.md](STATUS.md) for Git/CI/Test/Live gates
+and [MONITORING_REPORTER_TRIAL.md](MONITORING_REPORTER_TRIAL.md) for the one active
+work plan and acceptance checklist. Do not restart already completed sprints.
+
+Current priority: guarded default-off mixed-generation monitoring trial, scope
+labels/readiness/JSON export, bounded anonymous session events and slow-write
+regressions. Original accounting/history and control targets stay unchanged.
+After exact-commit validation and Test publication, validate combined coverage,
+older-unit activity, charging, rollback/restart and 48–72-hour normal-operation
+soak. Counter scope and actual control migration remain separate research gates.
+Expansion/ES21/ES22 and independent-installation cases need labelled hardware
+acceptance. Ed's Solis/controller-ownership requests remain advisory and separate.
+
+## Historical roadmap — 7 October 2026
 
 Updated: 7 October 2026. This is the current priority order; older sprint documents
 remain historical records. Local implementation, automated verification, hardware

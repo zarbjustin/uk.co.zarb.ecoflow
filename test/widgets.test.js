@@ -57,6 +57,48 @@ test('5000 widgets consume fresh reported settings and honour reserve enabled st
   assert.equal(streamData(homey([], [], [aggregate])).usableEnergyKwh, null);
 });
 
+test('monitoring trial does not mix combined SOC/power with original control-floor runtime estimates', () => {
+  const aggregate = device('mixed', 'Home Battery', { capabilities: { measure_battery: 53, measure_power: -300,
+    backup_reserve_soc: 10, discharge_limit: 5 }, settings: { installed_capacity_kwh: 10 } });
+  aggregate.getMonitoringTrialDiagnostics = () => ({ enabled: true });
+  const report = streamData(homey([aggregate]));
+  assert.equal(report.soc, 53);
+  assert.equal(report.battery, -300);
+  assert.equal(report.usableEnergyKwh, null);
+  assert.equal(report.timeToEmpty, null);
+  assert.equal(report.mode, null);
+  assert.equal(report.backupReserve, null);
+  assert.equal(report.chargeLimit, null);
+  assert.equal(report.dischargeLimit, null);
+  assert.equal(report.feedIn, null);
+  assert.equal(report.controlsAvailable, false);
+});
+
+test('widgets compute freshness once per response and trial tariff advice stays monitoring-only', async () => {
+  const aggregate = device('mixed', 'Home Battery', { capabilities: { measure_battery: 53, measure_power: -300,
+    backup_reserve_soc: 80, tariff_price_now: -5, operating_mode: 'custom', feed_in_control: true } });
+  let checks = 0;
+  aggregate.getReadingDiagnostics = () => { checks++; return {}; };
+  aggregate.getMonitoringTrialDiagnostics = () => ({ enabled: true });
+  const ctx = { homey: homey([aggregate]) };
+  const report = await require('../widgets/stream_tariff_opportunity/api').getTariffOpportunity(ctx);
+  assert.equal(checks, 1);
+  assert.equal(report.recommendation, 'Monitoring trial');
+  assert.match(report.reason, /no charging recommendation/);
+  assert.equal(report.mode, null); assert.equal(report.feedIn, null);
+});
+
+test('rollback does not revive reserve advice or original controls before fresh recovery', async () => {
+  const aggregate = device('mixed', 'Home Battery', { capabilities: { measure_battery: 53, measure_power: -300,
+    backup_reserve_soc: 80, tariff_price_now: -5, operating_mode: 'custom' } });
+  aggregate.getMonitoringTrialDiagnostics = () => ({ enabled: false, rollbackAwaitingFreshOriginal: true });
+  const report = await require('../widgets/stream_tariff_opportunity/api').getTariffOpportunity({ homey: homey([aggregate]) });
+  assert.equal(report.controlsAvailable, false); assert.equal(report.backupReserve, null);
+  assert.equal(report.mode, null); assert.equal(report.recommendation, 'Awaiting original readings');
+  aggregate.getMonitoringTrialDiagnostics = () => { throw Error('PRIVATE'); };
+  assert.equal(streamData(homey([aggregate])).controlsAvailable, false);
+});
+
 test('5000 widget settings and power fail closed when stale, absent or diagnostics fail', () => {
   const aggregate = device('five', '5000 Home Battery', { capabilities: { measure_battery: 80, measure_power: -400 },
     settings: { installed_capacity_kwh: 5 } });

@@ -1,5 +1,11 @@
 # Mixed-generation reporter transition — 10 October 2026
 
+Historical increment below. Subsequent comparison release and fresh follow-up
+evidence are recorded in `STATUS.md`. The current guarded, unreleased monitoring
+trial and remaining hardware gates are in [MONITORING_REPORTER_TRIAL.md](MONITORING_REPORTER_TRIAL.md).
+The old "not implemented" descriptions below do not describe the current local
+working tree; they describe this earlier diagnostic-only increment.
+
 ## Release hold
 
 The owner explicitly requested no Test publication until the next community

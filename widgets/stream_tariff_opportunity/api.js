@@ -9,7 +9,10 @@ module.exports = {
 
     let recommendation = 'Watch';
     let reason = 'Waiting for stronger solar, grid or battery signal.';
-    if (data.priceNow != null && data.priceNow < 0) {
+    if (data.monitoringGuarded) {
+      recommendation = data.monitoringTrial ? 'Monitoring trial' : 'Awaiting original readings';
+      reason = 'Selected system readings only. Controls and combined reserve settings are unverified; no charging recommendation.';
+    } else if (data.priceNow != null && data.priceNow < 0) {
       recommendation = 'Charge now';
       reason = 'Electricity price is negative — importing pays you. Fill the battery.';
     } else if (data.gridExport != null && data.gridExport > 100 && data.feedIn) {

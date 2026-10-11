@@ -350,6 +350,8 @@ export interface Es22Telemetry {
   battW?: number;
   battChargePowerW?: number;
   battDischargePowerW?: number;
+  /** Same-frame flow edges for read-only derivation diagnostics, not accounting. */
+  batteryFlowEdges?: Record<string, number>;
   /** Signed grid power (W) from the linked meter; positive imports. */
   gridW?: number;
   /** Non-negative grid import (W), derived from the flow matrix. */
@@ -410,6 +412,17 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   // numbers means this frame actually carried `f12`; an absent group leaves
   // battW out so the caller keeps the last known value.
   if (typeof homeFromBattW === 'number' && typeof battToGrid === 'number' && typeof gridToBatt === 'number') {
+    out.batteryFlowEdges = {
+      mpptToBatteryW: raw._mpptToBattW ?? 0,
+      solarToBatteryW: solarToBatt ?? 0,
+      gridToBatteryW: gridToBatt,
+      batteryToHomeW: homeFromBattW,
+      batteryToGridW: battToGrid,
+      batteryToSocketW: raw._battToSocketW ?? 0,
+      gridToHomeW: homeFromGridW ?? 0,
+      gridToSocketW: raw._gridToSocketW ?? 0,
+      solarToGridW: solarToGrid ?? 0,
+    };
     const into = gridToBatt + (typeof solarToBatt === 'number' ? solarToBatt : 0) + (raw._mpptToBattW ?? 0);
     out.battW = into - (homeFromBattW + battToGrid + (raw._battToSocketW ?? 0));
     out.battChargePowerW = out.battW > 0 ? out.battW : 0;

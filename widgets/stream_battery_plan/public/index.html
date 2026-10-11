@@ -73,7 +73,7 @@
           return;
         }
         document.getElementById('title').textContent = d.name || tr('widgets.battery_plan.title');
-        document.getElementById('mode').textContent = label(d.mode);
+        document.getElementById('mode').textContent = d.monitoringTrial ? tr('widgets.common.combined_trial') : label(d.mode);
         document.getElementById('soc').textContent = pct(d.soc);
         document.getElementById('bar').style.width = (d.soc == null ? 0 : Math.max(0, Math.min(100, d.soc))) + '%';
         document.getElementById('energy').innerHTML = d.capacityKwh == null

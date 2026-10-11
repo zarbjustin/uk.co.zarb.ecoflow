@@ -65,9 +65,9 @@ export class EcoFlowClient {
    * GET /iot-open/sign/device/system/main/sn — resolve the MAIN device SN of a
    * multi-device STREAM/BKW system. Most STREAM commands target the main SN.
    */
-  async getMainSn(anySn: string, options: { fresh?: boolean } = {}): Promise<string> {
-    const load = () => this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn } });
-    const data = options.fresh ? await load() : await this.cachedRequest(`main-sn:${anySn}`, 5 * 60 * 1000, load);
+  async getMainSn(anySn: string, options: { fresh?: boolean; signal?: AbortSignal } = {}): Promise<string> {
+    const load = () => this.request('GET', '/iot-open/sign/device/system/main/sn', { query: { sn: anySn }, signal: options.signal });
+    const data = options.fresh || options.signal ? await load() : await this.cachedRequest(`main-sn:${anySn}`, 5 * 60 * 1000, load);
     if (!data || typeof data.sn !== 'string' || !data.sn.trim()) {
       throw new Error('EcoFlow API: main device identity unavailable.');
     }
@@ -152,12 +152,12 @@ export class EcoFlowClient {
   private async request(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { query?: Record<string, any>; body?: Record<string, any> } = {},
+    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal } = {},
   ): Promise<any> {
     return withRetry(() => this.requestOnce(method, path, opts), {
       // Only idempotent GETs are retried; real API rejections carry a code.
       attempts: method === 'GET' ? 3 : 1,
-      isRetryable: (e) => !(e instanceof EcoFlowApiError),
+      isRetryable: (e) => !opts.signal?.aborted && !(e instanceof EcoFlowApiError),
       delayMs: (attempt) => 300 * attempt + Math.floor(Math.random() * 200),
     });
   }
@@ -165,7 +165,7 @@ export class EcoFlowClient {
   private requestOnce(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { query?: Record<string, any>; body?: Record<string, any> } = {},
+    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal } = {},
   ): Promise<any> {
     const isJson = method === 'POST' || method === 'PUT';
     // Per the signing rule: JSON body => sign the body; otherwise sign the query.
@@ -184,7 +184,25 @@ export class EcoFlowClient {
       headers['Content-Length'] = String(Buffer.byteLength(payload));
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolvePromise, rejectPromise) => {
+      let deadline: NodeJS.Timeout | null = null;
+      let settled = false;
+      let abort: (() => void) | null = null;
+      const finish = (error: unknown, value?: any) => {
+        if (settled) return;
+        settled = true;
+        // eslint-disable-next-line homey-app/global-timers -- REST client also runs outside Homey.
+        if (deadline) clearTimeout(deadline);
+        if (abort) opts.signal?.removeEventListener('abort', abort);
+        if (error) rejectPromise(error);
+        else resolvePromise(value);
+      };
+      const reject = (error: unknown) => finish(error);
+      const resolve = (value: any) => finish(null, value);
+      if (opts.signal?.aborted) {
+        reject(new Error('EcoFlow API: request cancelled.'));
+        return;
+      }
       const req = https.request(
         {
           method,
@@ -195,20 +213,32 @@ export class EcoFlowClient {
           timeout: 15000,
         },
         (res) => {
+          if (settled) {
+            res.destroy();
+            return;
+          }
           const chunks: Buffer[] = [];
           let bytes = 0;
           res.on('error', reject);
           res.on('aborted', () => reject(new Error('EcoFlow API: response interrupted.')));
           res.on('data', (c) => {
+            if (settled) return;
             const chunk = Buffer.isBuffer(c) ? c : Buffer.from(c);
             bytes += chunk.length;
             if (bytes > 4 * 1024 * 1024) {
-              req.destroy(new Error('EcoFlow API: response exceeded size limit.'));
+              const error = new Error('EcoFlow API: response exceeded size limit.');
+              reject(error);
+              req.destroy(error);
               return;
             }
             chunks.push(chunk);
           });
           res.on('end', () => {
+            if (settled) return;
+            if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+              reject(new EcoFlowApiError(String(res.statusCode), 'HTTP request failed'));
+              return;
+            }
             const text = Buffer.concat(chunks).toString('utf8');
             let json: any;
             try {
@@ -221,10 +251,6 @@ export class EcoFlowClient {
               reject(new Error('EcoFlow API: invalid response envelope.'));
               return;
             }
-            if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
-              reject(new EcoFlowApiError(String(res.statusCode), 'HTTP request failed'));
-              return;
-            }
             const code = String(json.code ?? '');
             if (code !== '0') {
               reject(new EcoFlowApiError(code || String(res.statusCode), json.message || 'Request failed'));
@@ -234,10 +260,35 @@ export class EcoFlowClient {
           });
         },
       );
-      req.on('timeout', () => req.destroy(new Error('EcoFlow API: request timed out')));
+      req.on('timeout', () => {
+        const error = new Error('EcoFlow API: request timed out');
+        reject(error);
+        req.destroy(error);
+      });
       req.on('error', reject);
-      if (payload) req.write(payload);
-      req.end();
+      // Wall-clock deadline also bounds DNS/connect stalls and trickling responses.
+      // eslint-disable-next-line homey-app/global-timers -- REST client also runs outside Homey.
+      deadline = setTimeout(() => {
+        const error = new Error('EcoFlow API: request deadline exceeded.');
+        reject(error);
+        req.destroy(error);
+      }, 15000);
+      abort = () => {
+        const error = new Error('EcoFlow API: request cancelled.');
+        reject(error);
+        req.destroy(error);
+      };
+      opts.signal?.addEventListener('abort', abort, { once: true });
+      if (opts.signal?.aborted) abort();
+      else {
+        try {
+          if (payload) req.write(payload);
+          req.end();
+        } catch (error) {
+          reject(error);
+          req.destroy();
+        }
+      }
     });
   }
 }

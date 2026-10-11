@@ -7,8 +7,9 @@ import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
-import { reporterRepairPreview, systemReporterSnapshot } from './streamReporterEvidence';
+import { reporterRepairPreview, systemReporterSnapshot, reporterFlowSnapshot } from './streamReporterEvidence';
 import { reporterShadowSnapshot } from './streamReporterShadow';
+import { monitoringTrialSnapshot } from './streamMonitoringTrial';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -174,9 +175,23 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       registered,
       pairedCount: devices.length,
       reporting,
+      monitoringTrial: id === 'stream' ? devices.map((device, deviceIndex) => {
+        let input = null;
+        try {
+          input = device.getMonitoringTrialDiagnostics?.();
+        } catch { /* Private failures omitted. */ }
+        return { deviceIndex, ...monitoringTrialSnapshot(input) };
+      }) : [],
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
       systemReporter,
+      systemFlow: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        let input = null;
+        try {
+          input = device.getSystemFlowDiagnostics?.();
+        } catch { /* Private failures omitted. */ }
+        return { deviceIndex, ...reporterFlowSnapshot(input) };
+      }),
       configuration,
       assessment: id === 'stream' || id === 'stream_unit' ? [] : devices.map((_device, deviceIndex) => ({
         deviceIndex,
@@ -225,7 +240,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

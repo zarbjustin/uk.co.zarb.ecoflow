@@ -67,6 +67,49 @@ test('registered price condition cards use session freshness and propagate stale
   await h.device.onTeardown();
 });
 
+test('registered solar conditions reject missing values and trial-suppressed installation readings', async () => {
+  const listeners = {};
+  const driver = new StreamDriver();
+  const card = id => ({ registerRunListener: callback => { listeners[id] = callback; } });
+  driver.homey = { flow: { getConditionCard: card, getActionCard: card, getDeviceTriggerCard: card } };
+  await driver.onInit();
+  const h = await harness();
+  h.device.values['measure_power.pv'] = null;
+  assert.equal(listeners.solar_power_below({ device: h.device, watts: 100 }), false);
+  h.device.values['measure_power.pv'] = 0;
+  assert.equal(listeners.solar_power_below({ device: h.device, watts: 100 }), true);
+  h.device.values['measure_power.pv'] = 500;
+  assert.equal(listeners.solar_power_above({ device: h.device, watts: 100 }), true);
+  h.device.monitoringEnabled = true;
+  assert.throws(() => listeners.solar_power_above({ device: h.device, watts: 100 }), /conditions are unavailable/);
+  assert.throws(() => listeners.solar_power_below({ device: h.device, watts: 1000 }), /conditions are unavailable/);
+  await h.device.onTeardown();
+});
+
+test('registered battery conditions stop both normal and inverted Flows during unsafe trial transitions', async () => {
+  const listeners = {};
+  const driver = new StreamDriver();
+  const card = id => ({ registerRunListener: callback => { listeners[id] = callback; } });
+  driver.homey = { flow: { getConditionCard: card, getActionCard: card, getDeviceTriggerCard: card } };
+  await driver.onInit();
+  const h = await harness();
+  h.device.values.measure_battery = 53;
+  h.device.values.measure_power = -291;
+  assert.equal(listeners.is_charging({ device: h.device }), false);
+  assert.equal(listeners.battery_soc({ device: h.device, direction: 'above', level: 50 }), true);
+  const args = { device: h.device, direction: 'above', level: 50, watts: 100, mode: 'self_powered' };
+  for (const guard of ['monitoringEnabled', 'monitoringRollbackPending', 'monitoringSettingsCount']) {
+    h.device[guard] = guard === 'monitoringSettingsCount' ? 1 : true;
+    for (const id of ['is_charging', 'battery_soc', 'is_exporting', 'solar_power_above',
+      'solar_power_below', 'charging_from_solar', 'operating_mode_is', 'feed_in_enabled']) {
+      assert.throws(() => listeners[id](args), /Monitoring reporter|conditions are unavailable/, `${guard}: ${id}`);
+      assert.throws(() => !listeners[id](args), /Monitoring reporter|conditions are unavailable/, `inverted ${guard}: ${id}`);
+    }
+    h.device[guard] = guard === 'monitoringSettingsCount' ? 0 : false;
+  }
+  await h.device.onTeardown();
+});
+
 test('safety Flow metadata keeps installation filters and translated policy/freshness hints', () => {
   const fs = require('node:fs');
   const path = require('node:path');

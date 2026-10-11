@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { StreamReporterObservations, mainResolutionSnapshot, systemReporterSnapshot, reporterRepairPreview } = require('../.homeybuild/lib/streamReporterEvidence');
+const { StreamReporterObservations, mainResolutionSnapshot, systemReporterSnapshot, reporterRepairPreview, reporterFlowSnapshot } = require('../.homeybuild/lib/streamReporterEvidence');
 const { mapStreamQuota } = require('../.homeybuild/lib/streamMapping');
 const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 
@@ -65,4 +65,44 @@ test('repair preview remains blocked for fresh, empty, missing or stale system e
     assert.equal(preview.controlMigrationAllowed, false);
     assert.ok(preview.blockers.includes('counter_source_transition_unverified'));
   }
+});
+
+test('flow diagnostics retain independent receipts, omit private/invalid data and never become accounting', (t) => {
+  t.mock.method(Date, 'now', () => 1000000);
+  const tracker = new StreamReporterObservations();
+  tracker.observe({ batteryFlowEdges: { batteryToHomeW: 300, batteryToGridW: 0, PRIVATE: 123 },
+    battW: -300, gridImportPowerW: 0, gridExportPowerW: 5 }, 'ES22SYNTHETIC', 990000);
+  tracker.observe({ gridW: -10, homeW: 300 }, 'ES22SYNTHETIC', 995000);
+  tracker.observe({ gridW: 99, sourceSn: 'ES22OTHER' }, 'ES22SYNTHETIC', 999000);
+  tracker.observe({ gridW: 999 }, 'ES22SYNTHETIC', 980000);
+  tracker.observe({ gridW: 999 }, 'ES22SYNTHETIC', 1000001);
+  const report = tracker.flowSnapshot(1000000);
+  assert.equal(report.fields.gridMeterW.value, -10);
+  assert.equal(report.fields.gridFlowNetW.value, -5);
+  assert.equal(report.gridReceiptSkewSec, 5);
+  assert.equal(report.meterMinusFlowW, -5);
+  assert.equal(report.fields.batteryDerivedW.value, -300);
+  assert.equal(report.fields.batteryToHomeW.ageSec, 10);
+  assert.equal(report.accountingUsed, false);
+  assert.equal(report.deviceTimestampsVerified, false);
+  assert.ok(!JSON.stringify(report).match(/PRIVATE|SYNTHETIC/));
+  assert.equal(tracker.flowSnapshot(1180001).meterMinusFlowW, null);
+  assert.deepEqual(tracker.flowSnapshot(900000).fields, {});
+  tracker.observe({ gridW: 0 }, 'ES22SYNTHETIC', 1000000);
+  assert.equal(tracker.flowSnapshot(1040000).fields.gridFlowNetW.ageSec, 50, 'partial meter update must not refresh flow edges');
+});
+
+test('flow comparisons fail closed for absent, stale, skewed and malformed fields', () => {
+  const field = (value, ageSec = 0) => ({ value, ageSec, stale: false, secret: 'PRIVATE' });
+  for (const input of [ {}, { fields: { gridMeterW: field(0) } },
+    { fields: { gridMeterW: field(0, 31), gridFlowNetW: field(0) } },
+    { fields: { gridMeterW: field(0, 181), gridFlowNetW: field(0, 181) } } ]) {
+    assert.equal(reporterFlowSnapshot(input).meterMinusFlowW, null);
+  }
+  const projection = reporterFlowSnapshot({ fields: { gridMeterW: field(0), gridFlowNetW: field(0),
+    batteryToHomeW: field(-1), homeW: field(Infinity), solarToGridW: field(1, -1),
+    PRIVATE: field(123), batteryDerivedW: field(-100001) }, password: 'PRIVATE' });
+  assert.equal(projection.meterMinusFlowW, 0);
+  assert.deepEqual(Object.keys(projection.fields), ['gridMeterW', 'gridFlowNetW']);
+  assert.ok(!JSON.stringify(projection).includes('PRIVATE'));
 });

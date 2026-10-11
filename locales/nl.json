@@ -1,5 +1,31 @@
 {
   "settings": {
+    "reporter": {
+      "title": "Batterijbron gereedheid", "battery": "Bestaande thuisbatterij",
+      "refresh": "Toon het integratierapport om de gereedheid te controleren.", "none": "Geen oorspronkelijke thuisbatterij gekoppeld.",
+      "ready": "Gereed voor de optionele meetproef", "active": "Meetproef actief",
+      "rollback": "Wachten op oorspronkelijke metingen na terugkeer", "lookup": "Broncontrole ontbreekt, is verlopen of onveranderd",
+      "monitor": "Passende gekoppelde monitor ontbreekt", "overlap": "Overlappende batterijapparaten",
+      "waiting": "Wachten op actuele passende metingen", "changed": "Bronidentiteit gewijzigd", "failed": "Bewijs ontbreekt of schrijven mislukt",
+      "check": "Controleer de huidige batterijbron en toon daarna het rapport opnieuw.",
+      "pair": "Behoud de gekoppelde STREAM 5000 Unit monitor. Voeg bij ontbreken die monitor toe, geen tweede thuisbatterij. Verwijder bestaande apparaten niet.",
+      "review": "Controleer dubbele monitors of thuisbatterijen voor dezelfde installatie voordat u activeert. Stuur bij twijfel het rapport.",
+      "wait": "Wacht op actuele metingen en vernieuw het rapport. Stuur bij aanhoudende problemen JSON en een aparte app-log-ID.",
+      "capture": "Stuur JSON en bijpassende EcoFlow-screenshots privé. Verwijder of herkoppel apparaten niet.",
+      "enable": "Optioneel: activeer de meetproef in de geavanceerde instellingen van deze thuisbatterij. Batterijbediening wordt uitgeschakeld.",
+      "scope": "Proef: alleen systeempercentage, vermogen en laadstatus van de geselecteerde bron. Bereik van oorspronkelijke energie/historie blijft onbevestigd. Batterijniveau, gezondheid en laadlimiet zijn verschillende waarden.",
+      "snapshot": "Momentopname; vernieuw voor wijzigingen. Uitschakelen herstelt de oorspronkelijke bron zonder herkoppelen.",
+      "download": "Integratie-JSON downloaden", "downloaded": "Rapport gedownload. Controleer vóór privé delen; het staat los van Homey's app-log-ID.",
+      "download_failed": "Download hier niet beschikbaar. Kopieer het getoonde rapport."
+    },
+    "monitoring_trial": {
+      "help": "Meetproef voor gemengde generaties: activeer na een actuele broncontrole in de geavanceerde instellingen van de bestaande STREAM-thuisbatterij. Behoud de gekoppelde 5000-unitmonitor en voeg geen tweede thuisbatterij toe. Alleen gezamenlijk percentage, batterijvermogen en laadstatus wijzigen. Energietotalen/historie behouden hun oorspronkelijke bron en onbevestigd gezamenlijk bereik. Andere installatievermogens worden leeggemaakt; bediening is uitgeschakeld. Adrescontrole elke vier minuten, metingen uit het bestaande abonnement. Uitschakelen herstelt oorspronkelijke waarden zonder opnieuw koppelen.",
+      "warning": "Meetproef: gezamenlijk percentage en berekend batterijvermogen komen van de gekoppelde 5000-bron. Energietotalen/historie behouden hun oorspronkelijke bron; gezamenlijk bereik onbevestigd. Bediening is uitgeschakeld. Schakel de proef uit om oorspronkelijke metingen te herstellen.",
+      "unavailable": "Batterijbron ontbreekt, is verouderd of gewijzigd. Geen terugval naar oorspronkelijke nullen. Controleer het integratierapport of schakel de meetproef uit.",
+      "blocked": "Batterijbediening is uitgeschakeld tijdens de meetproef. Er is geen gevalideerde bedieningsmigratie.",
+      "activation": "Voer eerst de alleen-lezen broncontrole uit. Activeer alleen met één exact overeenkomende gekoppelde bron, actuele vergelijkbare systeemmetingen en zonder tweede thuisbatterij voor dezelfde installatie.",
+      "condition": "Voorwaarden voor installatie-energiestromen en oorspronkelijke regelinstellingen zijn tijdens de bronproef niet beschikbaar. Alleen actuele batterijpercentages en laadstatus van de geselecteerde bron worden ondersteund."
+    },
     "meter": {
       "title": "Smart Meter-metingen",
       "help": "Toon het integratierapport om deze lokale momentopname te vernieuwen. De Smart Meter meet het net; Home Battery meet laden en ontladen. Gebruik één leidende meter per netaansluiting. Rapporteert een ander apparaat dezelfde netaansluiting, controleer dan de instelling Uitsluiten van Energy om dubbele nettelling te voorkomen.",
@@ -55,7 +81,10 @@
     "common": {
       "pair_home_battery": "Koppel een STREAM-thuisbatterij",
       "aggregate_required": "Widgets gebruiken de volledige installatie, niet een fysieke unit.",
-      "data_unavailable": "Gegevens van STREAM-thuisbatterij niet beschikbaar"
+      "data_unavailable": "Gegevens van STREAM-thuisbatterij niet beschikbaar",
+      "combined_trial": "Gecombineerde proef",
+      "trial_scope": "Geselecteerde systeemmetingen · alleen monitoring",
+      "original_history": "Historie oorspronkelijke bron · gecombineerd bereik onbevestigd"
     },
     "battery_plan": {
       "title": "Batterijplan",

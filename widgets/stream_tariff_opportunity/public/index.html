@@ -51,7 +51,7 @@
         document.getElementById('grid').textContent = d.grid == null ? '—' : (d.grid < -5 ? 'Export ' : (d.grid > 5 ? 'Import ' : 'Flat ')) + power(d.grid);
         document.getElementById('soc').textContent = pct(d.soc);
         document.getElementById('mode').textContent = label(d.mode);
-        document.getElementById('feed').textContent = d.feedIn ? 'On' : 'Off';
+        document.getElementById('feed').textContent = d.feedIn == null ? '—' : d.feedIn ? 'On' : 'Off';
         document.getElementById('card').classList.toggle('muted', d.available === false);
       }
       var busy = false;

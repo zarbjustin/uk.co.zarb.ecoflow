@@ -101,3 +101,88 @@ test('shared API cache is bounded and expired entries are retired', async (t) =>
   await c.getQuotaAll('BK61NEW'); assert.equal(EcoFlowClient.responseCache.size, 1);
   EcoFlowClient.responseCache.clear();
 });
+
+test('wall-clock deadline bounds a request that never gets a socket timeout, and rejects late data', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let requests = 0; let destroyed = 0; let sendResponse;
+  t.mock.method(https, 'request', (_opts, callback) => {
+    requests++;
+    const req = new EventEmitter();
+    req.end = () => {};
+    req.destroy = () => { destroyed++; }; // Deadline must settle even without an error event.
+    sendResponse = () => {
+      const res = new EventEmitter(); res.destroy = () => { destroyed++; };
+      callback(res);
+      res.emit('data', Buffer.from('{"code":"0","data":{"sn":"ES22SYNTHETIC"}}'));
+      res.emit('end');
+    };
+    return req;
+  });
+  const request = client().requestOnce('GET', '/test');
+  const rejected = assert.rejects(request, /deadline exceeded/);
+  t.mock.timers.tick(15000);
+  await rejected;
+  sendResponse();
+  assert.equal(requests, 1);
+  assert.equal(destroyed, 2);
+});
+
+test('response trickle does not reset wall-clock deadline', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let res; let destroyed = false;
+  t.mock.method(https, 'request', (_opts, callback) => {
+    const req = new EventEmitter(); req.destroy = () => { destroyed = true; };
+    req.end = () => { res = new EventEmitter(); res.statusCode = 200; callback(res); };
+    return req;
+  });
+  const pending = client().requestOnce('GET', '/test');
+  const rejected = assert.rejects(pending, /deadline exceeded/);
+  for (let i = 0; i < 3; i++) { res.emit('data', Buffer.from(' ')); t.mock.timers.tick(5000); }
+  await rejected;
+  assert.equal(destroyed, true);
+});
+
+test('abort stops a main lookup without retrying, and a pre-aborted request never sends', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let requests = 0; let destroyed = 0;
+  t.mock.method(https, 'request', () => {
+    requests++;
+    const req = new EventEmitter(); req.end = () => {}; req.destroy = () => { destroyed++; };
+    return req;
+  });
+  const controller = new AbortController();
+  const pending = client().getMainSn('BK11SYNTHETIC', { fresh: true, signal: controller.signal });
+  const rejected = assert.rejects(pending, /cancelled/);
+  controller.abort();
+  await rejected;
+  t.mock.timers.tick(60000);
+  await assert.rejects(client().getMainSn('BK11SYNTHETIC', { signal: controller.signal }), /cancelled/);
+  assert.equal(requests, 1);
+  assert.equal(destroyed, 1);
+});
+
+test('HTTP rate limits are not retried even when the body is not JSON', async (t) => {
+  response(t, 'PRIVATE RATE LIMIT PAGE', 429);
+  const request = https.request;
+  let count = 0;
+  t.mock.method(https, 'request', (...args) => { count++; return request(...args); });
+  await assert.rejects(client().getMainSn('BK11SYNTHETIC', { fresh: true }), e => {
+    assert.equal(e.code, '429'); assert.ok(!e.message.includes('PRIVATE')); return true;
+  });
+  assert.equal(count, 1);
+});
+
+test('successful requests remove abort listeners and deadline timers', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  response(t, '{"code":"0","data":{"sn":"ES22SYNTHETIC"}}');
+  const controller = new AbortController();
+  let added = 0; let removed = 0;
+  const add = controller.signal.addEventListener.bind(controller.signal);
+  const remove = controller.signal.removeEventListener.bind(controller.signal);
+  t.mock.method(controller.signal, 'addEventListener', (...args) => { added++; return add(...args); });
+  t.mock.method(controller.signal, 'removeEventListener', (...args) => { removed++; return remove(...args); });
+  assert.equal(await client().getMainSn('BK11SYNTHETIC', { fresh: true, signal: controller.signal }), 'ES22SYNTHETIC');
+  assert.equal(added, 1); assert.equal(removed, 1);
+  controller.abort();
+  t.mock.timers.tick(60000); // No late timeout or abort after successful completion.
+});

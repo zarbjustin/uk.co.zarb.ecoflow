@@ -1955,6 +1955,21 @@
       },
       "settings": [
         {
+          "id": "use_5000_reporter_trial",
+          "type": "checkbox",
+          "label": {
+            "en": "Use linked 5000 battery reporter (monitoring trial)",
+            "de": "Verknüpften 5000-Batterie-Melder verwenden (Messwert-Test)",
+            "nl": "Gekoppelde 5000-batterijbron gebruiken (meetproef)"
+          },
+          "value": false,
+          "hint": {
+            "en": "Opt-in trial for an existing mixed-generation Home Battery. Run the app's read-only reporter check first and keep the paired 5000 Unit monitor. Changes only combined battery percentage, live battery power and charging state. Energy totals/history keep their original source and are not verified as combined totals. Other installation flow tiles clear; controls are disabled. Checks the reporter address every four minutes; no extra MQTT subscription. Turn off to restore original readings without re-pairing. Do not add a second Home Battery for this installation.",
+            "de": "Optionaler Messwert-Test für eine bestehende Hausbatterie mit gemischten Generationen. Zuerst den Melder in den App-Einstellungen prüfen; den gekoppelten 5000-Einheitenmonitor behalten. Ändert nur Gesamt-Ladezustand, Batterieleistung und Lade-/Entladestatus. Energiesummen und Verlauf behalten ihre ursprüngliche Quelle; Gesamtumfang unbestätigt. Andere Anlagenflusswerte werden geleert, Steuerung deaktiviert. Adressprüfung alle vier Minuten, kein zusätzlicher MQTT-Datenstrom. Ausschalten stellt ursprüngliche Messwerte ohne Neukopplung wieder her. Keine zweite Hausbatterie für diese Anlage hinzufügen.",
+            "nl": "Optionele meetproef voor een bestaande thuisbatterij met gemengde generaties. Controleer eerst de bron in de app-instellingen en behoud de gekoppelde 5000-unitmonitor. Wijzigt alleen gezamenlijk batterijpercentage, batterijvermogen en laadstatus. Energietotalen/historie behouden hun oorspronkelijke bron; gezamenlijk bereik onbevestigd. Andere installatievermogens worden leeggemaakt; bediening is uitgeschakeld. Adrescontrole elke vier minuten, geen extra MQTT-abonnement. Uitschakelen herstelt oorspronkelijke metingen zonder opnieuw koppelen. Voeg geen tweede thuisbatterij voor deze installatie toe."
+          }
+        },
+        {
           "id": "poll_interval",
           "type": "number",
           "label": {

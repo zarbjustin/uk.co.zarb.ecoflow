@@ -1,5 +1,31 @@
 {
   "settings": {
+    "reporter": {
+      "title": "Battery reporter readiness", "battery": "Existing Home Battery",
+      "refresh": "Show the integration report to check readiness.", "none": "No existing original Home Battery is paired.",
+      "ready": "Ready for the optional monitoring trial", "active": "Monitoring trial active",
+      "rollback": "Waiting for original readings after rollback", "lookup": "Reporter check missing, expired or unchanged",
+      "monitor": "Matching paired monitor missing", "overlap": "Overlapping battery representations",
+      "waiting": "Waiting for fresh, matching readings", "changed": "Reporter identity changed", "failed": "Evidence unavailable or a write failed",
+      "check": "Run Check current battery reporter, then show the report again.",
+      "pair": "Keep the paired STREAM 5000 Unit monitor. If missing, add that monitor, not another Home Battery. Do not delete existing devices.",
+      "review": "Review duplicate monitors or Home Batteries for the same installation before enabling. Send the report if unsure.",
+      "wait": "Wait for fresh readings and refresh the report. If this persists, send the JSON and a separate app-log ID.",
+      "capture": "Send this JSON and matching EcoFlow screenshots privately. Do not delete or re-pair devices.",
+      "enable": "Optional: enable the monitoring trial in this existing Home Battery's Advanced Settings. Battery controls will be disabled.",
+      "scope": "Trial: selected system percentage, watts and charging state only. Original energy/history scope remains unverified. Battery level, battery health and charge limit are different values.",
+      "snapshot": "Snapshot only; refresh to see changes. Turning the trial off restores the original source without re-pairing.",
+      "download": "Download integration JSON", "downloaded": "Report downloaded. Review it before sharing privately; it is separate from Homey's app-log ID.",
+      "download_failed": "Download unavailable here. Copy the displayed report instead."
+    },
+    "monitoring_trial": {
+      "help": "Mixed-generation reading trial: after a fresh reporter check, opt in from the existing STREAM Home Battery's Advanced Settings. Keep its paired 5000 Unit monitor; do not add another Home Battery. Only combined SOC, battery power and charging state change. Cumulative energy/history retain their original source and unverified combined scope. Unsupported installation flow tiles clear and battery controls are disabled. The trial checks identity every four minutes and uses cached paired telemetry. Turn the setting off to roll back without re-pairing.",
+      "warning": "Monitoring trial: system SOC and derived battery power use the paired 5000 reporter. Cumulative energy and history still use the original source; their combined-system scope is unverified. Controls are disabled. Turn off the trial to restore original readings.",
+      "unavailable": "Monitoring reporter missing, stale or changed. No fallback to original zeros. Check the integration report or turn off the monitoring trial.",
+      "blocked": "Battery controls are disabled during the monitoring reporter trial. No control migration has been validated.",
+      "activation": "Run the read-only reporter check first. Enable only with one exact paired reporter, fresh comparable system SOC/power and no second Home Battery for the same installation.",
+      "condition": "Installation-flow and original control-setting conditions are unavailable during the monitoring reporter trial. Only fresh selected battery SOC and charging-state conditions are supported."
+    },
     "meter": {
       "title": "Smart Meter readings",
       "help": "Show the integration support report to refresh this local snapshot. The Smart Meter measures the grid; Home Battery measures battery charging and discharging. Keep one authoritative meter for each grid connection. If another device reports that same grid connection, review its Exclude from Energy setting to avoid duplicate grid accounting.",
@@ -55,7 +81,10 @@
     "common": {
       "pair_home_battery": "Pair a STREAM Home Battery",
       "aggregate_required": "Widgets use the complete installation, not a physical Unit.",
-      "data_unavailable": "STREAM Home Battery data unavailable"
+      "data_unavailable": "STREAM Home Battery data unavailable",
+      "combined_trial": "Combined trial",
+      "trial_scope": "Selected system readings · monitoring only",
+      "original_history": "Original-source history · combined scope unverified"
     },
     "battery_plan": {
       "title": "Battery Plan",

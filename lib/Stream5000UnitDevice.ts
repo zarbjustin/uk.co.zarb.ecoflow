@@ -324,6 +324,10 @@ export class Stream5000UnitDevice extends Homey.Device {
     return this.reporterObservations.snapshot(Date.now());
   }
 
+  getSystemFlowDiagnostics(): Record<string, unknown> {
+    return this.reporterObservations.flowSnapshot(Date.now());
+  }
+
   getConnectionDiagnostics(): Record<string, unknown> {
     const now = Date.now();
     const age = (at: number) => (at > 0 && at <= now ? Math.floor((now - at) / 1000) : null);

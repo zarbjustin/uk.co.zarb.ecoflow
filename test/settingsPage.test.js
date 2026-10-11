@@ -21,6 +21,7 @@ function loadSettingsScript() {
   });
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'meter-status.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'reporter-status.js'), 'utf8'), context);
   vm.runInContext(source, context);
   return context;
 }
@@ -163,6 +164,34 @@ test('support report copies displayed JSON only and handles unavailable clipboar
   assert.equal(copy.disabled, true);
   await copy.click();
   assert.equal(copied.length, 1, 'an old report is never copied after a failed refresh');
+});
+
+test('report refreshes cannot overlap or restore an older snapshot', () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey();
+  const calls = [];
+  homey.api = (method, url, body, cb) => calls.push({ method, url, cb });
+  context.onHomeyReady(homey);
+  const show = context.document.getElementById('supportSnapshot');
+  const check = context.document.getElementById('refreshReporterDiagnostics');
+  const download = context.document.getElementById('downloadSupportSnapshot');
+  show.click();
+  check.click();
+  show.click();
+  assert.equal(calls.length, 1);
+  assert.equal(show.disabled, true);
+  assert.equal(check.disabled, true);
+  calls[0].cb(null, { schemaVersion: 9, drivers: [] });
+  assert.equal(download.disabled, false);
+  check.click();
+  show.click();
+  assert.equal(calls.length, 2);
+  assert.equal(download.disabled, true);
+  calls[1].cb(new Error('PRIVATE'));
+  assert.equal(show.disabled, false);
+  assert.equal(check.disabled, false);
+  assert.equal(download.disabled, true);
+  assert.doesNotMatch(context.document.getElementById('supportSnapshotResult').textContent, /PRIVATE/);
 });
 
 test('a failing unset is reported instead of a false success', async () => {

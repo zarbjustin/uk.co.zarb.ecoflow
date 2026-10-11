@@ -23,16 +23,16 @@ function boundedNumber(value, min, max, fallback = null) {
   return n != null && n >= min && n <= max ? n : fallback;
 }
 
-function cap(device, id) {
+function cap(device, id, diagnostics) {
   try {
-    if (device.getReadingDiagnostics?.()?.[id]?.stale === true) return null;
+    if (diagnostics === null || diagnostics?.[id]?.stale === true) return null;
   } catch { return null; }
   return finite(device.getCapabilityValue(id));
 }
 
-function textCap(device, id) {
+function textCap(device, id, diagnostics) {
   try {
-    if (device.getReadingDiagnostics?.()?.[id]?.stale === true) return null;
+    if (diagnostics === null || diagnostics?.[id]?.stale === true) return null;
   } catch { return null; }
   const value = device.getCapabilityValue(id);
   return value == null ? null : String(value);
@@ -145,26 +145,37 @@ function streamData(homey, query = {}) {
   const picked = pickDevice(homey, query);
   if (picked.error) return { ok: false, reason: picked.error };
   const d = picked.device;
-  const grid = cap(d, 'measure_power.grid');
-  const battery = cap(d, 'measure_power');
-  const solar = cap(d, 'measure_power.pv');
-  const home = cap(d, 'measure_power.load');
-  const soc = cap(d, 'measure_battery');
+  let diagnostics;
+  try { diagnostics = d.getReadingDiagnostics?.(); } catch { diagnostics = null; }
+  const read = id => cap(d, id, diagnostics);
+  const text = id => textCap(d, id, diagnostics);
+  const grid = read('measure_power.grid');
+  const battery = read('measure_power');
+  const solar = read('measure_power.pv');
+  const home = read('measure_power.load');
+  const soc = read('measure_battery');
   const is5000 = typeof d.getConfigurationDiagnostics === 'function';
+  let monitoring;
+  try { monitoring = d.getMonitoringTrialDiagnostics?.(); } catch { monitoring = { enabled: true }; }
+  const monitoringTrial = monitoring?.enabled === true;
+  const monitoringGuarded = monitoringTrial || monitoring?.rollbackAwaitingFreshOriginal === true;
   let configuration;
   try { configuration = d.getConfigurationDiagnostics?.(); } catch { /* Unknown, no private errors. */ }
   const reported = (key) => {
     const entry = configuration?.source === 'captured_app_protocol' ? configuration.values?.[key] : null;
     return entry?.stale === false ? entry.value : null;
   };
-  const backupReserve = is5000 ? percentage(finite(reported('backupReservePct'))) : cap(d, 'backup_reserve_soc');
-  const dischargeLimit = is5000 ? percentage(finite(reported('minDischargeSocPct'))) : cap(d, 'discharge_limit');
+  const backupReserve = monitoringGuarded ? null
+    : is5000 ? percentage(finite(reported('backupReservePct'))) : read('backup_reserve_soc');
+  const dischargeLimit = monitoringGuarded ? null
+    : is5000 ? percentage(finite(reported('minDischargeSocPct'))) : read('discharge_limit');
   const reserveEnabled = reported('backupReserveEnabled');
   let reserveForEstimate = backupReserve;
   if (is5000 && reserveEnabled === false) reserveForEstimate = 0;
   if (is5000 && reserveEnabled !== true && reserveEnabled !== false) reserveForEstimate = null;
-  const floorKnown = !is5000 || (reserveForEstimate != null && dischargeLimit != null);
-  const dischargeRemaining = cap(d, 'discharge_remaining');
+  // Original-source control limits are not validated for the combined reporter.
+  const floorKnown = !monitoringGuarded && (!is5000 || (reserveForEstimate != null && dischargeLimit != null));
+  const dischargeRemaining = read('discharge_remaining');
   const energy = calculateEnergy({
     capacityKwh: setting(d, 'installed_capacity_kwh'),
     soc,
@@ -183,6 +194,11 @@ function streamData(homey, query = {}) {
     ok: true,
     name: d.getName(),
     available: d.getAvailable(),
+    monitoringTrial,
+    monitoringGuarded,
+    controlsAvailable: !monitoringGuarded && !is5000 && d.getAvailable() !== false,
+    readingScope: monitoringTrial ? 'selected_system_trial' : monitoringGuarded ? 'rollback_wait' : 'paired_installation',
+    accountingScope: monitoringGuarded ? 'original_source_unverified_combined_scope' : 'paired_source',
     grid,
     gridImport: grid == null ? null : Math.max(0, grid),
     gridExport: grid == null ? null : Math.max(0, -grid),
@@ -192,29 +208,29 @@ function streamData(homey, query = {}) {
     batteryCharge: battery == null ? null : Math.max(0, battery),
     batteryDischarge: battery == null ? null : Math.max(0, -battery),
     soc,
-    state: textCap(d, 'battery_charging_state'),
-    mode: is5000 ? (['self_powered', 'intelligent_plus', 'custom'].includes(reported('mode')) ? reported('mode') : null)
-      : textCap(d, 'operating_mode'),
-    feedIn: d.getCapabilityValue('feed_in_control') === true,
+    state: text('battery_charging_state'),
+    mode: monitoringGuarded ? null : is5000 ? (['self_powered', 'intelligent_plus', 'custom'].includes(reported('mode')) ? reported('mode') : null)
+      : text('operating_mode'),
+    feedIn: monitoringGuarded ? null : d.getCapabilityValue('feed_in_control') === true,
     backupReserve,
-    chargeLimit: is5000 ? percentage(finite(reported('maxChargeSocPct'))) : cap(d, 'charge_limit'),
+    chargeLimit: monitoringGuarded ? null : is5000 ? percentage(finite(reported('maxChargeSocPct'))) : read('charge_limit'),
     dischargeLimit,
-    chargeRemaining: cap(d, 'charge_remaining'),
+    chargeRemaining: read('charge_remaining'),
     dischargeRemaining,
     ...energy,
     dischargeEfficiencyPercent: efficiency,
     timeToEmpty: runtime.minutes,
     timeToEmptySource: runtime.source,
-    solarToday: cap(d, 'energy_solar_today'),
-    consumptionToday: cap(d, 'energy_consumption_today'),
-    gridImportToday: cap(d, 'energy_grid_import_today'),
-    gridExportToday: cap(d, 'energy_grid_export_today'),
-    savingsToday: cap(d, 'energy_savings_today'),
-    co2Today: cap(d, 'co2_today'),
-    independence: cap(d, 'energy_independence'),
-    solarForecastToday: cap(d, 'solar_forecast_today'),
-    solarForecastTomorrow: cap(d, 'solar_forecast_tomorrow'),
-    priceNow: cap(d, 'tariff_price_now'),
+    solarToday: read('energy_solar_today'),
+    consumptionToday: read('energy_consumption_today'),
+    gridImportToday: read('energy_grid_import_today'),
+    gridExportToday: read('energy_grid_export_today'),
+    savingsToday: read('energy_savings_today'),
+    co2Today: read('co2_today'),
+    independence: read('energy_independence'),
+    solarForecastToday: read('solar_forecast_today'),
+    solarForecastTomorrow: read('solar_forecast_tomorrow'),
+    priceNow: read('tariff_price_now'),
     forecastTarget: settingNumber(query.target, null),
   };
 }

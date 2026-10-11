@@ -130,7 +130,8 @@
           const dot = document.getElementById('socDot');
           dot.style.background = d.state === 'discharging' ? '#F5A623' : (d.state === 'idle' ? '#9bb3c4' : '#38C172');
 
-          set('foot', d.solarToday == null ? '' : 'Solar today: ' + d.solarToday.toFixed(2) + ' kWh');
+          set('foot', d.monitoringTrial ? tr('widgets.common.trial_scope')
+            : d.solarToday == null ? '' : 'Solar today: ' + d.solarToday.toFixed(2) + ' kWh');
 
           document.querySelector('.card').classList.toggle('muted', d.available === false);
         } catch (e) {

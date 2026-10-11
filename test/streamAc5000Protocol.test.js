@@ -62,9 +62,15 @@ test('socket battery outflow contributes once to discharge, not grid export, inc
   assert.strictEqual(combined.battDischargePowerW, 0);
   assert.strictEqual(combined.gridImportPowerW, 57);
   assert.strictEqual(combined.gridExportPowerW, 5);
+  assert.deepStrictEqual(combined.batteryFlowEdges, {
+    mpptToBatteryW: 100, solarToBatteryW: 10, gridToBatteryW: 50,
+    batteryToHomeW: 20, batteryToGridW: 5, batteryToSocketW: 45,
+    gridToHomeW: 0, gridToSocketW: 7, solarToGridW: 0,
+  });
   assert.strictEqual(parseStreamAc5000Frame(flow({})).battW, 0, 'present empty flow clears socket outflow');
   const absent = parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, sn: SN, pdata: lField(11, vField(5, 50)) }]));
   assert.strictEqual(absent.battW, undefined, 'absent flow cannot invent an idle sample');
+  assert.strictEqual(absent.batteryFlowEdges, undefined, 'absent flow does not refresh edge diagnostics');
 });
 
 // --- header decoding ---------------------------------------------------------

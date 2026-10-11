@@ -1,5 +1,31 @@
 {
   "settings": {
+    "reporter": {
+      "title": "Bereitschaft des Batteriemelders", "battery": "Bestehende Hausbatterie",
+      "refresh": "Integrationsbericht anzeigen, um die Bereitschaft zu prüfen.", "none": "Keine ursprüngliche Hausbatterie gekoppelt.",
+      "ready": "Bereit für den optionalen Überwachungstest", "active": "Überwachungstest aktiv",
+      "rollback": "Warten auf ursprüngliche Messwerte nach Rückkehr", "lookup": "Melderprüfung fehlt, ist veraltet oder unverändert",
+      "monitor": "Passender gekoppelter Monitor fehlt", "overlap": "Überlappende Batteriedarstellungen",
+      "waiting": "Warten auf aktuelle passende Messwerte", "changed": "Melderidentität geändert", "failed": "Nachweis fehlt oder Schreibvorgang fehlgeschlagen",
+      "check": "Aktuellen Batteriemelder prüfen und den Bericht erneut anzeigen.",
+      "pair": "Den gekoppelten STREAM 5000 Unit Monitor behalten. Falls er fehlt, diesen Monitor hinzufügen, keine weitere Hausbatterie. Bestehende Geräte nicht löschen.",
+      "review": "Doppelte Monitore oder Hausbatterien derselben Anlage vor Aktivierung prüfen. Bei Unsicherheit den Bericht senden.",
+      "wait": "Auf aktuelle Werte warten und den Bericht erneuern. Bei anhaltendem Problem JSON und separate App-Protokoll-ID senden.",
+      "capture": "JSON und passende EcoFlow-Screenshots privat senden. Geräte nicht löschen oder neu koppeln.",
+      "enable": "Optional den Überwachungstest in den erweiterten Einstellungen dieser Hausbatterie aktivieren. Batteriesteuerung wird deaktiviert.",
+      "scope": "Test: nur Gesamt-Ladezustand, Leistung und Ladestatus des ausgewählten Melders. Umfang ursprünglicher Energie-/Verlaufswerte ungeprüft. Ladezustand, Batteriegesundheit und Ladelimit sind verschieden.",
+      "snapshot": "Momentaufnahme; für Änderungen erneuern. Ausschalten stellt die ursprüngliche Quelle ohne Neukopplung wieder her.",
+      "download": "Integrations-JSON herunterladen", "downloaded": "Bericht heruntergeladen. Vor privatem Teilen prüfen; separat von Homeys App-Protokoll-ID.",
+      "download_failed": "Download hier nicht verfügbar. Angezeigten Bericht kopieren."
+    },
+    "monitoring_trial": {
+      "help": "Messwert-Test für gemischte Generationen: Nach einer aktuellen Melderprüfung in den erweiterten Einstellungen der bestehenden STREAM-Hausbatterie aktivieren. Den gekoppelten 5000-Einheitenmonitor behalten, keine weitere Hausbatterie hinzufügen. Nur Gesamt-Ladezustand, Batterieleistung und Lade-/Entladestatus ändern sich. Energiesummen und Verlauf behalten ihre ursprüngliche Quelle und unbestätigten Gesamtumfang. Andere Anlagenflusswerte werden geleert, Batteriesteuerung deaktiviert. Adressprüfung alle vier Minuten, Messwerte aus dem bestehenden Datenstrom. Ausschalten stellt ursprüngliche Werte ohne Neukopplung wieder her.",
+      "warning": "Messwert-Test: Gesamt-Ladezustand und berechnete Batterieleistung stammen vom gekoppelten 5000-Melder. Energiesummen und Verlauf behalten ihre ursprüngliche Quelle; Gesamtumfang unbestätigt. Steuerung deaktiviert. Zum Wiederherstellen ursprünglicher Messwerte den Test ausschalten.",
+      "unavailable": "Batterie-Melder fehlt, ist veraltet oder hat sich geändert. Kein Rückfall auf ursprüngliche Nullwerte. Integrationsbericht prüfen oder Messwert-Test ausschalten.",
+      "blocked": "Batteriesteuerung ist während des Messwert-Tests deaktiviert. Keine Steuerungsmigration wurde validiert.",
+      "activation": "Zuerst die Nur-Lesen-Melderprüfung ausführen. Nur bei einem exakt passenden gekoppelten Melder, aktuellen vergleichbaren Gesamtwerten und ohne zweite Hausbatterie für dieselbe Anlage aktivieren.",
+      "condition": "Bedingungen für Anlagen-Energieflüsse und ursprüngliche Steuereinstellungen sind während des Meldertests nicht verfügbar. Unterstützt werden nur aktuelle Werte für Ladezustand und Ladestatus des ausgewählten Melders."
+    },
     "meter": {
       "title": "Smart-Meter-Messwerte",
       "help": "Den Integrationsbericht anzeigen, um diese lokale Momentaufnahme zu aktualisieren. Der Smart Meter misst das Netz; die Hausbatterie misst Laden und Entladen. Pro Netzanschluss nur einen maßgeblichen Zähler verwenden. Meldet ein anderes Gerät denselben Netzanschluss, dessen Einstellung zum Ausschluss aus Energy prüfen, um doppelte Netzwerte zu vermeiden.",
@@ -55,7 +81,10 @@
     "common": {
       "pair_home_battery": "STREAM-Hausbatterie koppeln",
       "aggregate_required": "Widgets verwenden die gesamte Anlage, nicht eine physische Einheit.",
-      "data_unavailable": "Daten der STREAM-Hausbatterie nicht verfügbar"
+      "data_unavailable": "Daten der STREAM-Hausbatterie nicht verfügbar",
+      "combined_trial": "Gesamtsystem-Test",
+      "trial_scope": "Ausgewählte Systemwerte · nur Überwachung",
+      "original_history": "Verlauf ursprünglicher Quelle · Gesamtumfang ungeprüft"
     },
     "battery_plan": {
       "title": "Batterieplan",

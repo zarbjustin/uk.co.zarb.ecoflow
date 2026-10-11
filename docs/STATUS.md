@@ -2,6 +2,50 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unreleased working increment — guarded monitoring reporter trial
+
+Local changes only on `codex/mixed-generation-reporting-diagnostics`, following
+Robert's close-time follow-up capture in reply 59. No commit/push, version bump,
+upload, main merge, installation, certification or hardware acceptance for this
+increment. Latest Test release below remains the released baseline.
+
+- Default-off per-original-Home-Battery opt-in reuses an exact, fresh, paired
+  ES21/ES22 reporter for system SOC, derived battery watts and charging state.
+  Existing device ID/Flows stay; no re-pairing or extra Energy aggregate.
+- Original charged/discharged accounting and history sources are unchanged and
+  not promoted to verified combined-system totals. Old installation flow tiles
+  clear during the trial; battery controls are blocked, not migrated.
+- Fail-closed freshness, duplicate/overlap checks, restart, persisted rollback
+  wait, capability-write failure and in-flight operation safeguards are tested.
+  Widgets remain local-only; old control floors do not create combined runtime
+  estimates. Missing solar is not treated as zero by below-threshold conditions.
+- Reliability hardening rechecks trial receipts and applied values when Flow
+  conditions execute; unavailable/suppressed conditions throw even if inverted.
+  Local expiry clearing continues while network lookup is pending. Identity
+  checks have a 20-second overall abort deadline and REST attempts a 15-second
+  wall-clock deadline. Cancelled requests and HTTP 429 are not retried.
+- Private binding/rollback state uses one versioned record; setting/record
+  mismatches and corrupt records fail safely on restart. Setting changes are
+  bounded/serialized and cancelled across teardown; rollback completion stays
+  unavailable until persistence succeeds. Failure-injection tests cover these
+  paths, delayed packets and timer cleanup without hardware commands.
+- Schema 9 adds anonymous trial state and independent raw-flow/grid comparison
+  diagnostics; existing formulas and accounting are unchanged.
+- Readiness panel explains fixed blockers and safe next steps, with local JSON
+  download separate from Homey's app-log ID. Refresh/check requests cannot
+  overlap. Widgets distinguish selected system readings from original-source
+  history and suppress old control advice during trial/rollback.
+- Session-only anonymous timeline is bounded to 32 events. Local refreshes
+  coalesce during slow Homey writes; post-write freshness is checked before
+  availability or threshold triggers can recover. Widget freshness is captured
+  once per response. No additional widget polling or subscriptions.
+- Local checks: 529 tests passed; TypeScript, lint, whitespace checks and Homey
+  CLI 4.5.3 verified validation passed. Exact-commit CI remains a later Git gate.
+- See [implementation and tester acceptance steps](MONITORING_REPORTER_TRIAL.md).
+  Real combined coverage, charging/daytime/original-unit-active captures,
+  counter scope, a normal-operation hardware soak and 5000 command acceptance
+  remain external gates.
+
 ## Latest Test release — v1.10.29 / Build 44, 10 October 2026
 
 Published to Test from `codex/mixed-generation-reporting-diagnostics` and

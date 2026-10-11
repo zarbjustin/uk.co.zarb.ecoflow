@@ -154,7 +154,7 @@ test('support report uses a fixed projection and UTC capture time; no writes or 
   };
   const homey = { drivers: { getDriver: id => ({ getDevices: () => id === 'stream' ? [legacy] : id === 'stream_5000_unit' ? [monitor] : [] }) } };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 8);
+  assert.equal(report.schemaVersion, 9);
   assert.equal(report.capturedAt, new Date(now).toISOString());
   assert.equal(report.reporterShadow[0].status, 'comparison_ready');
   assert.equal(report.reporterShadow[0].comparisons.socPct.candidate.value, 80);

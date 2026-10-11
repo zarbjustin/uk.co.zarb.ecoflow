@@ -20,6 +20,12 @@ import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
 import { DeveloperApiQuarantineError } from '../../lib/developerApiCompatibility';
 import { StreamTopologyEvidence, streamTopologyFamily } from '../../lib/streamTopology';
 import { REPORTING_CAPABILITIES, ReportingObservation } from '../../lib/streamReportingDiagnostics';
+import { ReporterTimeline } from '../../lib/reporterTimeline';
+import {
+  MONITORING_TRIAL_SETTING, MONITORING_TRIAL_STORE, MONITORING_TICK_MS, MONITORING_RESOLVE_MS,
+  MONITORING_STATE_STORE, MONITORING_LOOKUP_DEADLINE_MS, readMonitoringState,
+  TRIAL_SUPPRESSED_CAPABILITIES, selectMonitoringReporter, monitoringTrialSnapshot,
+} from '../../lib/streamMonitoringTrial';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -30,23 +36,230 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private reportingObservations: Record<string, ReportingObservation> = {};
   private mainResolution: { status: string; receivedAt: number; family: string } | null = null;
   private resolutionPending: Promise<void> | null = null;
+  private resolutionCancel: (() => void) | null = null;
   private resolvedReporter: { sn: string; readSn: string; receivedAt: number } | null = null;
+  private monitoringEnabled = false;
+  private monitoringReporterId: string | null = null;
+  private monitoringStatus = 'disabled';
+  private monitoringCandidate: { driverId: string; deviceIndex: number } | null = null;
+  private monitoringTimer: NodeJS.Timeout | null = null;
+  private monitoringPending: Promise<void> | null = null;
+  private monitoringResolveAt = 0;
+  private monitoringGeneration = 0;
+  private monitoringRollbackPending = false;
+  private monitoringSession = 0;
+  private monitoringSettingsCount = 0;
+  private monitoringSettingsChain: Promise<void> = Promise.resolve();
+  private monitoringLocalPending: Promise<void> | null = null;
+  private monitoringCoalescedTicks = 0;
+  private monitoringTimeline = new ReporterTimeline();
+
+  /** Conditions validate the donor now, not just the last 15-second tick. */
+  private monitoringConditionReady(): boolean {
+    if (this.monitoringRollbackPending || this.monitoringSettingsCount > 0) return false;
+    if (!this.monitoringEnabled) return true;
+    if (this.monitoringStatus !== 'active' || this.monitoringReporterId === null) return false;
+    const selected = selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId);
+    return selected.status === 'active' && Object.entries(selected.values)
+      .every(([cap, value]) => this.getCapabilityValue(cap) === value);
+  }
+
+  /** An unavailable reading is not false: inverted Flow conditions must also stop. */
+  assertMonitoringCondition(scope: 'core' | 'installation'): void {
+    if (this.monitoringEnabled && scope === 'installation') {
+      throw new Error(this.monitoringMessage('condition'));
+    }
+    if (this.monitoringRollbackPending || this.monitoringSettingsCount > 0
+      || (this.monitoringEnabled && !this.monitoringConditionReady())) {
+      throw new Error(this.monitoringMessage('unavailable'));
+    }
+  }
+
+  /** Widgets must not use failed capability writes or old installation flow tiles. */
+  getReadingDiagnostics(): Record<string, { stale: boolean }> {
+    if (!this.monitoringEnabled && !this.monitoringRollbackPending) return {};
+    const selected = this.monitoringEnabled && this.monitoringReporterId && this.monitoringStatus !== 'application_failed'
+      ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId)
+      : null;
+    return Object.fromEntries([
+      ...TRIAL_SUPPRESSED_CAPABILITIES.map((cap) => [cap, { stale: true }]),
+      ...['measure_battery', 'measure_power', 'battery_charging_state'].map((cap) => [cap, {
+        stale: !selected || selected.values[cap as keyof typeof selected.values] == null
+          || this.getCapabilityValue(cap) !== selected.values[cap as keyof typeof selected.values],
+      }]),
+    ]);
+  }
+
+  getMonitoringTrialDiagnostics() {
+    const selected = selectMonitoringReporter(this.homey, this, Date.now(),
+      this.monitoringEnabled ? this.monitoringReporterId : null, !this.monitoringEnabled);
+    let status = this.monitoringEnabled ? selected.status : this.monitoringStatus;
+    if (this.monitoringEnabled && this.monitoringReporterId === null) status = 'waiting_for_validation';
+    if (this.monitoringEnabled && (this.controlStopped || this.isShuttingDown())) status = 'waiting_for_validation';
+    if (this.monitoringEnabled && this.monitoringStatus === 'application_failed') status = 'application_failed';
+    if (this.monitoringEnabled && status === 'active' && !this.monitoringConditionReady()) status = 'pending_apply';
+    return monitoringTrialSnapshot({
+      enabled: this.monitoringEnabled,
+      status,
+      candidateDevice: this.monitoringCandidate,
+      rollbackAwaitingFreshOriginal: this.monitoringRollbackPending,
+      readiness: {
+        eligible: !this.controlStopped && !this.isShuttingDown() && !this.monitoringEnabled && !this.monitoringRollbackPending
+        && this.monitoringSettingsCount === 0 && selected.status === 'active',
+        status: selected.status,
+      },
+      timeline: this.monitoringTimeline.snapshot(Date.now()),
+      coalescedLocalTicks: this.monitoringCoalescedTicks,
+    });
+  }
+
+  private resetMonitoringTriggers(): void {
+    this.prevSoc = undefined;
+    this.prevBatteryDirection = undefined;
+    this.prevPv = undefined;
+    this.prevGrid = undefined;
+    this.prevGridDirection = undefined;
+  }
+
+  private startMonitoringTimer(): void {
+    if (this.monitoringTimer) this.homey.clearInterval(this.monitoringTimer);
+    this.monitoringTimer = this.homey.setInterval(() => {
+      this.refreshMonitoringTrial().catch(() => this.error('Monitoring reporter refresh failed.'));
+    }, MONITORING_TICK_MS);
+  }
+
+  /** Reuse paired reporter caches, with one bounded fresh identity check per four minutes. */
+  private async refreshMonitoringTrial(): Promise<void> {
+    if (!this.monitoringEnabled || this.isShuttingDown()) return;
+    if (this.monitoringLocalPending) {
+      this.monitoringCoalescedTicks += 1; return;
+    }
+    const generation = this.monitoringGeneration;
+    const apply = async () => {
+      if (this.monitoringLocalPending) return;
+      const pending = this.queueDeviceWork(async () => {
+        if (generation !== this.monitoringGeneration || !this.monitoringEnabled) return;
+        await this.applyMonitoringTrial();
+      }).finally(() => {
+        if (this.monitoringLocalPending === pending) this.monitoringLocalPending = null;
+      });
+      this.monitoringLocalPending = pending;
+      await pending;
+    };
+    // Expiry/removal checks continue locally even while a network lookup is pending.
+    await apply();
+    if (generation !== this.monitoringGeneration || !this.monitoringEnabled || this.monitoringPending) return;
+    const now = Date.now();
+    if (this.monitoringResolveAt > 0 && this.monitoringResolveAt <= now
+      && now - this.monitoringResolveAt < MONITORING_RESOLVE_MS) return;
+    this.monitoringResolveAt = now;
+    const run = async () => {
+      await this.refreshReporterDiagnostics();
+      await apply();
+    };
+    const pending = run().finally(() => {
+      if (this.monitoringPending === pending) this.monitoringPending = null;
+    });
+    this.monitoringPending = pending;
+    await pending;
+  }
+
+  private async applyMonitoringTrial(): Promise<void> {
+    const generation = this.monitoringGeneration;
+    const selected = this.monitoringReporterId
+      ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId)
+      : {
+        status: 'waiting_for_validation',
+        candidateDevice: null,
+        values: { measure_battery: null, measure_power: null, battery_charging_state: null },
+      };
+    const boundary = selected.status !== this.monitoringStatus;
+    if (boundary) this.monitoringTimeline.record('reporter_state', Date.now(), selected.status);
+    if (boundary || selected.status !== 'active') this.resetMonitoringTriggers();
+    this.monitoringStatus = selected.status;
+    this.monitoringCandidate = selected.candidateDevice;
+    try {
+      for (const cap of TRIAL_SUPPRESSED_CAPABILITIES) {
+        if (this.hasCapability(cap) && this.getCapabilityValue(cap) !== null) await this.setCapabilityValue(cap, null);
+      }
+      for (const [cap, value] of Object.entries(selected.values)) {
+        if (this.hasCapability(cap) && this.getCapabilityValue(cap) !== value) await this.setCapabilityValue(cap, value);
+      }
+    } catch {
+      this.monitoringStatus = 'application_failed';
+      this.monitoringTimeline.record('reporter_state', Date.now(), 'application_failed');
+      this.resetMonitoringTriggers();
+      for (const cap of Object.keys(selected.values)) {
+        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+      }
+      await super.setOnlineState(false, this.monitoringMessage('unavailable'));
+      return;
+    }
+    if (generation !== this.monitoringGeneration || this.isShuttingDown()) return;
+    const current = this.monitoringReporterId
+      ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId) : null;
+    if (selected.status === 'active' && (current?.status !== 'active'
+      || Object.entries(current.values).some(([cap, value]) => this.getCapabilityValue(cap) !== value))) {
+      this.monitoringStatus = current?.status === 'active' ? 'pending_apply' : current?.status || 'waiting_for_validation';
+      this.monitoringTimeline.record('reporter_state', Date.now(), this.monitoringStatus);
+      this.resetMonitoringTriggers();
+      await super.setOnlineState(false, this.monitoringMessage('unavailable'));
+      return;
+    }
+    // A missing/stale reporter is unavailable, not an idle or zero battery.
+    await super.setOnlineState(selected.status === 'active', this.monitoringMessage('unavailable'));
+    if (selected.status === 'active') {
+      this.fireTriggers(Object.fromEntries(
+        Object.entries(selected.values).filter(([, v]) => v !== null),
+      ) as Record<string, number | string>);
+    }
+  }
+
+  private monitoringMessage(kind: 'warning' | 'unavailable' | 'blocked' | 'activation' | 'condition'): string {
+    const key = `settings.monitoring_trial.${kind}`;
+    const translated = typeof this.homey.__ === 'function' ? this.homey.__(key) : null;
+    const fallback = {
+      warning: 'Monitoring trial: system SOC and derived battery power use the paired 5000 reporter. '
+        + 'Cumulative energy and history still use the original source; their combined-system scope is unverified. '
+        + 'Controls are disabled. Turn off the trial to restore original readings.',
+      unavailable: 'Monitoring reporter missing, stale or changed. No fallback to original zeros. Check the integration report or turn off the monitoring trial.',
+      blocked: 'Battery controls are disabled during the monitoring reporter trial. No control migration has been validated.',
+      activation: 'Run the read-only reporter check first. Enable only with one exact paired reporter, fresh comparable system SOC/power and no second Home Battery for the same installation.',
+      condition: 'Installation-flow and original control-setting conditions are unavailable during the monitoring reporter trial. '
+        + 'Only fresh selected battery SOC and charging-state conditions are supported.',
+    };
+    return translated && translated !== key ? translated : fallback[kind];
+  }
 
   /** Explicit read-only check; never changes the read/control address or counters. */
   async refreshReporterDiagnostics(): Promise<void> {
     if (this.resolutionPending) {
       await this.resolutionPending;
-      return;
     }
     const resolutionAge = this.mainResolution ? Date.now() - this.mainResolution.receivedAt : null;
     if (resolutionAge !== null && resolutionAge >= 0 && resolutionAge < 60000) return;
     const generation = this.controlGeneration;
+    const session = this.monitoringSession;
     const readSn = this.getReadSn();
-    const active = () => !this.isShuttingDown() && generation === this.controlGeneration && readSn === this.getReadSn();
+    const active = () => !this.isShuttingDown() && generation === this.controlGeneration
+      && session === this.monitoringSession && readSn === this.getReadSn();
     const run = async () => {
+      const controller = new AbortController();
+      let cancel: (() => void) | null = null;
+      let timer: NodeJS.Timeout | null = null;
       try {
         if (!this.client || this.isShuttingDown()) return;
-        const resolved = await this.client.getMainSn(readSn, { fresh: true });
+        const deadline = new Promise<never>((_resolve, reject) => {
+          cancel = () => {
+            controller.abort();
+            reject(new Error('Reporter lookup cancelled or timed out.'));
+          };
+          this.resolutionCancel = cancel;
+          timer = this.homey.setTimeout(cancel, MONITORING_LOOKUP_DEADLINE_MS);
+        });
+        const resolved = await Promise.race([
+          this.client.getMainSn(readSn, { fresh: true, signal: controller.signal }), deadline,
+        ]);
         if (!active()) return;
         const receivedAt = Date.now();
         this.resolvedReporter = { sn: resolved.toUpperCase(), readSn: readSn.toUpperCase(), receivedAt };
@@ -57,14 +270,19 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         };
       } catch {
         if (!active()) return;
+        this.monitoringTimeline.record('lookup_failed', Date.now());
         this.resolvedReporter = null;
         this.mainResolution = { status: 'failed', receivedAt: Date.now(), family: 'unknown' };
+      } finally {
+        if (timer) this.homey.clearTimeout(timer);
+        if (this.resolutionCancel === cancel) this.resolutionCancel = null;
       }
     };
-    this.resolutionPending = run().finally(() => {
-      this.resolutionPending = null;
+    const pending = run().finally(() => {
+      if (this.resolutionPending === pending) this.resolutionPending = null;
     });
-    await this.resolutionPending;
+    this.resolutionPending = pending;
+    await pending;
   }
 
   private controlStopped = false;
@@ -156,6 +374,12 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onReady(): Promise<void> {
+    this.monitoringTimeline.reset(Date.now());
+    this.monitoringCoalescedTicks = 0;
+    this.monitoringSession += 1;
+    this.resolutionCancel?.();
+    if (this.monitoringTimer) this.homey.clearInterval(this.monitoringTimer);
+    this.monitoringTimer = null;
     this.controlGeneration += 1;
     this.controlStopped = false;
     this.priceUpdatedAt = 0;
@@ -163,6 +387,21 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.mainResolution = null;
     this.resolvedReporter = null;
     this.lastControlFailure = null;
+    this.monitoringGeneration += 1;
+    this.monitoringResolveAt = 0;
+    this.monitoringEnabled = this.getSetting(MONITORING_TRIAL_SETTING) === true;
+    const rawState = this.getStoreValue(MONITORING_STATE_STORE);
+    const state = readMonitoringState(rawState);
+    if (rawState != null && !state) this.monitoringTimeline.record('state_invalid', Date.now());
+    // Legacy keys are read only if there is no new record, never over a corrupt one.
+    let pinned = rawState == null ? this.getStoreValue(MONITORING_TRIAL_STORE) : null;
+    if (state?.mode === 'trial') pinned = state.reporterId;
+    this.monitoringReporterId = typeof pinned === 'string' && pinned ? pinned : null;
+    this.monitoringStatus = this.monitoringEnabled ? 'waiting_for_validation' : 'disabled';
+    this.monitoringCandidate = null;
+    this.monitoringRollbackPending = !this.monitoringEnabled && (rawState == null
+      ? this.getStoreValue('monitoringRollbackPending') === true : state?.mode !== 'original');
+    this.resetMonitoringTriggers();
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
     const storedWh = (key: string) => {
       const value = toFiniteNumber(this.getStoreValue(key));
@@ -184,6 +423,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
     if (this.getSetting('enable_history') !== false) this.startHistory();
     if (this.getSetting('solar_forecast') !== false) this.startSolarForecast();
+    if (this.monitoringEnabled) {
+      await this.applyMonitoringTrial(); // Clear cached readings before startup's first legacy poll.
+      await this.setWarning(this.monitoringMessage('warning')).catch(() => {});
+      this.startMonitoringTimer();
+    } else if (this.monitoringRollbackPending) {
+      await this.clearRollbackReadings();
+    }
   }
 
   /**
@@ -320,9 +566,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Fresh main-target state and readback for every command; no optimistic tiles. */
   private async runControl(intent: StreamControlIntent): Promise<void> {
+    if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
+      throw new Error(this.monitoringMessage('blocked'));
+    }
     const target = this.mainSn || this.getData().sn;
     const generation = this.controlGeneration;
     const active = () => !this.controlStopped && !this.isShuttingDown()
+      && !this.monitoringEnabled && !this.monitoringRollbackPending
+      && this.monitoringSettingsCount === 0
       && generation === this.controlGeneration
       && target === (this.mainSn || this.getData().sn);
     try {
@@ -367,6 +618,15 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Availability + online/offline flow triggers (overrides the base). */
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {
+    if (this.monitoringEnabled) {
+      // Legacy quota availability cannot revive a stale/missing selected reporter.
+      await super.setOnlineState(this.monitoringConditionReady(), this.monitoringMessage('unavailable'));
+      return;
+    }
+    if (this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
+      await super.setOnlineState(false, 'Waiting for fresh original battery readings after rollback.');
+      return;
+    }
     if (online) {
       if (!this.getAvailable()) await this.setAvailable().catch(() => {});
     } else {
@@ -394,13 +654,44 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     // values mapped from absent device counters to avoid conflicts.
     delete values['meter_power.charged'];
     delete values['meter_power.discharged'];
+    const legacyPower = values.measure_power;
+    if (this.monitoringEnabled) {
+      for (const key of [...TRIAL_SUPPRESSED_CAPABILITIES, 'measure_battery', 'measure_power', 'battery_charging_state']) {
+        delete values[key];
+      }
+    }
+    if (this.monitoringRollbackPending && (!Number.isFinite(receivedAt) || receivedAt <= 0
+      || receivedAt > Date.now() || Date.now() - receivedAt > 180000)) {
+      // Delayed/future packets may not repopulate the core UI during rollback.
+      // Keep the original accounting path below unchanged.
+      delete values.measure_battery;
+      delete values.measure_power;
+      delete values.battery_charging_state;
+    }
+    let coreWriteFailed = false;
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
       if (this.getCapabilityValue(cap) === value) continue;
-      await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
+      try {
+        await this.setCapabilityValue(cap, value);
+      } catch (e) {
+        if (cap === 'measure_battery' || cap === 'measure_power') coreWriteFailed = true;
+        this.error(`setCapabilityValue ${cap}`, e);
+      }
     }
-    await this.updateBatteryEnergy(quota, values['measure_power'], receivedAt);
-    this.fireTriggers(values);
+    if (this.monitoringRollbackPending && !coreWriteFailed && receivedAt > 0 && receivedAt <= Date.now()
+      && Date.now() - receivedAt <= 180000
+      && typeof values.measure_battery === 'number' && typeof values.measure_power === 'number') {
+      try {
+        await this.setStoreValue(MONITORING_STATE_STORE, { version: 1, mode: 'original', reporterId: null });
+        this.monitoringRollbackPending = false;
+        this.monitoringTimeline.record('rollback_complete', Date.now());
+      } catch { /* Keep rollback unavailable until its complete state can be saved. */ }
+    }
+    // Only the original quota enters accounting, never the selected reporter's power.
+    await this.updateBatteryEnergy(quota, legacyPower, receivedAt);
+    if (this.monitoringEnabled) await this.applyMonitoringTrial();
+    if (!this.monitoringRollbackPending && this.monitoringSettingsCount === 0) this.fireTriggers(values);
     this.checkFaults(quota);
   }
 
@@ -599,15 +890,23 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Condition + action helpers used by flow cards. */
   isCharging(): boolean {
+    if (!this.monitoringConditionReady()) return false;
     return (this.getCapabilityValue('measure_power') as number) > 5;
   }
 
   isExporting(): boolean {
+    if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) return false;
     return (this.getCapabilityValue('measure_power.grid') as number) < -5;
+  }
+
+  solarPowerIs(direction: 'above' | 'below', watts: number): boolean {
+    if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) return false;
+    return aboveBelow(this.getCapabilityValue('measure_power.pv'), direction, watts);
   }
 
   /** True when the battery is charging from surplus solar (PV exceeds home load). */
   isChargingFromSolar(): boolean {
+    if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) return false;
     const batt = this.getCapabilityValue('measure_power');
     const pv = this.getCapabilityValue('measure_power.pv');
     const load = this.getCapabilityValue('measure_power.load');
@@ -708,12 +1007,16 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Battery SoC condition helper. */
   batterySocIs(direction: 'above' | 'below', level: number): boolean {
+    if (!this.monitoringConditionReady()) return false;
     const soc = this.getCapabilityValue('measure_battery') as number;
     if (typeof soc !== 'number') return false;
     return direction === 'above' ? soc > level : soc < level;
   }
 
   protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {
+    if (changedKeys.includes(MONITORING_TRIAL_SETTING)) {
+      await this.changeMonitoringSetting(newSettings[MONITORING_TRIAL_SETTING] === true);
+    }
     // A cached numeric value in the old unit must not trigger a new-unit threshold.
     if (changedKeys.includes('price_unit')) this.priceUpdatedAt = 0;
     if (changedKeys.includes('enable_history')) {
@@ -729,9 +1032,82 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
   }
 
+  private async changeMonitoringSetting(enable: boolean): Promise<void> {
+    if (this.monitoringSettingsCount >= 4) throw new Error('Too many pending monitoring changes; wait before retrying.');
+    this.monitoringSettingsCount += 1;
+    this.controlGeneration += 1; // Block/cancel commands before awaiting validation or persistence.
+    const session = this.monitoringSession;
+    const checkSession = () => {
+      if (this.isShuttingDown() || session !== this.monitoringSession) throw new Error('Monitoring change cancelled.');
+    };
+    const run = async () => {
+      checkSession();
+      if (enable) await this.refreshReporterDiagnostics();
+      checkSession();
+      await this.queueDeviceWork(async () => {
+        checkSession();
+        const selected = enable ? selectMonitoringReporter(this.homey, this, Date.now(), null, true) : null;
+        if (enable && selected?.status !== 'active') throw new Error(this.monitoringMessage('activation'));
+        // Persist a Homey device reference, never a replacement paired serial or counter baseline.
+        await this.setStoreValue(MONITORING_STATE_STORE, {
+          version: 1, mode: enable ? 'trial' : 'rollback', reporterId: selected?.reporterId ?? null,
+        });
+        checkSession();
+        this.monitoringEnabled = enable;
+        this.monitoringTimeline.record(enable ? 'trial_enabled' : 'rollback_started', Date.now());
+        this.monitoringRollbackPending = !enable;
+        this.monitoringReporterId = selected?.reporterId ?? null;
+        this.monitoringGeneration += 1;
+        this.controlGeneration += 1; // Cancel already in-flight control readbacks/writes.
+        this.resetMonitoringTriggers();
+        if (this.monitoringTimer) this.homey.clearInterval(this.monitoringTimer);
+        this.monitoringTimer = null;
+        if (enable) {
+          this.monitoringResolveAt = Date.now();
+          await this.setWarning(this.monitoringMessage('warning')).catch(() => {});
+          checkSession();
+          await this.applyMonitoringTrial();
+          checkSession();
+          this.startMonitoringTimer();
+        } else {
+          this.monitoringStatus = 'disabled';
+          this.monitoringCandidate = null;
+          // Do not reuse pre-switch receipts/capabilities on rollback; await original telemetry.
+          this.reportingObservations = {};
+          await this.clearRollbackReadings();
+          await this.setWarning(null).catch(() => {});
+        }
+      });
+      checkSession();
+    };
+    const pending = this.monitoringSettingsChain.then(run).catch((error) => {
+      if (session === this.monitoringSession) this.monitoringTimeline.record('setting_failed', Date.now());
+      throw error;
+    }).finally(() => {
+      this.monitoringSettingsCount -= 1;
+    });
+    this.monitoringSettingsChain = pending.catch(() => {});
+    await pending;
+  }
+
+  private async clearRollbackReadings(): Promise<void> {
+    for (const cap of [...TRIAL_SUPPRESSED_CAPABILITIES, 'measure_battery', 'measure_power', 'battery_charging_state']) {
+      if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+    }
+    await super.setOnlineState(false, 'Waiting for fresh original battery readings after rollback.');
+  }
+
   protected async onTeardown(): Promise<void> {
+    this.monitoringTimeline.record('session_stopped', Date.now());
+    this.monitoringSession += 1;
+    this.monitoringGeneration += 1;
+    if (this.monitoringTimer) this.homey.clearInterval(this.monitoringTimer);
+    this.monitoringTimer = null;
+    this.monitoringStatus = this.monitoringEnabled ? 'waiting_for_validation' : 'disabled';
+    this.monitoringCandidate = null;
     this.controlStopped = true;
     this.controlGeneration += 1;
+    this.resolutionCancel?.();
     this.resolvedReporter = null;
     this.mainResolution = null;
     for (const [timer, resolve] of this.controlWaits) {

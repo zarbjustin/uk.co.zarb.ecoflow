@@ -109,11 +109,15 @@
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
   <button id="supportSnapshot" type="button">Show integration support report</button>
   <button id="copySupportSnapshot" type="button" disabled>Copy integration support report</button>
+  <button id="downloadSupportSnapshot" type="button" disabled>Download integration JSON</button>
   <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
   <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
+  <p class="help" id="monitoringTrialHelp"></p>
+  <h2 id="reporterStatusTitle" style="font-size:17px;">Battery reporter readiness</h2>
+  <div id="reporterStatus" role="status" aria-live="polite"></div>
   <p class="help" id="reporterHelp">The optional reporter check makes a read-only EcoFlow API request for each existing original Home Battery (up to eight).
     It does not change devices, controls, counters or grouping. A match is not proof of installation-wide reporting.
     Do not delete or re-pair devices while investigating. Homey's Create diagnostic report button supplies a separate app-log ID; please send both.</p>
@@ -127,6 +131,7 @@
   <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
 
   <script src="meter-status.js"></script>
+  <script src="reporter-status.js"></script>
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
@@ -150,20 +155,40 @@
       refreshAppAuthState();
 
       var reportText = '';
+      var displayedReport = null;
+      var reportBusy = false;
+      var showButton = document.getElementById('supportSnapshot');
+      var checkButton = document.getElementById('refreshReporterDiagnostics');
+      var downloadButton = document.getElementById('downloadSupportSnapshot');
       var copyButton = document.getElementById('copySupportSnapshot');
       var copyStatus = document.getElementById('supportCopyStatus');
       document.getElementById('supportSnapshot').textContent = Homey.__('settings.support.show');
       copyButton.textContent = Homey.__('settings.support.copy');
+      downloadButton.textContent = Homey.__('settings.reporter.download');
+      document.getElementById('reporterStatusTitle').textContent = Homey.__('settings.reporter.title');
       document.getElementById('refreshReporterDiagnostics').textContent = Homey.__('settings.support.check');
       document.getElementById('reporterHelp').textContent = Homey.__('settings.support.instructions');
+      document.getElementById('monitoringTrialHelp').textContent = Homey.__('settings.monitoring_trial.help');
       document.getElementById('meterStatusTitle').textContent = Homey.__('settings.meter.title');
       document.getElementById('meterStatusHelp').textContent = Homey.__('settings.meter.help');
       function renderMeterStatus(report) {
+        displayedReport = report;
+        downloadButton.disabled = !report;
+        window.EcoFlowReporterStatus.render(document.getElementById('reporterStatus'), report, function (key) {
+          return Homey.__('settings.reporter.' + key);
+        });
         window.EcoFlowMeterStatus.render(document.getElementById('meterStatus'), report, function (key) {
           return Homey.__('settings.meter.' + key);
         });
       }
       renderMeterStatus(null);
+      downloadButton.addEventListener('click', function () {
+        if (!displayedReport) return;
+        try {
+          window.EcoFlowReporterStatus.download(displayedReport, document, URL, Blob);
+          copyStatus.textContent = Homey.__('settings.reporter.downloaded');
+        } catch (err) { copyStatus.textContent = Homey.__('settings.reporter.download_failed'); }
+      });
       copyButton.addEventListener('click', async function () {
         if (!reportText) return;
         try {
@@ -175,16 +200,18 @@
       });
 
       document.getElementById('supportSnapshot').addEventListener('click', function () {
-        var button = document.getElementById('supportSnapshot');
+        if (reportBusy) return;
+        reportBusy = true;
         var output = document.getElementById('supportSnapshotResult');
-        button.disabled = true;
+        showButton.disabled = checkButton.disabled = true;
         reportText = '';
         copyButton.disabled = true;
         copyStatus.textContent = '';
         output.textContent = 'Reading local diagnostics...';
         renderMeterStatus(null);
         Homey.api('GET', '/support-snapshot', null, function (err, report) {
-          button.disabled = false;
+          reportBusy = false;
+          showButton.disabled = checkButton.disabled = false;
           reportText = err ? '' : JSON.stringify(report, null, 2);
           output.textContent = err ? 'Could not read local diagnostics. Please try again.' : reportText;
           copyButton.disabled = !reportText;
@@ -193,14 +220,17 @@
       });
 
       document.getElementById('refreshReporterDiagnostics').addEventListener('click', function () {
-        var button = document.getElementById('refreshReporterDiagnostics');
-        button.disabled = true;
+        if (reportBusy) return;
+        reportBusy = true;
+        showButton.disabled = checkButton.disabled = true;
         copyButton.disabled = true;
         reportText = '';
+        copyStatus.textContent = '';
         document.getElementById('supportSnapshotResult').textContent = 'Checking reporter resolution; no commands are sent...';
         renderMeterStatus(null);
         Homey.api('POST', '/reporter-diagnostics', {}, function (err, report) {
-          button.disabled = false;
+          reportBusy = false;
+          showButton.disabled = checkButton.disabled = false;
           reportText = err ? '' : JSON.stringify(report, null, 2);
           document.getElementById('supportSnapshotResult').textContent = err
             ? 'Could not check the reporter. Use the local support report instead.' : reportText;
