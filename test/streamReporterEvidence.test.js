@@ -85,6 +85,9 @@ test('flow diagnostics retain independent receipts, omit private/invalid data an
   assert.equal(report.fields.batteryToHomeW.ageSec, 10);
   assert.equal(report.accountingUsed, false);
   assert.equal(report.deviceTimestampsVerified, false);
+  assert.equal(report.sourceContract.gridMeterW, 'reported_grid_meter');
+  assert.equal(report.sourceContract.gridFlowNetW, 'derived_app_protocol_flow_matrix');
+  assert.equal(report.sourceContract.differenceIsVerifiedLoss, false);
   assert.ok(!JSON.stringify(report).match(/PRIVATE|SYNTHETIC/));
   assert.equal(tracker.flowSnapshot(1180001).meterMinusFlowW, null);
   assert.deepEqual(tracker.flowSnapshot(900000).fields, {});

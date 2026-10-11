@@ -157,6 +157,7 @@ export function monitoringTrialSnapshot(input: any): Record<string, unknown> {
     rollbackAvailable: true,
     rollbackAwaitingFreshOriginal: input?.rollbackAwaitingFreshOriginal === true,
     readiness: {
+      eligibilityScope: 'activation_only',
       eligible: input?.readiness?.eligible === true && input?.enabled !== true
         && input?.rollbackAwaitingFreshOriginal !== true && input?.readiness?.status === 'active',
       status: statuses.includes(input?.readiness?.status) ? input.readiness.status : 'waiting_for_validation',

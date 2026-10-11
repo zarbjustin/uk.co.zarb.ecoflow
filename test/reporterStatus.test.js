@@ -41,6 +41,32 @@ test('download keeps JSON formatting and UTC filename, cleans URLs and does not 
   assert.equal(anchor.download, 'ecoflow-integration-snapshot.json');
 });
 
+test('source labels keep grid meter and flow separate and suppress stale/skewed comparisons', () => {
+  const field = (value, ageSec = 0, stale = false) => ({ value, ageSec, stale });
+  const text = (meter, flow) => {
+    const element = { children: [], ownerDocument: { createElement: () => ({}) },
+      appendChild(child) { this.children.push(child); } };
+    render(element, { drivers: [
+      { id: 'stream', monitoringTrial: [{ enabled: true, status: 'active', readiness: { eligible: false } }] },
+      { id: 'stream_5000_unit', name: 'PRIVATE', systemFlow: [{ fields: { gridMeterW: meter, gridFlowNetW: flow },
+        meterMinusFlowW: 'PRIVATE' }] },
+    ] }, key => key);
+    return element.children.map(child => child.textContent).join('\n');
+  };
+  const valid = text(field(-5), field(-29, 1));
+  assert.match(valid, /active/);
+  assert.match(valid, /activation_only/);
+  assert.match(valid, /grid_meter: -5 W/);
+  assert.match(valid, /grid_flow: -29 W/);
+  assert.match(valid, /grid_difference: 24 W/);
+  assert.ok(!valid.includes('PRIVATE'));
+  for (const [meter, flow] of [[null, field(0)], [field(0, 181), field(0)],
+    [field(0, 31), field(0)], [field(Infinity), field(0)], [field(0, 0, true), field(0)]]) {
+    assert.match(text(meter, flow), /grid_difference: field_unavailable/);
+  }
+  assert.match(text(field(0), field(0)), /grid_difference: 0 W/);
+});
+
 test('session timeline is bounded, fixed vocabulary, resets and rejects private/future input', () => {
   const timeline = new ReporterTimeline(); timeline.reset(1000);
   timeline.record('PRIVATE', 1001, 'PRIVATE');
@@ -62,8 +88,12 @@ test('settings readiness and JSON download work in the browser without hidden po
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
     await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
-    const report = { capturedAt: '2026-10-11T01:02:03.004Z', schemaVersion: 9,
-      drivers: [{ id: 'stream', monitoringTrial: [{ enabled: false, readiness: { eligible: true, status: 'active' } }] }] };
+    const report = { capturedAt: '2026-10-11T01:02:03.004Z', schemaVersion: 10,
+      drivers: [{ id: 'stream', monitoringTrial: [{ enabled: false, readiness: { eligible: true, status: 'active' } }] },
+        { id: 'stream_5000_unit', systemFlow: [{ fields: {
+          gridMeterW: { value: -5, ageSec: 0, stale: false },
+          gridFlowNetW: { value: -29, ageSec: 1, stale: false },
+        } }] }] };
     await page.evaluate(({ report, translations }) => {
       window.calls = 0;
       window.onHomeyReady({ ready() {}, get(_key, callback) { callback(null, null); },
@@ -79,6 +109,10 @@ test('settings readiness and JSON download work in the browser without hidden po
     assert.match(file.suggestedFilename(), /^ecoflow-integration-2026/);
     assert.deepEqual(JSON.parse(fs.readFileSync(await file.path(), 'utf8')), report);
     assert.equal(await page.evaluate(() => window.calls), 1);
-    await page.screenshot({ path: '/tmp/ecoflow-reporter-readiness.png', fullPage: true });
+    assert.match(await page.locator('#reporterStatus').innerText(), /Reported grid-meter power: -5 W/);
+    assert.match(await page.locator('#reporterStatus').innerText(), /Meter minus flow: 24 W/);
+    await page.setViewportSize({ width: 390, height: 900 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    await page.locator('#reporterStatus').screenshot({ path: '/tmp/ecoflow-reporter-source-labels.png' });
   } finally { await browser.close(); }
 });

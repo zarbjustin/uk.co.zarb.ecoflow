@@ -219,7 +219,10 @@ test('anonymous peer visibility never infers expansion count, capacity or teleme
   tracker.observe({ unitsBySn: { [unknown]: {} } }, 2000);
   const report = streamTopologySnapshot(readStreamTopologyEvidence({ getTopologyEvidence: () => tracker.evidence() }), 2000);
   assert.deepEqual(report.peerVisibility[0], { observationIndex: 0, prefix: 'ZZ11', family: 'unknown', entityRole: 'unverified', fresh: true,
-    fieldsSeenThisSession: { soc: true, rawBatteryPower: true, pv: true } });
+    fieldsSeenThisSession: { soc: true, rawBatteryPower: true, pv: true },
+    readings: { socPct: { value: 75, ageSec: 1, stale: false }, batteryPowerRawW: { value: 10, ageSec: 1, stale: false },
+      pvTotalW: { value: 0, ageSec: 1, stale: false } },
+    readingScope: 'peer_record_not_verified_physical_unit', rawBatteryPowerSignAndScaleVerified: false, accountingUsed: false });
   assert.equal(report.expansionPackCount, null);
   assert.equal(report.installedCapacityKWh, null);
   assert.equal(report.maxReportedRecordCount, 4, 'record count is not pack count');
@@ -238,4 +241,42 @@ test('invalid SOC/power/PV fields and arbitrary peer getter fields are not expor
   assert.equal(projected.peers[0].socObserved, false);
   assert.equal(projected.peers[0].rawBatteryPowerObserved, true);
   assert.ok(!JSON.stringify(projected).includes('PRIVATE'));
+});
+
+test('peer values retain independent ages through partial, invalid and out-of-order records', () => {
+  for (const address of [ES, 'ES21SYNTHETIC0001']) {
+    const tracker = new Es22TopologyTracker(address);
+    tracker.observe({ unitsBySn: { [BK]: { socPct: 61, socPrecisePct: 61.2, batteryPowerRawW: -200,
+      pv: { totalW: 0, string3W: 0 } } } }, 1000);
+    tracker.observe({ unitsBySn: { [BK]: { socPct: 62 } } }, 3000);
+    tracker.observe({ unitsBySn: { [BK]: { socPct: 3, batteryPowerRawW: 999 } } }, 500);
+    tracker.observe({ unitsBySn: { [BK]: { batteryPowerRawW: Infinity, pv: { totalW: -1 } } } }, 4000);
+    const evidence = tracker.evidence();
+    evidence.peers[0].readings.batteryPowerRawW.value = 9999;
+    const projected = readStreamTopologyEvidence({ getTopologyEvidence: () => tracker.evidence() });
+    const peer = streamTopologySnapshot(projected, 4000).peerVisibility[0];
+    assert.deepEqual(peer.readings.socPct, { value: 62, ageSec: 1, stale: false });
+    assert.deepEqual(peer.readings.batteryPowerRawW, { value: -200, ageSec: 3, stale: false });
+    assert.deepEqual(peer.readings.pvTotalW, { value: 0, ageSec: 3, stale: false });
+    assert.equal(peer.rawBatteryPowerSignAndScaleVerified, false);
+    assert.equal(peer.accountingUsed, false);
+    const later = 181001;
+    tracker.observe({ unitsBySn: { [BK]: { socPct: 62 } } }, later);
+    const stale = streamTopologySnapshot(tracker.evidence(), later).peerVisibility[0];
+    assert.equal(stale.fresh, true, 'peer record freshness does not refresh missing fields');
+    assert.equal(stale.readings.socPct.stale, false);
+    assert.equal(stale.readings.batteryPowerRawW.stale, true);
+    assert.ok(!JSON.stringify(stale).includes('SYNTHETIC'));
+    assert.deepEqual(new Es22TopologyTracker(address).evidence().peers, []);
+  }
+});
+
+test('untrusted peer readings are bounded, re-projected and future fields cannot appear current', () => {
+  const field = (value, receivedAt = 1000) => ({ value, receivedAt, token: 'PRIVATE' });
+  const evidence = readStreamTopologyEvidence({ getTopologyEvidence: () => ({ source: 'es22_peer_records', addressSn: ES,
+    peers: [{ sn: BK, seenAt: 1000, readings: { socPct: field(101), socPrecisePct: field(50),
+      batteryPowerRawW: field(100001), pvTotalW: field(0, 3000), pv3W: field(NaN), PRIVATE: field(1) } }] }) });
+  const report = streamTopologySnapshot(evidence, 2000);
+  assert.deepEqual(report.peerVisibility[0].readings, { socPrecisePct: { value: 50, ageSec: 1, stale: false } });
+  assert.ok(!JSON.stringify(report).match(/PRIVATE|SYNTHETIC/));
 });

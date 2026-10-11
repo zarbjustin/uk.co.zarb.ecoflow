@@ -16,7 +16,12 @@
       "scope": "Proef: alleen systeempercentage, vermogen en laadstatus van de geselecteerde bron. Bereik van oorspronkelijke energie/historie blijft onbevestigd. Batterijniveau, gezondheid en laadlimiet zijn verschillende waarden.",
       "snapshot": "Momentopname; vernieuw voor wijzigingen. Uitschakelen herstelt de oorspronkelijke bron zonder herkoppelen.",
       "download": "Integratie-JSON downloaden", "downloaded": "Rapport gedownload. Controleer vóór privé delen; het staat los van Homey's app-log-ID.",
-      "download_failed": "Download hier niet beschikbaar. Kopieer het getoonde rapport."
+      "download_failed": "Download hier niet beschikbaar. Kopieer het getoonde rapport.",
+      "activation_only": "Activeringsgereedheid geldt vóór inschakelen. Een actieve proef wacht niet op activering.",
+      "flow_sources": "Netbronnen van de 5000-bron (alleen diagnose)",
+      "grid_meter": "Gemeld netmetervermogen", "grid_flow": "Uit energiestromen berekend netvermogen",
+      "grid_difference": "Meter min energiestroom", "receipt_age": "Ontvangstleeftijd", "field_unavailable": "Niet beschikbaar of verouderd",
+      "grid_scope": "Positief betekent import; negatief export. Dit zijn afzonderlijke bronnen, geen uitwisselbare installatietotalen. Nabije ontvangsttijden bewijzen geen gelijke meettijd op het apparaat. Het verschil is geen bevestigd verlies. Energieboekhouding blijft ongewijzigd."
     },
     "monitoring_trial": {
       "help": "Meetproef voor gemengde generaties: activeer na een actuele broncontrole in de geavanceerde instellingen van de bestaande STREAM-thuisbatterij. Behoud de gekoppelde 5000-unitmonitor en voeg geen tweede thuisbatterij toe. Alleen gezamenlijk percentage, batterijvermogen en laadstatus wijzigen. Energietotalen/historie behouden hun oorspronkelijke bron en onbevestigd gezamenlijk bereik. Andere installatievermogens worden leeggemaakt; bediening is uitgeschakeld. Adrescontrole elke vier minuten, metingen uit het bestaande abonnement. Uitschakelen herstelt oorspronkelijke waarden zonder opnieuw koppelen.",

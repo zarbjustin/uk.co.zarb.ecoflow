@@ -27,6 +27,14 @@ export function reporterFlowSnapshot(input: any): Record<string, unknown> {
       ? meter.value - flow.value : null,
     deviceTimestampsVerified: false,
     accountingUsed: false,
+    sourceContract: {
+      gridMeterW: 'reported_grid_meter',
+      gridFlowNetW: 'derived_app_protocol_flow_matrix',
+      batteryDerivedW: 'derived_app_protocol_flow_matrix',
+      scope: 'subscription_source_unverified_installation',
+      comparison: 'receipt_aligned_not_device_time',
+      differenceIsVerifiedLoss: false,
+    },
   };
 }
 

@@ -16,7 +16,12 @@
       "scope": "Test: nur Gesamt-Ladezustand, Leistung und Ladestatus des ausgewählten Melders. Umfang ursprünglicher Energie-/Verlaufswerte ungeprüft. Ladezustand, Batteriegesundheit und Ladelimit sind verschieden.",
       "snapshot": "Momentaufnahme; für Änderungen erneuern. Ausschalten stellt die ursprüngliche Quelle ohne Neukopplung wieder her.",
       "download": "Integrations-JSON herunterladen", "downloaded": "Bericht heruntergeladen. Vor privatem Teilen prüfen; separat von Homeys App-Protokoll-ID.",
-      "download_failed": "Download hier nicht verfügbar. Angezeigten Bericht kopieren."
+      "download_failed": "Download hier nicht verfügbar. Angezeigten Bericht kopieren.",
+      "activation_only": "Die Aktivierungsbereitschaft gilt vor dem Einschalten. Ein aktiver Test wartet nicht auf Aktivierung.",
+      "flow_sources": "Netzquellen des 5000-Melders (nur Diagnose)",
+      "grid_meter": "Gemeldete Netzzählerleistung", "grid_flow": "Aus Energieflüssen berechnete Netzleistung",
+      "grid_difference": "Zähler minus Energiefluss", "receipt_age": "Empfangsalter", "field_unavailable": "Nicht verfügbar oder veraltet",
+      "grid_scope": "Positiv bedeutet Bezug, negativ Einspeisung. Dies sind getrennte Quellen, keine austauschbaren Anlagensummen. Nahe Empfangszeiten bestätigen keine gleichen Geräte-Messzeiten. Die Differenz ist kein bestätigter Verlust. Keine Änderung der Energieabrechnung."
     },
     "monitoring_trial": {
       "help": "Messwert-Test für gemischte Generationen: Nach einer aktuellen Melderprüfung in den erweiterten Einstellungen der bestehenden STREAM-Hausbatterie aktivieren. Den gekoppelten 5000-Einheitenmonitor behalten, keine weitere Hausbatterie hinzufügen. Nur Gesamt-Ladezustand, Batterieleistung und Lade-/Entladestatus ändern sich. Energiesummen und Verlauf behalten ihre ursprüngliche Quelle und unbestätigten Gesamtumfang. Andere Anlagenflusswerte werden geleert, Batteriesteuerung deaktiviert. Adressprüfung alle vier Minuten, Messwerte aus dem bestehenden Datenstrom. Ausschalten stellt ursprüngliche Werte ohne Neukopplung wieder her.",

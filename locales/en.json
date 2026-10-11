@@ -16,7 +16,12 @@
       "scope": "Trial: selected system percentage, watts and charging state only. Original energy/history scope remains unverified. Battery level, battery health and charge limit are different values.",
       "snapshot": "Snapshot only; refresh to see changes. Turning the trial off restores the original source without re-pairing.",
       "download": "Download integration JSON", "downloaded": "Report downloaded. Review it before sharing privately; it is separate from Homey's app-log ID.",
-      "download_failed": "Download unavailable here. Copy the displayed report instead."
+      "download_failed": "Download unavailable here. Copy the displayed report instead.",
+      "activation_only": "Activation eligibility applies before enabling. An active trial is not awaiting activation.",
+      "flow_sources": "5000 reporter grid sources (diagnostic only)",
+      "grid_meter": "Reported grid-meter power", "grid_flow": "Flow-derived grid power",
+      "grid_difference": "Meter minus flow", "receipt_age": "Receipt age", "field_unavailable": "Unavailable or stale",
+      "grid_scope": "Positive means import; negative means export. These are separate reported sources, not interchangeable installation totals. Close receipt times do not prove matching device sampling times. The difference is not verified loss. No change to energy accounting."
     },
     "monitoring_trial": {
       "help": "Mixed-generation reading trial: after a fresh reporter check, opt in from the existing STREAM Home Battery's Advanced Settings. Keep its paired 5000 Unit monitor; do not add another Home Battery. Only combined SOC, battery power and charging state change. Cumulative energy/history retain their original source and unverified combined scope. Unsupported installation flow tiles clear and battery controls are disabled. The trial checks identity every four minutes and uses cached paired telemetry. Turn the setting off to roll back without re-pairing.",

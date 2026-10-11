@@ -2,6 +2,38 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unreleased peer/source diagnostics follow-up — 11 October 2026
+
+Local work on `codex/mixed-generation-reporting-diagnostics`, following the
+[pasted report in reply 65](https://community.homey.app/t/157399/65) and
+[Homey overview screenshot in reply 66](https://community.homey.app/t/157399/66).
+The screenshot is not an EcoFlow combined-system screen; individual tile SOCs
+do not prove combined capacity, membership or controller ownership. No raw
+reports, device identities, contact details or screenshots are stored in Git.
+
+- Support schema 10 adds bounded, anonymous peer SOC/raw-power/PV values with
+  independent receipt ages and three-minute stale flags. Partial records do not
+  refresh absent fields; invalid/future data, foreign sources and out-of-order
+  overwrites cannot appear as fresh readings. Session reset clears the cache.
+- Peer power remains raw protocol data with unverified sign/scale and entity
+  scope. It is diagnostic-only: no power summation, SOC averaging, capacity
+  inference, capability remapping or accounting input.
+- Grid-meter and flow-derived grid power now have separate fixed source labels
+  and a receipt-aligned diagnostic comparison in EN/DE/NL settings. A difference
+  is not labelled battery loss or a verified common measurement boundary.
+- Readiness explicitly labels eligibility as activation-only. An active trial
+  is not failed merely because it is no longer eligible for activation.
+- A synthetic mixed-generation regression joins two original peers, original
+  zero readings, selected reporter SOC/power and disagreeing grid sources;
+  restart clears cached donor values until fresh evidence returns. Counter
+  continuity and blocked controls remain asserted.
+- Local tests: 533/533 passed; TypeScript build, lint, whitespace checks and
+  Homey validation at `verified` level passed. Mobile settings layout and JSON
+  download were checked. Exact-commit CI and physical acceptance remain pending.
+- No commit/push, version increment, merge, Test upload/publication or Community
+  reply was performed for this follow-up. Test remains v1.10.30 / Build 45.
+  Publish a new validated diagnostic build before asking for schema-10 captures.
+
 ## Latest Test release — v1.10.30 / Build 45, 11 October 2026
 
 Published to Test from `codex/mixed-generation-reporting-diagnostics`, following

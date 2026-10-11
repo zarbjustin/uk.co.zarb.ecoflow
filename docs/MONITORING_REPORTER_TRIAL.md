@@ -1,5 +1,45 @@
 # Linked 5000 monitoring reporter trial
 
+## Unreleased follow-up: peer fields and grid source clarification
+
+Support schema 10 retains SOC (integer/precise), raw peer battery power and PV
+total/string observations per anonymous peer index, with each field's own receipt
+age. Field freshness expires after three minutes independently of the existing
+topology-record freshness. Missing/delta fields never refresh older readings;
+bounded session-only caches reset on restart. Raw peer power sign/scale and
+physical entity scope remain unverified and no values enter Energy accounting.
+
+The settings summary distinguishes reported grid-meter watts from flow-derived
+grid watts. Positive is import and negative export for these two diagnostic
+fields. The comparison requires fresh receipts no more than 30 seconds apart;
+receipt alignment is not verified device-time alignment or scope equivalence.
+The difference must not be interpreted as loss. Activation eligibility is
+explicitly activation-only, not the health of an already active trial.
+
+This code is not in Build 45. After a separately approved new Test release, ask
+for one natural operating-state capture first (preferably an original STREAM
+unit supplying power), using the following sequence:
+
+1. Record the date, local time/timezone and which battery is supplying power.
+   Do not force a mode or change wiring to create a test state.
+2. In the EcoFlow app, capture the linked installation overview with combined
+   SOC/battery watts, solar/home/grid watts, and each battery detail showing
+   SOC/charge-discharge power. If individual power is unavailable, state that;
+   do not substitute Homey's app overview as an EcoFlow capture.
+3. Capture the existing Homey Home Battery detail screen (SOC, signed watts,
+   charged/discharged totals) as close in time as practical. Note any longer gap.
+4. In EcoFlow STREAM Series app settings, click Show integration support report
+   and then Download integration JSON. This regenerates the report from current
+   local caches; the download alone would only save the previous snapshot.
+5. Create Homey's separate app diagnostic report afterwards and record its ID.
+   Send the downloaded JSON, screenshots, capture time/state and app-log ID
+   directly via the forum/DM web page, not email. If files are rejected, paste
+   the JSON in a preformatted code block to preserve quotes and empty arrays.
+
+Charging/daytime-solar and restart/reconnect captures follow after review of the
+first set; a snapshot is not the 48–72-hour hardware soak. No counter source or
+controller migration is authorized by these captures.
+
 ## Working state
 
 Released to Test as v1.10.30 / Build 45 from

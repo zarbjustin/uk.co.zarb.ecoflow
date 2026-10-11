@@ -6,6 +6,7 @@ const { selectMonitoringReporter, monitoringTrialSnapshot } = require('../.homey
 const { readMonitoringState } = require('../.homeybuild/lib/streamMonitoringTrial');
 const { StreamReporterObservations } = require('../.homeybuild/lib/streamReporterEvidence');
 const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
+const { Es22TopologyTracker } = require('../.homeybuild/lib/streamTopology');
 const Module = require('node:module');
 
 class FakeDevice {
@@ -195,7 +196,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 9);
+  assert.equal(report.schemaVersion, 10);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });
@@ -790,6 +791,7 @@ test('readiness and session event history explain the trial without mutating the
   await h.enable();
   let snap = h.device.getMonitoringTrialDiagnostics();
   assert.equal(snap.status, 'active'); assert.equal(snap.readiness.eligible, false);
+  assert.equal(snap.readiness.eligibilityScope, 'activation_only');
   assert.ok(snap.timeline.events.some(event => event.event === 'trial_enabled'));
   assert.ok(!JSON.stringify(snap).match(/PRIVATE|SYNTHETIC/));
   await h.device.onSettingsChanged({ use_5000_reporter_trial: false }, ['use_5000_reporter_trial']);
@@ -797,5 +799,66 @@ test('readiness and session event history explain the trial without mutating the
   snap = h.device.getMonitoringTrialDiagnostics();
   assert.ok(snap.timeline.events.some(event => event.event === 'rollback_started'));
   assert.ok(snap.timeline.events.some(event => event.event === 'rollback_complete'));
+  await h.device.onTeardown();
+});
+
+test('mixed-generation zero legacy readings, two peers and disagreeing grid sources preserve trial boundaries across restart', async (t) => {
+  const h = await deviceHarness(t, { chargedWh: 100000, dischargedWh: 200000,
+    chargedRawWh: 1000, dischargedRawWh: 2000, countersAvailable: true });
+  let topology = new Es22TopologyTracker(targetSn);
+  let observations = new StreamReporterObservations();
+  const receive = () => {
+    const at = Date.now();
+    topology.observe({ socPct: 61, unitRecordCount: 3, unitsBySn: {
+      [oldSn]: { socPct: 61.2, batteryPowerRawW: -200 },
+      BK31SYNTHETIC: { socPct: 60.2, batteryPowerRawW: 0 },
+    } }, at);
+    observations.observe({ socPct: 61, battW: -372, homeW: 343,
+      batteryFlowEdges: { batteryToHomeW: 343, batteryToGridW: 29 },
+      gridImportPowerW: 0, gridExportPowerW: 29 }, targetSn, at);
+    observations.observe({ gridW: -5 }, targetSn, at);
+  };
+  h.monitor.getTopologyEvidence = () => topology.evidence();
+  h.monitor.getSystemReporterDiagnostics = () => observations.snapshot(Date.now());
+  h.monitor.getSystemFlowDiagnostics = () => observations.flowSnapshot(Date.now());
+  receive();
+  await h.legacy({ accuChgEnergy: 1000, accuDsgEnergy: 2000 });
+  await h.enable();
+  const report = createSupportSnapshot(h.homey);
+  const original = report.drivers.find(d => d.id === 'stream');
+  const donor = report.drivers.find(d => d.id === 'stream_5000_unit');
+  assert.equal(original.reporting[0].observations.measure_power.value, 0);
+  assert.equal(original.reporting[0].currentReadings.measure_power, -372);
+  assert.equal(original.reporting[0].currentReadings.measure_battery, 61);
+  for (const cap of ['measure_power.pv', 'measure_power.grid', 'measure_power.load']) {
+    assert.equal(original.reporting[0].currentReadings[cap], null);
+  }
+  assert.equal(donor.topology[0].freshPeerCount, 2);
+  assert.equal(donor.topology[0].peerVisibility[0].readings.batteryPowerRawW.value, -200);
+  assert.equal(donor.systemFlow[0].fields.gridMeterW.value, -5);
+  assert.equal(donor.systemFlow[0].fields.gridFlowNetW.value, -29);
+  assert.equal(donor.systemFlow[0].meterMinusFlowW, 24);
+  assert.equal(donor.systemFlow[0].accountingUsed, false);
+  assert.equal(original.monitoringTrial[0].status, 'active');
+  assert.equal(original.monitoringTrial[0].readiness.eligibilityScope, 'activation_only');
+  await h.legacy({ accuChgEnergy: 1100, accuDsgEnergy: 2100 });
+  assert.equal(h.device.getEnergyDiagnostics().chargedKWh, 100.1);
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200.1);
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200.1);
+  await assert.rejects(h.device.flowSetChargeLimit(80), /controls are disabled/);
+  assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE/));
+  await h.device.onTeardown();
+  topology = new Es22TopologyTracker(targetSn);
+  observations = new StreamReporterObservations();
+  await h.device.onReady();
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.values.measure_power, null, 'restart cannot restore cached donor data');
+  assert.equal(h.device.getAvailable(), false);
+  receive();
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.values.measure_power, -372);
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200.1);
+  assert.equal(h.device.getReadSn(), oldSn);
   await h.device.onTeardown();
 });
