@@ -240,7 +240,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 10,
+    schemaVersion: 11,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

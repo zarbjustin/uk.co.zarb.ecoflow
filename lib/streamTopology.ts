@@ -71,11 +71,23 @@ export class Es22TopologyTracker {
     this.addressSn = addressSn;
   }
 
-  observe(telemetry: Es22Telemetry, receivedAt: number): void {
+  observe(telemetry: Es22Telemetry, receivedAt: number, now = Date.now()): void {
     const address = serial(this.addressSn);
     const at = timestamp(receivedAt);
-    if (!address || at === null) return;
+    if (!address || at === null || !Number.isFinite(now) || now < 0) return;
     if (telemetry.sourceSn && serial(telemetry.sourceSn) !== address) return;
+    // A wall-clock rollback invalidates prior future receipts. Fail closed and rebuild
+    // from new observations rather than letting their maxima suppress valid updates.
+    if ((this.lastPeerRecordAt ?? 0) > now) {
+      this.peers.clear();
+      this.visibility.clear();
+      this.readings.clear();
+      this.lastPeerRecordAt = null;
+      this.maxReportedRecordCount = 0;
+      this.systemSocObserved = false;
+      this.truncated = false;
+    }
+    if (at > now) return;
     if (typeof telemetry.socPct === 'number' && Number.isFinite(telemetry.socPct)
       && telemetry.socPct >= 0 && telemetry.socPct <= 100) this.systemSocObserved = true;
     const count = telemetry.unitRecordCount;

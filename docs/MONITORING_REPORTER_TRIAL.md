@@ -1,5 +1,52 @@
 # Linked 5000 monitoring reporter trial
 
+## Unreleased diagnostic reliability increment (schema 11)
+
+Diagnostic-branch release preparation: commit/push, CI and a new Test release
+are authorized. The last verified Test v1.10.31 exports schema 10. Record the
+new version/build only after verification; do not merge mainline or change Live.
+
+Report requests time out safely with manual retry (15 seconds for the local
+snapshot; 180 seconds for the optional up-to-eight-device reporter check).
+Timed-out, duplicate or late callbacks cannot replace a newer snapshot.
+Copy/download remain unavailable after failure. A UI timeout does not cancel
+the server's read-only work; no automatic network retry is introduced.
+
+The displayed capture banner includes app version, UTC timestamp and elapsed
+snapshot age. Its ten-second UI timer is local-only; the downloaded JSON,
+capture-time receipt ages, field freshness and readiness are not silently
+updated. Invalid/future capture times are marked unknown/clock mismatch.
+
+After a backwards wall-clock jump, peer and system-observation caches discard
+future cached receipts before accepting new observations. Missing fields in a
+fresh partial packet remain unavailable; a delayed packet cannot cause a reset.
+Original accounting, history, controls and subscriptions are unchanged.
+
+`timeline.summary` is an anonymous session-only projection with fixed fields:
+
+- `activeSec`, `unavailableSec`, `unobservedSec`: observed monitoring-state time,
+  with healthy time capped at three minutes after the last successful check.
+  Unobserved time includes pre-trial/rollback periods and unchecked gaps; it is
+  not necessarily an outage. Identical successful checks renew this window
+  without growing the event tail.
+- `longestUnavailableSec`: longest continuous observed unavailable interval.
+- `longestObservedTelemetryUnavailableSec`: longest continuous interval whose
+  observed reason was missing/stale fields or an unavailable connection. This
+  starts when that state is observed, not at the exact last packet or hardware
+  sample, and excludes other causes such as changed identity.
+- `stateTransitions`: transitions into active/unavailable, including the initial
+  transition from unknown. `discardedEvents`: events evicted from the bounded
+  32-entry tail. These totals survive tail eviction, not app restart.
+- `clockResets`: backward-clock measurement resets detected this runtime.
+  Such a reset clears epoch durations/events; restart clears all session totals.
+
+The fixed scope is `session_observed_monitoring_state_not_hardware_acceptance`.
+The summary never verifies combined capacity, installation membership, physical
+power response or controller ownership. It is not a substitute for a 48–72-hour
+hardware soak. A deterministic 72-hour simulation and 100 repeated monitor
+sessions exercise failure/recovery, fixed memory/timer/subscription bounds,
+counter continuity and teardown; they do not constitute hardware acceptance.
+
 ## v1.10.31 follow-up: peer fields and grid source clarification
 
 Support schema 10 retains SOC (integer/precise), raw peer battery power and PV

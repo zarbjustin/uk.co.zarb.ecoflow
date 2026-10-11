@@ -2,6 +2,52 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Diagnostic reliability follow-up — release preparation
+
+Implemented on `codex/mixed-generation-reporting-diagnostics` while waiting for
+the time-matched evidence requested in [Community reply 67](https://community.homey.app/t/157399/67).
+Commit/push, exact-commit CI and a new Test publication are now authorized.
+The last verified Test is v1.10.31 / Build 46 with schema 10; this increment
+introduces support schema 11. Record the new tag/build only after verification.
+Mainline and Live remain outside the authorized release scope.
+
+- Settings report requests have a 15-second local-report deadline and a
+  180-second explicit reporter-check deadline (up to eight sequential bounded
+  checks). A timeout permits manual retry, clears copy/download, and rejects
+  late/duplicate callbacks. There is no automatic retry or server cancellation
+  claim. Page teardown cancels UI timers and invalidates pending callbacks.
+- EN/DE/NL capture metadata shows app version, UTC capture time and elapsed age.
+  A ten-second local UI ticker does not fetch telemetry or change the saved JSON.
+  Readiness, receipt ages and stale flags remain explicitly capture-time values.
+  Invalid/future capture timestamps show an unknown/clock-mismatch warning.
+- Peer and system/flow caches reject future receipts and discard future cached
+  observations after a backwards wall-clock jump. New partial packets cannot
+  revive old power or PV fields. Delayed packets on an unchanged clock remain
+  out-of-order packets, not a reset. This does not affect energy accounting.
+- Anonymous session summaries retain active/unavailable/unobserved durations,
+  longest observed unavailable/stale-or-disconnected intervals, state transitions,
+  discarded-event counts and clock-reset counts even after the 32-event tail
+  rolls over. Repeated identical checks renew observation without adding events.
+  Healthy time is bounded by the three-minute freshness window; unchecked gaps
+  are not counted as healthy. Backwards clock jumps start a new measurement epoch.
+  These are observed software states, not packet-level gap measurements or proof
+  of hardware/controller/whole-installation acceptance.
+- A deterministic 72-hour mixed-generation simulation exercises 4,320 steps,
+  outages/recovery, partial/delayed packets, identity changes, six restarts and
+  rollback. Original counters/address stay unchanged; controls remain blocked.
+  Another test checks timer/subscription cleanup over 100 physical-monitor
+  sessions. Existing duplicate/overlap and write-failure regressions remain.
+- Local validation: 543/543 tests, lint, TypeScript, `git diff --check` and
+  Homey CLI 4.5.3 validation at `verified` level passed. The mobile capture-age
+  display and unchanged JSON download/no hidden API polling were checked in
+  Playwright. No exact-commit CI or new hardware soak has been run.
+
+Next: review Robert's original v1.10.31 JSON, EcoFlow combined/individual
+screenshots and separate app diagnostic ID together before changing combined
+capacity/grouping, energy-counter sources or 5000 controls. Preserve any existing
+v1.10.31 capture and its timestamps; identify the installed version for subsequent
+captures. Publication must follow passing exact-release CI and remain Test-only.
+
 ## Latest Test release — v1.10.31 / Build 46, 11 October 2026
 
 Released from `codex/mixed-generation-reporting-diagnostics`, following the
@@ -44,9 +90,11 @@ reports, device identities, contact details or screenshots are stored in Git.
 - Local tests: 533/533 passed; TypeScript build, lint, whitespace checks and
   Homey validation at `verified` level passed. Mobile settings layout and JSON
   download were checked. Physical acceptance remains pending.
-- Next: review the reply draft before posting. Ask for one time-matched EcoFlow
-  combined/individual battery capture, Homey Home Battery detail, refreshed
-  schema-10 integration JSON and a separate app diagnostic ID from v1.10.31.
+- The capture request was subsequently approved, posted and reopened for
+  verification as [Community reply 67](https://community.homey.app/t/157399/67).
+  Await one time-matched EcoFlow combined/individual battery capture, Homey Home
+  Battery detail, refreshed schema-10 JSON and a separate app diagnostic ID from
+  v1.10.31. Do not ask for these local unreleased schema-11 fields yet.
 
 ## Previous Test release — v1.10.30 / Build 45, 11 October 2026
 

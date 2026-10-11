@@ -75,7 +75,20 @@
     }
   }
 
-  const api = { describe, render, download };
+  function renderCapture(element, report, translate, now) {
+    element.textContent = '';
+    if (!report) return;
+    const date = typeof report.capturedAt === 'string' ? new Date(report.capturedAt) : null;
+    const captured = date?.getTime();
+    const valid = Number.isFinite(captured) && Number.isFinite(now) && captured <= now;
+    const version = typeof report.appVersion === 'string' && /^\d+\.\d+\.\d+$/.test(report.appVersion)
+      ? report.appVersion : translate('capture_unknown');
+    element.textContent = `${translate('capture_version')}: ${version}. ${translate('capture_time')}: ${valid
+      ? date.toISOString() : translate('capture_unknown')}. ${translate('capture_elapsed')}: ${valid
+      ? `${Math.floor((now - captured) / 1000)} s` : translate('capture_unknown')}. ${translate('capture_scope')}`;
+  }
+
+  const api = { describe, render, download, renderCapture };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EcoFlowReporterStatus = api;
 }(typeof window === 'undefined' ? {} : window));

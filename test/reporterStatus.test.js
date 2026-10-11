@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { describe, render, download } = require('../settings/reporter-status');
+const { describe, render, download, renderCapture } = require('../settings/reporter-status');
 const { ReporterTimeline, timelineSnapshot } = require('../.homeybuild/lib/reporterTimeline');
 
 test('readiness explains ready, active, rollback and blockers without guessing', () => {
@@ -79,6 +79,79 @@ test('session timeline is bounded, fixed vocabulary, resets and rejects private/
   assert.equal(timeline.snapshot(3999).sessionUptimeSec, null);
 });
 
+test('capture metadata distinguishes capture freshness from now without changing the report', () => {
+  const element = {}; const at = Date.parse('2026-10-11T01:02:03.004Z');
+  const report = { capturedAt: new Date(at).toISOString(), appVersion: '1.10.31',
+    fields: { value: 0, ageSec: 0, stale: false } };
+  const before = JSON.stringify(report);
+  const translate = key => require('../locales/en.json').settings.reporter[key];
+  renderCapture(element, report, translate, at + 400000);
+  assert.match(element.textContent, /1.10.31/);
+  assert.match(element.textContent, /2026-10-11T01:02:03.004Z/);
+  assert.match(element.textContent, /Snapshot age now: 400 s/);
+  assert.match(element.textContent, /capture time, not the current connection/);
+  assert.equal(JSON.stringify(report), before);
+  for (const capturedAt of ['PRIVATE', new Date(at + 1000).toISOString()]) {
+    renderCapture(element, { appVersion: 'PRIVATE', capturedAt }, translate, at);
+    assert.match(element.textContent, /Unknown or clock mismatch/);
+    assert.doesNotMatch(element.textContent, /PRIVATE/);
+  }
+  renderCapture(element, null, translate, at);
+  assert.equal(element.textContent, '');
+});
+
+test('bounded summary survives event eviction, counts only observed states and stops at rollback', () => {
+  const timeline = new ReporterTimeline(); timeline.reset(1000);
+  timeline.record('trial_enabled', 2000);
+  timeline.record('reporter_state', 3000, 'active');
+  timeline.record('reporter_state', 13000, 'fields_missing_or_stale');
+  timeline.record('reporter_state', 15000, 'reporter_connection_unavailable');
+  timeline.record('reporter_state', 19000, 'selected_reporter_changed');
+  timeline.record('reporter_state', 23000, 'active');
+  for (let i = 0; i < 100; i++) timeline.record('lookup_failed', 24000 + i);
+  timeline.record('rollback_started', 33000);
+  const snap = timeline.snapshot(99000);
+  assert.equal(snap.events.length, 32);
+  assert.equal(snap.summary.activeSec, 20);
+  assert.equal(snap.summary.unavailableSec, 10);
+  assert.equal(snap.summary.longestUnavailableSec, 10);
+  assert.equal(snap.summary.longestObservedTelemetryUnavailableSec, 6);
+  assert.equal(snap.summary.stateTransitions, 3);
+  assert.equal(snap.summary.discardedEvents, 76);
+  assert.equal(timeline.snapshot(199000).summary.activeSec, 20, 'no growth outside the trial');
+  const copy = timeline.snapshot(99000); copy.summary.activeSec = 999;
+  assert.equal(timeline.snapshot(99000).summary.activeSec, 20);
+  timeline.record('trial_enabled', 2000);
+  assert.equal(timeline.snapshot(2000).summary.clockResets, 1);
+  assert.equal(timeline.snapshot(2000).summary.activeSec, 0);
+  timeline.record('reporter_state', 3000, 'active');
+  assert.equal(timeline.snapshot(4000).summary.activeSec, 1);
+  timeline.reset(5000);
+  assert.equal(timeline.snapshot(5000).summary.discardedEvents, 0);
+});
+
+test('summary projection rejects forged durations and private fields', () => {
+  const snap = timelineSnapshot({ startedAt: 1000, summary: { activeSec: 9000, unavailableSec: -1,
+    longestUnavailableSec: NaN, longestObservedTelemetryUnavailableSec: Infinity,
+    stateTransitions: 'PRIVATE', discardedEvents: 12, password: 'PRIVATE' } }, 5000);
+  assert.equal(snap.summary.activeSec, null);
+  assert.equal(snap.summary.unavailableSec, null);
+  assert.equal(snap.summary.discardedEvents, 12);
+  assert.doesNotMatch(JSON.stringify(snap), /PRIVATE|password/);
+});
+
+test('long unchecked intervals cannot inflate healthy time and repeated checks do not grow events', () => {
+  const timeline = new ReporterTimeline(); timeline.reset(1000);
+  timeline.record('reporter_state', 1000, 'active');
+  assert.equal(timeline.snapshot(10000000).summary.activeSec, 180);
+  for (let i = 1; i <= 1000; i++) timeline.record('reporter_state', 1000 + i * 15000, 'active');
+  assert.equal(timeline.snapshot(15001000).events.length, 2);
+  assert.equal(timeline.snapshot(15001000).summary.activeSec, 15000);
+  timeline.record('reporter_state', 25001000, 'fields_missing_or_stale');
+  assert.equal(timeline.snapshot(25001000).summary.activeSec, 15180);
+  assert.equal(timeline.snapshot(25001000).summary.unavailableSec, 0);
+});
+
 test('settings readiness and JSON download work in the browser without hidden polling', async () => {
   const { chromium } = require('playwright');
   const { pathToFileURL } = require('node:url');
@@ -88,12 +161,13 @@ test('settings readiness and JSON download work in the browser without hidden po
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
     await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
-    const report = { capturedAt: '2026-10-11T01:02:03.004Z', schemaVersion: 10,
+    const report = { capturedAt: '2026-10-11T01:02:03.004Z', appVersion: '1.10.31', schemaVersion: 11,
       drivers: [{ id: 'stream', monitoringTrial: [{ enabled: false, readiness: { eligible: true, status: 'active' } }] },
         { id: 'stream_5000_unit', systemFlow: [{ fields: {
           gridMeterW: { value: -5, ageSec: 0, stale: false },
           gridFlowNetW: { value: -29, ageSec: 1, stale: false },
         } }] }] };
+    await page.clock.install({ time: new Date(report.capturedAt) });
     await page.evaluate(({ report, translations }) => {
       window.calls = 0;
       window.onHomeyReady({ ready() {}, get(_key, callback) { callback(null, null); },
@@ -102,6 +176,10 @@ test('settings readiness and JSON download work in the browser without hidden po
     }, { report, translations: require('../locales/en.json') });
     assert.equal(await page.evaluate(() => window.calls), 0);
     await page.locator('#supportSnapshot').click();
+    assert.match(await page.locator('#supportCaptureStatus').innerText(), /1.10.31/);
+    await page.clock.runFor(20000);
+    assert.match(await page.locator('#supportCaptureStatus').innerText(), /Snapshot age now: 20 s/);
+    assert.equal(await page.evaluate(() => window.calls), 1, 'age ticker makes no API requests');
     assert.match(await page.locator('#reporterStatus').innerText(), /Ready for the optional monitoring trial/);
     const downloadEvent = page.waitForEvent('download');
     await page.locator('#downloadSupportSnapshot').click();
@@ -114,5 +192,6 @@ test('settings readiness and JSON download work in the browser without hidden po
     await page.setViewportSize({ width: 390, height: 900 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
     await page.locator('#reporterStatus').screenshot({ path: '/tmp/ecoflow-reporter-source-labels.png' });
+    await page.locator('#supportCaptureStatus').screenshot({ path: '/tmp/ecoflow-diagnostic-capture-age.png' });
   } finally { await browser.close(); }
 });

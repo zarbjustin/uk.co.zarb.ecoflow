@@ -115,6 +115,7 @@
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
+  <p id="supportCaptureStatus" class="help" role="status" aria-live="polite"></p>
   <p class="help" id="monitoringTrialHelp"></p>
   <h2 id="reporterStatusTitle" style="font-size:17px;">Battery reporter readiness</h2>
   <div id="reporterStatus" role="status" aria-live="polite"></div>
@@ -157,6 +158,9 @@
       var reportText = '';
       var displayedReport = null;
       var reportBusy = false;
+      var reportOperation = 0;
+      var reportDeadline = null;
+      var captureTimer = null;
       var showButton = document.getElementById('supportSnapshot');
       var checkButton = document.getElementById('refreshReporterDiagnostics');
       var downloadButton = document.getElementById('downloadSupportSnapshot');
@@ -180,9 +184,33 @@
         window.EcoFlowMeterStatus.render(document.getElementById('meterStatus'), report, function (key) {
           return Homey.__('settings.meter.' + key);
         });
+        renderCaptureStatus();
       }
+      function renderCaptureStatus() {
+        window.EcoFlowReporterStatus.renderCapture(document.getElementById('supportCaptureStatus'), displayedReport,
+          function (key) { return Homey.__('settings.reporter.' + key); }, Date.now());
+      }
+      // UI-only elapsed age; never refresh telemetry or alter the downloadable snapshot.
+      function startCaptureTimer() {
+        if (captureTimer === null) captureTimer = setInterval(renderCaptureStatus, 10000);
+      }
+      startCaptureTimer();
+      window.addEventListener('pagehide', function () {
+        reportOperation++;
+        clearTimeout(reportDeadline);
+        clearInterval(captureTimer);
+        captureTimer = null;
+        reportBusy = false;
+        showButton.disabled = checkButton.disabled = false;
+        reportText = '';
+        copyButton.disabled = true;
+        document.getElementById('supportSnapshotResult').textContent = '';
+        renderMeterStatus(null);
+      });
+      window.addEventListener('pageshow', function () { startCaptureTimer(); renderCaptureStatus(); });
       renderMeterStatus(null);
       downloadButton.addEventListener('click', function () {
+        renderCaptureStatus();
         if (!displayedReport) return;
         try {
           window.EcoFlowReporterStatus.download(displayedReport, document, URL, Blob);
@@ -190,6 +218,7 @@
         } catch (err) { copyStatus.textContent = Homey.__('settings.reporter.download_failed'); }
       });
       copyButton.addEventListener('click', async function () {
+        renderCaptureStatus();
         if (!reportText) return;
         try {
           await navigator.clipboard.writeText(reportText);
@@ -199,45 +228,41 @@
         }
       });
 
-      document.getElementById('supportSnapshot').addEventListener('click', function () {
+      function requestReport(remoteCheck) {
         if (reportBusy) return;
         reportBusy = true;
+        var operation = ++reportOperation;
         var output = document.getElementById('supportSnapshotResult');
         showButton.disabled = checkButton.disabled = true;
         reportText = '';
         copyButton.disabled = true;
         copyStatus.textContent = '';
-        output.textContent = 'Reading local diagnostics...';
+        output.textContent = remoteCheck ? 'Checking reporter resolution; no commands are sent...' : 'Reading local diagnostics...';
         renderMeterStatus(null);
-        Homey.api('GET', '/support-snapshot', null, function (err, report) {
+        function finish(err, report, timedOut) {
+          // A late/duplicate callback cannot replace a newer result or re-enable busy buttons.
+          if (operation !== reportOperation) return;
+          reportOperation++;
+          clearTimeout(reportDeadline);
+          reportDeadline = null;
           reportBusy = false;
           showButton.disabled = checkButton.disabled = false;
-          reportText = err ? '' : JSON.stringify(report, null, 2);
-          output.textContent = err ? 'Could not read local diagnostics. Please try again.' : reportText;
+          try { reportText = err || !report || typeof report !== 'object' ? '' : JSON.stringify(report, null, 2); }
+          catch (serializationError) { reportText = ''; }
+          output.textContent = timedOut ? Homey.__('settings.reporter.request_timeout') : reportText
+            || (remoteCheck ? 'Could not check the reporter. Use the local support report instead.' : 'Could not read local diagnostics. Please try again.');
           copyButton.disabled = !reportText;
-          renderMeterStatus(err ? null : report);
-        });
-      });
-
-      document.getElementById('refreshReporterDiagnostics').addEventListener('click', function () {
-        if (reportBusy) return;
-        reportBusy = true;
-        showButton.disabled = checkButton.disabled = true;
-        copyButton.disabled = true;
-        reportText = '';
-        copyStatus.textContent = '';
-        document.getElementById('supportSnapshotResult').textContent = 'Checking reporter resolution; no commands are sent...';
-        renderMeterStatus(null);
-        Homey.api('POST', '/reporter-diagnostics', {}, function (err, report) {
-          reportBusy = false;
-          showButton.disabled = checkButton.disabled = false;
-          reportText = err ? '' : JSON.stringify(report, null, 2);
-          document.getElementById('supportSnapshotResult').textContent = err
-            ? 'Could not check the reporter. Use the local support report instead.' : reportText;
-          copyButton.disabled = !reportText;
-          renderMeterStatus(err ? null : report);
-        });
-      });
+          renderMeterStatus(reportText ? report : null);
+        }
+        // Longer than the server's bounded reporter lookup. Timeout does not cancel server work.
+        reportDeadline = setTimeout(function () { finish(true, null, true); }, remoteCheck ? 180000 : 15000);
+        try {
+          Homey.api(remoteCheck ? 'POST' : 'GET', remoteCheck ? '/reporter-diagnostics' : '/support-snapshot',
+            remoteCheck ? {} : null, function (err, report) { finish(err, report, false); });
+        } catch (apiError) { finish(true, null, false); }
+      }
+      showButton.addEventListener('click', function () { requestReport(false); });
+      checkButton.addEventListener('click', function () { requestReport(true); });
 
       function saveSetting(Homey, key, value) {
         return new Promise(function (resolve, reject) {

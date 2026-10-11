@@ -17,8 +17,15 @@ function loadSettingsScript() {
   const source = blocks.find((b) => b.includes('onHomeyReady'));
   assert.ok(source, 'settings/index.html has no onHomeyReady script');
   const context = vm.createContext({
-    console, setTimeout, Promise, document: fakeDocument(),
+    console, Promise, document: fakeDocument(),
   });
+  const timers = new Map(); let next = 0;
+  context.timers = timers;
+  context.setTimeout = (fn, ms) => { timers.set(++next, { fn, ms, interval: false }); return next; };
+  context.setInterval = (fn, ms) => { timers.set(++next, { fn, ms, interval: true }); return next; };
+  context.clearTimeout = context.clearInterval = id => timers.delete(id);
+  context.events = {};
+  context.addEventListener = (event, fn) => { context.events[event] = fn; };
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'meter-status.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'reporter-status.js'), 'utf8'), context);
@@ -192,6 +199,53 @@ test('report refreshes cannot overlap or restore an older snapshot', () => {
   assert.equal(check.disabled, false);
   assert.equal(download.disabled, true);
   assert.doesNotMatch(context.document.getElementById('supportSnapshotResult').textContent, /PRIVATE/);
+});
+
+test('missing callbacks time out, allow manual retry, and reject late/duplicate callbacks', () => {
+  for (const [button, deadline] of [['supportSnapshot', 15000], ['refreshReporterDiagnostics', 180000]]) {
+    const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+    homey.api = (_method, _url, _body, cb) => calls.push(cb);
+    context.onHomeyReady(homey);
+    const show = context.document.getElementById(button);
+    const output = context.document.getElementById('supportSnapshotResult');
+    show.click();
+    const [id, timer] = [...context.timers].find(([, entry]) => !entry.interval);
+    assert.equal(timer.ms, deadline);
+    timer.fn();
+    assert.equal(context.timers.has(id), false);
+    assert.equal(show.disabled, false);
+    assert.match(output.textContent, /timed out/);
+    assert.equal(calls.length, 1, 'no automatic network retry');
+    assert.equal(context.document.getElementById('downloadSupportSnapshot').disabled, true);
+    show.click();
+    calls[0](null, { schemaVersion: 999 });
+    assert.equal(show.disabled, true, 'old callback cannot unlock the new request');
+    calls[1](null, { schemaVersion: 11 });
+    calls[0](new Error('PRIVATE'));
+    calls[1](null, { schemaVersion: 999 });
+    assert.equal(JSON.parse(output.textContent).schemaVersion, 11);
+    assert.equal([...context.timers.values()].filter(entry => !entry.interval).length, 0);
+    context.events.pagehide();
+    assert.equal(context.timers.size, 0);
+    context.events.pageshow();
+    context.events.pageshow();
+    assert.equal(context.timers.size, 1, 'only one UI age timer after restore');
+  }
+});
+
+test('synchronous API errors and page teardown fail safely without resurrecting old results', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey();
+  homey.api = () => { throw new Error('PRIVATE'); };
+  context.onHomeyReady(homey);
+  const show = context.document.getElementById('supportSnapshot');
+  show.click();
+  assert.equal(show.disabled, false);
+  assert.doesNotMatch(context.document.getElementById('supportSnapshotResult').textContent, /PRIVATE/);
+  let callback;
+  homey.api = (_method, _url, _body, cb) => { callback = cb; };
+  show.click(); context.events.pagehide(); callback(null, { schemaVersion: 999 });
+  assert.equal(context.document.getElementById('downloadSupportSnapshot').disabled, true);
+  assert.equal(context.timers.size, 0);
 });
 
 test('a failing unset is reported instead of a false success', async () => {

@@ -174,7 +174,6 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         values: { measure_battery: null, measure_power: null, battery_charging_state: null },
       };
     const boundary = selected.status !== this.monitoringStatus;
-    if (boundary) this.monitoringTimeline.record('reporter_state', Date.now(), selected.status);
     if (boundary || selected.status !== 'active') this.resetMonitoringTriggers();
     this.monitoringStatus = selected.status;
     this.monitoringCandidate = selected.candidateDevice;
@@ -208,6 +207,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
     // A missing/stale reporter is unavailable, not an idle or zero battery.
     await super.setOnlineState(selected.status === 'active', this.monitoringMessage('unavailable'));
+    this.monitoringTimeline.record('reporter_state', Date.now(), selected.status);
     if (selected.status === 'active') {
       this.fireTriggers(Object.fromEntries(
         Object.entries(selected.values).filter(([, v]) => v !== null),

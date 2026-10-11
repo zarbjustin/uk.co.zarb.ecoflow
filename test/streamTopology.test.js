@@ -168,6 +168,24 @@ test('tracker has bounded memory and resets at a new runtime session', () => {
   assert.equal(tracker.evidence().peers.length, MAX_OBSERVED_PEERS, 'callers cannot mutate the tracker');
 });
 
+test('future receipts cannot poison peer maxima and clock rollback rebuilds all field ages', () => {
+  const tracker = new Es22TopologyTracker(ES);
+  tracker.observe({ unitRecordCount: 999, unitsBySn: { [BK]: { socPct: 90 } } }, 10000, 1000);
+  assert.equal(tracker.evidence().peers.length, 0);
+  assert.equal(tracker.evidence().maxReportedRecordCount, 0);
+  tracker.observe({ unitRecordCount: 2, unitsBySn: { [BK]: { socPct: 60, batteryPowerRawW: -123 } } }, 5000, 5000);
+  tracker.observe({ unitsBySn: { [BK]: { socPct: 61 } } }, 2000, 2000);
+  const peer = streamTopologySnapshot(tracker.evidence(), 2000).peerVisibility[0];
+  assert.equal(peer.readings.socPct.value, 61);
+  assert.equal(peer.readings.socPct.ageSec, 0);
+  assert.equal(peer.readings.batteryPowerRawW, undefined, 'old future power is not revived by a partial packet');
+  assert.equal(tracker.evidence().maxReportedRecordCount, 0, 'old epoch topology count is discarded');
+  tracker.observe({ unitsBySn: { [BK]: { batteryPowerRawW: 0 } } }, 2001, 2001);
+  assert.equal(streamTopologySnapshot(tracker.evidence(), 2001).peerVisibility[0].readings.batteryPowerRawW.value, 0);
+  tracker.observe({ unitsBySn: { [BK]: { socPct: 10 } } }, 1000, 2001);
+  assert.equal(tracker.evidence().peers[0].readings.socPct.value, 61, 'a delayed packet is not a clock rollback');
+});
+
 test('untrusted diagnostic getter is re-projected, bounded and exceptions stay private', () => {
   assert.equal(readStreamTopologyEvidence({ getTopologyEvidence() { throw new Error(BK); } }), null);
   assert.equal(readStreamTopologyEvidence({ getTopologyEvidence: () => ({ source: 'account_list', addressSn: ES }) }), null);

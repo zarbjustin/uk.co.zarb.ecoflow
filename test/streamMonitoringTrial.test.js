@@ -196,7 +196,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 10);
+  assert.equal(report.schemaVersion, 11);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });
@@ -861,4 +861,67 @@ test('mixed-generation zero legacy readings, two peers and disagreeing grid sour
   assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200.1);
   assert.equal(h.device.getReadSn(), oldSn);
   await h.device.onTeardown();
+});
+
+test('72-hour deterministic mixed-generation soak stays bounded across outages, deltas, identity changes and restarts', async (t) => {
+  const h = await deviceHarness(t, { chargedWh: 100000, dischargedWh: 200000,
+    chargedRawWh: 1000, dischargedRawWh: 2000, countersAvailable: true });
+  let topology = new Es22TopologyTracker(targetSn);
+  let observations = new StreamReporterObservations();
+  let connected = true; let identity = 'PRIVATE_HOMEY_ID';
+  h.monitor.getId = () => identity;
+  h.monitor.getConnectionDiagnostics = () => ({ subscriptionState: connected ? 'active' : 'stopped' });
+  h.monitor.getTopologyEvidence = () => topology.evidence();
+  h.monitor.getSystemReporterDiagnostics = () => observations.snapshot(Date.now());
+  const receive = (partial = false) => {
+    const at = Date.now();
+    topology.observe({ unitsBySn: { [oldSn]: { socPct: 61 }, BK31SYNTHETIC: { batteryPowerRawW: 0 } } }, at);
+    observations.observe(partial ? { socPct: 61 } : { socPct: 61, battW: -372 }, targetSn, at);
+    if (!partial) observations.observe({ socPct: 99, battW: 999 }, targetSn, at - 5000); // Delayed duplicate cannot overwrite.
+  };
+  receive(); await h.legacy({ accuChgEnergy: 1000, accuDsgEnergy: 2000 }); await h.enable();
+  const timerLimit = h.device.timers.size;
+  let unavailable = 0; let active = 0;
+  for (let minute = 1; minute <= 72 * 60; minute++) {
+    h.setTime(now + minute * 60000);
+    const phase = minute % 60;
+    connected = phase >= 12;
+    identity = phase === 30 ? 'CHANGED_PRIVATE_ID' : 'PRIVATE_HOMEY_ID';
+    if (connected) receive(phase < 15);
+    // No trial power may enter these native original-address counters.
+    await h.legacy({ accuChgEnergy: 1000, accuDsgEnergy: 2000 });
+    await h.device.refreshMonitoringTrial();
+    const diagnostics = h.device.getMonitoringTrialDiagnostics();
+    assert.ok(diagnostics.timeline.events.length <= 32);
+    assert.ok(h.device.timers.size <= timerLimit, 'no accumulating monitoring/deadline timers');
+    assert.ok(topology.evidence().peers.length <= 2);
+    if (connected) assert.equal(topology.evidence().peers.length, 2);
+    assert.equal(h.device.getReadSn(), oldSn);
+    assert.equal(h.device.getEnergyDiagnostics().chargedKWh, 100);
+    assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200);
+    if (diagnostics.status === 'active') {
+      active++; assert.equal(h.device.values.measure_power, -372);
+    } else {
+      unavailable++; assert.equal(h.device.getAvailable(), false);
+    }
+    if (!connected) assert.notEqual(diagnostics.status, 'active');
+    if (phase === 30) assert.equal(diagnostics.status, 'selected_reporter_changed');
+    if (minute % 720 === 0) {
+      await h.device.onTeardown(); assert.equal(h.device.timers.size, 0);
+      topology = new Es22TopologyTracker(targetSn); observations = new StreamReporterObservations();
+      await h.device.onReady(); await h.device.refreshMonitoringTrial();
+      assert.equal(h.device.getAvailable(), false);
+      assert.equal(h.device.values.measure_power, null);
+    }
+  }
+  assert.ok(active > 2000 && unavailable > 500, 'exercise repeated recovery and outages');
+  assert.ok(h.reads() <= 1100, 'bounded identity checks, not a lookup every minute');
+  await assert.rejects(h.device.flowSetChargeLimit(80), /controls are disabled/);
+  h.setTime(now + (72 * 60 + 1) * 60000);
+  await h.device.onSettingsChanged({ use_5000_reporter_trial: false }, ['use_5000_reporter_trial']);
+  await h.legacy({ cmsBattSoc: 62, powGetBpCms: -100, accuChgEnergy: 1000, accuDsgEnergy: 2000 });
+  assert.equal(h.device.values.measure_battery, 62);
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200);
+  assert.equal(h.device.getMonitoringTrialDiagnostics().rollbackAwaitingFreshOriginal, false);
+  await h.device.onTeardown(); assert.equal(h.device.timers.size, 0);
 });

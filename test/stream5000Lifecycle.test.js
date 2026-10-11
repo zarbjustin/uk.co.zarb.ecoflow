@@ -76,26 +76,42 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a) 
   Object.assign(device.store, savedStore);
   let handler;
   let nextTimer = 0;
+  const timers = new Set();
+  const subscriptions = new Set();
   device.homey = {
     __: (key) => key,
     app: {
-      subscribeAppRealtime: async (_sn, callback) => { handler = callback; return true; },
-      unsubscribeAppRealtime: () => {},
+      subscribeAppRealtime: async (address, callback) => { subscriptions.add(address); handler = callback; return true; },
+      unsubscribeAppRealtime: address => subscriptions.delete(address),
     },
-    setInterval: () => ++nextTimer,
-    clearInterval: () => {},
-    setTimeout: () => ++nextTimer,
-    clearTimeout: () => {},
+    setInterval: () => { timers.add(++nextTimer); return nextTimer; },
+    clearInterval: id => timers.delete(id),
+    setTimeout: () => { timers.add(++nextTimer); return nextTimer; },
+    clearTimeout: id => timers.delete(id),
   };
   await device.onInit();
   return {
     device,
+    resources: () => ({ timers: timers.size, subscriptions: subscriptions.size }),
     emit: async (payload) => {
       handler(payload, `/app/device/property/${sn}`);
       await device.applyChain;
     },
   };
 }
+
+test('repeated physical monitor sessions release every timer and subscription', async () => {
+  for (let session = 0; session < 100; session++) {
+    const h = await harness(classes.Stream5000UnitDevice);
+    assert.equal(h.resources().subscriptions, 1);
+    assert.ok(h.resources().timers > 0 && h.resources().timers <= 4);
+    assert.deepEqual(h.device.getTopologyEvidence().peers, []);
+    await h.device.onUninit();
+    assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+    await h.device.onUninit();
+    assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+  }
+});
 
 test('socket discharge advances only aggregate energy and preserves totals across restart', async (t) => {
   const { decodeFrameHeaders } = require('../.homeybuild/lib/streamAc5000Protocol');

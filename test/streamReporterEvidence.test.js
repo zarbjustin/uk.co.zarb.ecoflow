@@ -24,6 +24,22 @@ test('system-only receipts preserve genuine zero, reject unit fallback and age f
   assert.deepEqual(new StreamReporterObservations().snapshot(1000000), {});
 });
 
+test('wall-clock rollback clears future system/flow receipts and accepts fresh partial observations', (t) => {
+  let clock = 5000; t.mock.method(Date, 'now', () => clock);
+  const tracker = new StreamReporterObservations();
+  tracker.observe({ socPct: 60, battW: -123, gridW: -5 }, 'ES22SYNTHETIC', clock);
+  clock = 2000;
+  tracker.observe({ socPct: 61 }, 'ES22SYNTHETIC', clock);
+  assert.equal(tracker.snapshot(clock).socPct.value, 61);
+  assert.equal(tracker.snapshot(clock).batteryW, undefined);
+  assert.deepEqual(tracker.flowSnapshot(clock).fields, {});
+  tracker.observe({ battW: 0, gridW: 0 }, 'ES22SYNTHETIC', clock);
+  assert.equal(tracker.snapshot(clock).batteryW.value, 0);
+  assert.equal(tracker.flowSnapshot(clock).fields.gridMeterW.value, 0);
+  tracker.observe({ socPct: 10 }, 'ES22SYNTHETIC', 1000);
+  assert.equal(tracker.snapshot(clock).socPct.value, 61);
+});
+
 test('fixed projection drops private fields and malformed values; API match is not scope proof', () => {
   const system = systemReporterSnapshot({ socPct: { value: 10, ageSec: 1, stale: false, sn: 'PRIVATE' },
     batteryW: { value: NaN, ageSec: 1 }, PRIVATE: { value: 123 } });

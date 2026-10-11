@@ -45,8 +45,14 @@ export class StreamReporterObservations {
 
   observe(input: { socPct?: number; battW?: number; sourceSn?: string; batteryFlowEdges?: Record<string, number>;
     homeW?: number; gridW?: number; gridImportPowerW?: number; gridExportPowerW?: number }, address: string, at: number): void {
-    if (!Number.isFinite(at) || at <= 0 || at > Date.now()) return;
+    const now = Date.now();
+    if (!Number.isFinite(at) || at <= 0) return;
     if (input.sourceSn && input.sourceSn.toUpperCase() !== address.toUpperCase()) return;
+    if ([...Object.values(this.values), ...Object.values(this.flowValues)].some((v) => v.receivedAt > now)) {
+      this.values = {};
+      this.flowValues = {};
+    }
+    if (at > now) return;
     const flowInput: Record<string, number | undefined> = {
       ...input.batteryFlowEdges,
       homeW: input.homeW,
