@@ -196,5 +196,8 @@
   },
   "1.10.29": {
     "en": "Add read-only mixed-generation reporter comparisons with exact identity correlation, per-field freshness, UTC support report timestamps and safer lookup lifecycle handling. Homey Energy accounting and controls remain unchanged."
+  },
+  "1.10.30": {
+    "en": "Adds an optional linked 5000 monitoring reporter trial with fresh-source checks, rollback safeguards, clearer reading scope, readiness guidance and downloadable integration reports. Default-off; controls remain blocked during the trial and original energy accounting/history are unchanged."
   }
 }
