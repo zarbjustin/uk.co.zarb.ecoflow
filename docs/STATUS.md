@@ -2,12 +2,24 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Unreleased working increment — guarded monitoring reporter trial
+## Latest Test release — v1.10.30 / Build 45, 11 October 2026
 
-Local changes only on `codex/mixed-generation-reporting-diagnostics`, following
-Robert's close-time follow-up capture in reply 59. No commit/push, version bump,
-upload, main merge, installation, certification or hardware acceptance for this
-increment. Latest Test release below remains the released baseline.
+Published to Test from `codex/mixed-generation-reporting-diagnostics`, following
+Robert's close-time follow-up capture in reply 59. The portal confirmed "Your app
+is currently available for testing" and the refreshed Test store showed v1.10.30.
+Mainline `master` and Live remain unchanged (v1.10.3 / Build 18). No certification,
+hub installation or hardware acceptance was performed. This is a default-off
+monitoring trial, not an automatic migration or a validated whole-system repair.
+
+- Implementation commit: `63a7304a1c7c9bbe2b03ef394f4559e6de303b21`;
+  exact release/tag: `16a006728ac2d6af8d66b1ec622a427455f7802b` / `v1.10.30`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159264875),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159378948),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159459071)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159612115)
+  succeeded. CI passed 529 tests, lint, dependency audit and verified Homey validation.
+- [Build 45](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/45)
+  is published to [Test](https://homey.app/a/uk.co.zarb.ecoflow/test/).
 
 - Default-off per-original-Home-Battery opt-in reuses an exact, fresh, paired
   ES21/ES22 reporter for system SOC, derived battery watts and charging state.
@@ -40,13 +52,13 @@ increment. Latest Test release below remains the released baseline.
   availability or threshold triggers can recover. Widget freshness is captured
   once per response. No additional widget polling or subscriptions.
 - Local checks: 529 tests passed; TypeScript, lint, whitespace checks and Homey
-  CLI 4.5.3 verified validation passed. Exact-commit CI remains a later Git gate.
+  CLI 4.5.3 verified validation passed. Exact-commit CI also passed as linked above.
 - See [implementation and tester acceptance steps](MONITORING_REPORTER_TRIAL.md).
   Real combined coverage, charging/daytime/original-unit-active captures,
   counter scope, a normal-operation hardware soak and 5000 command acceptance
   remain external gates.
 
-## Latest Test release — v1.10.29 / Build 44, 10 October 2026
+## Previous Test release — v1.10.29 / Build 44, 10 October 2026
 
 Published to Test from `codex/mixed-generation-reporting-diagnostics` and
 verified in the portal and refreshed store listing. Mainline `master` is unchanged;

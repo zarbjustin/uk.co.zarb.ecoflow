@@ -6,7 +6,7 @@ as v1.10.29 / Build 44. Hardware acceptance and any reporter repair remain pendi
 
 Follow-up: reply 59 supplied fresh exact-resolution and close-time screenshot
 evidence supporting a default-off, reversible **monitoring trial**, now
-implemented locally but not released. See [the current trial and acceptance
+released to Test in v1.10.30 / Build 45. See [the current trial and acceptance
 plan](MONITORING_REPORTER_TRIAL.md). This does not promote the candidate's full
 installation/counter scope or permit controls; the original schema-8 comparison
 release described below remains unchanged.
@@ -70,7 +70,7 @@ existing source/baselines remain untouched.
    installation. Verify power sign/scale and SOC against EcoFlow, distinguish
    aggregate fields from member records, and review partial flow-frame behaviour.
    Do not infer scope merely from matching SOC, peer presence or equal readings.
-4. The guarded local trial is implemented; after a separately approved release,
+4. The guarded trial is published to Test in v1.10.30 / Build 45;
    validate it on hardware before accepting a **monitoring-reporter** repair
    retaining the Homey device identity and Flows. Define counter-source continuity
    separately before any Energy switch. History/control targets must not silently

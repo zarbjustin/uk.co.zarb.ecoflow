@@ -2,10 +2,13 @@
 
 ## Working state
 
-Implemented locally on `codex/mixed-generation-reporting-diagnostics` after the
-v1.10.29 / Build 44 comparison release. This increment is not committed, uploaded,
-installed or hardware-accepted yet. `master`, the version and existing Test build
-are unchanged. Do not call this an automatic migration or a validated repair.
+Released to Test as v1.10.30 / Build 45 from
+`codex/mixed-generation-reporting-diagnostics`, after the v1.10.29 / Build 44
+comparison release. Implementation and exact-release CI passed; upload was pinned
+to tag v1.10.30. Portal and refreshed store version were verified. See `STATUS.md`
+for source hashes and workflow receipts. `master` and Live are unchanged. No hub
+installation or hardware acceptance yet. Do not call this an automatic migration
+or a validated repair.
 
 The follow-up [public capture in reply 59](https://community.homey.app/t/157399/59)
 was captured at 2026-10-10T21:40:15.788Z. It joins the original aggregate to a
@@ -72,7 +75,7 @@ The existing original **STREAM Home Battery** has a default-off Advanced Setting
   deleting/re-pairing. The wait for fresh original readings survives restart;
   controls/conditions remain blocked until both original core fields are applied.
 
-### Reliability hardening — local, unreleased
+### Reliability hardening — included in v1.10.30 Test
 
 - Battery Flow conditions revalidate current identity/topology, source receipts
   and equality with the applied Homey values at execution time. A new donor
@@ -181,9 +184,11 @@ feedback stays separate; this trial does not enable cross-vendor automation.
 
 ## Offline verification
 
-All 519 automated tests, TypeScript compilation, repository lint, whitespace
+All 529 automated tests, TypeScript compilation, repository lint, whitespace
 checks and Homey CLI 4.5.3 verified-level validation passed for this local
-increment. Exact-commit GitHub CI has not run for these uncommitted changes.
+increment. GitHub CI passed for both implementation and exact v1.10.30 release
+commits; dependency audit found no vulnerabilities. Browser checks covered report
+readiness rendering and actual JSON download, not mobile Homey installation.
 
 The synthetic regression suite covers exact identity, ES21/ES22, missing/stale
 fields, receipt skew, clock rollback, duplicate/overlapping representations,
