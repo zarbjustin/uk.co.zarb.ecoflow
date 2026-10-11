@@ -1,10 +1,15 @@
 # Linked 5000 monitoring reporter trial
 
-## Unreleased diagnostic reliability increment (schema 11)
+## v1.10.32 diagnostic reliability increment (schema 11)
 
-Diagnostic-branch release preparation: commit/push, CI and a new Test release
-are authorized. The last verified Test v1.10.31 exports schema 10. Record the
-new version/build only after verification; do not merge mainline or change Live.
+Released from the diagnostic branch to Test as v1.10.32 / Build 47 on
+11 October 2026. Implementation and exact-release CI passed 543 tests, lint,
+dependency audit and verified Homey validation. Upload was pinned to v1.10.32;
+portal availability and the refreshed Test store were verified. See `STATUS.md`
+for hashes and workflow receipts. `master` and Live (v1.10.3) remain unchanged;
+no certification, hub installation or hardware acceptance occurred.
+Preserve Robert's requested v1.10.31/schema-10 evidence if already captured;
+identify the installed version and capture time for any new schema-11 reports.
 
 Report requests time out safely with manual retry (15 seconds for the local
 snapshot; 180 seconds for the optional up-to-eight-device reporter check).

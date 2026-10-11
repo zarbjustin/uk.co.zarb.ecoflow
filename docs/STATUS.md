@@ -2,14 +2,26 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Diagnostic reliability follow-up — release preparation
+## Latest Test release — v1.10.32 / Build 47, 11 October 2026
 
 Implemented on `codex/mixed-generation-reporting-diagnostics` while waiting for
 the time-matched evidence requested in [Community reply 67](https://community.homey.app/t/157399/67).
-Commit/push, exact-commit CI and a new Test publication are now authorized.
-The last verified Test is v1.10.31 / Build 46 with schema 10; this increment
-introduces support schema 11. Record the new tag/build only after verification.
-Mainline and Live remain outside the authorized release scope.
+Published to Test with support schema 11. Mainline and Live remain unchanged.
+
+- Implementation: `912cf6810fb00477ce7cdcc61e8e4312fd71ff79`;
+  release/tag: `13fef587ee6a45860ebc44e89909540ee383bdf6` / `v1.10.32`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181513564),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181645010),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181714544)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181838179)
+  succeeded. Exact-release CI passed 543 tests, lint, dependency audit (zero
+  vulnerabilities) and verified Homey validation.
+- [Build 47](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/47)
+  confirmed available for testing; the refreshed [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  showed v1.10.32. The refreshed Live store remains v1.10.3. Remote `master`
+  remains `66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge,
+  certification submission, hub installation, Community post or hardware
+  acceptance occurred. Publication was explicitly authorized for Test only.
 
 - Settings report requests have a 15-second local-report deadline and a
   180-second explicit reporter-check deadline (up to eight sequential bounded
@@ -40,15 +52,17 @@ Mainline and Live remain outside the authorized release scope.
 - Local validation: 543/543 tests, lint, TypeScript, `git diff --check` and
   Homey CLI 4.5.3 validation at `verified` level passed. The mobile capture-age
   display and unchanged JSON download/no hidden API polling were checked in
-  Playwright. No exact-commit CI or new hardware soak has been run.
+  Playwright. Implementation and exact-release CI also passed; no new hardware
+  soak has been run.
 
 Next: review Robert's original v1.10.31 JSON, EcoFlow combined/individual
 screenshots and separate app diagnostic ID together before changing combined
 capacity/grouping, energy-counter sources or 5000 controls. Preserve any existing
 v1.10.31 capture and its timestamps; identify the installed version for subsequent
-captures. Publication must follow passing exact-release CI and remain Test-only.
+captures. v1.10.32 adds diagnostic reliability, not a combined-system repair or
+new battery controls. Keep release and hardware acceptance claims separate.
 
-## Latest Test release — v1.10.31 / Build 46, 11 October 2026
+## Previous Test release — v1.10.31 / Build 46, 11 October 2026
 
 Released from `codex/mixed-generation-reporting-diagnostics`, following the
 [pasted report in reply 65](https://community.homey.app/t/157399/65) and
@@ -94,7 +108,8 @@ reports, device identities, contact details or screenshots are stored in Git.
   verification as [Community reply 67](https://community.homey.app/t/157399/67).
   Await one time-matched EcoFlow combined/individual battery capture, Homey Home
   Battery detail, refreshed schema-10 JSON and a separate app diagnostic ID from
-  v1.10.31. Do not ask for these local unreleased schema-11 fields yet.
+  v1.10.31. Preserve any original capture; v1.10.32 now exports schema 11 and
+  subsequent captures must identify the installed app version.
 
 ## Previous Test release — v1.10.30 / Build 45, 11 October 2026
 
