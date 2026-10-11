@@ -1,6 +1,6 @@
 # Linked 5000 monitoring reporter trial
 
-## Unreleased follow-up: peer fields and grid source clarification
+## v1.10.31 follow-up: peer fields and grid source clarification
 
 Support schema 10 retains SOC (integer/precise), raw peer battery power and PV
 total/string observations per anonymous peer index, with each field's own receipt
@@ -16,7 +16,8 @@ receipt alignment is not verified device-time alignment or scope equivalence.
 The difference must not be interpreted as loss. Activation eligibility is
 explicitly activation-only, not the health of an already active trial.
 
-This code is not in Build 45. After a separately approved new Test release, ask
+Released to Test as v1.10.31 / Build 46 on 11 October 2026; not in Build 45.
+After installing the update and allowing fresh telemetry to arrive, ask
 for one natural operating-state capture first (preferably an original STREAM
 unit supplying power), using the following sequence:
 
