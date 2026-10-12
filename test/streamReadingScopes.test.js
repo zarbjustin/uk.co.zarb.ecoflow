@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { scopedReadingOptions, STREAM_5000_UNIT_TITLES, STREAM_UNIT_GRID_TITLE } = require('../.homeybuild/lib/streamReadingScopes');
+const { scopedReadingOptions, migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_UNIT_GRID_TITLE } = require('../.homeybuild/lib/streamReadingScopes');
 const { mapStreamQuota } = require('../.homeybuild/lib/streamMapping');
 
 test('known default titles migrate without resetting custom titles or options', () => {
@@ -28,7 +28,32 @@ test('physical manifests match scoped defaults while original grid-port and syst
     assert.equal(driver.capabilities.includes('measure_power'), false);
   }
   assert.deepEqual(require('../.homeycompose/capabilities/stream_unit_power_grid.json').title, STREAM_UNIT_GRID_TITLE);
+  assert.deepEqual(require('../drivers/stream_unit/driver.compose.json').capabilitiesOptions.stream_unit_power_grid.title, STREAM_UNIT_GRID_TITLE);
   assert.equal(require('../drivers/stream_5000_system/driver.compose.json').energy.homeBattery, true);
+});
+
+test('optional title migration isolates getter/setter failures without overwriting unreadable or custom options', async () => {
+  const key = 'stream_unit_power_grid'; const titles = STREAM_UNIT_GRID_TITLE;
+  let reads = 0; let writes = 0;
+  const device = {
+    hasCapability: () => true,
+    getCapabilityOptions: () => { reads++; throw new Error(`Invalid Capability: ${key}`); },
+    setCapabilityOptions: async () => { writes++; },
+  };
+  await migrateReadingTitle(device, key, titles);
+  assert.equal(reads, 1); assert.equal(writes, 0);
+  device.getCapabilityOptions = () => ({ title: 'My cable', decimals: 1 });
+  await migrateReadingTitle(device, key, titles); assert.equal(writes, 0);
+  device.getCapabilityOptions = () => ({ title: 'Grid import/export', decimals: 1 });
+  device.setCapabilityOptions = () => { writes++; throw new Error('synchronous SDK error'); };
+  await migrateReadingTitle(device, key, titles);
+  device.setCapabilityOptions = async () => { writes++; throw new Error('asynchronous SDK error'); };
+  await migrateReadingTitle(device, key, titles); assert.equal(writes, 2);
+  device.hasCapability = () => false;
+  await migrateReadingTitle(device, key, titles); assert.equal(writes, 2);
+  device.hasCapability = () => true;
+  await migrateReadingTitle(device, key, titles, () => false); assert.equal(writes, 2);
+  await migrateReadingTitle({ hasCapability: () => true }, key, titles);
 });
 
 test('original unit grid-port watts are not battery direction, system watts or socket watts', () => {

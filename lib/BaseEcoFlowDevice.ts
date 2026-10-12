@@ -15,7 +15,7 @@ import {
   hasKnownDeveloperApiPrefix, isStreamAc5000Sn,
 } from './deviceIdentity';
 import { StreamRemainingTime, REMAINING_TIME_CAPS } from './StreamRemainingTime';
-import { scopedReadingOptions } from './streamReadingScopes';
+import { migrateReadingTitle } from './streamReadingScopes';
 import { StreamLiveReadings, STREAM_SYSTEM_LIVE_CAPS, STREAM_UNIT_LIVE_CAPS } from './StreamLiveReadings';
 
 const DEFAULT_POLL_MS = 30000;
@@ -162,8 +162,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
               de: cap === 'charge_remaining' ? 'System: Verbleibende Ladezeit' : 'System: Verbleibende Entladezeit',
               nl: cap === 'charge_remaining' ? 'Systeem: resterende laadtijd' : 'Systeem: resterende ontlaadtijd',
             };
-          const options = scopedReadingOptions(cap, this.getCapabilityOptions(cap), titles);
-          if (options) await this.setCapabilityOptions(cap, options).catch(() => {});
+          await migrateReadingTitle(this, cap, titles,
+            () => !this.isShuttingDown() && generation === this.remainingTimeGeneration);
         }
       }
     }

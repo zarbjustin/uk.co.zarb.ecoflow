@@ -13,7 +13,7 @@ try {
   StreamUnit = require('../.homeybuild/drivers/stream_unit/device');
 } finally { Module._load = originalLoad; }
 
-async function harness(sn, mainSn = sn, app) {
+async function harness(sn, mainSn = sn, app, configure) {
   const d = new StreamUnit();
   const caps = new Set(['onoff.ac1', 'onoff.ac2', 'stream_unit_power_ac1', 'stream_unit_power_ac2']);
   const values = {}; const listeners = {}; const writes = []; const reads = [];
@@ -22,15 +22,21 @@ async function harness(sn, mainSn = sn, app) {
   d.hasCapability = (cap) => caps.has(cap);
   d.addCapability = async (cap) => caps.add(cap); d.removeCapability = async (cap) => caps.delete(cap);
   d.getCapabilityValue = (cap) => values[cap];
-  d.getCapabilityOptions = () => ({});
-  d.setCapabilityOptions = async () => {};
+  // Homey does not necessarily return {} for a valid custom capability with
+  // no driver/instance options entry. Model that instead of hiding the failure.
+  const options = structuredClone(require('../drivers/stream_unit/driver.compose.json').capabilitiesOptions);
+  d.getCapabilityOptions = cap => {
+    if (!caps.has(cap) || !Object.hasOwn(options, cap)) throw new Error(`Invalid Capability: ${cap}`);
+    return structuredClone(options[cap]);
+  };
+  d.setCapabilityOptions = async (cap, next) => { options[cap] = structuredClone(next); };
   d.setCapabilityValue = async (cap, value) => { values[cap] = value; };
   d.registerCapabilityListener = (cap, callback) => { listeners[cap] = callback; };
   d.setSettings = async () => {}; d.error = () => {};
   d.client = { getMainSn: async () => { if (mainSn === null) throw new Error('offline'); return mainSn; } };
-  const intervals = new Map();
+  const intervals = new Map(); let nextInterval = 0;
   d.homey = { app, setTimeout: (fn) => { queueMicrotask(fn); return 1; }, clearTimeout() {},
-    setInterval: (fn) => { intervals.set(1, fn); return 1; }, clearInterval: (id) => intervals.delete(id) };
+    setInterval: (fn) => { const id = ++nextInterval; intervals.set(id, fn); return id; }, clearInterval: (id) => intervals.delete(id) };
   d.readControlQuota = async (target, fields) => {
     reads.push({ target, fields });
     return fields ? Object.fromEntries(fields.map((field) => [field, state[field]])) : { ...state };
@@ -42,9 +48,69 @@ async function harness(sn, mainSn = sn, app) {
     if ('cfgMinDsgSoc' in payload.params) state.cmsMinDsgSoc = payload.params.cfgMinDsgSoc;
     if ('cfgBackupReverseSoc' in payload.params) state.backupReverseSoc = payload.params.cfgBackupReverseSoc;
   };
+  if (configure) configure(d, caps, values, listeners);
   await d.onReady();
   return { d, caps, values, listeners, writes, reads, intervals, setState: (next) => { state = next; } };
 }
+
+test('valid original units initialise when Homey rejects options lookup for a custom grid capability', async () => {
+  for (const sn of ['BK11SYNTHETIC0001', 'BK31SYNTHETIC0001']) {
+    const optionWrites = [];
+    const h = await harness(sn, 'ES22SYNTHETIC0001', undefined, d => {
+      d.getCapabilityOptions = cap => {
+        if (cap === 'stream_unit_power_grid') throw new Error(`Invalid Capability: ${cap}`);
+        return {};
+      };
+      d.setCapabilityOptions = async (cap, options) => optionWrites.push({ cap, options });
+    });
+    assert.equal(h.caps.has('stream_unit_power_grid'), true);
+    assert.equal(optionWrites.some(item => item.cap === 'stream_unit_power_grid'), false,
+      'an unreadable existing option must not be replaced with an invented empty default');
+    assert.equal(typeof h.listeners['onoff.ac1'], 'function');
+    await h.d.applyQuota({ f32ShowSoc: 81, gridConnectionPower: 420 }, { receivedAt: Date.now(), source: 'mqtt' });
+    assert.equal(h.values.stream_unit_power_grid, 420);
+    assert.equal(h.writes.length, 0, 'startup recovery sends no hardware commands');
+    await h.d.onTeardown(); assert.equal(h.intervals.size, 0);
+  }
+});
+
+test('original Ultra and AC Pro complete init, poll and MQTT startup despite unreadable grid and runtime options', async () => {
+  for (const sn of ['BK11SYNTHETIC0001', 'BK31SYNTHETIC0001']) {
+    let pollCount = 0; let handler; let available = false; let unsubscribeCount = 0;
+    const h = await harness(sn, 'ES22SYNTHETIC0001', undefined, (d, caps) => {
+      for (const cap of require('../drivers/stream_unit/driver.compose.json').capabilities) caps.add(cap);
+      d.getCapabilityOptions = cap => { throw new Error(`Invalid Capability: ${cap}`); };
+      d.getStoreValue = key => (key === 'mainSn' ? 'ES22SYNTHETIC0001' : undefined);
+      d.getSetting = () => undefined;
+      d.homey.settings = { get: key => ({ accessKey: 'SYNTHETIC_ACCESS', secretKey: 'SYNTHETIC_SECRET' }[key]) };
+      d.homey.app = { subscribeRealtime: async (_sn, callback) => { handler = callback; return true; },
+        unsubscribeRealtime: () => { unsubscribeCount++; } };
+      d.getAvailable = () => available;
+      d.setAvailable = async () => { available = true; };
+      d.setUnavailable = async () => { available = false; };
+      d.log = () => {};
+      // Exercise the real lifecycle without connecting to an account or sending commands.
+      d.poll = async () => {
+        pollCount++;
+        await d.applyQuota({ gridConnectionPower: 420 }, { receivedAt: Date.now(), source: 'rest' });
+        await d.setOnlineState(true);
+      };
+    });
+    await h.d.onInit();
+    assert.equal(pollCount, 1); assert.equal(available, true);
+    assert.equal(h.intervals.size, 3, 'poll, runtime and watt freshness have independent timer handles');
+    assert.equal(typeof handler, 'function');
+    handler({ f32ShowSoc: 80, gridConnectionPower: 421, bmsDsgRemTime: 25 });
+    await h.d.queueDeviceWork(async () => {});
+    assert.equal(h.values.stream_unit_power_grid, 421);
+    assert.equal(h.values.discharge_remaining, 25);
+    assert.equal(h.values.measure_battery, 80);
+    assert.equal(h.caps.has('stream_unit_power_grid'), true);
+    assert.equal(h.writes.length, 0);
+    await h.d.onUninit();
+    assert.equal(unsubscribeCount, 1); assert.equal(h.intervals.size, 0);
+  }
+});
 
 function pvFrame(value) {
   // Synthetic wrapper: pdata field 998 (float), cmdFunc 254, cmdId 21.
@@ -132,7 +198,7 @@ test('optional BK app diagnostics clear stale components and never touch power o
   await h.d.pvChain;
   assert.equal(h.values.stream_unit_pv3_voltage, 32);
   now += 20 * 60 * 1000 + 1;
-  h.intervals.get(1)(); await h.d.pvChain;
+  h.intervals.get(h.d.pvTimer)(); await h.d.pvChain;
   assert.equal(h.values.stream_unit_pv3_voltage, null);
   await h.d.onTeardown();
   assert.equal(unsubscribed, 1); assert.equal(h.intervals.size, 0);
@@ -184,7 +250,7 @@ test('unit remaining estimates clear persisted values, expire independently, and
   assert.equal(h.values.charge_remaining, null);
   await h.d.applyQuota({ bmsDsgRemTime: 210 }, { receivedAt: now, source: 'mqtt' });
   now += 180001;
-  h.intervals.get(1)(); await h.d.queueDeviceWork(async () => {});
+  h.intervals.get(h.d.remainingTimeTimer)(); await h.d.queueDeviceWork(async () => {});
   assert.equal(h.values.discharge_remaining, null);
   await h.d.onTeardown();
   assert.equal(h.intervals.size, 0);
@@ -199,7 +265,7 @@ test('failed startup clearing of a persisted time estimate retries without a tel
   h.d.setCapabilityValue = async (cap, value) => { if (fail) throw new Error('SDK'); await write(cap, value); };
   await h.d.startRemainingTime('unit');
   assert.equal(h.d.getRemainingTimeDiagnostics().discharge_remaining.ageSec, null);
-  fail = false; h.intervals.get(1)(); await h.d.queueDeviceWork(async () => {});
+  fail = false; h.intervals.get(h.d.remainingTimeTimer)(); await h.d.queueDeviceWork(async () => {});
   assert.equal(h.values.discharge_remaining, null);
   assert.equal(h.d.getRemainingTimeDiagnostics().discharge_remaining.source, 'unobserved');
   await h.d.onTeardown();

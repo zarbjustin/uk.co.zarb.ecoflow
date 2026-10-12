@@ -2,6 +2,36 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Urgent original-Unit startup hotfix — 12 October 2026
+
+After Test v1.10.35, two original STREAM units were reported unavailable with
+`Invalid Capability: stream_unit_power_grid`; the combined Home Battery and
+5000 monitor remained available. The same exception was reproduced in a
+synthetic original-Unit startup test before changing the code. A valid custom
+capability can have no driver/instance options entry, and an uncaught synchronous
+`getCapabilityOptions` error aborted onReady before polling/subscription setup.
+This Homey behavior is also described in [SDK issue 296](https://github.com/athombv/homey-apps-sdk-issues/issues/296).
+The Build 50 crash-report inventory was empty when checked; a device init error
+does not necessarily produce an app crash report. No private reports/images are
+stored here.
+
+- A shared optional title migration boundary now catches synchronous getters,
+  synchronous setters and rejected writes for original grid, original runtime
+  and 5000 scope labels. Failed/unknown reads are skipped, not replaced by {},
+  so existing custom titles/options are not overwritten. Missing capabilities,
+  missing SDK methods and teardown are guarded.
+- The original Unit driver explicitly declares grid-title options for fresh
+  metadata. Existing capability IDs, device identities, Flows, history, signs,
+  energy accounting and control behavior remain unchanged. No deletion/re-pair.
+- Regressions reproduce the exact exception on synthetic Ultra/AC Pro devices,
+  exercise full init with polling/MQTT and runtime updates, and cover 5000 startup
+  and metadata failures. The Unit harness now models unreadable custom options
+  instead of always returning {}, and gives timers distinct handles.
+- All 614 tests, lint and verified Homey validation passed locally. Urgent Test
+  release is in preparation on the diagnostic branch; record exact CI/tag/build
+  receipts after publication. Main and Live stay unchanged. Actual restoration
+  on the affected installation still requires the tester's confirmation.
+
 ## Test release v1.10.35 / Build 50 — EcoFlow terminology, 12 October 2026
 
 Diagnostic branch only. Original STREAM's default grid tile now reads **Unit

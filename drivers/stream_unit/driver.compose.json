@@ -55,6 +55,13 @@
         "nl": "Batterijstatus"
       }
     },
+    "stream_unit_power_grid": {
+      "title": {
+        "en": "Unit grid connection port",
+        "de": "Einheit: Netzanschluss",
+        "nl": "Unit: netaansluiting"
+      }
+    },
     "operating_mode": {
       "title": {
         "en": "Mode",

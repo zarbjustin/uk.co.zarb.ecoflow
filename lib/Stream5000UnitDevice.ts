@@ -20,7 +20,7 @@ import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } fro
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
-import { scopedReadingOptions, STREAM_5000_UNIT_TITLES } from './streamReadingScopes';
+import { migrateReadingTitle, STREAM_5000_UNIT_TITLES } from './streamReadingScopes';
 import {
   STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
   Stream5000ReadingAges, stream5000ConfigurationValues,
@@ -134,10 +134,9 @@ export class Stream5000UnitDevice extends Homey.Device {
       for (const [capability, titles] of Object.entries(STREAM_5000_UNIT_TITLES)) {
         if (this.isStopped()) return;
         if (!this.hasCapability(capability)) continue;
-        const options = scopedReadingOptions(capability, this.getCapabilityOptions(capability), titles);
         // This is an in-place default-title migration, not a re-pair or custom-title reset.
         // eslint-disable-next-line no-await-in-loop
-        if (options) await this.setCapabilityOptions(capability, options).catch((e) => this.error('reading title', e));
+        await migrateReadingTitle(this, capability, titles, () => !this.isStopped());
       }
     }
     for (const capability of Object.values(STREAM_5000_CONFIGURATION_CAPABILITIES)) {

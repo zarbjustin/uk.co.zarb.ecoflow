@@ -230,7 +230,7 @@ function frame(pdata) {
   return group(1, Buffer.concat([group(1, pdata), varint(64), varint(254), varint(72), varint(39)]));
 }
 
-async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, initialOptions = {}) {
+async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, initialOptions = {}, configure) {
   const device = new DeviceClass();
   device.sn = sn;
   Object.assign(device.store, savedStore);
@@ -250,6 +250,7 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
     setTimeout: () => { timers.add(++nextTimer); return nextTimer; },
     clearTimeout: id => timers.delete(id),
   };
+  if (configure) configure(device);
   await device.onInit();
   return {
     device,
@@ -260,6 +261,18 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
     },
   };
 }
+
+test('5000 physical monitoring still starts when optional scope-title metadata cannot be read', async () => {
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, device => {
+    device.getCapabilityOptions = cap => { throw new Error(`Invalid Capability: ${cap}`); };
+  });
+  assert.equal(h.resources().subscriptions, 1);
+  await h.emit(frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex')));
+  assert.equal(h.device.values.measure_battery, 87);
+  assert.equal(h.device.hasCapability('measure_power'), false);
+  await h.device.onUninit();
+  assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+});
 
 test('physical startup migrates legacy scope labels in place and preserves custom titles and units', async () => {
   const { device } = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {

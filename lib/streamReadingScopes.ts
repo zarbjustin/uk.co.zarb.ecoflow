@@ -58,3 +58,23 @@ export function scopedReadingOptions(key: string, options: any, titles: Record<s
   }
   return Object.keys(titles).some((lang) => next[lang] !== current[lang]) ? { ...options, title: next } : null;
 }
+
+/** Cosmetic migration must never interrupt startup or telemetry. Homey can throw
+ * "Invalid Capability" for a valid custom capability without an options entry.
+ * Do not assume {} on a failed read: that could overwrite a user's custom title.
+ */
+export async function migrateReadingTitle(device: {
+  hasCapability: (key: string) => boolean;
+  getCapabilityOptions?: (key: string) => unknown;
+  setCapabilityOptions?: (key: string, options: object) => Promise<void>;
+}, key: string, titles: Record<string, string>, active: () => boolean = () => true): Promise<void> {
+  try {
+    if (!active() || !device.hasCapability(key)
+      || typeof device.getCapabilityOptions !== 'function' || typeof device.setCapabilityOptions !== 'function') return;
+    const options = scopedReadingOptions(key, device.getCapabilityOptions(key), titles);
+    if (options && active() && device.hasCapability(key)) await device.setCapabilityOptions(key, options);
+  } catch {
+    // Keep existing options and continue startup. Missing options are not a lost
+    // capability, and a failed title write is not an EcoFlow connection failure.
+  }
+}

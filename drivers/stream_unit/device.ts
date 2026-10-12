@@ -8,7 +8,7 @@ import { executeStreamControl, readStreamControlState, StreamControlIntent } fro
 import { EcoFlowAppApi, getApp } from '../../lib/appApi';
 import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
 import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/streamBkPvDiagnostics';
-import { scopedReadingOptions, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
+import { migrateReadingTitle, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
 import { StreamUnitComparison } from '../../lib/streamDiagnosticChecks';
 import { decodeStreamLimits, StreamLimitObservations } from '../../lib/streamLimitDiagnostics';
 
@@ -187,12 +187,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const outlets = streamAcOutletCount(sn);
     const acCaps = StreamUnitDevice.AC_CAPS.filter((cap) => (cap.endsWith('1') ? outlets >= 1 : outlets >= 2));
     await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...acCaps]);
-    const gridOptions = scopedReadingOptions('stream_unit_power_grid',
-      this.getCapabilityOptions('stream_unit_power_grid'), STREAM_UNIT_GRID_TITLE);
-    if (gridOptions) {
-      await this.setCapabilityOptions('stream_unit_power_grid', gridOptions)
-        .catch((e) => this.error('grid-port title', e));
-    }
+    await migrateReadingTitle(this, 'stream_unit_power_grid', STREAM_UNIT_GRID_TITLE, () => !this.isShuttingDown());
     await this.removeCapabilities(StreamUnitDevice.AC_CAPS.filter((cap) => !acCaps.includes(cap)));
     // Previous versions could copy aggregate battery power/state onto a unit.
     // Clear persisted values: no proven signed per-unit path is exposed here.
