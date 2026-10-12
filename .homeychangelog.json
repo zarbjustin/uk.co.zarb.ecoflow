@@ -217,5 +217,8 @@
   },
   "1.10.36": {
     "en": "Fix original STREAM Unit startup failing with Invalid Capability: stream_unit_power_grid when capability options are unavailable. Cosmetic title migration can no longer block device startup. Existing devices, Flows, readings and energy accounting are preserved; no re-pairing is required."
+  },
+  "1.10.37": {
+    "en": "Improves integration report downloads with a complete numbered-parts fallback, restores original STREAM unit battery flow from fresh BMS telemetry when available, and shows remaining-time estimates only for matching fresh battery direction. Energy accounting and device pairing remain unchanged."
   }
 }
