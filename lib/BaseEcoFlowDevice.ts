@@ -14,6 +14,8 @@ import {
 import {
   hasKnownDeveloperApiPrefix, isStreamAc5000Sn,
 } from './deviceIdentity';
+import { StreamRemainingTime, REMAINING_TIME_CAPS } from './StreamRemainingTime';
+import { scopedReadingOptions } from './streamReadingScopes';
 
 const DEFAULT_POLL_MS = 30000;
 const REALTIME_GRACE_MS = 90000;
@@ -47,6 +49,99 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private stopping = false;
   private developerApiQuarantineReason: string | null = null;
   private consecutiveUnsupportedApiFailures = 0;
+  private remainingTime = new StreamRemainingTime();
+  private remainingTimeTimer: NodeJS.Timeout | null = null;
+  private remainingTimeScope: 'unit' | 'system' | null = null;
+  private remainingTimeGeneration = 0;
+  private remainingTimeClearPending = new Set<string>();
+
+  getRemainingTimeDiagnostics(): Record<string, unknown> {
+    return this.remainingTimeScope ? this.remainingTime.snapshot() : {};
+  }
+
+  protected getRemainingTimeFreshness(): Record<string, { stale: boolean }> {
+    if (!this.remainingTimeScope) return {};
+    return Object.fromEntries(Object.entries(this.remainingTime.snapshot())
+      .filter(([cap]) => this.hasCapability(cap)).map(([cap, field]) => [cap, { stale: field.stale }]));
+  }
+
+  protected resetRemainingTimeReceipts(): void {
+    this.remainingTime.reset();
+  }
+
+  protected async startRemainingTime(scope: 'unit' | 'system'): Promise<void> {
+    this.stopRemainingTime();
+    this.remainingTimeScope = scope;
+    if (!REMAINING_TIME_CAPS.some((cap) => this.hasCapability(cap))) return;
+    const generation = this.remainingTimeGeneration;
+    for (const cap of REMAINING_TIME_CAPS) {
+      if (this.isShuttingDown() || generation !== this.remainingTimeGeneration) return;
+      if (this.hasCapability(cap)) {
+        await this.setCapabilityValue(cap, null).catch(() => {
+          this.remainingTimeClearPending.add(cap);
+        });
+        if (typeof this.getCapabilityOptions === 'function') {
+          const suffix = cap === 'charge_remaining' ? 'charge time remaining' : 'discharge time remaining';
+          const titles = scope === 'unit'
+            ? {
+              en: `Unit ${suffix}`,
+              de: cap === 'charge_remaining' ? 'Einheit: Verbleibende Ladezeit' : 'Einheit: Verbleibende Entladezeit',
+              nl: cap === 'charge_remaining' ? 'Unit: resterende laadtijd' : 'Unit: resterende ontlaadtijd',
+            }
+            : {
+              en: `System ${suffix}`,
+              de: cap === 'charge_remaining' ? 'System: Verbleibende Ladezeit' : 'System: Verbleibende Entladezeit',
+              nl: cap === 'charge_remaining' ? 'Systeem: resterende laadtijd' : 'Systeem: resterende ontlaadtijd',
+            };
+          const options = scopedReadingOptions(cap, this.getCapabilityOptions(cap), titles);
+          if (options) await this.setCapabilityOptions(cap, options).catch(() => {});
+        }
+      }
+    }
+    if (this.isShuttingDown() || generation !== this.remainingTimeGeneration) return;
+    this.remainingTimeTimer = this.homey.setInterval(() => {
+      this.queueDeviceWork(async () => {
+        for (const cap of this.remainingTimeClearPending) {
+          if (generation !== this.remainingTimeGeneration || this.isShuttingDown()) return;
+          try {
+            await this.setCapabilityValue(cap, null); this.remainingTimeClearPending.delete(cap);
+          } catch { /* Retry next tick. */ }
+        }
+        await this.remainingTime.expire(
+          async (cap, value) => {
+            if (this.hasCapability(cap)) await this.setCapabilityValue(cap, value);
+          },
+          () => generation === this.remainingTimeGeneration && !this.isShuttingDown(),
+        );
+      }).catch(() => {});
+    }, 60000);
+  }
+
+  protected stopRemainingTime(): void {
+    this.remainingTimeGeneration += 1;
+    if (this.remainingTimeTimer) this.homey.clearInterval(this.remainingTimeTimer);
+    this.remainingTimeTimer = null;
+    this.remainingTimeScope = null;
+    this.remainingTimeClearPending.clear();
+    this.remainingTime.reset();
+  }
+
+  protected async applyRemainingTime(quota: Record<string, unknown>, context?: QuotaSampleContext): Promise<void> {
+    if (!this.remainingTimeScope) return;
+    const generation = this.remainingTimeGeneration;
+    const scopedQuota = { ...quota };
+    for (const cap of REMAINING_TIME_CAPS) {
+      if (!this.hasCapability(cap)) delete scopedQuota[`${this.remainingTimeScope === 'unit' ? 'bms' : 'cms'}${cap === 'charge_remaining' ? 'Chg' : 'Dsg'}RemTime`];
+    }
+    await this.remainingTime.apply(scopedQuota, this.remainingTimeScope, context?.receivedAt ?? Date.now(),
+      context?.source ?? 'unknown',
+      async (cap, value) => {
+        if (this.hasCapability(cap)) {
+          await this.setCapabilityValue(cap, value); this.remainingTimeClearPending.delete(cap);
+        }
+      },
+      () => generation === this.remainingTimeGeneration && !this.isShuttingDown());
+  }
 
   /** The SN whose quota this device reads/polls and subscribes to over MQTT. */
   protected abstract getReadSn(): string;

@@ -7,6 +7,8 @@ import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
+import { REMAINING_TIME_CAPS } from './StreamRemainingTime';
+import { correlateStreamPeers, PairedUnitReference, streamReadingExplanations } from './streamDiagnosticChecks';
 import {
   reporterRepairPreview, systemReporterSnapshot, reporterFlowSnapshot, ownUnitSnapshot,
 } from './streamReporterEvidence';
@@ -117,6 +119,8 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
   const aggregates: StreamAggregateEvidence[] = [];
   const shadowAggregates: Array<{ driverId: string; deviceIndex: number; addressSn?: string; resolution: any; reporting: any }> = [];
   const reporters: Array<{ driverId: string; deviceIndex: number; evidence: any; system: Record<string, any> }> = [];
+  const pairedUnits: PairedUnitReference[] = [];
+  const peerSources: Array<{ driverId: string; deviceIndex: number; evidence: any }> = [];
   const drivers = Object.entries(DRIVER_ROLES).map(([id, role]) => {
     const entry = Array.isArray(manifest.drivers) ? manifest.drivers.find((candidate: any) => candidate.id === id) : undefined;
     let registered = false;
@@ -130,6 +134,26 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       // Report absence without returning exception text or private identifiers.
     }
     const evidenceByDevice = devices.map(readStreamTopologyEvidence);
+    if (role === 'physical_monitor' || role === 'legacy_physical_monitor') {
+      devices.forEach((device, deviceIndex) => {
+        try {
+          const sn = device.getData?.()?.sn;
+          if (typeof sn === 'string') {
+            pairedUnits.push({
+              driverId: id,
+              deviceIndex,
+              sn,
+              readings: device.getUnitCorrelationDiagnostics?.(),
+            });
+          }
+        } catch { /* Private identity/getter errors never leave this process. */ }
+      });
+    }
+    evidenceByDevice.forEach((evidence, deviceIndex) => {
+      if (evidence?.source === 'es22_peer_records' || evidence?.source === 'es21_peer_records') {
+        peerSources.push({ driverId: id, deviceIndex, evidence });
+      }
+    });
     const reporting = devices.map((device, deviceIndex) => ({ deviceIndex, ...reportingSnapshot(device, now) }));
     if (id === 'stream') {
       devices.forEach((device, deviceIndex) => {
@@ -177,6 +201,59 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       registered,
       pairedCount: devices.length,
       reporting,
+      readingExplanations: devices.map((device, deviceIndex) => {
+        let freshness = {};
+        try {
+          freshness = device.getReadingDiagnostics?.() || {};
+        } catch { /* Fixed reasons only. */ }
+        return { deviceIndex, readings: streamReadingExplanations(id, device, freshness) };
+      }),
+      counterContinuity: id !== 'stream' ? [] : devices.map((device, deviceIndex) => {
+        let input: any;
+        try {
+          input = device.getCounterContinuityDiagnostics?.();
+          // Read the fixed scope inside the guard, including hostile getters.
+          input = { fields: input?.fields, powerComparisonScope: input?.powerComparisonScope };
+        } catch {
+          input = undefined; /* No private errors. */
+        }
+        return {
+          deviceIndex,
+          sourceMigrationAllowed: false,
+          installationScopeVerified: false,
+          powerComparisonScope: input?.powerComparisonScope === 'monitoring_system_scope_unverified'
+            ? 'monitoring_system_scope_unverified' : 'original_address',
+          fields: Object.fromEntries(['accuChgEnergy', 'accuDsgEnergy'].map((key) => {
+            try {
+              const f = input?.fields?.[key];
+              const ageSec = safeNumber(f?.ageSec);
+              const unchangedSec = safeNumber(f?.unchangedSec);
+              const status = ['missing', 'invalid', 'stale', 'baseline_only', 'advance_observed', 'unchanged'].includes(f?.status)
+                ? f.status : 'missing';
+              return [key, {
+                status,
+                ageSec,
+                unchangedSec,
+                advanceObserved: f?.advanceObserved === true,
+                resetCount: safeNumber(f?.resetCount),
+                possibleStall: f?.possibleStall === true && ageSec !== null && ageSec <= 180
+                  && unchangedSec !== null && unchangedSec >= 300 && ['unchanged', 'advance_observed'].includes(status),
+                stallVerified: false,
+              }];
+            } catch {
+              return [key, {
+                status: 'missing',
+                ageSec: null,
+                unchangedSec: null,
+                advanceObserved: false,
+                resetCount: null,
+                possibleStall: false,
+                stallVerified: false,
+              }];
+            }
+          })),
+        };
+      }),
       physicalPower: !['stream_5000_unit', 'stream_ac5000'].includes(id) ? [] : devices.map((device, deviceIndex) => {
         let status = 'waiting_for_unit_evidence';
         try {
@@ -216,12 +293,46 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
         ...stream5000Assessment(evidenceByDevice[deviceIndex],
           configuration.find((item) => item?.deviceIndex === deviceIndex), now),
       })),
+      remainingTime: id === 'stream' || id === 'stream_unit' ? devices.map((device, deviceIndex) => {
+        let input: any;
+        try {
+          input = device.getRemainingTimeDiagnostics?.();
+        } catch { /* Private failures omitted. */ }
+        return {
+          deviceIndex,
+          readings: Object.fromEntries(REMAINING_TIME_CAPS.filter((cap) => input?.[cap]).map((cap) => {
+            const field = input[cap];
+            const sources = ['unit_bms_mqtt', 'unit_bms_rest', 'unit_bms_unknown',
+              'system_cms_mqtt', 'system_cms_rest', 'system_cms_unknown', 'unobserved'];
+            return [cap, {
+              source: sources.includes(field.source) ? field.source : 'unobserved',
+              ageSec: safeNumber(field.ageSec),
+              receivedAgeSec: safeNumber(field.receivedAgeSec),
+              stale: field.stale !== false || safeNumber(field.ageSec) === null || field.applicationStatus !== 'applied',
+              applicationStatus: ['applied', 'write_failed', 'stale', 'unavailable'].includes(field.applicationStatus)
+                ? field.applicationStatus : 'unavailable',
+            }];
+          })),
+        };
+      }) : [],
       readingFreshness: id === 'stream' ? [] : devices.map((device, deviceIndex) => {
         try {
           const input = device.getReadingDiagnostics?.();
           const allowed = id === 'stream_unit' ? BK_PV_CAPS : STREAM_5000_LIVE_CAPABILITIES;
           const readings = Object.fromEntries(allowed.filter((key) => input?.[key])
-            .map((key) => [key, { ageSec: safeNumber(input[key].ageSec), stale: input[key].stale !== false }]));
+            .map((key) => {
+              const field = input[key];
+              const ageSec = safeNumber(field.ageSec);
+              if (id === 'stream_unit') return [key, { ageSec, stale: field.stale !== false }];
+              const applicationStatus = ['applied', 'write_failed', 'stale', 'unavailable'].includes(field.applicationStatus)
+                ? field.applicationStatus : 'unknown';
+              return [key, {
+                ageSec,
+                receivedAgeSec: safeNumber(field.receivedAgeSec),
+                stale: field.stale !== false || ageSec === null || applicationStatus === 'write_failed',
+                applicationStatus,
+              }];
+            }));
           return { deviceIndex, readings };
         } catch {
           return { deviceIndex, readings: {} }; // No private getter or exception contents.
@@ -258,13 +369,18 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 12,
+    schemaVersion: 13,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,
     betaPairingEnabled: isStream5000BetaEnabled(homey),
     drivers,
+    peerCorrelation: peerSources.map((source) => ({
+      driverId: source.driverId,
+      deviceIndex: source.deviceIndex,
+      peers: correlateStreamPeers(source.evidence, pairedUnits, now),
+    })),
     smartMeters,
     installationTopology: streamAggregateOverlapSnapshot(aggregates, now),
     reporterShadow: reporterShadowSnapshot(shadowAggregates, reporters, now),

@@ -4,6 +4,26 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 
+test('counter continuity follows original counter receipts without migrating or changing energy totals', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const device = await harness({ chargedWh: 50, dischargedWh: 60 });
+  await device.applyQuota({ accuChgEnergy: 1000, accuDsgEnergy: 2000, powGetBpCms: -420 }, { receivedAt: now, source: 'mqtt' });
+  for (let i = 0; i < 4; i++) {
+    now += 100000;
+    await device.applyQuota({ accuDsgEnergy: 2000, powGetBpCms: -420 }, { receivedAt: now, source: 'mqtt' });
+  }
+  const diagnostics = device.getCounterContinuityDiagnostics();
+  assert.equal(diagnostics.fields.accuDsgEnergy.possibleStall, true);
+  assert.equal(diagnostics.sourceMigrationAllowed, false);
+  assert.equal(device.getEnergyDiagnostics().dischargedKWh, 0.06);
+  now++;
+  await device.applyQuota({ accuDsgEnergy: 2001 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(device.getCounterContinuityDiagnostics().fields.accuDsgEnergy.advanceObserved, true);
+  assert.equal(device.getEnergyDiagnostics().dischargedKWh, 0.061);
+  await device.onTeardown();
+  assert.equal(device.getCounterContinuityDiagnostics().fields.accuDsgEnergy.status, 'missing');
+});
+
 class FakeDevice {
   constructor() { this.store = {}; this.values = {}; this.timers = new Map(); this.nextTimer = 0; }
   getData() { return { sn: 'BK61TEST00000001' }; }

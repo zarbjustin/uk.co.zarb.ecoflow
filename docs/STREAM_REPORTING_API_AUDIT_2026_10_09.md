@@ -178,3 +178,62 @@ partial/zero/nonfinite/malformed frames, receipt clocks, lifecycle cleanup,
 unchanged power/energy values, REST-only operation and fixed-list support JSON.
 All 418 tests, lint and diff checks pass. The candidate port label stays visible
 pending physical port validation. No live hardware settings were changed.
+
+## 12 October follow-up — original hardware, native app and fresh quota comparison
+
+Read-only investigation on the diagnostic branch at approximately
+17:35–17:41 UTC (18:35–18:41 UK). Previously supplied credentials were loaded
+in memory for discovery, main-address lookup and quota reads. The native EcoFlow
+app was inspected without changing modes, relays, limits, feed-in or grouping.
+No extra MQTT session was opened, to avoid disturbing the installed integration.
+No credentials, full identities, raw responses, private screenshots or reports
+are stored here. These checks are not acceptance of the uninstalled local fixes.
+
+- The account still contains six original-generation batteries (two BK61 and
+  four BK31), plus its existing meter/microinverter, and no ES hardware. Current
+  main resolution points to one BK61. Each battery's quota/all still exposes the
+  same 15-field shape recorded above. Non-main aggregate fields are zero; zero
+  at a member address is not evidence of zero whole-system SOC or discharge.
+- Near-contemporaneous combined app/API readings were approximately 52% SOC,
+  600 W discharge/house load and zero grid power. Homey was close, with normal
+  inter-sample changes. There was no observed combined-flow mismatch in this
+  original-generation scenario; this does not resolve mixed-generation scope.
+- A different Ultra X and an AC Pro both reported approximately 600 W positive
+  grid-port power while the combined system discharged approximately 600 W.
+  In this parallel-connected installation, adding those ports would roughly
+  double-count the flow. The main unit's port was zero despite non-zero combined
+  power. Do not equate a port with pack discharge, copy system watts to each
+  unit, flip signs from wording alone or sum these ports into Homey Energy.
+- The Ultra X app device page showed a roughly 60-hour remaining-time estimate,
+  consistent with its own BMS estimate shown in Homey while another device was
+  active. This is not a simultaneous system-runtime validation. Keep per-pack
+  BMS and installation CMS estimates distinct; no cross-scope fallback.
+- Native app mode, SOC limits and observed relay states agree with the fields
+  returned by fresh API reads. Its grid-output limit (1200 W) and system AC
+  charging limit (7200 W) are visible in the app but not exposed by the
+  documented STREAM quota contract inspected here. Candidate future work is
+  read-only field discovery and exact scope/range verification, followed by
+  separately authorised write/readback/recovery tests, not invented commands.
+- Targeted main-address quota reads returned known system SOC/power/mode/limit
+  fields, but not requested BMS/CMS remaining-time, charged/discharged counters
+  or socket-power fields. Meter quota/all was empty. These are REST transport
+  limitations observed on this account, not proof the fields are absent from
+  app/Developer MQTT or unsupported by the installed telemetry path.
+- Read-only Homey observations showed cumulative discharged energy increasing
+  by about 0.013 kWh during the capture window. That supports counter advancement
+  for this original-generation scenario only. No receipt freshness, installed
+  version or mixed-generation counter authority is inferred from the connector.
+
+The [official STREAM document](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
+was inspected live. It directs AC socket commands to the physical device serial
+and other system commands to the current main serial. Its port sign wording and
+some field descriptions do not consistently describe the observed app scopes.
+Preserve current measured behaviour rather than using those labels to invert
+ports or relabel a system meter as a physical-unit reading. No undocumented
+command, remote setting change or new API route was tried in this follow-up.
+
+Next investigation priorities: matched charging/discharging captures to verify
+peer power direction, original/app telemetry discovery of the two limit fields,
+and field acceptance of fresh system-only grid/runtime displays. The new exact
+anonymous peer correlation and counter continuity diagnostics help gather that
+evidence without migrating accounting or enabling unverified controls.

@@ -20,12 +20,16 @@ class FakeDevice {
     this.available = false;
     this.onlineTransitions = 0;
     this.logs = [];
+    this.errors = [];
+    this.options = {};
   }
 
   getData() { return { sn: this.sn || captures.pair.unit_a }; }
   getSetting(key) { return this.settings[key]; }
   getStoreValue(key) { return this.store[key]; }
   getCapabilityValue(key) { return this.values[key]; }
+  getCapabilityOptions(key) { return this.options[key] || {}; }
+  async setCapabilityOptions(key, options) { this.options[key] = options; }
   hasCapability(key) { return this.capabilities.has(key); }
   getAvailable() { return this.available; }
   async addCapability(key) { this.capabilities.add(key); }
@@ -34,10 +38,10 @@ class FakeDevice {
   async setStoreValue(key, value) { this.store[key] = value; }
   async setSettings(values) { Object.assign(this.settings, values); }
   async setAvailable() { this.available = true; this.onlineTransitions += 1; }
-  async setUnavailable() { this.available = false; }
+  async setUnavailable(message) { this.available = false; this.unavailableMessage = message; }
   async setWarning(message) { this.warning = message; }
   log(...args) { this.logs.push(args.join(' ')); }
-  error(...args) { throw new Error(args.join(' ')); }
+  error(...args) { this.errors.push(args); }
 }
 
 const originalLoad = Module._load;
@@ -63,6 +67,161 @@ function varint(value) {
   return Buffer.from(bytes);
 }
 
+test('failed live write never refreshes applied age, unrelated fields cannot restore availability, zero can recover', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  await device.queueTelemetry({ 'measure_power.load': 42 }, now, true);
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'measure_power.load' && value === 100) throw new Error('synthetic SDK rejection');
+    await write(key, value);
+  });
+  now += 10000;
+  await device.queueTelemetry({ 'measure_power.load': 100, measure_temperature: 31 }, now, true);
+  assert.equal(device.getAvailable(), false);
+  assert.equal(device.values['measure_power.load'], null);
+  assert.equal(device.values.measure_temperature, 31);
+  assert.deepEqual(device.getReadingDiagnostics()['measure_power.load'], {
+    ageSec: 10, receivedAgeSec: 0, stale: true, applicationStatus: 'write_failed',
+  });
+  assert.match(device.unavailableMessage, /could not be applied/);
+  now += 1000;
+  await device.queueTelemetry({ measure_temperature: 32 }, now, true);
+  assert.equal(device.getAvailable(), false);
+  await device.queueTelemetry({ 'measure_power.load': 0 }, now, true);
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.values['measure_power.load'], 0);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].applicationStatus, 'applied');
+  await device.onUninit();
+});
+
+test('failed expiry clear retains failure evidence, retries independently and does not invent a receipt', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  await device.queueTelemetry({ measure_power: 100, 'measure_power.load': 42 }, now, true);
+  const write = device.setCapabilityValue.bind(device);
+  let reject = true;
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (reject && key === 'measure_power.load' && value === null) throw new Error('synthetic clear rejection');
+    await write(key, value);
+  });
+  now += 180001;
+  await device.checkAvailability();
+  assert.equal(device.values.measure_power, null, 'other expired fields still clear');
+  assert.equal(device.values['measure_power.load'], 42);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].receivedAgeSec, 180);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].applicationStatus, 'write_failed');
+  assert.equal(device.getAvailable(), false);
+  reject = false;
+  await device.checkAvailability();
+  assert.equal(device.values['measure_power.load'], null);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].applicationStatus, 'write_failed', 'clearing is not new data');
+  await device.queueTelemetry({ 'measure_power.load': 0 }, now, true);
+  assert.equal(device.getAvailable(), true);
+  await device.onUninit();
+});
+
+test('first-frame write failure explains application failure rather than a missing connection', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'measure_power.load' && value === 42) throw new Error('synthetic first write rejection');
+    await write(key, value);
+  });
+  await device.queueTelemetry({ 'measure_power.load': 42 }, 100000, true);
+  assert.equal(device.getAvailable(), false);
+  assert.match(device.unavailableMessage, /could not be applied/);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].ageSec, null);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].receivedAgeSec, 0);
+  await device.onUninit();
+});
+
+test('slow writes and delayed/future queued packets cannot revive expired readings', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'measure_power.load' && value === 100) now += 180001;
+    await write(key, value);
+  });
+  await device.queueTelemetry({ 'measure_power.load': 100 }, now, true);
+  assert.equal(device.values['measure_power.load'], null);
+  assert.equal(device.getAvailable(), false);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].stale, true);
+  await device.queueTelemetry({ 'measure_power.load': 0 }, now - 180001, true);
+  await device.queueTelemetry({ 'measure_power.load': 0 }, now + 1, true);
+  assert.equal(device.values['measure_power.load'], null);
+  await device.queueTelemetry({ 'measure_power.load': 0 }, now, true);
+  assert.equal(device.values['measure_power.load'], 0);
+  assert.equal(device.getAvailable(), true);
+  await device.onUninit();
+});
+
+test('accessory write/add failures stay visible and recover without Energy contribution', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  await device.queueTelemetry({ measure_battery: 50 }, now, true);
+  const add = device.addCapability.bind(device);
+  let reject = true;
+  t.mock.method(device, 'addCapability', async key => {
+    if (reject && key === 'stream_5000_socket_power') throw new Error('synthetic add rejection');
+    await add(key);
+  });
+  await device.queueAccessories({ acSocketW: 20, directPv: { totalW: 10 } }, now);
+  assert.equal(device.values.stream_5000_direct_pv, 10);
+  assert.equal(device.getAvailable(), false);
+  assert.equal(device.getReadingDiagnostics().stream_5000_socket_power.applicationStatus, 'write_failed');
+  reject = false; now += 1000;
+  await device.queueAccessories({ acSocketW: 20 }, now);
+  await device.queueTelemetry({ measure_battery: 51 }, now, true);
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.values.stream_5000_socket_power, 20);
+  assert.equal(device.hasCapability('measure_power'), false);
+  assert.equal(device.hasCapability('meter_power.discharged'), false);
+  await device.onUninit();
+});
+
+test('deletion during a pending write cannot promote availability or schedule later writes', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  const write = device.setCapabilityValue.bind(device);
+  let release; let entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const pending = new Promise(resolve => { release = resolve; });
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'measure_power.load' && value === 100) { entered(); await pending; }
+    await write(key, value);
+  });
+  const apply = device.queueTelemetry({ 'measure_power.load': 100, measure_temperature: 32 }, 100000, true);
+  await started;
+  const teardown = device.onUninit();
+  release();
+  await Promise.all([apply, teardown]);
+  assert.equal(device.getAvailable(), false);
+  assert.equal(device.values.measure_temperature, null);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].ageSec, null);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].applicationStatus, 'unavailable');
+});
+
+test('old/future queued deltas do not replace a fresh reading or declare its connection lost', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  await device.queueTelemetry({ 'measure_power.load': 42 }, 100000, true);
+  await device.queueTelemetry({ 'measure_power.load': 100 }, 99999, true);
+  await device.queueTelemetry({ 'measure_power.load': 100 }, 100001, true);
+  assert.equal(device.values['measure_power.load'], 42);
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.getReadingDiagnostics()['measure_power.load'].applicationStatus, 'applied');
+  await device.queueAccessories({ acSocketW: 100 }, -80001);
+  assert.equal(device.hasCapability('stream_5000_socket_power'), false);
+  await device.onUninit();
+});
+
 function group(number, payload) {
   return Buffer.concat([varint(number * 8 + 2), varint(payload.length), payload]);
 }
@@ -71,10 +230,11 @@ function frame(pdata) {
   return group(1, Buffer.concat([group(1, pdata), varint(64), varint(254), varint(72), varint(39)]));
 }
 
-async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a) {
+async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, initialOptions = {}) {
   const device = new DeviceClass();
   device.sn = sn;
   Object.assign(device.store, savedStore);
+  Object.assign(device.options, initialOptions);
   let handler;
   let nextTimer = 0;
   const timers = new Set();
@@ -100,6 +260,20 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a) 
     },
   };
 }
+
+test('physical startup migrates legacy scope labels in place and preserves custom titles and units', async () => {
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {
+    'measure_power.load': { title: 'House consumption', units: 'W', decimals: 2 },
+    measure_temperature: { title: 'My battery temperature', decimals: 1 },
+  });
+  assert.equal(device.options['measure_power.load'].title.en, 'System house consumption');
+  assert.equal(device.options['measure_power.load'].units, 'W');
+  assert.equal(device.options['measure_power.load'].decimals, 2);
+  assert.equal(device.options.measure_temperature.title, 'My battery temperature');
+  assert.equal(device.getData().sn, captures.pair.unit_a);
+  assert.equal(device.hasCapability('measure_power'), false);
+  await device.onUninit();
+});
 
 test('repeated physical monitor sessions release every timer and subscription', async () => {
   for (let session = 0; session < 100; session++) {
@@ -425,10 +599,12 @@ test('independent reading expiry clears stale power despite fresh temperature an
   assert.equal(device.values['meter_power.discharged'], 0.2);
   assert.equal(device.getReadingDiagnostics().measure_power.stale, true);
   await device.queueTelemetry({ measure_power: 400, battery_charging_state: 'charging' }, now + 1, true);
-  assert.equal(device.values.measure_power, 400);
+  assert.equal(device.values.measure_power, null, 'future packets must not overwrite displayed readings');
   assert.equal(device.values['meter_power.charged'], 0.1, 'returning positive power must not backfill stale interval');
   assert.equal(device.getReadingDiagnostics().measure_power.stale, true, 'future receipt fails closed until clock catches up');
   now += 1;
+  await device.queueTelemetry({ measure_power: 400, battery_charging_state: 'charging' }, now, true);
+  assert.equal(device.values.measure_power, 400);
   assert.equal(device.getReadingDiagnostics().measure_power.stale, false);
   assert.equal(device.getEnergyDiagnostics().ignoredGaps, 1);
   now += 60000;

@@ -1,5 +1,25 @@
 # Linked 5000 monitoring reporter trial
 
+## Unreleased application-freshness / scope follow-up
+
+Diagnostic branch only, not another Test build. A rejected capability write
+must not renew the displayed reading's age or make the donor available. Schema
+13 separates receipt age from successful application and marks write failures
+explicitly. Test delayed/future updates, independent recovery, clearing failures,
+clock rollback, accessory failures and teardown before the next release.
+
+Physical 5000 battery tiles describe the **unit**; house/grid tiles describe the
+**system**. Original STREAM grid-port power comes unchanged from
+`gridConnectionPower`, not signed battery power or socket output. Blank physical
+battery flow/state remains deliberate where individual direction is unverified.
+An original-unit discharge screenshot supports this distinction, but is not a
+matching numeric JSON comparison. Preserve it and request only the still-missing
+time-matched combined/individual EcoFlow breakdown and integration JSON during
+natural original-unit discharge. Include the Homey unit tile if investigating
+port direction or the simultaneous remaining-time estimates; do not force modes
+or ask for deletion/re-pairing. Reuse the already-published version for captures
+until a new release is explicitly authorized.
+
 ## 12 October follow-up and late-October acceptance plan
 
 Diagnostic branch only; this reliability increment was published to Test as
@@ -358,3 +378,16 @@ native-counter and power-fallback continuity, restart, rollback persistence,
 failed Homey writes, in-flight control cancellation, bounded lookup cadence,
 local-only widgets and anonymous report projection. Passing these tests does not
 establish physical behaviour or combined counter scope.
+
+## Original STREAM grid and time-estimate follow-up (unreleased, 12 October)
+
+The original Home Battery uses only `powGetSysGrid` for the house grid meter;
+unit-port and installation AC deltas cannot replace it. Physical-unit port
+power is unchanged. Original time estimates are now scope-specific (BMS unit,
+CMS system) and expire after three minutes, independently of other traffic.
+Long estimates are not treated as undocumented sentinel values. When CMS time
+is absent, the Home Battery leaves time unknown instead of borrowing unit BMS.
+Anonymous support diagnostics expose only fixed source/application/age fields.
+Existing capability IDs, custom titles, controls and energy accounting remain.
+Local regression validation does not establish physical/mixed-generation
+acceptance. No new Test upload, mainline merge or Live publication is authorized.

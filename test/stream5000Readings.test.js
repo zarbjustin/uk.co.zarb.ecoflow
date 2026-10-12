@@ -27,7 +27,8 @@ test('reading timestamps are bounded to known capabilities, ignore counters, and
   assert.equal(ages.snapshot(2500, 1000).measure_temperature.stale, false);
   assert.ok(!JSON.stringify(ages.snapshot(2500, 1000)).includes('PRIVATE'));
   ages.observe({ measure_power: null }, 2500);
-  assert.equal(ages.snapshot(2500, 1000).measure_power, undefined);
+  assert.equal(ages.snapshot(2500, 1000).measure_power.applicationStatus, 'unavailable');
+  assert.equal(ages.snapshot(2500, 1000).measure_power.ageSec, null);
   ages.observe({ measure_power: 0 }, 3000);
   assert.deepEqual(ages.expired(2999, 1000), ['measure_power']);
 });
@@ -64,4 +65,52 @@ test('power/state expire independently within three minutes while SOC and temper
   ages.observe({ measure_power: 0 }, 181001);
   assert.equal(ages.snapshot(181001, 1200000).measure_power.stale, false);
   assert.equal(ages.snapshot(181001, 1200000)['measure_power.load'].stale, true);
+});
+
+test('failed application keeps the applied age while separating receipt age and recovery per field', () => {
+  const ages = new Stream5000ReadingAges();
+  ages.observe({ 'measure_power.load': 42 }, 1000);
+  ages.failed('measure_power.load', 5000);
+  assert.deepEqual(ages.snapshot(5000, 180000)['measure_power.load'], {
+    ageSec: 4, receivedAgeSec: 0, stale: true, applicationStatus: 'write_failed',
+  });
+  ages.observe({ measure_temperature: 30 }, 6000);
+  assert.equal(ages.hasWriteFailures(), true);
+  assert.deepEqual(ages.expired(6000, 180000), ['measure_power.load']);
+  ages.failed('measure_power.load'); // a failed watchdog clear is not another receipt
+  assert.equal(ages.snapshot(7000, 180000)['measure_power.load'].receivedAgeSec, 2);
+  ages.observe({ 'measure_power.load': 0 }, 7000);
+  assert.equal(ages.hasWriteFailures(), false);
+  assert.equal(ages.snapshot(7000, 180000)['measure_power.load'].applicationStatus, 'applied');
+});
+
+test('invalid and out-of-order attempts do not renew applied freshness or clear failures', () => {
+  const ages = new Stream5000ReadingAges();
+  ages.observe({ measure_power: 42 }, 5000);
+  ages.failed('measure_power', 6000);
+  for (const at of [NaN, Infinity, -1, 1000]) {
+    ages.failed('measure_power', at);
+    ages.observe({ measure_power: 0 }, at);
+  }
+  ages.observe({ measure_power: NaN, measure_temperature: {}, PRIVATE: 0 }, 7000);
+  ages.failed('PRIVATE', 7000);
+  const snapshot = ages.snapshot(7000, 180000);
+  assert.deepEqual(Object.keys(snapshot), ['measure_power']);
+  assert.equal(snapshot.measure_power.ageSec, 2);
+  assert.equal(snapshot.measure_power.receivedAgeSec, 1);
+  assert.equal(snapshot.measure_power.applicationStatus, 'write_failed');
+  assert.equal(ages.canApply('measure_power', 5000, 7000, 180000), false);
+  assert.equal(ages.canApply('measure_power', 7001, 7000, 180000), false);
+});
+
+test('clock rollback invalidates old applied values but admits a new-epoch receipt', () => {
+  const ages = new Stream5000ReadingAges();
+  ages.observe({ measure_power: 100 }, 10000);
+  assert.equal(ages.snapshot(5000, 180000).measure_power.stale, true);
+  assert.equal(ages.canApply('measure_power', 10000, 5001, 180000), false);
+  assert.equal(ages.canApply('measure_power', 5000, 5001, 180000), true);
+  ages.receive('measure_power', 5000);
+  assert.equal(ages.snapshot(5001, 180000).measure_power.stale, true);
+  ages.observe({ measure_power: 0 }, 5000);
+  assert.equal(ages.snapshot(5001, 180000).measure_power.stale, false);
 });

@@ -1,12 +1,19 @@
 {
   "settings": {
     "reporter": {
-      "title": "Bereitschaft des Batteriemelders", "battery": "Bestehende Hausbatterie",
-      "refresh": "Integrationsbericht anzeigen, um die Bereitschaft zu prüfen.", "none": "Keine ursprüngliche Hausbatterie gekoppelt.",
-      "ready": "Bereit für den optionalen Überwachungstest", "active": "Überwachungstest aktiv",
-      "rollback": "Warten auf ursprüngliche Messwerte nach Rückkehr", "lookup": "Melderprüfung fehlt, ist veraltet oder unverändert",
-      "monitor": "Passender gekoppelter Monitor fehlt", "overlap": "Überlappende Batteriedarstellungen",
-      "waiting": "Warten auf aktuelle passende Messwerte", "changed": "Melderidentität geändert", "failed": "Nachweis fehlt oder Schreibvorgang fehlgeschlagen",
+      "title": "Bereitschaft des Batteriemelders",
+      "battery": "Bestehende Hausbatterie",
+      "refresh": "Integrationsbericht anzeigen, um die Bereitschaft zu prüfen.",
+      "none": "Keine ursprüngliche Hausbatterie gekoppelt.",
+      "ready": "Bereit für den optionalen Überwachungstest",
+      "active": "Überwachungstest aktiv",
+      "rollback": "Warten auf ursprüngliche Messwerte nach Rückkehr",
+      "lookup": "Melderprüfung fehlt, ist veraltet oder unverändert",
+      "monitor": "Passender gekoppelter Monitor fehlt",
+      "overlap": "Überlappende Batteriedarstellungen",
+      "waiting": "Warten auf aktuelle passende Messwerte",
+      "changed": "Melderidentität geändert",
+      "failed": "Nachweis fehlt oder Schreibvorgang fehlgeschlagen",
       "check": "Aktuellen Batteriemelder prüfen und den Bericht erneut anzeigen.",
       "pair": "Den gekoppelten STREAM 5000 Unit Monitor behalten. Falls er fehlt, diesen Monitor hinzufügen, keine weitere Hausbatterie. Bestehende Geräte nicht löschen.",
       "review": "Doppelte Monitore oder Hausbatterien derselben Anlage vor Aktivierung prüfen. Bei Unsicherheit den Bericht senden.",
@@ -15,19 +22,35 @@
       "enable": "Optional den Überwachungstest in den erweiterten Einstellungen dieser Hausbatterie aktivieren. Batteriesteuerung wird deaktiviert.",
       "scope": "Test: nur Gesamt-Ladezustand, Leistung und Ladestatus des ausgewählten Melders. Umfang ursprünglicher Energie-/Verlaufswerte ungeprüft. Ladezustand, Batteriegesundheit und Ladelimit sind verschieden.",
       "snapshot": "Momentaufnahme; für Änderungen erneuern. Ausschalten stellt die ursprüngliche Quelle ohne Neukopplung wieder her.",
-      "download": "Integrations-JSON herunterladen", "downloaded": "Bericht heruntergeladen. Vor privatem Teilen prüfen; separat von Homeys App-Protokoll-ID.",
+      "download": "Integrations-JSON herunterladen",
+      "downloaded": "Bericht heruntergeladen. Vor privatem Teilen prüfen; separat von Homeys App-Protokoll-ID.",
       "download_failed": "Download hier nicht verfügbar. Angezeigten Bericht kopieren.",
       "activation_only": "Die Aktivierungsbereitschaft gilt vor dem Einschalten. Ein aktiver Test wartet nicht auf Aktivierung.",
       "update_pending": "Neue Messwerte warten auf Übernahme. Die letzte vollständige aktuelle Momentaufnahme bleibt online; Flow-Bedingungen warten auf passende aktuelle Werte.",
       "linked_unit_power": "Verknüpfte 5000-Einheit: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Leere Einheitenwerte bedeuten weder Nullleistung noch Verbindungsverlust. Die Hausbatterie zeigt Gesamtwerte.",
       "request_timeout": "Zeitüberschreitung beim Bericht. Erneut versuchen oder den lokalen Integrationsbericht anzeigen. Kein automatischer Wiederholungsversuch; eine frühere Melderprüfung kann noch laufen.",
-      "capture_version": "App-Version bei Erfassung", "capture_time": "Erfasst (UTC)", "capture_elapsed": "Alter der Momentaufnahme jetzt",
+      "capture_version": "App-Version bei Erfassung",
+      "capture_time": "Erfasst (UTC)",
+      "capture_elapsed": "Alter der Momentaufnahme jetzt",
       "capture_unknown": "Unbekannt oder Zeitabweichung",
       "capture_scope": "Angezeigte Zustände, Empfangsalter und Aktualität gelten zur Erfassungszeit, nicht für die aktuelle Verbindung. Für neue Daten manuell erneuern. Der Download speichert dieselbe Momentaufnahme.",
       "flow_sources": "Netzquellen des 5000-Melders (nur Diagnose)",
-      "grid_meter": "Gemeldete Netzzählerleistung", "grid_flow": "Aus Energieflüssen berechnete Netzleistung",
-      "grid_difference": "Zähler minus Energiefluss", "receipt_age": "Empfangsalter", "field_unavailable": "Nicht verfügbar oder veraltet",
-      "grid_scope": "Positiv bedeutet Bezug, negativ Einspeisung. Dies sind getrennte Quellen, keine austauschbaren Anlagensummen. Nahe Empfangszeiten bestätigen keine gleichen Geräte-Messzeiten. Die Differenz ist kein bestätigter Verlust. Keine Änderung der Energieabrechnung."
+      "grid_meter": "Gemeldete Netzzählerleistung",
+      "grid_flow": "Aus Energieflüssen berechnete Netzleistung",
+      "grid_difference": "Zähler minus Energiefluss",
+      "receipt_age": "Empfangsalter",
+      "field_unavailable": "Nicht verfügbar oder veraltet",
+      "grid_scope": "Positiv bedeutet Bezug, negativ Einspeisung. Dies sind getrennte Quellen, keine austauschbaren Anlagensummen. Nahe Empfangszeiten bestätigen keine gleichen Geräte-Messzeiten. Die Differenz ist kein bestätigter Verlust. Keine Änderung der Energieabrechnung.",
+      "unit_scope": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie.",
+      "original_unit_scope": "Die Netzanschlussleistung der ursprünglichen Einheit ist gridConnectionPower, nicht der vorzeichenbehaftete Batteriefluss oder die AC-Steckdosenleistung. Leere Batteriefluss-/Statuswerte bedeuten nicht verifizierte Einzelrichtung, nicht null oder Verbindungsverlust.",
+      "application_failed": "EcoFlow-Daten sind eingetroffen, aber Homey konnte mindestens einen Messwert nicht übernehmen. Dessen Aktualität wird nicht erneuert; siehe readingFreshness im Integrations-JSON.",
+      "individual_flow_unverified": "Einzel-Batteriefluss und Richtung sind unbestätigt. Leer bedeutet weder null noch Verbindungsfehler.",
+      "reading_expired": "Messwerte sind veraltet; andere Aktualisierungen erneuern alte Wattwerte nicht.",
+      "reading_not_reported": "Diese Quelle hat für mindestens eine Kachel keinen nutzbaren Messwert geliefert.",
+      "trial_sources": "Gesamt-Ladezustand, Batteriewatt und Status nutzen den gewählten 5000-Melder. Andere Systemfluss-Kacheln bleiben leer; Energiezähler behalten die ursprüngliche Adresse.",
+      "counter_scope": "Zählerkontinuität ist nur Diagnose. Gesamtanlagenumfang unbestätigt; keine Abrechnungsquelle wird geändert.",
+      "counter_possible_stall": "Ein kürzlich empfangener Zähler ist mindestens fünf Minuten unverändert, während aktuell Leistung in passender Richtung gemessen wird. Möglicher Unterschied, kein bestätigter Stillstand.",
+      "counter_incomplete": "Ursprüngliche Zähler fehlen, sind ungültig oder veraltet. Kein automatischer Ersatz und keine Migration."
     },
     "monitoring_trial": {
       "help": "Messwert-Test für gemischte Generationen: Nach einer aktuellen Melderprüfung in den erweiterten Einstellungen der bestehenden STREAM-Hausbatterie aktivieren. Den gekoppelten 5000-Einheitenmonitor behalten, keine weitere Hausbatterie hinzufügen. Nur Gesamt-Ladezustand, Batterieleistung und Lade-/Entladestatus ändern sich. Energiesummen und Verlauf behalten ihre ursprüngliche Quelle und unbestätigten Gesamtumfang. Andere Anlagenflusswerte werden geleert, Batteriesteuerung deaktiviert. Adressprüfung alle vier Minuten, Messwerte aus dem bestehenden Datenstrom. Ausschalten stellt ursprüngliche Werte ohne Neukopplung wieder her.",
@@ -71,11 +94,13 @@
   },
   "device": {
     "stream_5000_system": {
-      "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert"
+      "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert",
+      "application_failed": "Neue EcoFlow-Messwerte konnten in Homey nicht übernommen werden. Prüfen Sie den Integrationsbericht."
     },
     "stream_5000_unit": {
       "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert",
-      "linked_power_unverified": "Verknüpfte Anlage: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Die Hausbatterie zeigt Gesamtwerte."
+      "linked_power_unverified": "Verknüpfte Anlage: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Die Hausbatterie zeigt Gesamtwerte.",
+      "reading_scope": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie."
     },
     "stream_ac5000": {
       "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert"

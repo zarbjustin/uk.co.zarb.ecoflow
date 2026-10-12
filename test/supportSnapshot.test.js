@@ -6,6 +6,70 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('counter projection isolates nested getters and rejects unsupported stall claims', () => {
+  const instance = homey();
+  const bad = { get powerComparisonScope() { throw new Error('PRIVATE'); } };
+  const input = { fields: {
+    get accuChgEnergy() { throw new Error('PRIVATE'); },
+    accuDsgEnergy: { status: 'invalid', ageSec: 1, unchangedSec: 900, possibleStall: true },
+  } };
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream' ? [bad, input].map(data => ({
+    getCounterContinuityDiagnostics: () => data,
+  })) : [] });
+  const report = createSupportSnapshot(instance);
+  const counters = report.drivers.find(d => d.id === 'stream').counterContinuity;
+  assert.equal(counters[0].fields.accuDsgEnergy.status, 'missing');
+  assert.equal(counters[1].fields.accuChgEnergy.status, 'missing');
+  assert.equal(counters[1].fields.accuDsgEnergy.possibleStall, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('support report anonymously correlates exact paired peers, with no migration or private getter leakage', () => {
+  const now = Date.now(); const instance = homey();
+  const sn = 'BK31PRIVATE000001';
+  const devices = {
+    stream_unit: [{ getData: () => ({ sn }),
+      getUnitCorrelationDiagnostics: () => ({ gridPortW: { value: 421, ageSec: 0, stale: false, secret: 'PRIVATE' } }) }],
+    stream_5000_unit: [{ getTopologyEvidence: () => ({ source: 'es22_peer_records', addressSn: 'ES22PRIVATE000001',
+      peers: [{ sn, seenAt: now, readings: { batteryPowerRawW: { value: 419, receivedAt: now } } }] }) }],
+    stream: [{ getCounterContinuityDiagnostics: () => ({ secret: 'PRIVATE', sourceMigrationAllowed: true,
+      powerComparisonScope: 'PRIVATE', fields: { accuDsgEnergy: { status: 'PRIVATE', ageSec: 181,
+        possibleStall: true, stallVerified: true, raw: 'PRIVATE' } } }) }],
+  };
+  instance.drivers.getDriver = id => ({ getDevices: () => devices[id] || [] });
+  const report = createSupportSnapshot(instance);
+  const match = report.peerCorrelation[0].peers[0];
+  assert.deepEqual(match.pairedDevice, { driverId: 'stream_unit', deviceIndex: 0 });
+  assert.equal(match.comparisons.rawPowerVersusPort.peerMinusUnit, -2);
+  assert.equal(match.accountingUsed, false);
+  const counters = report.drivers.find(d => d.id === 'stream').counterContinuity[0];
+  assert.equal(counters.fields.accuDsgEnergy.possibleStall, false);
+  assert.equal(counters.fields.accuDsgEnergy.stallVerified, false);
+  assert.equal(counters.sourceMigrationAllowed, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('remaining-time diagnostics export only scoped source and application ages, never private payloads', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream' ? [{
+    getRemainingTimeDiagnostics: () => ({
+      discharge_remaining: { source: 'system_cms_mqtt', ageSec: 0, receivedAgeSec: 0,
+        stale: false, applicationStatus: 'write_failed', value: 207, sn: 'PRIVATE', raw: 'PRIVATE' },
+      charge_remaining: { source: 'PRIVATE', ageSec: -1, receivedAgeSec: NaN,
+        stale: false, applicationStatus: 'PRIVATE' },
+      secret: 'PRIVATE',
+    }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const readings = report.drivers.find(d => d.id === 'stream').remainingTime[0].readings;
+  assert.equal(readings.discharge_remaining.stale, true);
+  assert.equal(readings.discharge_remaining.applicationStatus, 'write_failed');
+  assert.equal(readings.charge_remaining.source, 'unobserved');
+  assert.equal(readings.charge_remaining.ageSec, null);
+  assert.equal(Object.keys(readings).length, 2);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('active meter source projection is private and rejects stale or malformed readings', () => {
   for (const ageSec of [0, 91, -1, null, NaN]) {
     const instance = homey();
@@ -168,7 +232,7 @@ test('per-reading freshness projection excludes identities and catches nested ge
   }] : [] });
   const report = createSupportSnapshot(instance);
   assert.deepEqual(report.drivers.find(d => d.id === 'stream_5000_unit').readingFreshness[0].readings,
-    { measure_power: { ageSec: 12, stale: false } });
+    { measure_power: { ageSec: 12, receivedAgeSec: null, stale: false, applicationStatus: 'unknown' } });
   assert.ok(!JSON.stringify(report).includes('PRIVATE'));
   malicious = true;
   assert.ok(!JSON.stringify(createSupportSnapshot(instance)).includes('PRIVATE'));
@@ -185,6 +249,22 @@ function homey() {
     drivers: { getDriver: () => { throw new Error('private serial ES22PRIVATE000001'); } },
   };
 }
+
+test('failed application projection separates receipt from applied freshness with fixed vocabulary', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getReadingDiagnostics: () => ({
+      'measure_power.load': { ageSec: 10, receivedAgeSec: 0, stale: false, applicationStatus: 'write_failed', error: 'PRIVATE' },
+      measure_temperature: { ageSec: null, receivedAgeSec: -1, stale: false, applicationStatus: 'PRIVATE' },
+    }),
+  }] : [] });
+  const readings = createSupportSnapshot(instance).drivers.find(driver => driver.id === 'stream_5000_unit').readingFreshness[0].readings;
+  assert.deepEqual(readings['measure_power.load'], { ageSec: 10, receivedAgeSec: 0, stale: true, applicationStatus: 'write_failed' });
+  assert.equal(readings.measure_temperature.stale, true);
+  assert.equal(readings.measure_temperature.applicationStatus, 'unknown');
+  assert.equal(readings.measure_temperature.receivedAgeSec, null);
+  assert.ok(!JSON.stringify(readings).includes('PRIVATE'));
+});
 
 test('support report projects anonymous read-only configuration with receipt age and no private fields', () => {
   const instance = homey();
@@ -240,7 +320,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 12);
+  assert.equal(report.schemaVersion, 13);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {

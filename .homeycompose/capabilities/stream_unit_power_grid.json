@@ -1,9 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Grid import/export",
-    "de": "Netzbezug/-einspeisung",
-    "nl": "Netafname/-teruglevering"
+    "en": "Unit grid-port power",
+    "de": "Einheit: Netzanschlussleistung",
+    "nl": "Unit: netaansluitvermogen"
   },
   "units": {
     "en": "W",

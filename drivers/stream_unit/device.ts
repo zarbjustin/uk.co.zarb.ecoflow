@@ -1,6 +1,6 @@
 'use strict';
 
-import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
+import { BaseEcoFlowDevice, QuotaSampleContext } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { streamModelFromSn, streamAcOutletCount } from '../../lib/streamModels';
 import { OperatingMode } from '../../lib/streamProtocol';
@@ -8,6 +8,8 @@ import { executeStreamControl, readStreamControlState, StreamControlIntent } fro
 import { EcoFlowAppApi, getApp } from '../../lib/appApi';
 import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
 import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/streamBkPvDiagnostics';
+import { scopedReadingOptions, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
+import { StreamUnitComparison } from '../../lib/streamDiagnosticChecks';
 
 type ControlWait = () => void;
 
@@ -30,6 +32,7 @@ type ControlWait = () => void;
  */
 module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private mainSn = '';
+  private unitComparison = new StreamUnitComparison();
   private controlGeneration = 0;
   private readonly controlWaits = new Map<NodeJS.Timeout, ControlWait>();
   private pvReceipts = new BkPvReceipts();
@@ -40,7 +43,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private pvChain: Promise<void> = Promise.resolve();
 
   getReadingDiagnostics(): Record<string, unknown> {
-    return this.pvReceipts.snapshot(Date.now());
+    return { ...this.pvReceipts.snapshot(Date.now()), ...this.getRemainingTimeFreshness() };
   }
 
   private async startPvDiagnostics(sn: string): Promise<void> {
@@ -151,7 +154,9 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   };
 
   protected async onReady(): Promise<void> {
+    this.unitComparison = new StreamUnitComparison();
     this.controlGeneration += 1;
+    await this.startRemainingTime('unit');
     const sn = this.getData().sn as string;
     const spec = streamModelFromSn(sn);
     this.mainSn = (this.getStoreValue('mainSn') as string) || sn;
@@ -172,6 +177,12 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const outlets = streamAcOutletCount(sn);
     const acCaps = StreamUnitDevice.AC_CAPS.filter((cap) => (cap.endsWith('1') ? outlets >= 1 : outlets >= 2));
     await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...acCaps]);
+    const gridOptions = scopedReadingOptions('stream_unit_power_grid',
+      this.getCapabilityOptions('stream_unit_power_grid'), STREAM_UNIT_GRID_TITLE);
+    if (gridOptions) {
+      await this.setCapabilityOptions('stream_unit_power_grid', gridOptions)
+        .catch((e) => this.error('grid-port title', e));
+    }
     await this.removeCapabilities(StreamUnitDevice.AC_CAPS.filter((cap) => !acCaps.includes(cap)));
     // Previous versions could copy aggregate battery power/state onto a unit.
     // Clear persisted values: no proven signed per-unit path is exposed here.
@@ -286,6 +297,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.stopRemainingTime();
     this.controlGeneration += 1;
     if (this.pvTimer) this.homey.clearInterval(this.pvTimer);
     this.pvTimer = null;
@@ -293,6 +305,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     this.pvHandler = undefined;
     await this.pvChain;
     this.pvReceipts = new BkPvReceipts();
+    this.unitComparison = new StreamUnitComparison();
     for (const [timer, resolve] of this.controlWaits) {
       this.homey.clearTimeout(timer);
       resolve();
@@ -321,8 +334,11 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     return true;
   }
 
-  async applyQuota(quota: Record<string, any>): Promise<void> {
+  async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    await this.applyRemainingTime(quota, context);
     const values = mapStreamQuota(quota, 'unit');
+    delete values.charge_remaining;
+    delete values.discharge_remaining;
     for (const [source, target] of Object.entries(StreamUnitDevice.POWER_CAP_MAP)) {
       const value = values[source];
       if (value !== undefined) values[target] = value;
@@ -335,8 +351,21 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     }
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
-      if (this.getCapabilityValue(cap) === value) continue;
-      await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
+      try {
+        if (this.getCapabilityValue(cap) !== value) await this.setCapabilityValue(cap, value);
+        this.unitComparison.observe(cap, value, context?.receivedAt ?? Date.now());
+      } catch (e) {
+        this.unitComparison.failed(cap);
+        this.error(`setCapabilityValue ${cap}`, e);
+      }
     }
+  }
+
+  getUnitCorrelationDiagnostics(): Record<string, unknown> {
+    const readings = this.unitComparison.snapshot(Date.now());
+    for (const [key, cap] of [['socPct', 'measure_battery'], ['gridPortW', 'stream_unit_power_grid']]) {
+      if (readings[key] && this.getCapabilityValue(cap) !== readings[key].value) delete readings[key];
+    }
+    return readings;
   }
 };

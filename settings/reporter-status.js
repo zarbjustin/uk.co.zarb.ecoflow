@@ -31,11 +31,30 @@
       const result = describe(trial);
       append(`${translate('battery')} ${index + 1}: ${translate(result.state)}`);
       append(translate(result.action));
-      if (result.state === 'active') append(translate('activation_only'));
+      if (result.state === 'active') {
+        append(translate('activation_only'));
+        append(translate('trial_sources'));
+      }
       if (result.state === 'active' && trial.updatePending === true) append(translate('update_pending'));
     });
     append(translate('scope'));
     append(translate('snapshot'));
+    const explanationKeys = { individual_flow_unverified: 'individual_flow_unverified',
+      expired: 'reading_expired', write_failed: 'application_failed', not_reported: 'reading_not_reported' };
+    (Array.isArray(report.drivers) ? report.drivers : []).slice(0, 8).forEach(driver => {
+      const reasons = new Set();
+      (Array.isArray(driver.readingExplanations) ? driver.readingExplanations : []).slice(0, 64)
+        .forEach(entry => Object.values(entry?.readings || {}).forEach(reason => {
+          if (Object.hasOwn(explanationKeys, reason)) reasons.add(explanationKeys[reason]);
+        }));
+      reasons.forEach(key => append(translate(key)));
+      (Array.isArray(driver.counterContinuity) ? driver.counterContinuity : []).slice(0, 64).forEach(entry => {
+        append(translate('counter_scope'));
+        const fields = ['accuChgEnergy', 'accuDsgEnergy'].map(key => entry?.fields?.[key]);
+        if (fields.some(f => f?.possibleStall === true)) append(translate('counter_possible_stall'));
+        if (fields.some(f => ['missing', 'invalid', 'stale'].includes(f?.status))) append(translate('counter_incomplete'));
+      });
+    });
     // Separate diagnostic sources; never render API labels/IDs or stale numbers.
     const fresh = field => field?.stale === false && typeof field.value === 'number'
       && Number.isFinite(field.value) && Math.abs(field.value) <= 100000
@@ -46,6 +65,11 @@
     (Array.isArray(report.drivers) ? report.drivers : [])
       .filter(driver => ['stream_5000_unit', 'stream_5000_system', 'stream_ac5000'].includes(driver.id))
       .forEach(driver => {
+        if (driver.id !== 'stream_5000_system' && driver.pairedCount > 0) append(translate('unit_scope'));
+        if ((Array.isArray(driver.readingFreshness) ? driver.readingFreshness : []).some(entry =>
+          Object.values(entry?.readings || {}).some(field => field?.applicationStatus === 'write_failed'))) {
+          append(translate('application_failed'));
+        }
         (Array.isArray(driver.physicalPower) ? driver.physicalPower : []).slice(0, 64).forEach(power => {
           if (power?.status === 'linked_power_unverified') append(translate('linked_unit_power'));
         });
@@ -60,6 +84,7 @@
           append(translate('grid_scope'));
         });
       });
+    if (report.drivers?.some(driver => driver.id === 'stream_unit' && driver.pairedCount > 0)) append(translate('original_unit_scope'));
   }
 
   function download(report, doc, urlApi, BlobType) {

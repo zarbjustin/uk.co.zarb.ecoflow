@@ -2410,58 +2410,65 @@
       "capabilitiesOptions": {
         "measure_battery": {
           "title": {
-            "en": "Battery",
-            "de": "Batterie",
-            "nl": "Batterij"
+            "en": "Unit battery level",
+            "de": "Einheit: Batteriestand",
+            "nl": "Unit: batterijniveau"
           }
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery state",
-            "de": "Batteriestatus",
-            "nl": "Batterijstatus"
+            "en": "Unit battery state",
+            "de": "Einheit: Batteriestatus",
+            "nl": "Unit: batterijstatus"
           }
         },
         "measure_power.load": {
           "title": {
-            "en": "House consumption",
-            "de": "Hausverbrauch",
-            "nl": "Huisverbruik"
+            "en": "System house consumption",
+            "de": "System: Hausverbrauch",
+            "nl": "Systeem: huisverbruik"
           }
         },
         "measure_power.grid": {
           "title": {
-            "en": "Grid import/export",
-            "de": "Netzbezug/-einspeisung",
-            "nl": "Netafname/-teruglevering"
+            "en": "System grid meter",
+            "de": "System: Netzzähler",
+            "nl": "Systeem: netmeter"
           }
         },
         "measure_power.grid_import": {
           "title": {
-            "en": "Grid import",
-            "de": "Netzbezug",
-            "nl": "Netafname"
+            "en": "System grid import (flow)",
+            "de": "System: Netzbezug (Fluss)",
+            "nl": "Systeem: netafname (stroom)"
           }
         },
         "measure_power.grid_export": {
           "title": {
-            "en": "Grid export",
-            "de": "Netzeinspeisung",
-            "nl": "Netteruglevering"
+            "en": "System grid export (flow)",
+            "de": "System: Einspeisung (Fluss)",
+            "nl": "Systeem: teruglevering (stroom)"
           }
         },
         "measure_temperature": {
           "title": {
-            "en": "Battery temperature",
-            "de": "Batterietemperatur",
-            "nl": "Batterijtemperatuur"
+            "en": "Unit battery temperature",
+            "de": "Einheit: Batterietemperatur",
+            "nl": "Unit: batterijtemperatuur"
           }
         },
         "battery_soh": {
           "title": {
-            "en": "Battery health",
-            "de": "Batteriezustand",
-            "nl": "Batterijconditie"
+            "en": "Unit battery health",
+            "de": "Einheit: Batteriezustand",
+            "nl": "Unit: batterijconditie"
+          }
+        },
+        "stream_unit_power_battery_flow": {
+          "title": {
+            "en": "Unit battery flow",
+            "de": "Einheit: Batteriefluss",
+            "nl": "Unit: batterijstroom"
           }
         }
       },
@@ -2512,6 +2519,21 @@
                 "en": "This unit's EcoFlow serial number.",
                 "de": "Die EcoFlow-Seriennummer dieser Einheit.",
                 "nl": "Het EcoFlow-serienummer van deze unit."
+              }
+            },
+            {
+              "id": "reading_scope",
+              "type": "label",
+              "label": {
+                "en": "Reading scopes",
+                "de": "Messwertbereiche",
+                "nl": "Meetbereiken"
+              },
+              "value": "Unit battery / system house and grid",
+              "hint": {
+                "en": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy.",
+                "de": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie.",
+                "nl": "Unit-batterijwaarden beschrijven dit apparaat. Huis- en netwaarden beschrijven het systeem, niet de afzonderlijke batterij. Lege stroom-/statuswaarden betekenen niet geverifieerd, niet nul. Netmeter en stroomgebaseerde afname/teruglevering zijn aparte bronnen. Gebruik Home Battery voor gezamenlijke energie."
               }
             }
           ]
@@ -2566,9 +2588,9 @@
               },
               "value": "Monitoring only · controls intentionally disabled",
               "hint": {
-                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit only reads per-device telemetry and does not contribute to Homey Energy. Pair STREAM Home Battery (5000) for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
-                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit liest nur Gerätetelemetrie und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM Home Battery (5000) für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
-                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze optionele fysieke unit leest alleen apparaattelemeterie en draagt niet bij aan Homey Energy. Koppel STREAM Home Battery (5000) voor de gecombineerde energiegegevens van de installatie. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
+                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit shows unit battery telemetry and separate system house/grid context and does not contribute to Homey Energy. Pair STREAM Home Battery (5000) for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
+                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit zeigt Batteriewerte der Einheit und getrennte Haus-/Netzwerte des Systems und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM Home Battery (5000) für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
+                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze optionele fysieke unit toont unit-batterijgegevens en aparte huis-/netwaarden van het systeem en draagt niet bij aan Homey Energy. Koppel STREAM Home Battery (5000) voor de gecombineerde energiegegevens van de installatie. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
               }
             }
           ]
@@ -2623,58 +2645,65 @@
       "capabilitiesOptions": {
         "measure_battery": {
           "title": {
-            "en": "Battery",
-            "de": "Batterie",
-            "nl": "Batterij"
+            "en": "Unit battery level",
+            "de": "Einheit: Batteriestand",
+            "nl": "Unit: batterijniveau"
           }
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery state",
-            "de": "Batteriestatus",
-            "nl": "Batterijstatus"
+            "en": "Unit battery state",
+            "de": "Einheit: Batteriestatus",
+            "nl": "Unit: batterijstatus"
           }
         },
         "measure_power.load": {
           "title": {
-            "en": "House consumption",
-            "de": "Hausverbrauch",
-            "nl": "Huisverbruik"
+            "en": "System house consumption",
+            "de": "System: Hausverbrauch",
+            "nl": "Systeem: huisverbruik"
           }
         },
         "measure_power.grid": {
           "title": {
-            "en": "Grid import/export",
-            "de": "Netzbezug/-einspeisung",
-            "nl": "Netafname/-teruglevering"
+            "en": "System grid meter",
+            "de": "System: Netzzähler",
+            "nl": "Systeem: netmeter"
           }
         },
         "measure_power.grid_import": {
           "title": {
-            "en": "Grid import",
-            "de": "Netzbezug",
-            "nl": "Netafname"
+            "en": "System grid import (flow)",
+            "de": "System: Netzbezug (Fluss)",
+            "nl": "Systeem: netafname (stroom)"
           }
         },
         "measure_power.grid_export": {
           "title": {
-            "en": "Grid export",
-            "de": "Netzeinspeisung",
-            "nl": "Netteruglevering"
+            "en": "System grid export (flow)",
+            "de": "System: Einspeisung (Fluss)",
+            "nl": "Systeem: teruglevering (stroom)"
           }
         },
         "measure_temperature": {
           "title": {
-            "en": "Battery temperature",
-            "de": "Batterietemperatur",
-            "nl": "Batterijtemperatuur"
+            "en": "Unit battery temperature",
+            "de": "Einheit: Batterietemperatur",
+            "nl": "Unit: batterijtemperatuur"
           }
         },
         "battery_soh": {
           "title": {
-            "en": "Battery health",
-            "de": "Batteriezustand",
-            "nl": "Batterijconditie"
+            "en": "Unit battery health",
+            "de": "Einheit: Batteriezustand",
+            "nl": "Unit: batterijconditie"
+          }
+        },
+        "stream_unit_power_battery_flow": {
+          "title": {
+            "en": "Unit battery flow",
+            "de": "Einheit: Batteriefluss",
+            "nl": "Unit: batterijstroom"
           }
         }
       },
@@ -2725,6 +2754,21 @@
                 "en": "This unit's EcoFlow serial number.",
                 "de": "Die EcoFlow-Seriennummer dieser Einheit.",
                 "nl": "Het EcoFlow-serienummer van deze unit."
+              }
+            },
+            {
+              "id": "reading_scope",
+              "type": "label",
+              "label": {
+                "en": "Reading scopes",
+                "de": "Messwertbereiche",
+                "nl": "Meetbereiken"
+              },
+              "value": "Unit battery / system house and grid",
+              "hint": {
+                "en": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy.",
+                "de": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie.",
+                "nl": "Unit-batterijwaarden beschrijven dit apparaat. Huis- en netwaarden beschrijven het systeem, niet de afzonderlijke batterij. Lege stroom-/statuswaarden betekenen niet geverifieerd, niet nul. Netmeter en stroomgebaseerde afname/teruglevering zijn aparte bronnen. Gebruik Home Battery voor gezamenlijke energie."
               }
             }
           ]
@@ -4282,9 +4326,9 @@
     "stream_unit_power_grid": {
       "type": "number",
       "title": {
-        "en": "Grid import/export",
-        "de": "Netzbezug/-einspeisung",
-        "nl": "Netafname/-teruglevering"
+        "en": "Unit grid-port power",
+        "de": "Einheit: Netzanschlussleistung",
+        "nl": "Unit: netaansluitvermogen"
       },
       "units": {
         "en": "W",

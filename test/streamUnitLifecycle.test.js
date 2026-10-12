@@ -22,6 +22,8 @@ async function harness(sn, mainSn = sn, app) {
   d.hasCapability = (cap) => caps.has(cap);
   d.addCapability = async (cap) => caps.add(cap); d.removeCapability = async (cap) => caps.delete(cap);
   d.getCapabilityValue = (cap) => values[cap];
+  d.getCapabilityOptions = () => ({});
+  d.setCapabilityOptions = async () => {};
   d.setCapabilityValue = async (cap, value) => { values[cap] = value; };
   d.registerCapabilityListener = (cap, callback) => { listeners[cap] = callback; };
   d.setSettings = async () => {}; d.error = () => {};
@@ -49,6 +51,29 @@ function pvFrame(value) {
   const data = Buffer.alloc(6); data[0] = 0xb5; data[1] = 0x3e; data.writeFloatLE(value, 2);
   return Buffer.concat([Buffer.from([0x0a, 13, 0x0a, 6]), data, Buffer.from([0x40, 0xfe, 1, 0x48, 21])]);
 }
+
+test('unit correlation renews unchanged applied receipts, drops rejected writes and resets on teardown', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness('BK61SYNTHETIC0001');
+  h.caps.add('measure_battery'); // Present in the packaged physical-unit driver.
+  await h.d.applyQuota({ f32ShowSoc: 81, gridConnectionPower: 421 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.d.getUnitCorrelationDiagnostics().gridPortW.value, 421);
+  now += 10000;
+  await h.d.applyQuota({ gridConnectionPower: 421 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.d.getUnitCorrelationDiagnostics().gridPortW.ageSec, 0);
+  assert.equal(h.d.getUnitCorrelationDiagnostics().socPct.ageSec, 10);
+  const write = h.d.setCapabilityValue;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (cap === 'stream_unit_power_grid') throw new Error('PRIVATE SDK failure');
+    await write(cap, value);
+  };
+  await h.d.applyQuota({ gridConnectionPower: 430 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.d.getUnitCorrelationDiagnostics().gridPortW, undefined);
+  await h.d.onTeardown();
+  assert.deepEqual(h.d.getUnitCorrelationDiagnostics(), {});
+  assert.equal(h.writes.length, 0, 'diagnostics issue no hardware writes');
+});
 
 test('optional BK app diagnostics clear stale components and never touch power or energy', async (t) => {
   let now = 100000;
@@ -103,6 +128,43 @@ test('REST-only BK unit stays usable without starting an app-diagnostic watchdog
   assert.equal(h.caps.has('stream_unit_pv3_voltage'), false);
   await h.d.applyQuota({ powGetPv3: 42 });
   assert.equal(h.values.stream_unit_power_pv3, 42);
+  await h.d.onTeardown();
+});
+
+test('unit remaining estimates clear persisted values, expire independently, and release the local watchdog', async t => {
+  let now = 1000000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness('BK61SYNTHETIC0001');
+  h.caps.add('charge_remaining'); h.caps.add('discharge_remaining');
+  h.values.discharge_remaining = 999;
+  await h.d.startRemainingTime('unit');
+  assert.equal(h.values.discharge_remaining, null);
+  await h.d.applyQuota({ bmsDsgRemTime: 207, bmsChgRemTime: 5939 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.values.discharge_remaining, 207);
+  now += 180001;
+  await h.d.applyQuota({ cmsDsgRemTime: 50, temp: 38 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.values.discharge_remaining, null);
+  assert.equal(h.values.charge_remaining, null);
+  await h.d.applyQuota({ bmsDsgRemTime: 210 }, { receivedAt: now, source: 'mqtt' });
+  now += 180001;
+  h.intervals.get(1)(); await h.d.queueDeviceWork(async () => {});
+  assert.equal(h.values.discharge_remaining, null);
+  await h.d.onTeardown();
+  assert.equal(h.intervals.size, 0);
+  await h.d.applyQuota({ bmsDsgRemTime: 5 });
+  assert.equal(h.values.discharge_remaining, null);
+});
+
+test('failed startup clearing of a persisted time estimate retries without a telemetry receipt', async () => {
+  const h = await harness('BK31SYNTHETIC0001');
+  h.caps.add('discharge_remaining'); h.values.discharge_remaining = 999;
+  const write = h.d.setCapabilityValue; let fail = true;
+  h.d.setCapabilityValue = async (cap, value) => { if (fail) throw new Error('SDK'); await write(cap, value); };
+  await h.d.startRemainingTime('unit');
+  assert.equal(h.d.getRemainingTimeDiagnostics().discharge_remaining.ageSec, null);
+  fail = false; h.intervals.get(1)(); await h.d.queueDeviceWork(async () => {});
+  assert.equal(h.values.discharge_remaining, null);
+  assert.equal(h.d.getRemainingTimeDiagnostics().discharge_remaining.source, 'unobserved');
   await h.d.onTeardown();
 });
 

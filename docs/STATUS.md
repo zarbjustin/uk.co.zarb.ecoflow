@@ -2,6 +2,93 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unreleased follow-up — freshness, scopes and diagnostic continuity, 12 October 2026
+
+Changes confined to `codex/mixed-generation-reporting-diagnostics`, based on
+`ab08bf20eb950792ba4afe7ea90c1f53fc2b7ece`. Diagnostic-branch commit/push and
+exact-commit CI verification were authorized on 12 October; Test publication,
+mainline merge and Live changes remain on hold. No version bump or release
+workflow is part of this increment. The published Test baseline below remains
+separate from these unshipped changes. Check the exact branch HEAD in
+[GitHub Actions](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/workflows/homey-app-validate.yml)
+when continuing; source sync and CI success do not establish hardware acceptance.
+
+- A telemetry receipt is no longer marked successfully applied before the
+  Homey capability write completes. Anonymous schema 13 `readingFreshness`
+  separates `receivedAgeSec`, the last applied `ageSec` and fixed
+  `applicationStatus` (`applied`, `write_failed`, `stale`, `unavailable`).
+  Rejected writes do not renew freshness or restore availability. Clearing
+  failures remain visible and retry on the watchdog; clearing old values is
+  not another telemetry receipt. A fresh successful reading of the failed
+  field is required for recovery; unrelated temperature deltas cannot mask it.
+- Expired/future/out-of-order queued writes cannot overwrite fresh values or
+  manufacture availability. Slow writes retain original receipt age. Expired
+  accessory data cannot create tiles. SDK failures are isolated per reading;
+  later fields and queued work continue, with teardown guards retained.
+- Physical 5000/legacy monitors label battery readings as **Unit** and house/grid
+  context as **System**. The signed reported meter and flow-derived import/export
+  remain separate sources. Default-title migration preserves custom titles,
+  existing options, capability IDs and Flow references; no re-pair is needed.
+- Original STREAM `stream_unit_power_grid` is now **Unit grid-port power**,
+  sourced unchanged from `gridConnectionPower`. A supplied AC Pro screenshot
+  shows positive port watts while sockets are zero and signed battery tiles
+  are blank. These measurements are distinct: do not invert port power or
+  substitute combined power/state for an unverified individual reading.
+  The screenshot is not a matched API capture or proof of a universal sign
+  convention. Subsequent read-only app/API checks on original hardware confirm
+  the app shows positive port watts with an Output arrow and a distinct signed
+  system battery reading. This is not acceptance of mixed-generation unit power.
+- Original Home Battery grid now reads only `powGetSysGrid`. Neither unit
+  `gridConnectionPower` nor installation AC `sysGridConnectionPower` can replace
+  the whole-house meter in a partial packet. Startup clears persisted fallback
+  grid values. Unit port watts and their existing sign remain unchanged.
+- Original remaining-time capabilities use BMS estimates for physical units
+  and CMS estimates for the Home Battery; absent CMS never borrows a pack's
+  estimate. EN/DE/NL default titles identify Unit/System while retaining custom
+  titles/options/IDs. Estimates are non-negative finite minutes; explicit zero
+  and long durations such as 5939 are retained, not guessed to be sentinels.
+  Independent three-minute receipts, startup clearing, minute expiry/retry,
+  SDK-write failures, delayed/future packets, clock rollback and teardown are
+  covered. Widgets reject expired/failed estimates before the watchdog clears
+  tiles. Trial/rollback suppression remains intact. Missing system estimates
+  intentionally stay unavailable instead of displaying individual runtime.
+  Anonymous `remainingTime` diagnostics project fixed source/age/status fields
+  only; no raw values, identities, network calls or private captures are added.
+- Energy integration, counters, checkpoints, reporter selection, controls and
+  grouping remain unchanged. No private reports/screenshots/identities are
+  stored in this increment; tests use synthetic and already-masked fixtures.
+- The mixed-discharge regression separates idle AC 5000/Ultra observations,
+  active original AC Pro peer watts and combined battery power. Raw peer watts
+  remain diagnostic-only; they do not enable signed physical flow or accounting.
+- Anonymous schema 13 `readingExplanations` and the support UI distinguish
+  unverified physical flow, expiry, application failure and missing reports.
+  Trial wording explicitly separates combined monitoring from original counters.
+- Exact private peer identity can correlate a paired original STREAM monitor to
+  an anonymous driver/index reference. SOC and raw-power-versus-port comparisons
+  require independent fresh receipts within 30 seconds of each other. Prefix/SOC
+  similarity, duplicates and stale peers never establish a match. No public
+  serial, automatic grouping, verified measurement equivalence or control
+  authority is created; optional getter failures remain isolated.
+- Session-only counter continuity records missing/invalid/stale/baseline,
+  unchanged, advances and reset evidence. A five-minute unchanged counter plus
+  current matching-direction watts is only a possible stall, not proof of a
+  faulty counter or sustained discharge. Missing fields do not renew receipts;
+  gaps, invalid recovery, rollback and teardown prevent false continuity.
+  Counter sources and cumulative totals are unchanged.
+- A read-only native-app/Developer API/Homey comparison on the owner's original
+  STREAM installation found close combined power/SOC agreement, duplicated
+  parallel port flows and an advancing Homey discharge counter. Individual
+  remaining-time estimates are not proof of combined runtime. App-only grid
+  output/AC charging limits remain investigation candidates, not guessed writes.
+  See the 12 October section of `STREAM_REPORTING_API_AUDIT_2026_10_09.md`.
+
+Local checks: all 596 tests passed, TypeScript, lint, Homey CLI 4.5.3 `verified`
+validation and whitespace checks passed. These local checks do not establish
+real-hardware acceptance; GitHub CI is a separate exact-commit gate.
+Next release gates remain matched combined/individual discharge evidence,
+restart/recovery/rollback checks and a normal-use soak, not a capability-label
+change alone. Publication remains on hold until explicitly authorized.
+
 ## Latest Test release — v1.10.33 / Build 48, 12 October 2026
 
 Working only on `codex/mixed-generation-reporting-diagnostics`, based on the

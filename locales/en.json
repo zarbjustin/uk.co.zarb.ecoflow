@@ -1,12 +1,19 @@
 {
   "settings": {
     "reporter": {
-      "title": "Battery reporter readiness", "battery": "Existing Home Battery",
-      "refresh": "Show the integration report to check readiness.", "none": "No existing original Home Battery is paired.",
-      "ready": "Ready for the optional monitoring trial", "active": "Monitoring trial active",
-      "rollback": "Waiting for original readings after rollback", "lookup": "Reporter check missing, expired or unchanged",
-      "monitor": "Matching paired monitor missing", "overlap": "Overlapping battery representations",
-      "waiting": "Waiting for fresh, matching readings", "changed": "Reporter identity changed", "failed": "Evidence unavailable or a write failed",
+      "title": "Battery reporter readiness",
+      "battery": "Existing Home Battery",
+      "refresh": "Show the integration report to check readiness.",
+      "none": "No existing original Home Battery is paired.",
+      "ready": "Ready for the optional monitoring trial",
+      "active": "Monitoring trial active",
+      "rollback": "Waiting for original readings after rollback",
+      "lookup": "Reporter check missing, expired or unchanged",
+      "monitor": "Matching paired monitor missing",
+      "overlap": "Overlapping battery representations",
+      "waiting": "Waiting for fresh, matching readings",
+      "changed": "Reporter identity changed",
+      "failed": "Evidence unavailable or a write failed",
       "check": "Run Check current battery reporter, then show the report again.",
       "pair": "Keep the paired STREAM 5000 Unit monitor. If missing, add that monitor, not another Home Battery. Do not delete existing devices.",
       "review": "Review duplicate monitors or Home Batteries for the same installation before enabling. Send the report if unsure.",
@@ -15,19 +22,35 @@
       "enable": "Optional: enable the monitoring trial in this existing Home Battery's Advanced Settings. Battery controls will be disabled.",
       "scope": "Trial: selected system percentage, watts and charging state only. Original energy/history scope remains unverified. Battery level, battery health and charge limit are different values.",
       "snapshot": "Snapshot only; refresh to see changes. Turning the trial off restores the original source without re-pairing.",
-      "download": "Download integration JSON", "downloaded": "Report downloaded. Review it before sharing privately; it is separate from Homey's app-log ID.",
+      "download": "Download integration JSON",
+      "downloaded": "Report downloaded. Review it before sharing privately; it is separate from Homey's app-log ID.",
       "download_failed": "Download unavailable here. Copy the displayed report instead.",
       "activation_only": "Activation eligibility applies before enabling. An active trial is not awaiting activation.",
       "update_pending": "New readings are waiting to be applied. The last complete, fresh snapshot remains online; Flow conditions wait for matching current values.",
       "linked_unit_power": "Linked 5000 Unit: individual battery power and direction are not verified. Blank unit tiles do not mean zero power or a lost connection. Home Battery shows combined readings.",
       "request_timeout": "The report request timed out. Try again, or use Show integration support report for a local-only report. No automatic retry is made; an earlier reporter check may still be finishing.",
-      "capture_version": "App version at capture", "capture_time": "Captured (UTC)", "capture_elapsed": "Snapshot age now",
+      "capture_version": "App version at capture",
+      "capture_time": "Captured (UTC)",
+      "capture_elapsed": "Snapshot age now",
       "capture_unknown": "Unknown or clock mismatch",
       "capture_scope": "All displayed states, receipt ages and freshness flags describe the capture time, not the current connection. Refresh manually for new data. Download saves this same snapshot.",
       "flow_sources": "5000 reporter grid sources (diagnostic only)",
-      "grid_meter": "Reported grid-meter power", "grid_flow": "Flow-derived grid power",
-      "grid_difference": "Meter minus flow", "receipt_age": "Receipt age", "field_unavailable": "Unavailable or stale",
-      "grid_scope": "Positive means import; negative means export. These are separate reported sources, not interchangeable installation totals. Close receipt times do not prove matching device sampling times. The difference is not verified loss. No change to energy accounting."
+      "grid_meter": "Reported grid-meter power",
+      "grid_flow": "Flow-derived grid power",
+      "grid_difference": "Meter minus flow",
+      "receipt_age": "Receipt age",
+      "field_unavailable": "Unavailable or stale",
+      "grid_scope": "Positive means import; negative means export. These are separate reported sources, not interchangeable installation totals. Close receipt times do not prove matching device sampling times. The difference is not verified loss. No change to energy accounting.",
+      "unit_scope": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy.",
+      "original_unit_scope": "Original Unit grid-port power is the reported gridConnectionPower, not signed battery flow or AC socket output. Blank battery flow/state means individual direction is unverified. It does not mean zero or disconnection.",
+      "application_failed": "EcoFlow data arrived, but Homey could not apply one or more readings. Their freshness is not renewed; see readingFreshness in the integration JSON.",
+      "individual_flow_unverified": "Individual battery flow/direction is unverified. Blank does not mean zero or a connection failure.",
+      "reading_expired": "One or more readings expired; unrelated updates cannot refresh old watts.",
+      "reading_not_reported": "This source has not supplied a usable reading for one or more tiles.",
+      "trial_sources": "Combined percentage, battery watts and state use the selected 5000 reporter. Other system-flow tiles are suppressed; energy counters retain the original address.",
+      "counter_scope": "Counter continuity is diagnostic only. Combined-installation scope is unverified; no accounting source is changed.",
+      "counter_possible_stall": "A recently received counter is unchanged for at least five minutes while matching-direction power is currently observed. This is a possible mismatch, not proof of a stalled counter.",
+      "counter_incomplete": "One or more original counters are missing, invalid or stale. No automatic fallback or migration is performed."
     },
     "monitoring_trial": {
       "help": "Mixed-generation reading trial: after a fresh reporter check, opt in from the existing STREAM Home Battery's Advanced Settings. Keep its paired 5000 Unit monitor; do not add another Home Battery. Only combined SOC, battery power and charging state change. Cumulative energy/history retain their original source and unverified combined scope. Unsupported installation flow tiles clear and battery controls are disabled. The trial checks identity every four minutes and uses cached paired telemetry. Turn the setting off to roll back without re-pairing.",
@@ -71,11 +94,13 @@
   },
   "device": {
     "stream_5000_system": {
-      "monitoring_only": "Monitoring only · controls intentionally disabled"
+      "monitoring_only": "Monitoring only · controls intentionally disabled",
+      "application_failed": "Fresh EcoFlow readings could not be applied in Homey. Check the integration report."
     },
     "stream_5000_unit": {
       "monitoring_only": "Monitoring only · controls intentionally disabled",
-      "linked_power_unverified": "Linked installation: individual battery power and direction are not verified. Use Home Battery for combined readings."
+      "linked_power_unverified": "Linked installation: individual battery power and direction are not verified. Use Home Battery for combined readings.",
+      "reading_scope": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy."
     },
     "stream_ac5000": {
       "monitoring_only": "Monitoring only · controls intentionally disabled"

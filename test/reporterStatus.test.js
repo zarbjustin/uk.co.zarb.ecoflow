@@ -5,6 +5,23 @@ const assert = require('node:assert/strict');
 const { describe, render, download, renderCapture } = require('../settings/reporter-status');
 const { ReporterTimeline, timelineSnapshot } = require('../.homeybuild/lib/reporterTimeline');
 
+test('new explanations distinguish blank reasons, trial sources and counter suspicion without private data', () => {
+  const element = { children: [], ownerDocument: { createElement: () => ({}) },
+    appendChild(child) { this.children.push(child); } };
+  render(element, { drivers: [{ id: 'stream', monitoringTrial: [{ enabled: true, status: 'active' }],
+    readingExplanations: [{ readings: { 'a': 'individual_flow_unverified', 'b': 'expired',
+      'c': 'write_failed', 'd': 'not_reported', 'PRIVATE': 'PRIVATE' } }],
+    counterContinuity: [{ fields: { accuChgEnergy: { status: 'missing' },
+      accuDsgEnergy: { possibleStall: true } } }],
+  }] }, key => key);
+  const text = element.children.map(c => c.textContent).join('\n');
+  for (const key of ['trial_sources', 'individual_flow_unverified', 'reading_expired',
+    'application_failed', 'reading_not_reported', 'counter_scope', 'counter_possible_stall', 'counter_incomplete']) {
+    assert.ok(text.includes(key));
+  }
+  assert.ok(!text.includes('PRIVATE'));
+});
+
 test('readiness explains ready, active, rollback and blockers without guessing', () => {
   assert.equal(describe({ readiness: { eligible: true, status: 'active' } }).state, 'ready');
   assert.equal(describe({ enabled: true, status: 'active' }).state, 'active');
@@ -116,6 +133,22 @@ test('capture metadata distinguishes capture freshness from now without changing
   }
   renderCapture(element, null, translate, at);
   assert.equal(element.textContent, '');
+});
+
+test('scope and write-failure explanations render fixed labels without arbitrary titles or errors', () => {
+  const element = { children: [], ownerDocument: { createElement: () => ({}) },
+    appendChild(child) { this.children.push(child); } };
+  render(element, { drivers: [
+    { id: 'stream_unit', pairedCount: 1 },
+    { id: 'stream_5000_unit', pairedCount: 1, readingFreshness: [{ readings: {
+      'measure_power.load': { applicationStatus: 'write_failed', error: 'PRIVATE' },
+    } }] },
+  ] }, key => key);
+  const text = element.children.map(child => child.textContent).join('\n');
+  assert.match(text, /unit_scope/);
+  assert.match(text, /original_unit_scope/);
+  assert.match(text, /application_failed/);
+  assert.doesNotMatch(text, /PRIVATE/);
 });
 
 test('bounded summary survives event eviction, counts only observed states and stops at rollback', () => {

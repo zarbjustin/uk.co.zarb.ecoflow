@@ -107,6 +107,41 @@ test('opt-in requires the exact fresh joined reporter and comparable fields; kee
   assert.equal(selectMonitoringReporter(homey, old, now, 'DIFFERENT_ID').status, 'selected_reporter_changed');
 });
 
+test('original Home Battery grid remains a whole-house meter through unit-only and temperature updates', async t => {
+  const h = await deviceHarness(t);
+  await h.legacy({ powGetSysGrid: 0, gridConnectionPower: 600 });
+  assert.equal(h.device.values['measure_power.grid'], 0);
+  await h.device.applyQuota({ gridConnectionPower: 610, sysGridConnectionPower: 620 });
+  await h.device.applyQuota({ temp: 38 });
+  assert.equal(h.device.values['measure_power.grid'], 0);
+  await h.device.applyQuota({ powGetSysGrid: -20 });
+  assert.equal(h.device.values['measure_power.grid'], -20);
+  await h.device.onTeardown();
+});
+
+test('Home Battery time estimates use only fresh CMS fields and cannot bypass trial suppression', async t => {
+  const h = await deviceHarness(t);
+  const has = h.device.hasCapability.bind(h.device);
+  h.device.hasCapability = cap => ['charge_remaining', 'discharge_remaining'].includes(cap) || has(cap);
+  await h.device.startRemainingTime('system');
+  await h.legacy({ bmsDsgRemTime: 207 });
+  assert.equal(h.device.values.discharge_remaining, null);
+  await h.legacy({ cmsDsgRemTime: 140 });
+  assert.equal(h.device.values.discharge_remaining, 140);
+  h.setTime(now + 180001);
+  assert.equal(h.device.getReadingDiagnostics().discharge_remaining.stale, true, 'widgets reject expired estimates before watchdog runs');
+  const expiry = [...h.device.timers.values()].find(timer => timer.interval === 60000);
+  expiry.fn(); await h.device.queueDeviceWork(async () => {});
+  assert.equal(h.device.values.discharge_remaining, null);
+  h.setTime(now);
+  await h.enable();
+  await h.legacy({ cmsDsgRemTime: 200 });
+  assert.equal(h.device.values.discharge_remaining, null);
+  assert.deepEqual(h.device.getRemainingTimeDiagnostics(), {});
+  await h.device.onTeardown();
+  assert.equal(h.device.timers.size, 0);
+});
+
 test('activation does not use cached physical SOC, stale fields or skewed comparisons', () => {
   for (const fields of [{}, { socPct: { value: 53, ageSec: 181, stale: true } },
     { socPct: { value: 53, ageSec: 40, stale: false }, batteryW: { value: -291, ageSec: 0, stale: false } }]) {
@@ -196,7 +231,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 12);
+  assert.equal(report.schemaVersion, 13);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });

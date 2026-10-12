@@ -43,6 +43,28 @@ test('unit grid never borrows whole-home grid when own feed is absent', () => {
   assert.strictEqual(v['measure_power.grid'], undefined);
 });
 
+test('system meter cannot fall back to unit-port or installation AC power on partial packets', () => {
+  for (const q of [{ gridConnectionPower: 600 }, { sysGridConnectionPower: 600 },
+    { powGetSysGrid: NaN, gridConnectionPower: 600 }]) {
+    assert.strictEqual(mapStreamQuota(q)['measure_power.grid'], undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ powGetSysGrid: 0, gridConnectionPower: 600 })['measure_power.grid'], 0);
+  assert.strictEqual(mapStreamQuota({ powGetSysGrid: -40, sysGridConnectionPower: 600 })['measure_power.grid'], -40);
+});
+
+test('remaining-time scope separates BMS unit estimates from CMS system estimates', () => {
+  const q = { bmsChgRemTime: 5939, bmsDsgRemTime: 207, cmsChgRemTime: 75, cmsDsgRemTime: 140 };
+  assert.strictEqual(mapStreamQuota(q, 'unit').discharge_remaining, 207);
+  assert.strictEqual(mapStreamQuota(q).discharge_remaining, 140);
+  assert.strictEqual(mapStreamQuota({ bmsChgRemTime: 5939 }).charge_remaining, undefined);
+  assert.strictEqual(mapStreamQuota({ cmsDsgRemTime: 140 }, 'unit').discharge_remaining, undefined);
+  assert.strictEqual(mapStreamQuota({ bmsChgRemTime: 5939 }, 'unit').charge_remaining, 5939);
+  for (const value of [-1, NaN, Infinity, '', null, true, 'invalid']) {
+    assert.strictEqual(mapStreamQuota({ cmsDsgRemTime: value }).discharge_remaining, undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ cmsDsgRemTime: '0' }).discharge_remaining, 0);
+});
+
 test('unit scope reads per-unit SoC and ignores system cmsBattSoc', () => {
   // Member MQTT BMS: the unit's own SoC.
   assert.strictEqual(mapStreamQuota({ f32ShowSoc: 28.2, soc: 28 }, 'unit')['measure_battery'], 28.2);

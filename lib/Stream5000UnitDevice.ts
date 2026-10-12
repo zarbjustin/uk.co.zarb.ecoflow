@@ -20,6 +20,7 @@ import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } fro
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
+import { scopedReadingOptions, STREAM_5000_UNIT_TITLES } from './streamReadingScopes';
 import {
   STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
   Stream5000ReadingAges, stream5000ConfigurationValues,
@@ -50,6 +51,7 @@ const MONITORING_ONLY_FALLBACK = 'Monitoring only · controls intentionally disa
 
 const UNAVAILABLE_MESSAGE = 'No data from EcoFlow\'s app connection. Check the EcoFlow account in the app settings.';
 const NOT_CONNECTED_MESSAGE = 'EcoFlow app connection unavailable — check or update your EcoFlow account in the app settings.';
+const APPLICATION_FAILED_MESSAGE = 'Fresh EcoFlow readings could not be applied in Homey. Check the integration report.';
 const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as const;
 
 export class Stream5000UnitDevice extends Homey.Device {
@@ -88,6 +90,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private configurationTracker?: Stream5000ConfigurationTracker;
   private readonly readingAges = new Stream5000ReadingAges();
   private linkedPowerWarning = false;
+  private lastOfflineMessage = '';
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -128,6 +131,14 @@ export class Stream5000UnitDevice extends Homey.Device {
       await this.initialiseEnergyCapabilities();
     } else {
       await this.initialisePhysicalUnitCapabilities();
+      for (const [capability, titles] of Object.entries(STREAM_5000_UNIT_TITLES)) {
+        if (this.isStopped()) return;
+        if (!this.hasCapability(capability)) continue;
+        const options = scopedReadingOptions(capability, this.getCapabilityOptions(capability), titles);
+        // This is an in-place default-title migration, not a re-pair or custom-title reset.
+        // eslint-disable-next-line no-await-in-loop
+        if (options) await this.setCapabilityOptions(capability, options).catch((e) => this.error('reading title', e));
+      }
     }
     for (const capability of Object.values(STREAM_5000_CONFIGURATION_CAPABILITIES)) {
       if (this.isStopped()) return;
@@ -156,6 +167,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       experimental_notice: localizedStatus && localizedStatus !== messageKey
         ? localizedStatus
         : MONITORING_ONLY_FALLBACK,
+      ...(!this.isEnergyAggregate() ? { reading_scope: this.homey.__('device.stream_5000_unit.reading_scope') } : {}),
     }).catch(() => {});
     if (this.isStopped()) return;
 
@@ -254,15 +266,17 @@ export class Stream5000UnitDevice extends Homey.Device {
   private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number, usable: boolean): Promise<void> {
     const run = async () => {
       if (this.isStopped()) return;
-      await this.applyTelemetry(values, receivedAt);
-      if (usable) await this.setOnline();
+      const applied = await this.applyTelemetry(values, receivedAt);
+      if (this.isStopped()) return;
+      if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
+      else if (applied && usable) await this.setOnline();
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
   }
 
-  private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
-    if (this.isStopped()) return;
+  private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<boolean> {
+    if (this.isStopped()) return false;
     const roleValues = this.capabilityValuesForRole(values);
     if (!this.isEnergyAggregate() && values.measure_power === null && values.battery_charging_state === null
       && !this.linkedPowerWarning) {
@@ -275,17 +289,44 @@ export class Stream5000UnitDevice extends Homey.Device {
           this.linkedPowerWarning = false;
         });
     }
-    this.readingAges.observe(Object.fromEntries(Object.entries(roleValues).filter(([key]) => this.hasCapability(key))), receivedAt);
+    let applied = true;
     for (const [capability, value] of Object.entries(roleValues)) {
       if (!this.hasCapability(capability)) continue;
-      if (this.lastValues[capability] === value && this.getCapabilityValue(capability) === value) continue;
-      this.lastValues[capability] = value;
-      await this.setCapabilityValue(capability, value).catch((e) => this.error(capability, e));
+      // eslint-disable-next-line no-await-in-loop
+      const success = await this.applyLiveReading(capability, value, receivedAt);
+      applied = success && applied;
     }
     const batteryPowerW = values.measure_power;
     if (this.isEnergyAggregate() && typeof batteryPowerW === 'number') {
       await this.updateEnergy(batteryPowerW, receivedAt);
     }
+    return applied;
+  }
+
+  private async applyLiveReading(capability: string, value: number | string | null, receivedAt: number): Promise<boolean> {
+    if (this.isStopped() || !this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) return false;
+    this.readingAges.receive(capability, receivedAt);
+    try {
+      if (this.getCapabilityValue(capability) !== value) await this.setCapabilityValue(capability, value);
+    } catch (e) {
+      this.readingAges.failed(capability, receivedAt);
+      this.error(capability, e);
+      // Best effort: a rejected write must not leave an old number looking current.
+      if (!this.isStopped()) await this.setCapabilityValue(capability, null).catch(() => {});
+      return false;
+    }
+    if (this.isStopped()) return false;
+    this.lastValues[capability] = value;
+    this.readingAges.observe({ [capability]: value }, receivedAt);
+    if (!this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) {
+      // Slow SDK writes cannot renew the receipt age or revive expired readings.
+      await this.setCapabilityValue(capability, null).catch((e) => {
+        this.readingAges.failed(capability, receivedAt);
+        this.error(capability, e);
+      });
+      return false;
+    }
+    return true;
   }
 
   private queueConfiguration(): Promise<void> {
@@ -316,17 +357,29 @@ export class Stream5000UnitDevice extends Homey.Device {
     // Inferred solarNodeW deliberately stays out of production meters/tiles.
     const run = async () => {
       if (this.isStopped()) return;
+      let applied = true;
       for (const [capability, value] of Object.entries(values)) {
         if (this.isStopped()) return;
+        if (!this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) continue;
         if (!this.hasCapability(capability)) {
           if (value === 0) continue; // Zero alone does not establish that an accessory is installed.
           // eslint-disable-next-line no-await-in-loop
-          await this.addCapability(capability);
+          try {
+            await this.addCapability(capability);
+          } catch (e) {
+            this.readingAges.failed(capability, receivedAt);
+            this.error(capability, e);
+            applied = false;
+            continue;
+          }
         }
         // eslint-disable-next-line no-await-in-loop
-        if (this.getCapabilityValue(capability) !== value) await this.setCapabilityValue(capability, value);
+        const success = await this.applyLiveReading(capability, value, receivedAt);
+        applied = success && applied;
       }
-      this.readingAges.observe(Object.fromEntries(Object.entries(values).filter(([key]) => this.hasCapability(key))), receivedAt);
+      if (!this.isStopped() && !applied && this.readingAges.hasWriteFailures()) {
+        await this.setOffline(this.applicationFailedMessage());
+      }
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
@@ -531,16 +584,23 @@ export class Stream5000UnitDevice extends Homey.Device {
     const expire = async () => {
       if (this.isStopped()) return;
       for (const capability of this.readingAges.expired(Date.now(), this.unavailableAfterMs())) {
+        if (this.isStopped()) return;
         if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== null) {
           // eslint-disable-next-line no-await-in-loop
-          await this.setCapabilityValue(capability, null);
-          this.lastValues[capability] = null;
+          try {
+            await this.setCapabilityValue(capability, null);
+            this.lastValues[capability] = null;
+          } catch (e) {
+            this.readingAges.failed(capability);
+            this.error(capability, e);
+          }
         }
       }
     };
     this.applyChain = this.applyChain.then(expire, expire);
     await this.applyChain;
     if (this.isStopped()) return;
+    if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
     const limitMs = this.unavailableAfterMs();
     const reference = this.lastTelemetryAt || this.startedAt;
     const age = Date.now() - reference;
@@ -578,15 +638,26 @@ export class Stream5000UnitDevice extends Homey.Device {
     return Math.max(5, Math.min(240, minutes)) * 60 * 1000;
   }
 
+  private applicationFailedMessage(): string {
+    const key = 'device.stream_5000_system.application_failed';
+    const translated = this.homey.__(key);
+    return translated && translated !== key ? translated : APPLICATION_FAILED_MESSAGE;
+  }
+
   /** Only transitions are applied, so a quiet device is not repeatedly flagged. */
   private async setOnline(): Promise<void> {
-    if (this.getAvailable()) return;
-    await this.setAvailable().catch(() => {});
+    if (this.isStopped() || this.readingAges.hasWriteFailures() || this.getAvailable()) return;
+    await this.setAvailable().then(() => {
+      this.lastOfflineMessage = '';
+    }).catch(() => {});
   }
 
   private async setOffline(message: string): Promise<void> {
-    if (!this.getAvailable()) return;
-    await this.setUnavailable(message).catch(() => {});
+    if (this.isStopped() || (!this.getAvailable() && this.lastOfflineMessage === message)) return;
+    // A write failure before the first successful frame is not a connection failure.
+    await this.setUnavailable(message).then(() => {
+      this.lastOfflineMessage = message;
+    }).catch(() => {});
   }
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises -- SDK types deletion void; teardown must await saved energy.

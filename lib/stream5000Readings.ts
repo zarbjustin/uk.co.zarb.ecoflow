@@ -40,14 +40,51 @@ export function stream5000ConfigurationValues(snapshot: any): Record<string, num
   return values;
 }
 
-/** Independent receipt age for each reading; a temperature delta cannot refresh power. */
+/** Receipt and successful application are separate; unrelated deltas cannot refresh power. */
 export class Stream5000ReadingAges {
   private readonly timestamps = new Map<string, number>();
+  private readonly received = new Map<string, number>();
+  private readonly writeFailures = new Set<string>();
 
+  canApply(key: string, at: number, now: number, limitMs: number): boolean {
+    // A wall-clock rollback invalidates the old epoch, not the next fresh packet.
+    // Reject future queued packets. Retain the old applied stamp as stale until
+    // a new-epoch write succeeds; do not revive it on a clock change.
+    if (Number.isFinite(at) && at > 0 && Number.isFinite(now) && at <= now
+      && (this.received.get(key) ?? 0) > now) this.received.delete(key);
+    return STREAM_5000_LIVE_CAPABILITIES.includes(key) && Number.isFinite(at) && at > 0
+      && Number.isFinite(now) && at <= now && at >= (this.received.get(key) ?? 0)
+      && now - at <= stream5000ReadingLimitMs(key, limitMs);
+  }
+
+  /** An attempted receipt is not a successfully applied Homey reading. */
+  receive(key: string, at: number): void {
+    if (STREAM_5000_LIVE_CAPABILITIES.includes(key) && Number.isFinite(at) && at >= 0
+      && at >= (this.received.get(key) ?? 0)) this.received.set(key, at);
+  }
+
+  failed(key: string, at?: number): void {
+    if (!STREAM_5000_LIVE_CAPABILITIES.includes(key)) return;
+    if (at !== undefined) {
+      if (!Number.isFinite(at) || at < 0 || at < (this.received.get(key) ?? 0)) return;
+      this.receive(key, at);
+    }
+    this.writeFailures.add(key);
+  }
+
+  hasWriteFailures(): boolean {
+    return this.writeFailures.size > 0;
+  }
+
+  /** Call only after the capability write succeeds (or its value already matches). */
   observe(values: Record<string, unknown>, at: number): void {
     if (!Number.isFinite(at) || at < 0) return;
     for (const [key, value] of Object.entries(values)) {
       if (!STREAM_5000_LIVE_CAPABILITIES.includes(key)) continue;
+      if (value !== null && !(typeof value === 'number' && Number.isFinite(value)) && typeof value !== 'string') continue;
+      if (at < (this.received.get(key) ?? 0)) continue;
+      this.receive(key, at);
+      this.writeFailures.delete(key);
       if (value === null) this.timestamps.delete(key);
       else if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'string') {
         this.timestamps.set(key, at);
@@ -56,18 +93,30 @@ export class Stream5000ReadingAges {
   }
 
   expired(now: number, limitMs: number): string[] {
-    return [...this.timestamps].filter(([key, at]) => at > now || now - at > stream5000ReadingLimitMs(key, limitMs))
-      .map(([key]) => key);
+    return [...new Set([...this.writeFailures, ...[...this.timestamps]
+      .filter(([key, at]) => at > now || now - at > stream5000ReadingLimitMs(key, limitMs))
+      .map(([key]) => key)])];
   }
 
   forget(key: string): void {
     this.timestamps.delete(key);
+    this.received.delete(key);
+    this.writeFailures.delete(key);
   }
 
   snapshot(now: number, limitMs: number): Record<string, unknown> {
-    return Object.fromEntries([...this.timestamps].map(([key, at]) => [key, {
-      ageSec: at > now ? null : Math.floor((now - at) / 1000),
-      stale: at > now || now - at > stream5000ReadingLimitMs(key, limitMs),
-    }]));
+    return Object.fromEntries([...this.received].map(([key, receivedAt]) => {
+      const at = this.timestamps.get(key);
+      const stale = at === undefined || at > now || now - at > stream5000ReadingLimitMs(key, limitMs);
+      let applicationStatus = stale ? 'stale' : 'applied';
+      if (at === undefined) applicationStatus = 'unavailable';
+      if (this.writeFailures.has(key)) applicationStatus = 'write_failed';
+      return [key, {
+        ageSec: at === undefined || at > now ? null : Math.floor((now - at) / 1000),
+        receivedAgeSec: receivedAt > now ? null : Math.floor((now - receivedAt) / 1000),
+        stale: stale || this.writeFailures.has(key),
+        applicationStatus,
+      }];
+    }));
   }
 }
