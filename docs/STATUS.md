@@ -2,7 +2,7 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Urgent original-Unit startup hotfix — 12 October 2026
+## Test v1.10.36 / Build 51 — original-Unit startup hotfix, 12 October 2026
 
 After Test v1.10.35, two original STREAM units were reported unavailable with
 `Invalid Capability: stream_unit_power_grid`; the combined Home Battery and
@@ -27,10 +27,23 @@ stored here.
   exercise full init with polling/MQTT and runtime updates, and cover 5000 startup
   and metadata failures. The Unit harness now models unreadable custom options
   instead of always returning {}, and gives timers distinct handles.
-- All 614 tests, lint and verified Homey validation passed locally. Urgent Test
-  release is in preparation on the diagnostic branch; record exact CI/tag/build
-  receipts after publication. Main and Live stay unchanged. Actual restoration
-  on the affected installation still requires the tester's confirmation.
+- All 614 tests, lint and verified Homey validation passed locally.
+  Implementation `52149cd6bbde407ddc145dcbc4089e9e4e5e9861` committed/pushed;
+  [implementation CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38300678209).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38300839521).
+  Tag `v1.10.36` / uploaded source `f01fce67a1840658200827b152b47b81577d0cef`;
+  [exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38300943783)
+  including dependency audit, then [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38301096223).
+- [Build 51](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/51)
+  explicitly published to Test. Portal confirms available for testing and the
+  [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows 1.10.36.
+  No certification/Live action or mainline merge. Protected local `master`
+  remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`; remote `master` remains
+  `66b1cb5f828a53333739798281fce86125f61c28`. Live baseline v1.10.3 / Build 18.
+- Actual restoration on the affected installation requires update-in-place and
+  tester confirmation. Prior detailed capture request is secondary to confirming
+  both original devices are accessible. The new apology/update reply is draft
+  only; no further community/private message was sent in this hotfix turn.
 
 ## Test release v1.10.35 / Build 50 — EcoFlow terminology, 12 October 2026
 
