@@ -211,5 +211,8 @@
   },
   "1.10.34": {
     "en": "Improve original STREAM reading freshness, correct Home Battery grid and remaining-time scopes, clarify Unit/System labels, and add matched support capture guidance with anonymous peer/counter and read-only limit diagnostics. Energy accounting and control safeguards remain unchanged."
+  },
+  "1.10.35": {
+    "en": "Align the original STREAM grid tile with EcoFlow: Unit grid connection port. Existing default labels migrate while custom names and Flow references are preserved. Readings, signs, energy accounting and controls are unchanged."
   }
 }
