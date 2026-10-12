@@ -2,7 +2,7 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Naming Test release preparation — EcoFlow terminology, 12 October 2026
+## Test release v1.10.35 / Build 50 — EcoFlow terminology, 12 October 2026
 
 Diagnostic branch only. Original STREAM's default grid tile now reads **Unit
 grid connection port**, matching the native EcoFlow app's **Grid connection
@@ -20,12 +20,29 @@ direction, energy accounting or control changes. Whole-house grid-meter and
 individual battery-flow capabilities remain separate. Naming regressions cover
 both default generations, partial localized custom names, idempotent migration,
 packaged/compose agreement and unchanged positive/negative/zero values.
-All 610 tests, lint and verified Homey validation passed. The user now authorizes
-commit/push and Test publication of this naming increment; release receipts will
-be recorded after exact-tag CI and portal verification. Test baseline is the
-tagged v1.10.34 / Build 49 below. Main and Live remain unchanged. Other suggested
-naming changes are not part of this increment. After release, the approved
-Robert follow-up goes privately to the Thanks! conversation, not the public topic.
+All 610 tests, lint, dependency audit and verified Homey validation passed.
+Other suggested naming changes are not part of this increment.
+
+- Implementation `df5d738f502d6559d0ec5c642de32e69b6bf344d` committed/pushed
+  on the diagnostic branch; [CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296486924).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296648201).
+  Tag `v1.10.35` / uploaded source `f1686752b1ea49259124daabbd8b9e2f914025ae`.
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296783935),
+  then [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296947705).
+- [Build 50](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/50)
+  published explicitly to Test. Portal and [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  verified as v1.10.35 at approximately 19:35 UTC. A browser-control stall was
+  recovered before publishing; no duplicate upload or repeated publish occurred.
+- Live still v1.10.3 / Build 18; no certification or Live action performed.
+  Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+- The approved follow-up was sent privately and reopened for verification,
+  updated to v1.10.35 and the final grid label. It asks for one matching capture
+  set with screenshots, downloaded integration JSON, separate app-log ID and
+  capture time/timezone. Existing evidence is retained; no mode/grouping change.
+  Private message content, raw reports, screenshots and identifiers are not in Git.
+- Installed version and physical acceptance are still unverified. Later
+  handover-only commits are not the uploaded release tag.
 
 ## Test release v1.10.34 / Build 49 — original STREAM freshness and support capture, 12 October 2026
 
