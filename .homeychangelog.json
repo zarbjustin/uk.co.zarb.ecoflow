@@ -205,5 +205,8 @@
   },
   "1.10.32": {
     "en": "Improved support-report timeouts and snapshot-age labels, added clock-recovery safeguards and bounded monitoring reliability summaries, and expanded outage/restart regression tests. Battery controls and energy accounting remain unchanged."
+  },
+  "1.10.33": {
+    "en": "Improved linked STREAM monitoring during reading updates, tightened power freshness, added individual-unit diagnostic observations and clearer support guidance. Battery controls and energy accounting remain unchanged."
   }
 }
