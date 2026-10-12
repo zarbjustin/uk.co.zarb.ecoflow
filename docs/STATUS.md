@@ -2,13 +2,29 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Diagnostic reliability follow-up — 12 October 2026, local/unpublished
+## Latest Test release — v1.10.33 / Build 48, 12 October 2026
 
 Working only on `codex/mixed-generation-reporting-diagnostics`, based on the
 latest mixed-generation feedback and review of manually submitted reports.
-No mainline merge, Git push, Test upload, certification, Live update or
-Community reply has been performed for this increment. The published Test
-baseline below remains v1.10.32 / Build 47; package version has not been bumped.
+Committed and pushed to the diagnostic branch, then released to Test with
+support schema 12. Mainline and Live remain unchanged; the Robert reply is a
+review-only draft, not posted.
+
+- Implementation: `f4d90a5edf65a093b19461262acd05ade5d7c2da`;
+  release/tag: `adda09b60af2db6cd66aa081c15c628ba5284eb7` / `v1.10.33`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38257541669),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38257723239),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38257851008)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38258048377)
+  succeeded. Exact-release CI passed 554 tests, lint, zero-vulnerability audit
+  and Homey CLI 4.5.3 validation at `verified` level.
+- [Build 48](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/48)
+  was published using Publish to Test; the portal confirmed available for
+  testing and the [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  showed v1.10.33. The refreshed Live store remains v1.10.3. Remote `master`
+  remains `66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge,
+  certification submission, hub installation, Community post or hardware
+  acceptance occurred. Publication was explicitly authorized for Test only.
 
 - Fresh, fully applied combined SOC/power/state remain available while newer
   donor values await the next local tick. Their own conservative three-minute
@@ -36,7 +52,7 @@ baseline below remains v1.10.32 / Build 47; package version has not been bumped.
   reading expiry, safe diagnostic projection and browser settings checks.
   TypeScript, lint, `git diff --check`, dependency audit (zero vulnerabilities)
   and Homey CLI 4.5.3 validation at `verified` level also passed locally.
-  GitHub CI has not run for these uncommitted changes; no hardware soak occurred.
+  Implementation and exact-release GitHub CI also passed; no hardware soak occurred.
 
 The latest evidence supports combined charging monitoring but the screenshots
 and JSON were captured at different times. Combined discharge while original
@@ -48,7 +64,7 @@ See the updated [trial plan](MONITORING_REPORTER_TRIAL.md) for late-October hard
 acceptance. Private reports, serials, contact details and screenshots remain out
 of Git; tests use synthetic or already-masked public fixtures.
 
-## Latest Test release — v1.10.32 / Build 47, 11 October 2026
+## Previous Test release — v1.10.32 / Build 47, 11 October 2026
 
 Implemented on `codex/mixed-generation-reporting-diagnostics` while waiting for
 the time-matched evidence requested in [Community reply 67](https://community.homey.app/t/157399/67).

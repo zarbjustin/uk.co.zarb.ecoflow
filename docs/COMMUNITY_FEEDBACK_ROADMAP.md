@@ -14,10 +14,11 @@ soak. Counter scope and actual control migration remain separate research gates.
 Expansion/ES21/ES22 and independent-installation cases need labelled hardware
 acceptance. Ed's Solis/controller-ownership requests remain advisory and separate.
 
-12 October follow-up: local diagnostic-branch update-race handling, three-minute
+12 October follow-up: diagnostic-branch update-race handling, three-minute
 power-field freshness independent of connection health, linked-unit explanations,
 anonymous self-record observations and simpler support capture guidance are
-implemented. No release or hardware acceptance yet. Ed's latest feedback calls
+implemented and published to Test as v1.10.33 / Build 48 after exact-release CI.
+Mainline and Live remain unchanged; hardware acceptance is still open. Ed's latest feedback calls
 for less technical testing requests: offer screenshots first, JSON optional.
 Preserve the already-supplied charging screenshots/report/log; the remaining
 target is matched evidence while original-generation batteries discharge.

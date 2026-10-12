@@ -2,7 +2,9 @@
 
 ## 12 October follow-up and late-October acceptance plan
 
-Diagnostic branch only; this reliability increment is not yet published.
+Diagnostic branch only; this reliability increment was published to Test as
+v1.10.33 / Build 48 on 12 October. See STATUS.md for exact-release CI and upload
+receipts. Mainline and Live remain unchanged; no hardware acceptance is claimed.
 Keep the existing Home Battery, physical monitor, original accounting source
 and default-off trial. No automatic source migration or new controls.
 
@@ -32,8 +34,8 @@ Request only one EcoFlow screenshot with combined SOC/watts and expanded battery
 SOC/watts, plus a fresh integration JSON, within about one minute, when an original
 battery naturally supplies power. Refresh with Show integration support report
 before Download integration JSON. Include local time/timezone and any capture
-gap. Current v1.10.32 evidence is still useful; do not require another update
-before a release exists. A new app-log ID is optional unless reproducing a new
+gap. Use v1.10.33 for new captures, but preserve any already-captured v1.10.32
+evidence and its timestamps rather than asking for a duplicate. A new app-log ID is optional unless reproducing a new
 problem. Screenshot-only help remains welcome for nontechnical users.
 
 ### Release path, not a promise of hardware acceptance
