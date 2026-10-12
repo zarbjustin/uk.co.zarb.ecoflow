@@ -214,5 +214,8 @@
   },
   "1.10.35": {
     "en": "Align the original STREAM grid tile with EcoFlow: Unit grid connection port. Existing default labels migrate while custom names and Flow references are preserved. Readings, signs, energy accounting and controls are unchanged."
+  },
+  "1.10.36": {
+    "en": "Fix original STREAM Unit startup failing with Invalid Capability: stream_unit_power_grid when capability options are unavailable. Cosmetic title migration can no longer block device startup. Existing devices, Flows, readings and energy accounting are preserved; no re-pairing is required."
   }
 }
