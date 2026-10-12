@@ -2,13 +2,26 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Unreleased diagnostic follow-up — 12 October 2026
+## Test v1.10.38 / Build 53 — bounded comparison diagnostics, 12 October 2026
 
-Diagnostic changes on `codex/mixed-generation-reporting-diagnostics` after
-`a96853eecba8c7d8e85b9d6978e62249cb300aaa`. The user subsequently authorized
-commit/push, exact-source CI checks and a new Test release. Publication remains
-pending until those checks and the portal channel are verified. Mainline and
-Live must remain unchanged; no certification or Live action is authorized.
+Published to Test from `codex/mixed-generation-reporting-diagnostics` only.
+Implementation `5ff1c3a86e06ecd3ec73f5ab242e9785db3ee80b`; exact release source
+and tag `v1.10.38` are `223e9e24875a7aac0552308f6ee4d19fa944198b`.
+
+- [Source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38316958615).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38317077235).
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38317157501),
+  including tests, lint, dependency audit and Homey verified validation.
+- [Upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38317307780).
+- [Build 53](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/53)
+  explicitly published to Test. The portal says available for testing; a refreshed
+  [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows v1.10.38
+  and its comparison/queue/report-transport changelog.
+- Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Live remains v1.10.3 / Build 18. No Mainline merge/push, certification submission,
+  Live publication, user installation, or hardware command was performed.
+  This subsequent handover-only commit is not the uploaded release source.
 
 - Support schema 16 adds anonymous BMS/peer/grid comparisons with separate
   scopes and receipt ages. Peer minus BMS magnitude is diagnostic only: neither
@@ -40,6 +53,10 @@ treated as an established scale error. Native mobile file download is not proven
 by a pasted report. The separate app-log ID and Homey mobile app version remain
 outstanding. No new message is sent here; the user is reviewing a draft first.
 Private reports/screenshots/identities are not retained in this repository.
+Installed v1.10.38, the native mobile encoded-parts workflow and physical accuracy
+remain unverified. The updated draft asks for an in-place update, five minutes of
+normal operation, a close-timed combined EcoFlow/AC Keller/Home Battery screenshot
+set, schema-16 JSON (or all complete encoded parts), and a matching app-log ID.
 
 ## Test v1.10.37 / Build 52 — support export and original Unit readings, 12 October 2026
 
