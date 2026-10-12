@@ -117,7 +117,18 @@
       ? `${Math.floor((now - captured) / 1000)} s` : translate('capture_unknown')}. ${translate('capture_scope')}`;
   }
 
-  const api = { describe, render, download, renderCapture };
+  function renderCaptureGuide(element, report, translate) {
+    element.textContent = '';
+    const keys = report ? ['capture_guide_refresh', 'capture_guide_screenshots', 'capture_guide_json',
+      'capture_guide_log', 'capture_guide_privacy'] : ['refresh'];
+    keys.forEach((key, index) => {
+      const p = element.ownerDocument.createElement('p');
+      p.textContent = `${report ? `${index + 1}. ` : ''}${translate(key)}`;
+      element.appendChild(p);
+    });
+  }
+
+  const api = { describe, render, download, renderCapture, renderCaptureGuide };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EcoFlowReporterStatus = api;
 }(typeof window === 'undefined' ? {} : window));

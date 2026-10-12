@@ -10,6 +10,7 @@ import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
 import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/streamBkPvDiagnostics';
 import { scopedReadingOptions, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
 import { StreamUnitComparison } from '../../lib/streamDiagnosticChecks';
+import { decodeStreamLimits, StreamLimitObservations } from '../../lib/streamLimitDiagnostics';
 
 type ControlWait = () => void;
 
@@ -41,15 +42,21 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private pvHandler?: AppFrameHandler;
   private pvSn = '';
   private pvChain: Promise<void> = Promise.resolve();
+  private limitObservations = new StreamLimitObservations();
+
+  getLimitDiagnostics(): Record<string, unknown> {
+    return this.limitObservations.snapshot();
+  }
 
   getReadingDiagnostics(): Record<string, unknown> {
-    return { ...this.pvReceipts.snapshot(Date.now()), ...this.getRemainingTimeFreshness() };
+    return { ...this.pvReceipts.snapshot(Date.now()), ...this.getRemainingTimeFreshness(), ...this.getLiveReadingFreshness() };
   }
 
   private async startPvDiagnostics(sn: string): Promise<void> {
     const generation = this.controlGeneration;
     const active = () => generation === this.controlGeneration && !this.isShuttingDown();
     this.pvReceipts = new BkPvReceipts();
+    this.limitObservations = new StreamLimitObservations();
     for (const cap of BK_PV_CAPS) {
       if (!active()) return;
       if (this.hasCapability(cap)) {
@@ -59,7 +66,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
         } else await this.setCapabilityValue(cap, null);
       }
     }
-    if (!active() || !/^(BK11|BK12|BK61)/i.test(sn)) return;
+    if (!active() || !/^(BK11|BK12|BK31|BK41|BK51|BK61)[A-Z0-9]+$/i.test(sn)) return;
     const expire = async () => {
       for (const cap of this.pvReceipts.expired(Date.now())) {
         if (!active()) return;
@@ -80,8 +87,11 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
           && topic.split('/')[3] === sn))) return;
       const at = Date.now();
       const values = decodeBkPvDiagnostics(payload, sn);
+      // Cached get replies are not evidence of a fresh limit observation.
+      const limits = topic === `/app/device/property/${sn}` ? decodeStreamLimits(payload, sn) : {};
       this.pvChain = this.pvChain.then(async () => {
         if (!active()) return;
+        this.limitObservations.observe(limits, at, 'app_property');
         for (const [cap, value] of Object.entries(values)) {
           if (!active() || !this.pvReceipts.observe(cap, at, Date.now())) continue;
           if (!this.hasCapability(cap)) await this.addCapability(cap);
@@ -198,6 +208,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     if (isMain) await this.ensureCapabilities(StreamUnitDevice.SYSTEM_CAPS);
     else await this.removeCapabilities(StreamUnitDevice.SYSTEM_CAPS);
     await this.removeCapabilities(StreamUnitDevice.LEGACY_SYSTEM_CAPS);
+    await this.startLiveReadings('unit');
 
     this.registerControlListeners(isMain);
     await this.refreshInfoSettings(sn, isMain, roleResolved).catch((e) => this.error('refresh info settings', e));
@@ -297,6 +308,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.stopLiveReadings();
     this.stopRemainingTime();
     this.controlGeneration += 1;
     if (this.pvTimer) this.homey.clearInterval(this.pvTimer);
@@ -305,6 +317,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     this.pvHandler = undefined;
     await this.pvChain;
     this.pvReceipts = new BkPvReceipts();
+    this.limitObservations = new StreamLimitObservations();
     this.unitComparison = new StreamUnitComparison();
     for (const [timer, resolve] of this.controlWaits) {
       this.homey.clearTimeout(timer);
@@ -335,6 +348,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
     await this.applyRemainingTime(quota, context);
     const values = mapStreamQuota(quota, 'unit');
     delete values.charge_remaining;
@@ -352,13 +366,20 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
       try {
-        if (this.getCapabilityValue(cap) !== value) await this.setCapabilityValue(cap, value);
+        if (this.isLiveReading(cap)) {
+          const applied = await this.applyLiveReading(cap, value, context?.receivedAt ?? Date.now());
+          if (!applied) {
+            this.unitComparison.failed(cap); continue;
+          }
+        } else
+          if (this.getCapabilityValue(cap) !== value) await this.setCapabilityValue(cap, value);
         this.unitComparison.observe(cap, value, context?.receivedAt ?? Date.now());
       } catch (e) {
         this.unitComparison.failed(cap);
         this.error(`setCapabilityValue ${cap}`, e);
       }
     }
+    await this.expireLiveReadings();
   }
 
   getUnitCorrelationDiagnostics(): Record<string, unknown> {

@@ -22,6 +22,7 @@ import { StreamTopologyEvidence, streamTopologyFamily } from '../../lib/streamTo
 import { REPORTING_CAPABILITIES, ReportingObservation } from '../../lib/streamReportingDiagnostics';
 import { ReporterTimeline } from '../../lib/reporterTimeline';
 import { StreamCounterContinuity } from '../../lib/streamDiagnosticChecks';
+import { StreamLimitObservations } from '../../lib/streamLimitDiagnostics';
 import {
   MONITORING_TRIAL_SETTING, MONITORING_TRIAL_STORE, MONITORING_TICK_MS, MONITORING_RESOLVE_MS,
   MONITORING_STATE_STORE, MONITORING_LOOKUP_DEADLINE_MS, readMonitoringState,
@@ -36,6 +37,12 @@ type ControlWaitResolver = () => void;
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
   private reportingObservations: Record<string, ReportingObservation> = {};
+  private limitObservations = new StreamLimitObservations();
+
+  getLimitDiagnostics(): Record<string, unknown> {
+    return this.limitObservations.snapshot();
+  }
+
   private mainResolution: { status: string; receivedAt: number; family: string } | null = null;
   private resolutionPending: Promise<void> | null = null;
   private resolutionCancel: (() => void) | null = null;
@@ -100,7 +107,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   getReadingDiagnostics(): Record<string, { stale: boolean }> {
-    if (!this.monitoringEnabled && !this.monitoringRollbackPending) return this.getRemainingTimeFreshness();
+    if (!this.monitoringEnabled && !this.monitoringRollbackPending) return { ...this.getRemainingTimeFreshness(), ...this.getLiveReadingFreshness() };
     const selected = this.monitoringEnabled && this.monitoringReporterId && this.monitoringStatus !== 'application_failed'
       ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId)
       : null;
@@ -406,7 +413,9 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onReady(): Promise<void> {
+    this.limitObservations = new StreamLimitObservations();
     this.counterContinuity = new StreamCounterContinuity();
+    await this.startLiveReadings('system');
     await this.startRemainingTime('system');
     // A persisted port fallback must not survive an app update as a house meter.
     if (this.hasCapability('measure_power.grid')) await this.setCapabilityValue('measure_power.grid', null).catch(() => {});
@@ -678,6 +687,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
     if (!this.monitoringEnabled && !this.monitoringRollbackPending) await this.applyRemainingTime(quota, context);
     const receivedAt = context?.receivedAt ?? Date.now();
     this.counterContinuity.observe(quota, receivedAt);
@@ -713,6 +723,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     let coreWriteFailed = false;
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
+      if (this.isLiveReading(cap)) {
+        const applied = await this.applyLiveReading(cap, value, receivedAt);
+        if (!applied) {
+          delete values[cap];
+          if (cap === 'measure_power') coreWriteFailed = true;
+        }
+        continue;
+      }
       if (this.getCapabilityValue(cap) === value) continue;
       try {
         await this.setCapabilityValue(cap, value);
@@ -732,6 +750,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
     // Only the original quota enters accounting, never the selected reporter's power.
     await this.updateBatteryEnergy(quota, legacyPower, receivedAt);
+    await this.expireLiveReadings();
     if (this.monitoringEnabled) await this.applyMonitoringTrial();
     if (!this.monitoringRollbackPending && this.monitoringSettingsCount === 0) this.fireTriggers(values);
     this.checkFaults(quota);
@@ -841,7 +860,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   getCounterContinuityDiagnostics(): Record<string, unknown> {
     const now = Date.now();
     const original = this.reportingObservations.measure_power;
-    const originalFresh = original && original.receivedAt <= now && now - original.receivedAt <= 180000;
+    const originalFresh = original && original.receivedAt <= now && now - original.receivedAt <= 180000
+      && this.getLiveReadingFreshness().measure_power?.stale === false;
     let power;
     if (this.monitoringEnabled) {
       if (this.monitoringConditionReady()) power = this.getCapabilityValue('measure_power');
@@ -1108,6 +1128,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         });
         checkSession();
         this.monitoringEnabled = enable;
+        this.resetLiveReadingReceipts();
         this.resetRemainingTimeReceipts();
         this.monitoringTimeline.record(enable ? 'trial_enabled' : 'rollback_started', Date.now());
         this.monitoringRollbackPending = !enable;
@@ -1153,6 +1174,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.limitObservations = new StreamLimitObservations();
+    this.stopLiveReadings();
     this.stopRemainingTime();
     this.counterContinuity = new StreamCounterContinuity();
     this.monitoringApplied = null;
@@ -1177,5 +1200,9 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
     if (this.solarForecastTimer) this.homey.clearInterval(this.solarForecastTimer);
     await this.energyCheckpoint?.flush();
+  }
+
+  protected liveReadingsEnabled(): boolean {
+    return !this.monitoringEnabled;
   }
 };

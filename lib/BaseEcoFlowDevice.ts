@@ -16,6 +16,7 @@ import {
 } from './deviceIdentity';
 import { StreamRemainingTime, REMAINING_TIME_CAPS } from './StreamRemainingTime';
 import { scopedReadingOptions } from './streamReadingScopes';
+import { StreamLiveReadings, STREAM_SYSTEM_LIVE_CAPS, STREAM_UNIT_LIVE_CAPS } from './StreamLiveReadings';
 
 const DEFAULT_POLL_MS = 30000;
 const REALTIME_GRACE_MS = 90000;
@@ -54,6 +55,74 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private remainingTimeScope: 'unit' | 'system' | null = null;
   private remainingTimeGeneration = 0;
   private remainingTimeClearPending = new Set<string>();
+  private liveReadings: StreamLiveReadings | null = null;
+  private liveReadingsTimer: NodeJS.Timeout | null = null;
+  private liveReadingsGeneration = 0;
+  private liveClearPending = new Set<string>();
+
+  protected liveReadingsEnabled(): boolean {
+    return true;
+  }
+
+  protected getLiveReadingFreshness(): ReturnType<StreamLiveReadings['snapshot']> {
+    return this.liveReadings?.snapshot() || {};
+  }
+
+  protected resetLiveReadingReceipts(): void {
+    this.liveReadings?.reset();
+  }
+
+  protected async startLiveReadings(scope: 'unit' | 'system'): Promise<void> {
+    this.stopLiveReadings();
+    const caps = (scope === 'unit' ? STREAM_UNIT_LIVE_CAPS : STREAM_SYSTEM_LIVE_CAPS).filter((cap) => this.hasCapability(cap));
+    this.liveReadings = new StreamLiveReadings(caps);
+    const generation = this.liveReadingsGeneration;
+    for (const cap of caps) {
+      if (this.isShuttingDown() || generation !== this.liveReadingsGeneration) return;
+      await this.setCapabilityValue(cap, null).catch(() => {
+        this.liveClearPending.add(cap);
+      });
+    }
+    if (this.isShuttingDown() || generation !== this.liveReadingsGeneration || typeof this.homey.setInterval !== 'function') return;
+    this.liveReadingsTimer = this.homey.setInterval(() => {
+      this.queueDeviceWork(() => this.expireLiveReadings()).catch(() => {});
+    }, 60000);
+  }
+
+  protected stopLiveReadings(): void {
+    this.liveReadingsGeneration += 1;
+    if (this.liveReadingsTimer) this.homey.clearInterval(this.liveReadingsTimer);
+    this.liveReadingsTimer = null;
+    this.liveReadings = null;
+    this.liveClearPending.clear();
+  }
+
+  protected isLiveReading(cap: string): boolean {
+    return this.liveReadings?.tracks(cap) === true;
+  }
+
+  protected async applyLiveReading(cap: string, value: unknown, at: number): Promise<boolean> {
+    const generation = this.liveReadingsGeneration;
+    const active = () => this.liveReadingsEnabled() && !this.isShuttingDown() && generation === this.liveReadingsGeneration;
+    if (!this.liveReadings) return false;
+    return this.liveReadings.apply(cap, value, at, async (next) => {
+      if (!active()) return;
+      if (this.getCapabilityValue(cap) !== next) await this.setCapabilityValue(cap, next);
+      this.liveClearPending.delete(cap);
+    }, active);
+  }
+
+  protected async expireLiveReadings(): Promise<void> {
+    const generation = this.liveReadingsGeneration;
+    const active = () => this.liveReadingsEnabled() && !this.isShuttingDown() && generation === this.liveReadingsGeneration;
+    for (const cap of this.liveClearPending) {
+      if (!active()) return;
+      await this.setCapabilityValue(cap, null).then(() => this.liveClearPending.delete(cap)).catch(() => {});
+    }
+    await this.liveReadings?.expire(async (cap) => {
+      if (this.hasCapability(cap) && this.getCapabilityValue(cap) !== null) await this.setCapabilityValue(cap, null);
+    }, active);
+  }
 
   getRemainingTimeDiagnostics(): Record<string, unknown> {
     return this.remainingTimeScope ? this.remainingTime.snapshot() : {};

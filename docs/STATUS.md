@@ -2,13 +2,47 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Unreleased follow-up — freshness, scopes and diagnostic continuity, 12 October 2026
+## Test release preparation — original STREAM freshness and support capture, 12 October 2026
+
+The user now authorizes Test publication from the diagnostic branch, including
+the earlier unshipped grid/scope/runtime fixes below. Local and remote `master`
+already differ and are protected separately; neither is merged/reset/pushed.
+Live is v1.10.3 / Build 18, verified before release. Test baseline is v1.10.33 /
+Build 48. Exact release CI and Test publication will be recorded when completed.
+
+- Original Home Battery/Unit watt and state tiles have independent three-minute
+  receipts and minute expiry. Empty REST, SOC-only and temperature-only updates
+  cannot renew old watts; unit-port packets cannot renew house-meter watts.
+  Startup clears persisted watts. Actual unchanged receipts and zero are valid;
+  SDK failures, delayed/future/out-of-order packets, clock rollback, trial
+  suppression and teardown have regressions. Energy accounting stays unchanged.
+- EN/DE/NL support settings include a matching-capture checklist: combined
+  EcoFlow flow with units expanded, matching Homey pages, the same downloaded
+  JSON, and an immediately-created separate Homey app-log ID. Aim for one minute
+  and record local time/timezone or a longer gap. No automatic upload, deletion,
+  re-pair or mode change is required.
+- Anonymous schema 14 adds original applied/received watt freshness and
+  `originalLimits`. A bounded BK 254/21 decoder observes four limit/max fields
+  from pinned upstream definitions. Cached get replies do not renew limits;
+  readings expire in three minutes. Known models and subscribed identity are
+  required. Maxima and setpoints stay distinct, scope remains unverified and
+  controls disabled. Existing shared app telemetry is used, not another login.
+- Fresh read-only API queries at 18:15 UTC covered all six owned batteries:
+  two BK61 and four BK31. Each quota/all returned 15 fields; neither all nor
+  targeted reads returned the four limit fields. Other routes/models may differ.
+  No commands were sent; credentials, raw responses and serials are not stored.
+
+Local checks: 608 tests, TypeScript, lint, dependency audit (zero vulnerabilities),
+Homey CLI 4.5.3 verified validation and whitespace checks passed. Matched hardware
+captures, restart/recovery/rollback and normal-use soak remain production gates.
+
+## Earlier unshipped follow-up — freshness, scopes and diagnostic continuity, 12 October 2026
 
 Changes confined to `codex/mixed-generation-reporting-diagnostics`, based on
 `ab08bf20eb950792ba4afe7ea90c1f53fc2b7ece`. Diagnostic-branch commit/push and
-exact-commit CI verification were authorized on 12 October; Test publication,
-mainline merge and Live changes remain on hold. No version bump or release
-workflow is part of this increment. The published Test baseline below remains
+exact-commit CI verification were authorized on 12 October. This earlier increment
+was held for Test; the new authorization above includes it in the next Test
+release. Mainline merge and Live changes remain on hold. The baseline below remains
 separate from these unshipped changes. Check the exact branch HEAD in
 [GitHub Actions](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/workflows/homey-app-validate.yml)
 when continuing; source sync and CI success do not establish hardware acceptance.
@@ -87,7 +121,7 @@ validation and whitespace checks passed. These local checks do not establish
 real-hardware acceptance; GitHub CI is a separate exact-commit gate.
 Next release gates remain matched combined/individual discharge evidence,
 restart/recovery/rollback checks and a normal-use soak, not a capability-label
-change alone. Publication remains on hold until explicitly authorized.
+change alone. Test is now explicitly authorized above; Live is not.
 
 ## Latest Test release — v1.10.33 / Build 48, 12 October 2026
 

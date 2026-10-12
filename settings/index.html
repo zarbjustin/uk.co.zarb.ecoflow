@@ -116,6 +116,8 @@
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
   <p id="supportCaptureStatus" class="help" role="status" aria-live="polite"></p>
+  <h2 id="supportCaptureGuideTitle" style="font-size:17px;">Capture a matching support set</h2>
+  <div id="supportCaptureGuide" class="help"></div>
   <p class="help" id="monitoringTrialHelp"></p>
   <h2 id="reporterStatusTitle" style="font-size:17px;">Battery reporter readiness</h2>
   <div id="reporterStatus" role="status" aria-live="polite"></div>
@@ -178,6 +180,7 @@
       document.getElementById('reporterCheckHelp').textContent = Homey.__('settings.support.check_scope');
       document.getElementById('technicalReportTitle').textContent = Homey.__('settings.support.technical');
       document.getElementById('monitoringTrialHelp').textContent = Homey.__('settings.monitoring_trial.help');
+      document.getElementById('supportCaptureGuideTitle').textContent = Homey.__('settings.reporter.capture_guide_title');
       document.getElementById('meterStatusTitle').textContent = Homey.__('settings.meter.title');
       document.getElementById('meterStatusHelp').textContent = Homey.__('settings.meter.help');
       function renderMeterStatus(report) {
@@ -190,6 +193,8 @@
           return Homey.__('settings.meter.' + key);
         });
         renderCaptureStatus();
+        window.EcoFlowReporterStatus.renderCaptureGuide(document.getElementById('supportCaptureGuide'), report,
+          function (key) { return Homey.__('settings.reporter.' + key); });
       }
       function renderCaptureStatus() {
         window.EcoFlowReporterStatus.renderCapture(document.getElementById('supportCaptureStatus'), displayedReport,

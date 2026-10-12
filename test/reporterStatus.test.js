@@ -2,6 +2,21 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { renderCaptureGuide } = require('../settings/reporter-status');
+
+test('capture checklist renders five fixed instructions without polling or private text', () => {
+  const element = { children: [], ownerDocument: { createElement: () => ({}) },
+    appendChild(child) { this.children.push(child); } };
+  const report = { capturedAt: 'PRIVATE', captureGuide: ['<script>PRIVATE</script>'] };
+  const before = JSON.stringify(report);
+  renderCaptureGuide(element, report, key => require('../locales/en.json').settings.reporter[key]);
+  const text = element.children.map(child => child.textContent).join('\n');
+  assert.equal(element.children.length, 5);
+  assert.match(text, /Within one minute/); assert.match(text, /timezone/);
+  assert.match(text, /log ID/); assert.match(text, /Download the integration JSON/);
+  assert.doesNotMatch(text, /PRIVATE|script/);
+  assert.equal(JSON.stringify(report), before);
+});
 const { describe, render, download, renderCapture } = require('../settings/reporter-status');
 const { ReporterTimeline, timelineSnapshot } = require('../.homeybuild/lib/reporterTimeline');
 

@@ -1,5 +1,20 @@
 # Linked 5000 monitoring reporter trial
 
+## Next Test: matching capture checklist and original display freshness
+
+The new authorized Test release includes schema 14. Use the checklist beside
+Show integration support report: refresh and check version/UTC; within one minute
+capture EcoFlow combined flow with individual units expanded and corresponding
+Homey Home Battery/Unit pages; download that same JSON; immediately create a
+separate Homey EcoFlow app diagnostic log. Send all files plus the log ID, local
+time/timezone and any longer gap, preferably privately. No re-pair/mode change.
+
+Original watt fields now expire independently after three minutes; unrelated
+packets cannot renew them. The original watchdog is disabled during the selected
+5000 monitoring trial, so it cannot clear donor readings. Accounting remains on
+the unchanged original source. `originalLimits` is read-only, scope-unverified
+evidence only, not a new control or guarantee that either API route exposes it.
+
 ## Unreleased application-freshness / scope follow-up
 
 Diagnostic branch only, not another Test build. A rejected capability write

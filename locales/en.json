@@ -1,6 +1,12 @@
 {
   "settings": {
     "reporter": {
+      "capture_guide_title": "Capture a matching support set",
+      "capture_guide_refresh": "Refresh the integration report. Check the installed app version and UTC capture time above; an old displayed report is not a new capture.",
+      "capture_guide_screenshots": "Within one minute, capture the EcoFlow combined battery flow with individual units expanded, and the matching Homey Home Battery and Unit pages. Include percentage, watts and charging/discharging state; record your local time and timezone.",
+      "capture_guide_json": "Download the integration JSON from this same displayed report. Send the JSON file, not just a screenshot of the report or a log ID. If capture took longer than one minute, say how long.",
+      "capture_guide_log": "Immediately create a diagnostic report from Homey's EcoFlow app page and send its log ID alongside the JSON and screenshots. The app-log ID and integration JSON are different items. Note which readings disagree and whether the battery was naturally charging, discharging or idle.",
+      "capture_guide_privacy": "Review screenshots and files before sharing, preferably by direct message. Never send API keys, passwords or tokens. Nothing is uploaded automatically; no device deletion, re-pairing or mode change is required for this capture.",
       "title": "Battery reporter readiness",
       "battery": "Existing Home Battery",
       "refresh": "Show the integration report to check readiness.",

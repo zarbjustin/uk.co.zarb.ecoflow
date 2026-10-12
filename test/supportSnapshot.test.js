@@ -6,6 +6,26 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('original live freshness and limit projection are fixed, anonymous and read-only', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [{
+    getReadingDiagnostics: () => ({ stream_unit_power_grid: { ageSec: 0, receivedAgeSec: 0,
+      stale: false, applicationStatus: 'applied', secret: 'PRIVATE' }, PRIVATE: {} }),
+    getLimitDiagnostics: () => ({ feedGridModePowLimit: { value: 1200, ageSec: 0, stale: false,
+      source: 'app_property', scopeVerified: true, controlEnabled: true, secret: 'PRIVATE' },
+    sysGridInPwrLimit: { value: 7200, ageSec: 181, stale: false, source: 'PRIVATE' } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const driver = report.drivers.find(d => d.id === 'stream_unit');
+  assert.equal(driver.readingFreshness[0].readings.stream_unit_power_grid.applicationStatus, 'applied');
+  const limits = driver.originalLimits[0].fields;
+  assert.equal(limits.feedGridModePowLimit.value, 1200);
+  assert.equal(limits.feedGridModePowLimit.controlEnabled, false);
+  assert.equal(limits.feedGridModePowLimit.scopeVerified, false);
+  assert.equal(limits.sysGridInPwrLimit.value, null);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('counter projection isolates nested getters and rejects unsupported stall claims', () => {
   const instance = homey();
   const bad = { get powerComparisonScope() { throw new Error('PRIVATE'); } };
@@ -320,7 +340,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 13);
+  assert.equal(report.schemaVersion, 14);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {

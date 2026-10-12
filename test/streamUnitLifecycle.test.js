@@ -52,6 +52,43 @@ function pvFrame(value) {
   return Buffer.concat([Buffer.from([0x0a, 13, 0x0a, 6]), data, Buffer.from([0x40, 0xfe, 1, 0x48, 21])]);
 }
 
+test('AC Pro limit diagnostics use live property packets, not cached replies, and never create controls or PV tiles', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler; let subscriptions = 0;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; subscriptions++; return true; },
+    unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  // uint32 property field 521 = 1200; cmdFunc 254 / cmdId 21.
+  const frame = Buffer.from([0x0a, 11, 0x0a, 4, 0xc8, 0x20, 0xb0, 9, 0x40, 0xfe, 1, 0x48, 21]);
+  handler(frame, `/app/test/${sn}/thing/property/get_reply`); await h.d.pvChain;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+  handler(frame, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, 1200);
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.controlEnabled, false);
+  assert.equal(subscriptions, 1); assert.equal(h.writes.length, 0);
+  assert.ok(![...h.caps].some(cap => /pv\d_voltage|feedGridModePowLimit/.test(cap)));
+  now += 180001;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+  await h.d.onTeardown(); assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+  handler(frame, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+});
+
+test('original Unit port watts expire independently of SOC updates and recover on explicit zero', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const h = await harness('BK31SYNTHETIC0001');
+  await h.d.applyQuota({ gridConnectionPower: 420 }, { receivedAt: now, source: 'mqtt' });
+  now += 180001;
+  await h.d.applyQuota({ f32ShowSoc: 75 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.values.stream_unit_power_grid, null);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_power_grid.stale, true);
+  await h.d.applyQuota({ gridConnectionPower: 0 }, { receivedAt: now, source: 'rest' });
+  assert.equal(h.values.stream_unit_power_grid, 0);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_power_grid.stale, false);
+  assert.equal(h.writes.length, 0);
+  await h.d.onTeardown(); assert.equal(h.intervals.size, 0);
+});
+
 test('unit correlation renews unchanged applied receipts, drops rejected writes and resets on teardown', async t => {
   let now = 100000;
   t.mock.method(Date, 'now', () => now);
@@ -103,7 +140,7 @@ test('optional BK app diagnostics clear stale components and never touch power o
   assert.equal(h.values.stream_unit_pv3_voltage, null);
   await h.d.onReady();
   assert.equal(h.values.stream_unit_pv3_voltage, null);
-  assert.deepEqual(h.d.getReadingDiagnostics(), {});
+  assert.ok(Object.values(h.d.getReadingDiagnostics()).every(field => field.stale === true));
   await h.d.onTeardown();
 });
 
@@ -120,11 +157,11 @@ test('BK subscription finishing after teardown is removed and cannot start a wat
   assert.ok(unsubscribed >= 1); assert.equal(h.intervals.size, 0);
 });
 
-test('REST-only BK unit stays usable without starting an app-diagnostic watchdog', async () => {
+test('REST-only BK unit stays usable with the display watchdog but no app-diagnostic subscription', async () => {
   const h = await harness('BK61SYNTHETIC0001', 'BK61SYNTHETIC0001', {
     subscribeAppRealtime: async () => false, unsubscribeAppRealtime() {},
   });
-  assert.equal(h.intervals.size, 0);
+  assert.equal(h.intervals.size, 1);
   assert.equal(h.caps.has('stream_unit_pv3_voltage'), false);
   await h.d.applyQuota({ powGetPv3: 42 });
   assert.equal(h.values.stream_unit_power_pv3, 42);

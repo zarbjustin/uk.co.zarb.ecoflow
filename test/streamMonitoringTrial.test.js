@@ -39,6 +39,38 @@ try {
 
 const now = 1000000;
 const oldSn = 'BK11SYNTHETIC';
+// Monitoring timers only; the independent original-display watchdog must not
+// be mistaken for a lookup or trial timer. After teardown its handle is null,
+// so this still detects any leaked display timer.
+const trialTimerCount = device => device.timers.size - (device.timers.has(device.liveReadingsTimer) ? 1 : 0);
+
+test('original live watts expire per field without port deltas renewing house grid or changing energy', async t => {
+  const h = await deviceHarness(t, { chargedWh: 120, dischargedWh: 340 });
+  await h.legacy({ powGetBpCms: -300, powGetSysGrid: -20 });
+  h.setTime(now + 180001);
+  await h.device.applyQuota({ gridConnectionPower: 500, temp: 38 }, { receivedAt: now + 180001, source: 'mqtt' });
+  assert.equal(h.device.values['measure_power.grid'], null);
+  assert.equal(h.device.values.measure_power, null);
+  assert.equal(h.device.getReadingDiagnostics().measure_power.stale, true);
+  assert.equal(h.device.getEnergyDiagnostics().chargedKWh, 0.12);
+  await h.legacy({ powGetBpCms: 0, powGetSysGrid: 0 });
+  assert.equal(h.device.values.measure_power, 0);
+  assert.equal(h.device.getReadingDiagnostics().measure_power.stale, false);
+  await h.device.onTeardown(); assert.equal(h.device.timers.size, 0);
+});
+
+test('original display watchdog cannot clear a fresh monitoring donor', async t => {
+  const h = await deviceHarness(t); await h.legacy(); await h.enable();
+  h.setTime(now + 180001);
+  const topology = h.monitor.getTopologyEvidence();
+  h.monitor.getTopologyEvidence = () => ({ ...topology, peers: [{ sn: oldSn, seenAt: now + 180001 }] });
+  h.monitor.getSystemReporterDiagnostics = () => ({ socPct: { value: 55, ageSec: 0, stale: false },
+    batteryW: { value: -400, ageSec: 0, stale: false } });
+  await h.device.refreshMonitoringTrial();
+  await h.device.expireLiveReadings();
+  assert.equal(h.device.values.measure_power, -400);
+  await h.device.onTeardown(); assert.equal(h.device.timers.size, 0);
+});
 const targetSn = 'ES22SYNTHETIC';
 function fixture() {
   const old = {
@@ -130,8 +162,8 @@ test('Home Battery time estimates use only fresh CMS fields and cannot bypass tr
   assert.equal(h.device.values.discharge_remaining, 140);
   h.setTime(now + 180001);
   assert.equal(h.device.getReadingDiagnostics().discharge_remaining.stale, true, 'widgets reject expired estimates before watchdog runs');
-  const expiry = [...h.device.timers.values()].find(timer => timer.interval === 60000);
-  expiry.fn(); await h.device.queueDeviceWork(async () => {});
+  [...h.device.timers.values()].filter(timer => timer.interval === 60000).forEach(timer => timer.fn());
+  await h.device.queueDeviceWork(async () => {});
   assert.equal(h.device.values.discharge_remaining, null);
   h.setTime(now);
   await h.enable();
@@ -139,7 +171,7 @@ test('Home Battery time estimates use only fresh CMS fields and cannot bypass tr
   assert.equal(h.device.values.discharge_remaining, null);
   assert.deepEqual(h.device.getRemainingTimeDiagnostics(), {});
   await h.device.onTeardown();
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
 });
 
 test('activation does not use cached physical SOC, stale fields or skewed comparisons', () => {
@@ -231,7 +263,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 13);
+  assert.equal(report.schemaVersion, 14);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });
@@ -261,7 +293,7 @@ test('device opt-in switches only SOC/power/state, keeps original identity and a
   assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 475.1, 'cached reporter polling cannot integrate energy');
   await assert.rejects(h.device.flowSetChargeLimit(80), /controls are disabled/);
   await h.device.onTeardown();
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
 });
 
 test('power fallback accounting continues unchanged on original watts, never candidate watts', async (t) => {
@@ -287,7 +319,7 @@ test('rollback clears trial values, resets trigger baselines and waits for fresh
   assert.equal(h.device.values.measure_power, null);
   assert.equal(h.device.getAvailable(), false);
   assert.deepEqual(h.device.store.monitoringTrialState, { version: 1, mode: 'rollback', reporterId: null });
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   await h.legacy({ cmsBattSoc: 15, powGetBpCms: -100 });
   assert.equal(h.device.values.measure_battery, 15);
   assert.equal(h.device.values.measure_power, -100);
@@ -375,7 +407,7 @@ test('lookup finishing after teardown cannot restore trial values or source bind
   await pending;
   assert.equal(h.device.getResolvedReporterEvidence(), null);
   assert.equal(h.device.getMonitoringTrialDiagnostics().status, 'waiting_for_validation');
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
 });
 
 test('activation with failed prerequisites or store write failure leaves trial off', async (t) => {
@@ -389,7 +421,7 @@ test('activation with failed prerequisites or store write failure leaves trial o
   h.device.setStoreValue = async () => { throw new Error('STORE_FAILURE'); };
   await assert.rejects(h.enable(), /STORE_FAILURE/);
   assert.equal(h.device.getMonitoringTrialDiagnostics().enabled, false);
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   await h.device.onTeardown();
 });
 
@@ -398,7 +430,7 @@ test('default remains passive and runtime charge/idle use selected system sign w
   await h.legacy();
   await h.device.refreshMonitoringTrial();
   assert.equal(h.reads(), 0);
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   await h.enable();
   h.monitor.getSystemReporterDiagnostics = () => ({ socPct: { value: 54, ageSec: 0, stale: false },
     batteryW: { value: 400, ageSec: 0, stale: false } });
@@ -432,7 +464,7 @@ test('failed Homey capability updates fail closed, retry locally and do not undo
   assert.equal(h.device.isCharging(), false);
   assert.equal(h.device.batterySocIs('below', 100), false);
   assert.equal(h.device.getReadingDiagnostics().measure_battery.stale, true);
-  assert.equal(h.device.timers.size, 1);
+  assert.equal(trialTimerCount(h.device), 1);
   assert.ok(!JSON.stringify(h.device.getMonitoringTrialDiagnostics()).includes('PRIVATE_CAPABILITY'));
   fail = false;
   await h.device.refreshMonitoringTrial();
@@ -462,7 +494,8 @@ test('rollback capability failure cannot revive cached trial readings, condition
   assert.equal(h.device.getReadingDiagnostics().measure_battery.stale, true);
   fail = false;
   await h.legacy({ cmsBattSoc: 15, powGetBpCms: -100 });
-  assert.deepEqual(h.device.getReadingDiagnostics(), {});
+  assert.equal(h.device.getReadingDiagnostics().measure_power.stale, false);
+  assert.equal(h.device.getReadingDiagnostics().measure_power.applicationStatus, 'applied');
   assert.equal(h.device.values.measure_battery, 15);
   await h.device.onTeardown();
 });
@@ -506,7 +539,7 @@ test('late resolution after rollback cannot re-enable trial; backwards clock inv
   await check;
   assert.equal(h.device.getMonitoringTrialDiagnostics().enabled, false);
   assert.equal(h.device.values.measure_power, null);
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   await h.device.onTeardown();
 });
 
@@ -582,9 +615,9 @@ test('local expiry clearing continues through a hanging lookup; deadline cancels
   assert.equal(h.device.getResolvedReporterEvidence(), null);
   finish(targetSn); await Promise.resolve();
   assert.equal(h.device.values.measure_power, null);
-  assert.equal(h.device.timers.size, 1, 'only local monitoring interval remains');
+  assert.equal(trialTimerCount(h.device), 1, 'only local monitoring interval remains');
   await h.device.onTeardown();
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
 });
 
 test('rapid setting changes are serialized and bounded; validation blocks commands before saving anything', async (t) => {
@@ -608,7 +641,7 @@ test('rapid setting changes are serialized and bounded; validation blocks comman
   assert.equal(h.device.getMonitoringTrialDiagnostics().enabled, false);
   assert.deepEqual(h.device.store.monitoringTrialState, { version: 1, mode: 'rollback', reporterId: null });
   assert.equal(h.device.monitoringSettingsCount, 0);
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   await h.device.onTeardown();
 });
 
@@ -653,7 +686,7 @@ test('teardown during persistence cancels setting completion and restart reconci
   assert.equal(h.device.settings.use_5000_reporter_trial, undefined);
   assert.equal(h.device.getMonitoringTrialDiagnostics().enabled, false);
   assert.equal(h.device.monitoringSettingsCount, 0);
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   h.device.setStoreValue = write;
   await h.device.onReady();
   assert.equal(h.device.getMonitoringTrialDiagnostics().rollbackAwaitingFreshOriginal, true);
@@ -678,7 +711,7 @@ test('activation lookup deadline releases the setting guard without saving a bin
   assert.equal(h.device.monitoringSettingsCount, 0);
   assert.equal(h.device.store.monitoringTrialState, undefined);
   assert.equal(h.device.getMonitoringTrialDiagnostics().enabled, false);
-  assert.equal(h.device.timers.size, 0);
+  assert.equal(trialTimerCount(h.device), 0);
   finish(targetSn); await Promise.resolve();
   assert.equal(h.device.getResolvedReporterEvidence(), null);
   await h.device.onTeardown();
@@ -983,7 +1016,7 @@ test('72-hour deterministic mixed-generation soak stays bounded across outages, 
     if (!partial) observations.observe({ socPct: 99, battW: 999 }, targetSn, at - 5000); // Delayed duplicate cannot overwrite.
   };
   receive(); await h.legacy({ accuChgEnergy: 1000, accuDsgEnergy: 2000 }); await h.enable();
-  const timerLimit = h.device.timers.size;
+  const timerLimit = trialTimerCount(h.device);
   let unavailable = 0; let active = 0;
   for (let minute = 1; minute <= 72 * 60; minute++) {
     h.setTime(now + minute * 60000);
@@ -996,7 +1029,7 @@ test('72-hour deterministic mixed-generation soak stays bounded across outages, 
     await h.device.refreshMonitoringTrial();
     const diagnostics = h.device.getMonitoringTrialDiagnostics();
     assert.ok(diagnostics.timeline.events.length <= 32);
-    assert.ok(h.device.timers.size <= timerLimit, 'no accumulating monitoring/deadline timers');
+    assert.ok(trialTimerCount(h.device) <= timerLimit, 'no accumulating monitoring/deadline timers');
     assert.ok(topology.evidence().peers.length <= 2);
     if (connected) assert.equal(topology.evidence().peers.length, 2);
     assert.equal(h.device.getReadSn(), oldSn);
@@ -1010,7 +1043,7 @@ test('72-hour deterministic mixed-generation soak stays bounded across outages, 
     if (!connected) assert.notEqual(diagnostics.status, 'active');
     if (phase === 30) assert.equal(diagnostics.status, 'selected_reporter_changed');
     if (minute % 720 === 0) {
-      await h.device.onTeardown(); assert.equal(h.device.timers.size, 0);
+      await h.device.onTeardown(); assert.equal(trialTimerCount(h.device), 0);
       topology = new Es22TopologyTracker(targetSn); observations = new StreamReporterObservations();
       await h.device.onReady(); await h.device.refreshMonitoringTrial();
       assert.equal(h.device.getAvailable(), false);
@@ -1026,5 +1059,5 @@ test('72-hour deterministic mixed-generation soak stays bounded across outages, 
   assert.equal(h.device.values.measure_battery, 62);
   assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, 200);
   assert.equal(h.device.getMonitoringTrialDiagnostics().rollbackAwaitingFreshOriginal, false);
-  await h.device.onTeardown(); assert.equal(h.device.timers.size, 0);
+  await h.device.onTeardown(); assert.equal(trialTimerCount(h.device), 0);
 });

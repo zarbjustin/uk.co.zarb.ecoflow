@@ -1,5 +1,25 @@
 # Reporting/topology regression and API audit — 9 October 2026
 
+## 12 October follow-up: original STREAM limit discovery
+
+At 18:15 UTC, a fresh read-only sweep queried quota/all and targeted quota on all
+six owned BK batteries (two BK61, four BK31). Each all response had 15 fields;
+neither route returned `feedGridModePowLimit`, `sysGridInPwrLimit`,
+`feedGridModePowMax` or `feedGridSafetyPowMax`. Credentials stayed in memory;
+no commands, raw captures or serials were stored. Absence here does not prove
+absence in app telemetry, BLE or another model/account.
+
+The pinned [BK protobuf definitions](https://github.com/rabits/ha-ef-ble/blob/71f5b90a23dce7acdf7b8d701460de59f6d3b0f6/proto/bk_series.proto)
+identify DisplayPropertyUpload uint32 fields 521, 1495, 727 and 1543 respectively.
+The diagnostic branch now observes these read-only properties for known original
+BK battery models, rejecting wrong envelopes/identities and malformed packets.
+Cached get replies do not renew the independent three-minute limit receipts.
+Candidate setpoints and maxima stay distinct; available BMS power, inverter
+capability maxima and scheduled charging targets are excluded. BLE definitions
+are not a cloud write contract or verified system scope. Schema 14
+`originalLimits` remains anonymous with `scopeVerified: false` and
+`controlEnabled: false`. No capability/control or energy source is changed.
+
 Work is on `codex/mixed-generation-reporting-diagnostics`, after Test
 v1.10.24/build 39. This audit is not a new release, hardware acceptance, or a fix
 for Robert's combined 0% reading. No runtime logic, grouping, driver IDs, control

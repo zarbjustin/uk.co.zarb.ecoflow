@@ -9,6 +9,8 @@ import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
 import { REMAINING_TIME_CAPS } from './StreamRemainingTime';
 import { correlateStreamPeers, PairedUnitReference, streamReadingExplanations } from './streamDiagnosticChecks';
+import { STREAM_SYSTEM_LIVE_CAPS, STREAM_UNIT_LIVE_CAPS } from './StreamLiveReadings';
+import { STREAM_LIMIT_FIELDS } from './streamLimitDiagnostics';
 import {
   reporterRepairPreview, systemReporterSnapshot, reporterFlowSnapshot, ownUnitSnapshot,
 } from './streamReporterEvidence';
@@ -315,15 +317,41 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           })),
         };
       }) : [],
-      readingFreshness: id === 'stream' ? [] : devices.map((device, deviceIndex) => {
+      originalLimits: id === 'stream' || id === 'stream_unit' ? devices.map((device, deviceIndex) => {
+        try {
+          const input = device.getLimitDiagnostics?.();
+          return {
+            deviceIndex,
+            fields: Object.fromEntries(STREAM_LIMIT_FIELDS.map((key) => {
+              const field = input?.[key];
+              const ageSec = safeNumber(field?.ageSec);
+              const value = safeNumber(field?.value);
+              const stale = field?.stale !== false || ageSec === null || ageSec < 0 || ageSec > 180;
+              return [key, {
+                value: !stale && value !== null && value >= 0 && value <= 100000 ? value : null,
+                ageSec,
+                stale,
+                scopeVerified: false,
+                controlEnabled: false,
+                source: ['developer_quota', 'app_property'].includes(field?.source) ? field.source : 'unobserved',
+              }];
+            })),
+          };
+        } catch {
+          return { deviceIndex, fields: {} };
+        }
+      }) : [],
+      readingFreshness: devices.map((device, deviceIndex) => {
         try {
           const input = device.getReadingDiagnostics?.();
-          const allowed = id === 'stream_unit' ? BK_PV_CAPS : STREAM_5000_LIVE_CAPABILITIES;
+          let allowed: readonly string[] = STREAM_5000_LIVE_CAPABILITIES;
+          if (id === 'stream_unit') allowed = [...BK_PV_CAPS, ...STREAM_UNIT_LIVE_CAPS];
+          else if (id === 'stream') allowed = STREAM_SYSTEM_LIVE_CAPS;
           const readings = Object.fromEntries(allowed.filter((key) => input?.[key])
             .map((key) => {
               const field = input[key];
               const ageSec = safeNumber(field.ageSec);
-              if (id === 'stream_unit') return [key, { ageSec, stale: field.stale !== false }];
+              if (id === 'stream_unit' && BK_PV_CAPS.includes(key)) return [key, { ageSec, stale: field.stale !== false }];
               const applicationStatus = ['applied', 'write_failed', 'stale', 'unavailable'].includes(field.applicationStatus)
                 ? field.applicationStatus : 'unknown';
               return [key, {
@@ -369,7 +397,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 13,
+    schemaVersion: 14,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

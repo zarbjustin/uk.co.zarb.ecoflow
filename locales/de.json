@@ -1,6 +1,12 @@
 {
   "settings": {
     "reporter": {
+      "capture_guide_title": "Zusammenpassende Supportdaten erfassen",
+      "capture_guide_refresh": "Integrationsbericht aktualisieren. Oben App-Version und UTC-Erfassungszeit prüfen; ein alter angezeigter Bericht ist keine neue Aufnahme.",
+      "capture_guide_screenshots": "Innerhalb einer Minute den kombinierten Batteriefluss in EcoFlow mit aufgeklappten Einzelgeräten und die passenden Homey-Seiten für Home Battery und Unit aufnehmen. Prozent, Watt und Ladezustand einschließen; lokale Zeit und Zeitzone notieren.",
+      "capture_guide_json": "Die Integrations-JSON dieses angezeigten Berichts herunterladen. Die JSON-Datei senden, nicht nur ein Bildschirmfoto oder eine Log-ID. Falls die Aufnahme länger als eine Minute dauerte, die Dauer angeben.",
+      "capture_guide_log": "Direkt danach auf der EcoFlow-App-Seite in Homey einen Diagnosebericht erstellen. Log-ID zusammen mit JSON und Bildern senden. Log-ID und Integrations-JSON sind unterschiedliche Daten. Abweichende Werte und den natürlichen Zustand (Laden, Entladen, Leerlauf) nennen.",
+      "capture_guide_privacy": "Dateien und Bilder vor dem Teilen prüfen, möglichst per Direktnachricht senden. Keine API-Schlüssel, Passwörter oder Tokens senden. Kein automatischer Upload; Löschen, erneutes Koppeln oder Moduswechsel ist für die Aufnahme nicht nötig.",
       "title": "Bereitschaft des Batteriemelders",
       "battery": "Bestehende Hausbatterie",
       "refresh": "Integrationsbericht anzeigen, um die Bereitschaft zu prüfen.",
