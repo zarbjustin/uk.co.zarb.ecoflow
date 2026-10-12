@@ -2,9 +2,40 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.37 / Build 52 — support export and original Unit readings, 12 October 2026
+
+The diagnostic follow-up described below is now published to Test. Mainline and
+Live are unchanged; no certification submission or Live action was performed.
+
+- Implementation `1b335122abb20e16e3c5e10dd61d3ea5364881e7`; final source
+  `682a2aba355b917c1ce20cc335f89172ec3d08d6` adds deterministic ordering to the
+  real-clock lifecycle regression. Direction is established before its matching
+  estimate; the earlier test was timing-sensitive under the new safety rule.
+- All 625 tests and lint pass locally. Final source
+  [CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308419331).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308587294).
+  Tag `v1.10.37` / exact uploaded source is
+  `8022af83269ed72b6965a067e7ed17c90ddb9ba7`.
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308734683)
+  including tests, lint, dependency audit and verified Homey validation, then
+  [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308891943).
+- [Build 52](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/52)
+  explicitly published to Test. Portal says available for testing, and a refresh
+  of the [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  shows v1.10.37 and the new report/BMS/runtime changelog.
+- Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Portal Live baseline remains v1.10.3 / Build 18. These refs intentionally
+  differ; neither was synced, reset, merged or pushed.
+- Installed v1.10.37, native mobile export, matching pack/AC comparisons and
+  physical acceptance remain unverified. Draft asks for update-in-place, five
+  minutes of normal operation, a matching screenshot/report set, complete JSON
+  or all numbered parts, and a separate app-log ID. No message sent this turn.
+  This later handover-only commit is not the uploaded release source.
+
 ## Test v1.10.36 / Build 51 — original-Unit startup hotfix, 12 October 2026
 
-### Unpublished diagnostic follow-up — export, original Unit BMS flow and runtime
+### Diagnostic follow-up — export, original Unit BMS flow and runtime (released above)
 
 The tester confirmed that v1.10.36 restored both original Units without restart
 or re-pairing. Later feedback describes a silent JSON-download failure, available
@@ -39,10 +70,10 @@ and discharge estimates. Private messages/images are not stored in Git.
   idle, runtime direction changes, public captures, and browser downloads,
   lossless multipart/manual clipboard fallback, refresh and pagehide.
   Verified Homey validation passed. Lint and final checks recorded in the turn.
-- Changes are local on `codex/mixed-generation-reporting-diagnostics`; no
-  version bump, commit/push, CI claim, Test publication, mainline merge or Live
-  action for this increment. Build 51 / v1.10.36 remains the published Test.
-  The response to the new feedback is draft only, pending user review.
+- This increment was initially held locally on the diagnostic branch, then
+  released as v1.10.37 / Build 52 with the receipts above. Mainline and Live
+  remain unchanged. The response to the new feedback is draft only, pending
+  user review; private messages, raw reports and screenshots stay out of Git.
 
 After Test v1.10.35, two original STREAM units were reported unavailable with
 `Invalid Capability: stream_unit_power_grid`; the combined Home Battery and
