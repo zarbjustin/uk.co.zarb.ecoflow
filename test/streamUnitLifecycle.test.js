@@ -100,9 +100,11 @@ test('original Ultra and AC Pro complete init, poll and MQTT startup despite unr
     assert.equal(pollCount, 1); assert.equal(available, true);
     assert.equal(h.intervals.size, 3, 'poll, runtime and watt freshness have independent timer handles');
     assert.equal(typeof handler, 'function');
+    // Establish direction before the matching estimate. Real-clock milliseconds
+    // must not accidentally revive an estimate captured before a direction change.
+    await h.d.applyRemainingTimePower(-400, Date.now());
     handler({ f32ShowSoc: 80, gridConnectionPower: 421, bmsDsgRemTime: 25 });
     await h.d.queueDeviceWork(async () => {});
-    await h.d.applyRemainingTimePower(-400, Date.now());
     assert.equal(h.values.stream_unit_power_grid, 421);
     assert.equal(h.values.discharge_remaining, 25);
     assert.equal(h.values.measure_battery, 80);
