@@ -220,5 +220,8 @@
   },
   "1.10.37": {
     "en": "Improves integration report downloads with a complete numbered-parts fallback, restores original STREAM unit battery flow from fresh BMS telemetry when available, and shows remaining-time estimates only for matching fresh battery direction. Energy accounting and device pairing remain unchanged."
+  },
+  "1.10.38": {
+    "en": "Adds scoped BMS, peer and grid reading comparisons with short session-only histories, bounds queued original STREAM telemetry during slow Homey writes, and protects pasted integration report parts against forum formatting. Energy accounting, device pairing and hardware controls remain unchanged."
   }
 }
