@@ -2,13 +2,33 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Test release preparation — original STREAM freshness and support capture, 12 October 2026
+## Test release v1.10.34 / Build 49 — original STREAM freshness and support capture, 12 October 2026
 
 The user now authorizes Test publication from the diagnostic branch, including
 the earlier unshipped grid/scope/runtime fixes below. Local and remote `master`
 already differ and are protected separately; neither is merged/reset/pushed.
-Live is v1.10.3 / Build 18, verified before release. Test baseline is v1.10.33 /
-Build 48. Exact release CI and Test publication will be recorded when completed.
+Live remains v1.10.3 / Build 18. Test advanced from v1.10.33 / Build 48 to
+v1.10.34 / Build 49; portal and public Test listing verified at 18:43 UTC.
+
+Release receipts:
+
+- Implementation commit: `1e0ef6601771f8f0ac57788994b135dca3041771` on
+  `codex/mixed-generation-reporting-diagnostics`;
+  [implementation CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38291679387).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38291823684).
+  Tag `v1.10.34` and uploaded release source:
+  `4a3ccdc335df905be8692e94a606709b6bfe0733`.
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38291955747),
+  then [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38292136499).
+- [Build 49](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/49)
+  explicitly published to Test. Portal confirms available for testing;
+  [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows 1.10.34.
+  No certification submission or Live publication was performed.
+- Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Neither was changed. Any later handover-only commit is not the uploaded tag.
+- Installed version and physical acceptance are not established by this release.
+  Matching hardware captures and restart/recovery/rollback/soak checks remain open.
 
 - Original Home Battery/Unit watt and state tiles have independent three-minute
   receipts and minute expiry. Empty REST, SOC-only and temperature-only updates
@@ -41,7 +61,7 @@ captures, restart/recovery/rollback and normal-use soak remain production gates.
 Changes confined to `codex/mixed-generation-reporting-diagnostics`, based on
 `ab08bf20eb950792ba4afe7ea90c1f53fc2b7ece`. Diagnostic-branch commit/push and
 exact-commit CI verification were authorized on 12 October. This earlier increment
-was held for Test; the new authorization above includes it in the next Test
+was held for Test; the new authorization above included it in the v1.10.34 Test
 release. Mainline merge and Live changes remain on hold. The baseline below remains
 separate from these unshipped changes. Check the exact branch HEAD in
 [GitHub Actions](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/workflows/homey-app-validate.yml)
