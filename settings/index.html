@@ -122,6 +122,7 @@
   <p class="help" id="reporterHelp">The optional reporter check makes a read-only EcoFlow API request for each existing original Home Battery (up to eight).
     It does not change devices, controls, counters or grouping. A match is not proof of installation-wide reporting.
     Do not delete or re-pair devices while investigating. Homey's Create diagnostic report button supplies a separate app-log ID; please send both.</p>
+  <p class="help" id="reporterCheckHelp"></p>
   <p class="help">STREAM 5000 configuration tiles are read-only and refer to the subscribed unit's
     reported settings, not verified installation-wide limits. Stale readings clear rather than showing
     zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
@@ -129,7 +130,9 @@
   <h2 id="meterStatusTitle" style="font-size:17px;">Smart Meter readings</h2>
   <p id="meterStatusHelp" class="help"></p>
   <div id="meterStatus" role="status" aria-live="polite"></div>
-  <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
+  <details><summary id="technicalReportTitle">Technical report (optional)</summary>
+    <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
+  </details>
 
   <script src="meter-status.js"></script>
   <script src="reporter-status.js"></script>
@@ -172,6 +175,8 @@
       document.getElementById('reporterStatusTitle').textContent = Homey.__('settings.reporter.title');
       document.getElementById('refreshReporterDiagnostics').textContent = Homey.__('settings.support.check');
       document.getElementById('reporterHelp').textContent = Homey.__('settings.support.instructions');
+      document.getElementById('reporterCheckHelp').textContent = Homey.__('settings.support.check_scope');
+      document.getElementById('technicalReportTitle').textContent = Homey.__('settings.support.technical');
       document.getElementById('monitoringTrialHelp').textContent = Homey.__('settings.monitoring_trial.help');
       document.getElementById('meterStatusTitle').textContent = Homey.__('settings.meter.title');
       document.getElementById('meterStatusHelp').textContent = Homey.__('settings.meter.help');

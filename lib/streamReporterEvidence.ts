@@ -1,5 +1,59 @@
 'use strict';
 
+import type { Es22Telemetry } from './streamAc5000Protocol';
+
+const OWN_UNIT_FIELDS = ['socPct', 'socPrecisePct', 'batteryPowerRawW'] as const;
+
+/** Fixed anonymous unit observations; raw power does not establish direction. */
+export function ownUnitSnapshot(input: any): Record<string, unknown> {
+  const fields = Object.fromEntries(OWN_UNIT_FIELDS.flatMap((key) => {
+    const v = input?.fields?.[key];
+    const valid = typeof v?.value === 'number' && Number.isFinite(v.value)
+      && (key === 'batteryPowerRawW' ? Math.abs(v.value) <= 100000 : v.value >= 0 && v.value <= 100)
+      && typeof v.ageSec === 'number' && Number.isFinite(v.ageSec) && v.ageSec >= 0;
+    return valid ? [[key, { value: v.value, ageSec: v.ageSec, stale: v.stale !== false || v.ageSec > 180 }]] : [];
+  }));
+  return {
+    fields,
+    scope: 'subscribed_unit_record_not_verified_physical_pack',
+    rawBatteryPowerSignAndScaleVerified: false,
+    accountingUsed: false,
+  };
+}
+
+/** Session-only self record; peers and system SOC/power never fill missing fields. */
+export class StreamOwnUnitObservations {
+  private values: Record<string, { value: number; receivedAt: number }> = {};
+
+  observe(input: Es22Telemetry, address: string, at: number, now = Date.now()): void {
+    if (!Number.isFinite(at) || at <= 0 || !Number.isFinite(now) || now < 0) return;
+    if (input.sourceSn && input.sourceSn.toUpperCase() !== address.toUpperCase()) return;
+    if (Object.values(this.values).some((v) => v.receivedAt > now)) this.values = {};
+    if (at > now) return;
+    const record = Object.entries(input.unitsBySn || {}).find(([sn]) => sn.toUpperCase() === address.toUpperCase())?.[1];
+    const fields = {
+      socPct: record?.socPct,
+      socPrecisePct: input.socPrecisePct ?? record?.socPrecisePct,
+      batteryPowerRawW: record?.batteryPowerRawW,
+    };
+    for (const key of OWN_UNIT_FIELDS) {
+      const value = fields[key];
+      if (typeof value === 'number' && Number.isFinite(value)
+        && (key === 'batteryPowerRawW' ? Math.abs(value) <= 100000 : value >= 0 && value <= 100)
+        && at >= (this.values[key]?.receivedAt ?? 0)) this.values[key] = { value, receivedAt: at };
+    }
+  }
+
+  snapshot(now: number): Record<string, unknown> {
+    return ownUnitSnapshot({
+      fields: Object.fromEntries(Object.entries(this.values)
+        .filter(([, v]) => v.receivedAt <= now).map(([key, v]) => [key, {
+          value: v.value, ageSec: Math.floor((now - v.receivedAt) / 1000), stale: now - v.receivedAt > 180000,
+        }])),
+    });
+  }
+}
+
 const reporterSource = (key: string) => (key === 'socPct'
   ? 'app_protocol_system_soc' : 'derived_app_protocol_flow_matrix');
 

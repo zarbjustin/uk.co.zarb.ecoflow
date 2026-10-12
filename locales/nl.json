@@ -18,6 +18,8 @@
       "download": "Integratie-JSON downloaden", "downloaded": "Rapport gedownload. Controleer vóór privé delen; het staat los van Homey's app-log-ID.",
       "download_failed": "Download hier niet beschikbaar. Kopieer het getoonde rapport.",
       "activation_only": "Activeringsgereedheid geldt vóór inschakelen. Een actieve proef wacht niet op activering.",
+      "update_pending": "Nieuwe metingen wachten op verwerking. De laatste volledige, actuele momentopname blijft online; Flow-voorwaarden wachten op overeenkomende actuele waarden.",
+      "linked_unit_power": "Gekoppelde 5000-unit: individueel batterijvermogen en richting zijn niet bevestigd. Lege waarden betekenen geen nulvermogen of verbroken verbinding. Home Battery toont de gecombineerde metingen.",
       "request_timeout": "Het rapportverzoek duurde te lang. Probeer opnieuw of toon het lokale integratierapport. Geen automatische herhaling; een eerdere broncontrole kan nog lopen.",
       "capture_version": "App-versie bij vastlegging", "capture_time": "Vastgelegd (UTC)", "capture_elapsed": "Leeftijd momentopname nu",
       "capture_unknown": "Onbekend of klokverschil",
@@ -58,7 +60,9 @@
       "show": "Integratierapport tonen",
       "copy": "Integratierapport kopiëren",
       "check": "Huidige batterijbron controleren (alleen lezen)",
-      "instructions": "Toon en kopieer het integratierapport in de instellingen van deze app. Homey's Diagnoserapport maken levert een aparte app-log-ID op; stuur beide. De optionele controle leest EcoFlows API voor maximaal acht bestaande oorspronkelijke thuisbatterijen. Apparaten, bediening, tellers en groepering blijven ongewijzigd. Een overeenkomend adres bevestigt geen metingen voor de hele installatie. Verwijder of koppel apparaten niet opnieuw tijdens het onderzoek. Controleer rapporten voordat u ze privé deelt."
+      "technical": "Technisch rapport (optioneel)",
+      "check_scope": "De optionele reportercontrole leest EcoFlows API voor maximaal acht bestaande oorspronkelijke thuisbatterijen. Apparaten, bediening, tellers en groepering blijven ongewijzigd. Een passend adres bevestigt geen installatiebrede metingen.",
+      "instructions": "Voor ondersteuning: 1. Maak een EcoFlow-screenshot van de gecombineerde batterij met de watts per batterij zichtbaar. 2. Toon het integratierapport, wacht tot het klaar is en download de integratie-JSON. Stuur bestand en screenshot privé, liefst binnen één minuut vastgelegd. Lukt downloaden niet, stuur dan eerst de screenshot. Maak op verzoek ook een Homey-diagnoserapport en stuur de ID apart. Plak de JSON niet in dat berichtveld: Homey kan deze inkorten. Niets wordt automatisch verzonden; controleer bestanden en screenshots op privégegevens vóór delen."
     }
   },
   "errors": {
@@ -70,7 +74,8 @@
       "monitoring_only": "Alleen monitoring · bediening bewust uitgeschakeld"
     },
     "stream_5000_unit": {
-      "monitoring_only": "Alleen monitoring · bediening bewust uitgeschakeld"
+      "monitoring_only": "Alleen monitoring · bediening bewust uitgeschakeld",
+      "linked_power_unverified": "Gekoppelde installatie: individueel batterijvermogen en richting zijn niet bevestigd. Gebruik Home Battery voor gecombineerde metingen."
     },
     "stream_ac5000": {
       "monitoring_only": "Alleen monitoring · bediening bewust uitgeschakeld"

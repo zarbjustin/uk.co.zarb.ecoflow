@@ -53,6 +53,8 @@ export interface MonitoringSelection {
   status: string;
   reporterId: string | null;
   candidateDevice: { driverId: string; deviceIndex: number } | null;
+  /** Conservative expiry of this exact applied snapshot, not a later packet. */
+  validUntil: number | null;
   values: { measure_battery: number | null; measure_power: number | null; battery_charging_state: string | null };
 }
 
@@ -63,6 +65,7 @@ export function selectMonitoringReporter(homey: any, device: any, now: number,
     status,
     reporterId: null,
     candidateDevice: null,
+    validUntil: null,
     values: { measure_battery: null, measure_power: null, battery_charging_state: null },
   });
   try {
@@ -123,6 +126,10 @@ export function selectMonitoringReporter(homey: any, device: any, now: number,
       status: socValue !== null && powerValue !== null ? 'active' : 'fields_missing_or_stale',
       reporterId,
       candidateDevice: result.candidateDevice,
+      // Ages are rounded down in diagnostics. Subtract another second so a
+      // changing donor cannot renew the lifetime of older applied values.
+      validUntil: socValue !== null && powerValue !== null
+        ? now + Math.max(0, 179 - Math.max(soc.ageSec, power.ageSec)) * 1000 : null,
       values: {
         measure_battery: socValue,
         measure_power: powerValue,
@@ -156,6 +163,7 @@ export function monitoringTrialSnapshot(input: any): Record<string, unknown> {
     requiresRePairing: false,
     rollbackAvailable: true,
     rollbackAwaitingFreshOriginal: input?.rollbackAwaitingFreshOriginal === true,
+    updatePending: input?.enabled === true && input?.updatePending === true,
     readiness: {
       eligibilityScope: 'activation_only',
       eligible: input?.readiness?.eligible === true && input?.enabled !== true

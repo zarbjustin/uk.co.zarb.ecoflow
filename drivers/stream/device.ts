@@ -25,6 +25,7 @@ import {
   MONITORING_TRIAL_SETTING, MONITORING_TRIAL_STORE, MONITORING_TICK_MS, MONITORING_RESOLVE_MS,
   MONITORING_STATE_STORE, MONITORING_LOOKUP_DEADLINE_MS, readMonitoringState,
   TRIAL_SUPPRESSED_CAPABILITIES, selectMonitoringReporter, monitoringTrialSnapshot,
+  MonitoringSelection,
 } from '../../lib/streamMonitoringTrial';
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
@@ -53,6 +54,23 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private monitoringLocalPending: Promise<void> | null = null;
   private monitoringCoalescedTicks = 0;
   private monitoringTimeline = new ReporterTimeline();
+  private monitoringApplied: MonitoringSelection | null = null;
+  private monitoringAppliedAt = 0;
+
+  /** Fresh applied snapshot stays online while newer values wait for the next tick.
+   * Conditions/widgets still require the latest donor values to match exactly.
+   */
+  private monitoringAvailabilityReady(selected?: MonitoringSelection, applying = false): boolean {
+    if (!this.monitoringEnabled || this.monitoringRollbackPending || (!applying && this.monitoringSettingsCount > 0)
+      || this.monitoringStatus !== 'active' || this.monitoringReporterId === null) return false;
+    const now = Date.now();
+    const current = selected || selectMonitoringReporter(this.homey, this, now, this.monitoringReporterId);
+    const applied = this.monitoringApplied;
+    return current.status === 'active' && applied?.status === 'active'
+      && current.reporterId === applied.reporterId && applied.reporterId === this.monitoringReporterId
+      && this.monitoringAppliedAt <= now && applied.validUntil !== null && now <= applied.validUntil
+      && Object.entries(applied.values).every(([cap, value]) => this.getCapabilityValue(cap) === value);
+  }
 
   /** Conditions validate the donor now, not just the last 15-second tick. */
   private monitoringConditionReady(): boolean {
@@ -97,12 +115,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (this.monitoringEnabled && this.monitoringReporterId === null) status = 'waiting_for_validation';
     if (this.monitoringEnabled && (this.controlStopped || this.isShuttingDown())) status = 'waiting_for_validation';
     if (this.monitoringEnabled && this.monitoringStatus === 'application_failed') status = 'application_failed';
-    if (this.monitoringEnabled && status === 'active' && !this.monitoringConditionReady()) status = 'pending_apply';
+    if (this.monitoringEnabled && status === 'active' && !this.monitoringAvailabilityReady(selected)) status = 'pending_apply';
     return monitoringTrialSnapshot({
       enabled: this.monitoringEnabled,
       status,
       candidateDevice: this.monitoringCandidate,
       rollbackAwaitingFreshOriginal: this.monitoringRollbackPending,
+      updatePending: status === 'active' && !this.monitoringConditionReady(),
       readiness: {
         eligible: !this.controlStopped && !this.isShuttingDown() && !this.monitoringEnabled && !this.monitoringRollbackPending
         && this.monitoringSettingsCount === 0 && selected.status === 'active',
@@ -170,13 +189,17 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId)
       : {
         status: 'waiting_for_validation',
+        reporterId: null,
         candidateDevice: null,
+        validUntil: null,
         values: { measure_battery: null, measure_power: null, battery_charging_state: null },
       };
     const boundary = selected.status !== this.monitoringStatus;
     if (boundary || selected.status !== 'active') this.resetMonitoringTriggers();
     this.monitoringStatus = selected.status;
     this.monitoringCandidate = selected.candidateDevice;
+    this.monitoringApplied = null;
+    this.monitoringAppliedAt = Date.now();
     try {
       for (const cap of TRIAL_SUPPRESSED_CAPABILITIES) {
         if (this.hasCapability(cap) && this.getCapabilityValue(cap) !== null) await this.setCapabilityValue(cap, null);
@@ -195,10 +218,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       return;
     }
     if (generation !== this.monitoringGeneration || this.isShuttingDown()) return;
+    this.monitoringApplied = selected;
     const current = this.monitoringReporterId
       ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId) : null;
-    if (selected.status === 'active' && (current?.status !== 'active'
-      || Object.entries(current.values).some(([cap, value]) => this.getCapabilityValue(cap) !== value))) {
+    if (selected.status === 'active' && !this.monitoringAvailabilityReady(current || undefined, true)) {
       this.monitoringStatus = current?.status === 'active' ? 'pending_apply' : current?.status || 'waiting_for_validation';
       this.monitoringTimeline.record('reporter_state', Date.now(), this.monitoringStatus);
       this.resetMonitoringTriggers();
@@ -208,10 +231,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     // A missing/stale reporter is unavailable, not an idle or zero battery.
     await super.setOnlineState(selected.status === 'active', this.monitoringMessage('unavailable'));
     this.monitoringTimeline.record('reporter_state', Date.now(), selected.status);
-    if (selected.status === 'active') {
+    if (selected.status === 'active' && this.monitoringConditionReady()) {
       this.fireTriggers(Object.fromEntries(
         Object.entries(selected.values).filter(([, v]) => v !== null),
       ) as Record<string, number | string>);
+    } else {
+      // Do not create crossing events from a superseded snapshot.
+      this.resetMonitoringTriggers();
     }
   }
 
@@ -374,6 +400,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onReady(): Promise<void> {
+    this.monitoringApplied = null;
+    this.monitoringAppliedAt = 0;
     this.monitoringTimeline.reset(Date.now());
     this.monitoringCoalescedTicks = 0;
     this.monitoringSession += 1;
@@ -620,7 +648,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {
     if (this.monitoringEnabled) {
       // Legacy quota availability cannot revive a stale/missing selected reporter.
-      await super.setOnlineState(this.monitoringConditionReady(), this.monitoringMessage('unavailable'));
+      await super.setOnlineState(this.monitoringAvailabilityReady(), this.monitoringMessage('unavailable'));
       return;
     }
     if (this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
@@ -1098,6 +1126,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.monitoringApplied = null;
+    this.monitoringAppliedAt = 0;
     this.monitoringTimeline.record('session_stopped', Date.now());
     this.monitoringSession += 1;
     this.monitoringGeneration += 1;

@@ -8,6 +8,16 @@ export const STREAM_5000_LIVE_CAPABILITIES = [
   'stream_unit_power_pv1', 'stream_unit_power_pv2', 'stream_unit_power_pv3', 'stream_unit_power_pv4',
 ];
 
+export const STREAM_5000_POWER_FRESH_MS = 180000;
+
+/** Connection timeout is not permission to display minutes-old watt readings. */
+export function stream5000ReadingLimitMs(key: string, connectionLimitMs: number): number {
+  const power = key === 'measure_power' || key.startsWith('measure_power.')
+    || key.startsWith('stream_unit_power_') || key === 'battery_charging_state'
+    || key === 'stream_5000_direct_pv' || key === 'stream_5000_socket_power';
+  return power ? Math.min(connectionLimitMs, STREAM_5000_POWER_FRESH_MS) : connectionLimitMs;
+}
+
 /** Separate from BK's writable settings. These are observations, never commands. */
 export const STREAM_5000_CONFIGURATION_CAPABILITIES: Readonly<Record<string, string>> = {
   mode: 'stream_5000_mode',
@@ -46,7 +56,8 @@ export class Stream5000ReadingAges {
   }
 
   expired(now: number, limitMs: number): string[] {
-    return [...this.timestamps].filter(([, at]) => at > now || now - at > limitMs).map(([key]) => key);
+    return [...this.timestamps].filter(([key, at]) => at > now || now - at > stream5000ReadingLimitMs(key, limitMs))
+      .map(([key]) => key);
   }
 
   forget(key: string): void {
@@ -56,7 +67,7 @@ export class Stream5000ReadingAges {
   snapshot(now: number, limitMs: number): Record<string, unknown> {
     return Object.fromEntries([...this.timestamps].map(([key, at]) => [key, {
       ageSec: at > now ? null : Math.floor((now - at) / 1000),
-      stale: at > now || now - at > limitMs,
+      stale: at > now || now - at > stream5000ReadingLimitMs(key, limitMs),
     }]));
   }
 }

@@ -41,6 +41,24 @@ test('download keeps JSON formatting and UTC filename, cleans URLs and does not 
   assert.equal(anchor.download, 'ecoflow-integration-snapshot.json');
 });
 
+test('linked unit and pending update explanations use fixed translated text, not private fields', () => {
+  const element = { children: [], ownerDocument: { createElement: () => ({}) },
+    appendChild(child) { this.children.push(child); } };
+  render(element, { drivers: [
+    { id: 'stream', monitoringTrial: [{ enabled: true, status: 'active', updatePending: true }] },
+    { id: 'stream_5000_unit', physicalPower: [{ status: 'linked_power_unverified', name: 'PRIVATE' }] },
+  ] }, key => key);
+  const text = element.children.map(child => child.textContent).join('\n');
+  assert.match(text, /update_pending/);
+  assert.match(text, /linked_unit_power/);
+  assert.doesNotMatch(text, /PRIVATE/);
+  for (const locale of ['en', 'de', 'nl']) {
+    const translations = require(`../locales/${locale}.json`);
+    assert.ok(translations.device.stream_5000_unit.linked_power_unverified);
+    assert.ok(translations.settings.support.technical);
+  }
+});
+
 test('source labels keep grid meter and flow separate and suppress stale/skewed comparisons', () => {
   const field = (value, ageSec = 0, stale = false) => ({ value, ageSec, stale });
   const text = (meter, flow) => {
@@ -162,8 +180,9 @@ test('settings readiness and JSON download work in the browser without hidden po
     const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
     await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
     const report = { capturedAt: '2026-10-11T01:02:03.004Z', appVersion: '1.10.31', schemaVersion: 11,
-      drivers: [{ id: 'stream', monitoringTrial: [{ enabled: false, readiness: { eligible: true, status: 'active' } }] },
-        { id: 'stream_5000_unit', systemFlow: [{ fields: {
+      drivers: [{ id: 'stream', monitoringTrial: [{ enabled: false, readiness: { eligible: true, status: 'active' } },
+        { enabled: true, status: 'active', updatePending: true }] },
+        { id: 'stream_5000_unit', physicalPower: [{ status: 'linked_power_unverified' }], systemFlow: [{ fields: {
           gridMeterW: { value: -5, ageSec: 0, stale: false },
           gridFlowNetW: { value: -29, ageSec: 1, stale: false },
         } }] }] };
@@ -181,6 +200,9 @@ test('settings readiness and JSON download work in the browser without hidden po
     assert.match(await page.locator('#supportCaptureStatus').innerText(), /Snapshot age now: 20 s/);
     assert.equal(await page.evaluate(() => window.calls), 1, 'age ticker makes no API requests');
     assert.match(await page.locator('#reporterStatus').innerText(), /Ready for the optional monitoring trial/);
+    assert.match(await page.locator('#reporterStatus').innerText(), /New readings are waiting/);
+    assert.match(await page.locator('#reporterStatus').innerText(), /Blank unit tiles do not mean zero/);
+    assert.equal(await page.locator('details').getAttribute('open'), null, 'technical JSON is optional and collapsed');
     const downloadEvent = page.waitForEvent('download');
     await page.locator('#downloadSupportSnapshot').click();
     const file = await downloadEvent;

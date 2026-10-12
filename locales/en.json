@@ -18,6 +18,8 @@
       "download": "Download integration JSON", "downloaded": "Report downloaded. Review it before sharing privately; it is separate from Homey's app-log ID.",
       "download_failed": "Download unavailable here. Copy the displayed report instead.",
       "activation_only": "Activation eligibility applies before enabling. An active trial is not awaiting activation.",
+      "update_pending": "New readings are waiting to be applied. The last complete, fresh snapshot remains online; Flow conditions wait for matching current values.",
+      "linked_unit_power": "Linked 5000 Unit: individual battery power and direction are not verified. Blank unit tiles do not mean zero power or a lost connection. Home Battery shows combined readings.",
       "request_timeout": "The report request timed out. Try again, or use Show integration support report for a local-only report. No automatic retry is made; an earlier reporter check may still be finishing.",
       "capture_version": "App version at capture", "capture_time": "Captured (UTC)", "capture_elapsed": "Snapshot age now",
       "capture_unknown": "Unknown or clock mismatch",
@@ -58,7 +60,9 @@
       "show": "Show integration support report",
       "copy": "Copy integration support report",
       "check": "Check current battery reporter (read-only)",
-      "instructions": "In this app's settings, show and copy the integration report. Homey's Create diagnostic report button produces a separate app-log ID; send both. The optional reporter check reads EcoFlow's API for up to eight existing original Home Batteries. It does not change devices, controls, counters or grouping. A match does not verify installation-wide reporting. Do not delete or re-pair devices while investigating. Review reports before sharing privately."
+      "technical": "Technical report (optional)",
+      "check_scope": "The optional reporter check reads EcoFlow's API for up to eight existing original Home Batteries. It does not change devices, controls, counters or grouping. A match does not verify installation-wide reporting.",
+      "instructions": "For support: 1. Take an EcoFlow combined-battery screenshot with the individual battery watts visible. 2. Select Show integration support report, wait for completion, then Download integration JSON. Send the file privately with the screenshot, ideally captured within one minute. If downloading is difficult, send the screenshot first. When requested, also use Homey's Create diagnostic report and send its ID separately. Do not paste the JSON into that message box: Homey may truncate it. Nothing is sent automatically; check files and screenshots for private details before sharing."
     }
   },
   "errors": {
@@ -70,7 +74,8 @@
       "monitoring_only": "Monitoring only · controls intentionally disabled"
     },
     "stream_5000_unit": {
-      "monitoring_only": "Monitoring only · controls intentionally disabled"
+      "monitoring_only": "Monitoring only · controls intentionally disabled",
+      "linked_power_unverified": "Linked installation: individual battery power and direction are not verified. Use Home Battery for combined readings."
     },
     "stream_ac5000": {
       "monitoring_only": "Monitoring only · controls intentionally disabled"

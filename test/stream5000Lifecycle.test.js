@@ -35,6 +35,7 @@ class FakeDevice {
   async setSettings(values) { Object.assign(this.settings, values); }
   async setAvailable() { this.available = true; this.onlineTransitions += 1; }
   async setUnavailable() { this.available = false; }
+  async setWarning(message) { this.warning = message; }
   log(...args) { this.logs.push(args.join(' ')); }
   error(...args) { throw new Error(args.join(' ')); }
 }
@@ -130,6 +131,9 @@ test('socket discharge advances only aggregate energy and preserves totals acros
   assert.equal(system.device.values.battery_charging_state, 'discharging');
   assert.equal(unit.device.values.stream_unit_power_battery_flow, null,
     'linked public capture cannot establish signed power for one physical unit');
+  assert.match(unit.device.warning, /individual battery power and direction are not verified/);
+  assert.equal(unit.device.getPhysicalPowerDiagnostics().status, 'linked_power_unverified');
+  assert.equal(unit.device.getPhysicalPowerDiagnostics().energyContribution, false);
   now += 60000;
   await system.emit(payload);
   await unit.emit(payload);
@@ -144,6 +148,23 @@ test('socket discharge advances only aggregate energy and preserves totals acros
   await restarted.emit(payload);
   assert.equal(restarted.device.values['meter_power.discharged'], previous, 'first sample never backfills downtime');
   await restarted.device.onUninit();
+});
+
+test('serial-keyed self record reaches diagnostics without becoming signed physical power or Energy', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const sn = captures.pair.unit_a;
+  const { device, emit } = await harness(classes.Stream5000PhysicalUnitDevice, {}, sn);
+  const entry = (serial, soc, watts) => group(1, Buffer.concat([
+    group(1, Buffer.from(serial)), varint(16), varint(soc), varint(32), varint(watts * 2),
+  ]));
+  await emit(frame(group(54, Buffer.concat([entry(sn, 70, 2260), entry('BK11SYNTHETIC', 68, 1030)]))));
+  assert.equal(device.getOwnUnitDiagnostics().fields.socPct.value, 70);
+  assert.equal(device.getOwnUnitDiagnostics().fields.batteryPowerRawW.value, 2260);
+  assert.equal(device.getOwnUnitDiagnostics().rawBatteryPowerSignAndScaleVerified, false);
+  assert.equal(device.values.stream_unit_power_battery_flow, null);
+  assert.equal(device.values.battery_charging_state, null);
+  assert.equal(device.getEnergyDiagnostics(), null);
+  await device.onUninit();
 });
 
 test('configuration-only frames populate diagnostics without availability, power samples or Energy changes', async (t) => {
@@ -413,6 +434,25 @@ test('independent reading expiry clears stale power despite fresh temperature an
   now += 60000;
   await device.queueTelemetry({ measure_power: 400 }, now, true);
   assert.ok(Math.abs(device.values['meter_power.charged'] - (0.1 + 400 / 60 / 1000)) < 1e-12);
+  await device.onUninit();
+});
+
+test('physical watt tiles expire after three minutes without declaring a healthy temperature feed offline', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  await device.queueTelemetry({ measure_power: 200, battery_charging_state: 'charging', 'measure_power.load': 25 }, now, true);
+  now += 181000;
+  await device.queueTelemetry({ measure_temperature: 31 }, now, true);
+  device.lastTelemetryAt = now;
+  await device.checkAvailability();
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.values.stream_unit_power_battery_flow, null);
+  assert.equal(device.values['measure_power.load'], null);
+  assert.equal(device.values.battery_charging_state, null);
+  assert.equal(device.values.measure_temperature, 31);
+  assert.equal(device.hasCapability('measure_power'), false);
+  assert.equal(device.getEnergyDiagnostics(), null);
   await device.onUninit();
 });
 

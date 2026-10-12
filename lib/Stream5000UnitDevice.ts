@@ -1,7 +1,8 @@
 'use strict';
 
 import Homey from 'homey';
-import { StreamReporterObservations } from './streamReporterEvidence';
+import { StreamReporterObservations, StreamOwnUnitObservations } from './streamReporterEvidence';
+import type { Es22Telemetry } from './streamAc5000Protocol';
 import { EcoFlowAppApi, getApp } from './appApi';
 import { AppFrameHandler } from './EcoFlowAppMqtt';
 import { clearSavedAppAuthCreds, hasSavedAppAuthCreds } from './appAuthPairing';
@@ -54,6 +55,7 @@ const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as
 export class Stream5000UnitDevice extends Homey.Device {
   private telemetryAdapter!: Stream5000TelemetryAdapter;
   private reporterObservations = new StreamReporterObservations();
+  private ownUnitObservations = new StreamOwnUnitObservations();
   private frameHandler?: AppFrameHandler;
   private subscribedSn?: string;
   private realtimeApp?: EcoFlowAppApi;
@@ -85,6 +87,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private topologyTracker?: Stream5000TopologyTracker;
   private configurationTracker?: Stream5000ConfigurationTracker;
   private readonly readingAges = new Stream5000ReadingAges();
+  private linkedPowerWarning = false;
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -102,6 +105,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   async onInit(): Promise<void> {
     this.reporterObservations = new StreamReporterObservations();
+    this.ownUnitObservations = new StreamOwnUnitObservations();
     this.subscriptionState = 'starting';
     this.startedAt = Date.now();
     this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
@@ -179,6 +183,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       this.topologyTracker?.observe(telemetry, receivedAt);
       this.reporterObservations.observe(telemetry, sn, receivedAt);
+      this.ownUnitObservations.observe(telemetry as Es22Telemetry, sn, receivedAt);
       const values = mapTelemetry(telemetry);
       const roleValues = this.capabilityValuesForRole(values);
       const usable = Object.entries(roleValues).some(([capability, value]) => value !== null && this.hasCapability(capability));
@@ -259,6 +264,17 @@ export class Stream5000UnitDevice extends Homey.Device {
   private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<void> {
     if (this.isStopped()) return;
     const roleValues = this.capabilityValuesForRole(values);
+    if (!this.isEnergyAggregate() && values.measure_power === null && values.battery_charging_state === null
+      && !this.linkedPowerWarning) {
+      this.linkedPowerWarning = true;
+      const key = 'device.stream_5000_unit.linked_power_unverified';
+      const translated = this.homey.__(key);
+      await this.setWarning(translated && translated !== key ? translated
+        : 'Linked installation: individual battery power and direction are not verified. Use Home Battery for combined readings.')
+        .catch(() => {
+          this.linkedPowerWarning = false;
+        });
+    }
     this.readingAges.observe(Object.fromEntries(Object.entries(roleValues).filter(([key]) => this.hasCapability(key))), receivedAt);
     for (const [capability, value] of Object.entries(roleValues)) {
       if (!this.hasCapability(capability)) continue;
@@ -326,6 +342,19 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   getSystemFlowDiagnostics(): Record<string, unknown> {
     return this.reporterObservations.flowSnapshot(Date.now());
+  }
+
+  getOwnUnitDiagnostics(): Record<string, unknown> {
+    return this.ownUnitObservations.snapshot(Date.now());
+  }
+
+  getPhysicalPowerDiagnostics(): Record<string, unknown> | null {
+    if (this.isEnergyAggregate()) return null;
+    return {
+      status: this.linkedPowerWarning ? 'linked_power_unverified' : 'waiting_for_unit_evidence',
+      linkedSystemPowerCopiedToUnit: false,
+      energyContribution: false,
+    };
   }
 
   getConnectionDiagnostics(): Record<string, unknown> {

@@ -32,6 +32,7 @@
       append(`${translate('battery')} ${index + 1}: ${translate(result.state)}`);
       append(translate(result.action));
       if (result.state === 'active') append(translate('activation_only'));
+      if (result.state === 'active' && trial.updatePending === true) append(translate('update_pending'));
     });
     append(translate('scope'));
     append(translate('snapshot'));
@@ -45,6 +46,9 @@
     (Array.isArray(report.drivers) ? report.drivers : [])
       .filter(driver => ['stream_5000_unit', 'stream_5000_system', 'stream_ac5000'].includes(driver.id))
       .forEach(driver => {
+        (Array.isArray(driver.physicalPower) ? driver.physicalPower : []).slice(0, 64).forEach(power => {
+          if (power?.status === 'linked_power_unverified') append(translate('linked_unit_power'));
+        });
         (Array.isArray(driver.systemFlow) ? driver.systemFlow : []).slice(0, 64).forEach((flow, index) => {
           append(`${translate('flow_sources')} ${index + 1}`);
           const meter = flow?.fields?.gridMeterW;

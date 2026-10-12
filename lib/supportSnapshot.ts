@@ -7,7 +7,9 @@ import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
 import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
-import { reporterRepairPreview, systemReporterSnapshot, reporterFlowSnapshot } from './streamReporterEvidence';
+import {
+  reporterRepairPreview, systemReporterSnapshot, reporterFlowSnapshot, ownUnitSnapshot,
+} from './streamReporterEvidence';
 import { reporterShadowSnapshot } from './streamReporterShadow';
 import { monitoringTrialSnapshot } from './streamMonitoringTrial';
 import {
@@ -175,6 +177,15 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       registered,
       pairedCount: devices.length,
       reporting,
+      physicalPower: !['stream_5000_unit', 'stream_ac5000'].includes(id) ? [] : devices.map((device, deviceIndex) => {
+        let status = 'waiting_for_unit_evidence';
+        try {
+          if (device.getPhysicalPowerDiagnostics?.()?.status === 'linked_power_unverified') status = 'linked_power_unverified';
+        } catch { /* Fixed diagnostic labels only. */ }
+        return {
+          deviceIndex, status, linkedSystemPowerCopiedToUnit: false, energyContribution: false,
+        };
+      }),
       monitoringTrial: id === 'stream' ? devices.map((device, deviceIndex) => {
         let input = null;
         try {
@@ -185,6 +196,13 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       accounting: role === 'installation_energy' ? devices.map(accountingSnapshot).filter(Boolean) : [],
       topology,
       systemReporter,
+      ownUnit: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        let input = null;
+        try {
+          input = device.getOwnUnitDiagnostics?.();
+        } catch { /* No raw objects or identifiers forwarded. */ }
+        return { deviceIndex, ...ownUnitSnapshot(input) };
+      }),
       systemFlow: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
         let input = null;
         try {
@@ -240,7 +258,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 11,
+    schemaVersion: 12,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

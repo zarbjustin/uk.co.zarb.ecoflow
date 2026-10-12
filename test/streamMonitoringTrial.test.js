@@ -196,7 +196,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 11);
+  assert.equal(report.schemaVersion, 12);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });
@@ -778,6 +778,74 @@ test('slow Homey writes coalesce ticks and cannot publish stale availability or 
   h.device.setCapabilityValue = write;
   await h.device.refreshMonitoringTrial();
   assert.equal(h.device.values.measure_power, null);
+  await h.device.onTeardown();
+});
+
+test('donor updates during a write do not manufacture an outage or trigger a stale crossing', async (t) => {
+  const h = await deviceHarness(t);
+  await h.legacy(); await h.enable();
+  let fields = { socPct: { value: 53, ageSec: 0, stale: false }, batteryW: { value: 400, ageSec: 0, stale: false } };
+  h.monitor.getSystemReporterDiagnostics = () => fields;
+  const write = h.device.setCapabilityValue.bind(h.device);
+  let once = true;
+  h.device.setCapabilityValue = async (cap, value) => {
+    await write(cap, value);
+    if (cap === 'measure_power' && once) {
+      once = false;
+      fields = { socPct: { value: 54, ageSec: 0, stale: false }, batteryW: { value: -50, ageSec: 0, stale: false } };
+    }
+  };
+  const count = h.triggers.length;
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.getAvailable(), true);
+  assert.equal(h.device.values.measure_power, 400, 'last fully applied snapshot remains available');
+  assert.equal(h.device.getMonitoringTrialDiagnostics().status, 'active');
+  assert.equal(h.device.getMonitoringTrialDiagnostics().updatePending, true);
+  assert.equal(h.triggers.length, count, 'no crossing from superseded values');
+  assert.throws(() => h.device.assertMonitoringCondition('core'), /Monitoring reporter/);
+  assert.equal(h.device.getReadingDiagnostics().measure_power.stale, true);
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.values.measure_power, -50);
+  assert.equal(h.device.getMonitoringTrialDiagnostics().updatePending, false);
+  assert.doesNotThrow(() => h.device.assertMonitoringCondition('core'));
+  assert.equal(h.device.getMonitoringTrialDiagnostics().timeline.summary.unavailableSec, 0);
+  await h.device.onTeardown();
+});
+
+test('new donor packets cannot renew an older applied snapshot; clock reversal fails closed', async (t) => {
+  const h = await deviceHarness(t);
+  await h.legacy(); await h.enable();
+  const evidence = h.monitor.getTopologyEvidence();
+  h.monitor.getTopologyEvidence = () => ({ ...evidence, peers: [{ sn: oldSn, seenAt: Date.now() }] });
+  h.monitor.getSystemReporterDiagnostics = () => ({ socPct: { value: 54, ageSec: 0, stale: false },
+    batteryW: { value: -300, ageSec: 0, stale: false } });
+  h.setTime(now + 178999);
+  await h.device.setOnlineState(true);
+  assert.equal(h.device.getAvailable(), true);
+  h.setTime(now + 179001);
+  await h.device.setOnlineState(true);
+  assert.equal(h.device.getAvailable(), false, 'fresh donor does not bless expired applied values');
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.getAvailable(), true);
+  h.setTime(now + 179000);
+  await h.device.setOnlineState(true);
+  assert.equal(h.device.getAvailable(), false);
+  await h.device.onTeardown();
+});
+
+test('donor removal during a capability write is unavailable despite a fresh applied snapshot', async (t) => {
+  const h = await deviceHarness(t);
+  await h.legacy(); await h.enable();
+  h.monitor.getSystemReporterDiagnostics = () => ({ socPct: { value: 54, ageSec: 0, stale: false },
+    batteryW: { value: 400, ageSec: 0, stale: false } });
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async (cap, value) => {
+    await write(cap, value);
+    if (cap === 'measure_power') h.map.stream_5000_unit = [];
+  };
+  await h.device.refreshMonitoringTrial();
+  assert.equal(h.device.getAvailable(), false);
+  assert.throws(() => h.device.assertMonitoringCondition('core'), /Monitoring reporter/);
   await h.device.onTeardown();
 });
 

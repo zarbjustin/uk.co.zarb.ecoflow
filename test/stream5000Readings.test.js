@@ -49,3 +49,19 @@ test('read-only configuration rejects stale, malformed, unknown mode and invalid
   }
   assert.ok(!JSON.stringify(values).includes('PRIVATE'));
 });
+
+test('power/state expire independently within three minutes while SOC and temperature retain the connection timeout', () => {
+  const ages = new Stream5000ReadingAges();
+  ages.observe({ measure_power: 200, 'measure_power.load': 25, stream_unit_power_battery_flow: -20,
+    battery_charging_state: 'charging', stream_5000_direct_pv: 100,
+    stream_5000_socket_power: 80, stream_unit_power_pv4: 50, measure_battery: 15, measure_temperature: 30 }, 1000);
+  assert.equal(ages.expired(181000, 1200000).length, 0);
+  assert.equal(ages.expired(181001, 1200000).length, 7);
+  ages.observe({ measure_temperature: 31 }, 181001);
+  assert.equal(ages.snapshot(181001, 1200000).measure_power.stale, true);
+  assert.equal(ages.snapshot(181001, 1200000).measure_battery.stale, false);
+  assert.equal(ages.snapshot(181001, 1200000).measure_temperature.stale, false);
+  ages.observe({ measure_power: 0 }, 181001);
+  assert.equal(ages.snapshot(181001, 1200000).measure_power.stale, false);
+  assert.equal(ages.snapshot(181001, 1200000)['measure_power.load'].stale, true);
+});

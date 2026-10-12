@@ -240,7 +240,23 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 11);
+  assert.equal(report.schemaVersion, 12);
+});
+
+test('self observations and linked-power explanation are re-projected without private fields or authority', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getOwnUnitDiagnostics: () => ({ fields: { batteryPowerRawW: { value: 2260, ageSec: 1, stale: false, sn: 'PRIVATE' } },
+      accountingUsed: true, rawBatteryPowerSignAndScaleVerified: true }),
+    getPhysicalPowerDiagnostics: () => ({ status: 'linked_power_unverified', secret: 'PRIVATE', energyContribution: true }),
+  }] : [] });
+  const driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_5000_unit');
+  assert.equal(driver.ownUnit[0].fields.batteryPowerRawW.value, 2260);
+  assert.equal(driver.ownUnit[0].accountingUsed, false);
+  assert.equal(driver.ownUnit[0].rawBatteryPowerSignAndScaleVerified, false);
+  assert.equal(driver.physicalPower[0].status, 'linked_power_unverified');
+  assert.equal(driver.physicalPower[0].energyContribution, false);
+  assert.ok(!JSON.stringify(driver).includes('PRIVATE'));
 });
 
 test('support report re-projects cached discovery without network or identity access', () => {

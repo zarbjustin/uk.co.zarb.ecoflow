@@ -1,6 +1,6 @@
 # Community feedback — historical roadmap and current entry point
 
-Updated 11 October 2026. The historical release/sprint descriptions below are
+Updated 12 October 2026. The historical release/sprint descriptions below are
 not current release status. Use [STATUS.md](STATUS.md) for Git/CI/Test/Live gates
 and [MONITORING_REPORTER_TRIAL.md](MONITORING_REPORTER_TRIAL.md) for the one active
 work plan and acceptance checklist. Do not restart already completed sprints.
@@ -13,6 +13,16 @@ older-unit activity, charging, rollback/restart and 48–72-hour normal-operatio
 soak. Counter scope and actual control migration remain separate research gates.
 Expansion/ES21/ES22 and independent-installation cases need labelled hardware
 acceptance. Ed's Solis/controller-ownership requests remain advisory and separate.
+
+12 October follow-up: local diagnostic-branch update-race handling, three-minute
+power-field freshness independent of connection health, linked-unit explanations,
+anonymous self-record observations and simpler support capture guidance are
+implemented. No release or hardware acceptance yet. Ed's latest feedback calls
+for less technical testing requests: offer screenshots first, JSON optional.
+Preserve the already-supplied charging screenshots/report/log; the remaining
+target is matched evidence while original-generation batteries discharge.
+Expected late-October owned-hardware acceptance and separate counter/control
+gates are detailed in the trial plan linked above.
 
 ## Historical roadmap — 7 October 2026
 

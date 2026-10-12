@@ -18,6 +18,8 @@
       "download": "Integrations-JSON herunterladen", "downloaded": "Bericht heruntergeladen. Vor privatem Teilen prüfen; separat von Homeys App-Protokoll-ID.",
       "download_failed": "Download hier nicht verfügbar. Angezeigten Bericht kopieren.",
       "activation_only": "Die Aktivierungsbereitschaft gilt vor dem Einschalten. Ein aktiver Test wartet nicht auf Aktivierung.",
+      "update_pending": "Neue Messwerte warten auf Übernahme. Die letzte vollständige aktuelle Momentaufnahme bleibt online; Flow-Bedingungen warten auf passende aktuelle Werte.",
+      "linked_unit_power": "Verknüpfte 5000-Einheit: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Leere Einheitenwerte bedeuten weder Nullleistung noch Verbindungsverlust. Die Hausbatterie zeigt Gesamtwerte.",
       "request_timeout": "Zeitüberschreitung beim Bericht. Erneut versuchen oder den lokalen Integrationsbericht anzeigen. Kein automatischer Wiederholungsversuch; eine frühere Melderprüfung kann noch laufen.",
       "capture_version": "App-Version bei Erfassung", "capture_time": "Erfasst (UTC)", "capture_elapsed": "Alter der Momentaufnahme jetzt",
       "capture_unknown": "Unbekannt oder Zeitabweichung",
@@ -58,7 +60,9 @@
       "show": "Integrationsbericht anzeigen",
       "copy": "Integrationsbericht kopieren",
       "check": "Aktuellen Batterie-Melder prüfen (nur lesen)",
-      "instructions": "In den Einstellungen dieser App den Integrationsbericht anzeigen und kopieren. Homeys Diagnosebericht erstellen liefert eine separate App-Protokoll-ID; bitte beides senden. Die optionale Prüfung liest EcoFlows API für bis zu acht vorhandene ursprüngliche Hausbatterien. Geräte, Steuerung, Zähler und Gruppierung bleiben unverändert. Eine übereinstimmende Adresse bestätigt keine anlagenweiten Messwerte. Während der Untersuchung keine Geräte löschen oder neu koppeln. Berichte vor dem privaten Teilen prüfen."
+      "technical": "Technischer Bericht (optional)",
+      "check_scope": "Die optionale Melderprüfung liest EcoFlows API für bis zu acht bestehende ursprüngliche Hausbatterien. Geräte, Steuerung, Zähler und Gruppierung bleiben unverändert. Eine passende Adresse bestätigt keine anlagenweiten Messwerte.",
+      "instructions": "Für Support: 1. EcoFlows Gesamtbatterie mit sichtbaren Wattwerten der einzelnen Batterien fotografieren. 2. Integrationsbericht anzeigen, Fertigstellung abwarten, dann Integrations-JSON herunterladen. Datei und Screenshot privat senden, möglichst innerhalb einer Minute erfasst. Bei Download-Problemen zuerst nur den Screenshot senden. Wenn angefordert, zusätzlich Homeys Diagnosebericht erstellen und dessen ID separat senden. JSON nicht in dieses Nachrichtenfeld einfügen: Homey kann es abschneiden. Nichts wird automatisch gesendet; Dateien und Screenshots vor dem Teilen auf private Angaben prüfen."
     }
   },
   "errors": {
@@ -70,7 +74,8 @@
       "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert"
     },
     "stream_5000_unit": {
-      "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert"
+      "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert",
+      "linked_power_unverified": "Verknüpfte Anlage: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Die Hausbatterie zeigt Gesamtwerte."
     },
     "stream_ac5000": {
       "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert"

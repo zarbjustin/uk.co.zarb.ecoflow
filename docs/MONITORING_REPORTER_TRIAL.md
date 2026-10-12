@@ -1,5 +1,72 @@
 # Linked 5000 monitoring reporter trial
 
+## 12 October follow-up and late-October acceptance plan
+
+Diagnostic branch only; this reliability increment is not yet published.
+Keep the existing Home Battery, physical monitor, original accounting source
+and default-off trial. No automatic source migration or new controls.
+
+Fresh, fully applied snapshots stay online across normal donor updates, but
+cannot outlive their own conservative receipt-age budget. Conditions and widgets
+still require exact current donor values. Report `updatePending` separately;
+do not call it a telemetry outage. Real missing/stale/changed donor evidence and
+failed capability writes remain unavailable. No new network requests are added.
+
+Power/state/PV/socket values expire after three minutes independently of the
+connection timeout. The minute watchdog clears expired device values; support
+freshness marks them stale immediately. No counters are recalculated or migrated.
+Linked-unit warnings explain why signed per-unit power/state are withheld.
+Schema 12 `ownUnit` observations are self-record diagnostic candidates, not
+installation membership or verified physical-pack measurements. They never
+borrow system/peer values, refresh missing fields or enter Energy/controls.
+
+### Evidence already received / minimal next capture
+
+The latest full JSON, separate manual log and EcoFlow combined/individual charging
+breakdown have been reviewed. The log is not a captured crash. The screenshot
+is later than the JSON; it cannot serve as its time-matched numeric comparison.
+The manual report message truncates long JSON: use the original download/file
+or an intact preformatted forum paste, not Homey's diagnostic-message box.
+
+Request only one EcoFlow screenshot with combined SOC/watts and expanded battery
+SOC/watts, plus a fresh integration JSON, within about one minute, when an original
+battery naturally supplies power. Refresh with Show integration support report
+before Download integration JSON. Include local time/timezone and any capture
+gap. Current v1.10.32 evidence is still useful; do not require another update
+before a release exists. A new app-log ID is optional unless reproducing a new
+problem. Screenshot-only help remains welcome for nontechnical users.
+
+### Release path, not a promise of hardware acceptance
+
+1. Before hardware: complete exact-release local/CI/Test gates after explicit
+   publication authorization; validate normal update races, independent field
+   expiry, teardown, restart, rollback, overlap and secret-free support paths.
+   Continue read-only own-unit sign/scope research. Do not infer direction from
+   the combined system or average peer percentages to replace reported SOC.
+2. Existing tester evidence: match combined and individual charging/discharging
+   readings and receipt ages in the same capture. Keep meter and flow-grid
+   sources separate. Check repeated intervals before interpreting counter deltas.
+3. On equipment arrival (expected late October): first establish an unlinked
+   standalone baseline, then configured mixed-generation and expansion cases.
+   Compare EcoFlow/Homey while idle, charging and discharging, with originals
+   active and inactive. Record model/firmware and actual membership privately.
+   Test normal app restart, connection recovery and opt-out without re-pairing;
+   verify history/device IDs/Flow references and run a 48–72-hour normal-use soak.
+   Do not change wiring or force unsafe modes to create test states.
+4. Counter/controls are separate gates: establish authoritative lifetime/daily
+   counter boundaries and continuity before changing sources. Validate command
+   target, readback, physical response, limits and safe restoration on owned
+   hardware before enabling any 5000 actuation or external-inverter coordination.
+5. Release a scoped monitoring update only after its acceptance criteria pass.
+   If counter/control gates remain open, keep them visibly unsupported rather
+   than promoting the trial to fully verified combined energy/control support.
+
+Possible later features: signed per-unit monitoring after direction/scale proof,
+capacity-aware expansion reporting after pack membership is established,
+validated installation solar/load/grid tiles, and eventually safe 5000 controls.
+Gateway/3000/Dual CT admission still requires model-specific API/telemetry evidence;
+the existence of a product or account-list entry is not a capability contract.
+
 ## v1.10.32 diagnostic reliability increment (schema 11)
 
 Released from the diagnostic branch to Test as v1.10.32 / Build 47 on

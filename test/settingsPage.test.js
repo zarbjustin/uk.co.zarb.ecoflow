@@ -124,7 +124,9 @@ test('read-only reporter check uses the fixed endpoint and enables copying only 
   assert.deepEqual(calls, [['POST', '/reporter-diagnostics']]);
   assert.equal(context.document.getElementById('copySupportSnapshot').disabled, false);
   assert.equal(JSON.parse(context.document.getElementById('supportSnapshotResult').textContent).schemaVersion, 7);
-  assert.match(context.document.getElementById('reporterHelp').textContent, /does not change/);
+  assert.match(context.document.getElementById('reporterCheckHelp').textContent, /does not change/);
+  assert.match(context.document.getElementById('reporterHelp').textContent, /Homey may truncate/);
+  assert.match(context.document.getElementById('reporterHelp').textContent, /screenshot first/);
 });
 
 async function clickRemove(homey) {

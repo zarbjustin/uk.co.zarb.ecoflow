@@ -2,6 +2,52 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Diagnostic reliability follow-up — 12 October 2026, local/unpublished
+
+Working only on `codex/mixed-generation-reporting-diagnostics`, based on the
+latest mixed-generation feedback and review of manually submitted reports.
+No mainline merge, Git push, Test upload, certification, Live update or
+Community reply has been performed for this increment. The published Test
+baseline below remains v1.10.32 / Build 47; package version has not been bumped.
+
+- Fresh, fully applied combined SOC/power/state remain available while newer
+  donor values await the next local tick. Their own conservative three-minute
+  expiry cannot be renewed by later packets. Removal, changed identity, stale
+  evidence, clock rollback and capability-write failures still fail closed.
+  Core Flow conditions and widgets retain exact-current-value checks; a
+  superseded snapshot cannot fire a crossing. `updatePending` is separately
+  reported rather than misclassifying every value change as a connection loss.
+- Individual watts/PV/socket/state have a three-minute freshness limit,
+  independent of the configurable connection timeout. Temperature-only deltas
+  cannot renew old watts. Expiry clears values on the existing minute watchdog;
+  diagnostics mark them stale immediately. SOC/temperature/health retain their
+  existing timeout. Accounting algorithms, checkpoints and sources are unchanged.
+- Linked physical monitors explain intentionally unavailable signed power and
+  direction with a localized warning. System watts are not substituted for unit
+  watts. Support schema 12 adds fixed anonymous `physicalPower` explanations and
+  `ownUnit` SOC/raw-power observations, independent of system and peer records.
+  Raw sign/scale and pack scope remain unverified; no new Energy input or control.
+- EN/DE/NL support guidance separates the JSON file from Homey's app-log ID and
+  warns that pasted report messages may be truncated. A screenshot-first route
+  is offered; technical JSON is collapsed by default. No automatic network
+  refresh, upload or support message is introduced.
+- Local validation: 554 tests passed, including a serial-keyed self-record
+  lifecycle replay, write-race/removal/expiry/clock regressions, independent
+  reading expiry, safe diagnostic projection and browser settings checks.
+  TypeScript, lint, `git diff --check`, dependency audit (zero vulnerabilities)
+  and Homey CLI 4.5.3 validation at `verified` level also passed locally.
+  GitHub CI has not run for these uncommitted changes; no hardware soak occurred.
+
+The latest evidence supports combined charging monitoring but the screenshots
+and JSON were captured at different times. Combined discharge while original
+units contribute, cumulative-counter scope and physical control migration are
+not accepted. Preserve all supplied evidence; request only a matching EcoFlow
+combined/individual breakdown and refreshed JSON during natural original-unit
+discharge. New app-log IDs are needed for reproduced problems, not every snapshot.
+See the updated [trial plan](MONITORING_REPORTER_TRIAL.md) for late-October hardware
+acceptance. Private reports, serials, contact details and screenshots remain out
+of Git; tests use synthetic or already-masked public fixtures.
+
 ## Latest Test release — v1.10.32 / Build 47, 11 October 2026
 
 Implemented on `codex/mixed-generation-reporting-diagnostics` while waiting for
