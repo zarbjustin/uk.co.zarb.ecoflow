@@ -30,7 +30,7 @@
       "snapshot": "Snapshot only; refresh to see changes. Turning the trial off restores the original source without re-pairing.",
       "download": "Download integration JSON",
       "parts_title": "Download not working? Send the report in parts",
-      "parts_help": "Prefer the JSON file. If this phone blocks downloads, copy each numbered part and send all parts in separate private messages with the capture time above. Keep their order and do not edit them. Nothing is uploaded automatically.",
+      "parts_help": "Prefer the JSON file. If this phone blocks downloads, send every numbered part in a separate private message. Copy the whole part, including its header and backticks. The encoded text preserves the JSON against forum formatting; it is not encrypted. Do not edit it or mix captures. Nothing is uploaded automatically.",
       "parts_previous": "Previous part",
       "parts_copy": "Copy this part",
       "parts_next": "Next part",

@@ -16,6 +16,7 @@ import {
 } from './streamReporterEvidence';
 import { reporterShadowSnapshot } from './streamReporterShadow';
 import { monitoringTrialSnapshot } from './streamMonitoringTrial';
+import { powerHistorySnapshot } from './streamPowerHistory';
 import {
   readStreamTopologyEvidence, StreamAggregateEvidence, streamAggregateOverlapSnapshot, streamTopologySnapshot,
 } from './streamTopology';
@@ -141,11 +142,16 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
         try {
           const sn = device.getData?.()?.sn;
           if (typeof sn === 'string') {
+            let history;
+            try {
+              history = device.getPowerHistoryDiagnostics?.();
+            } catch { /* Optional history does not suppress matching. */ }
             pairedUnits.push({
               driverId: id,
               deviceIndex,
               sn,
               readings: device.getUnitCorrelationDiagnostics?.(),
+              history,
             });
           }
         } catch { /* Private identity/getter errors never leave this process. */ }
@@ -322,6 +328,30 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           })),
         };
       }) : [],
+      recentPower: id !== 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        let history;
+        try {
+          history = device.getPowerHistoryDiagnostics?.();
+        } catch { /* Optional evidence. */ }
+        return { deviceIndex, ...powerHistorySnapshot(history, now) };
+      }),
+      telemetryQueue: id !== 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        try {
+          const input = device.getTelemetryQueueDiagnostics?.();
+          return {
+            deviceIndex,
+            running: input?.running === true,
+            pending: input?.pending === true,
+            coalesced: Number.isSafeInteger(input?.coalesced) && input.coalesced >= 0 ? input.coalesced : 0,
+            batches: Number.isSafeInteger(input?.batches) && input.batches >= 0 ? input.batches : 0,
+            maxPendingBatches: 1,
+          };
+        } catch {
+          return {
+            deviceIndex, running: false, pending: false, coalesced: 0, batches: 0, maxPendingBatches: 1,
+          };
+        }
+      }),
       originalUnitBattery: id !== 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
         try {
           const reading = device.getReadingDiagnostics?.()?.stream_unit_power_battery_flow;
@@ -431,7 +461,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 15,
+    schemaVersion: 16,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

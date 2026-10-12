@@ -3,6 +3,25 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { selectMonitoringReporter, monitoringTrialSnapshot } = require('../.homeybuild/lib/streamMonitoringTrial');
+
+test('pending monitoring diagnostics distinguish applied versus candidate watts without accounting or private fields', () => {
+  const result = monitoringTrialSnapshot({ enabled: true, status: 'active', updatePending: true,
+    powerApplication: { lastApplyStartedAgeSec: 10, appliedPowerW: -310, candidatePowerW: -280, secret: 'PRIVATE' } });
+  assert.equal(result.powerApplication.lastApplyStartedAgeSec, 10);
+  assert.equal(result.powerApplication.appliedPowerW, -310);
+  assert.equal(result.powerApplication.candidatePowerW, -280);
+  assert.equal(result.powerApplication.accountingUsed, false);
+  assert.deepEqual(monitoringTrialSnapshot(result).powerApplication, result.powerApplication);
+  assert.ok(!JSON.stringify(result).includes('PRIVATE'));
+  for (const age of [-1, 181, NaN, Infinity]) {
+    const stale = monitoringTrialSnapshot({ enabled: true, status: 'active',
+      powerApplication: { lastApplyStartedAgeSec: age, appliedPowerW: -310, candidatePowerW: Infinity } });
+    assert.equal(stale.powerApplication.appliedPowerW, null);
+    assert.equal(stale.powerApplication.candidatePowerW, null);
+  }
+  assert.equal(monitoringTrialSnapshot({ enabled: false, powerApplication: { appliedPowerW: -310,
+    lastApplyStartedAgeSec: 1, candidatePowerW: -280 } }).powerApplication.appliedPowerW, null);
+});
 const { readMonitoringState } = require('../.homeybuild/lib/streamMonitoringTrial');
 const { StreamReporterObservations } = require('../.homeybuild/lib/streamReporterEvidence');
 const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
@@ -263,7 +282,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 15);
+  assert.equal(report.schemaVersion, 16);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });

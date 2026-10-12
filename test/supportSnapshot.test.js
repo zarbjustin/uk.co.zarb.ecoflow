@@ -6,6 +6,42 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('recent power and queue diagnostics use bounded fixed projections and isolate hostile getters', t => {
+  const now = 100000; t.mock.method(Date, 'now', () => now);
+  const instance = homey();
+  const sample = { value: -450, receivedAt: now - 1000, appliedAt: now - 500, sn: 'PRIVATE' };
+  const devices = [{ getPowerHistoryDiagnostics: () => ({ fields: { bmsBatteryW: Array(100).fill(sample),
+    secret: [{ value: 'PRIVATE' }], gridPortW: [{ value: NaN, receivedAt: now, appliedAt: now }] } }),
+  getTelemetryQueueDiagnostics: () => ({ running: true, pending: true, coalesced: 200, batches: 2,
+    payload: 'PRIVATE', maxPendingBatches: 999 }),
+  }, { getPowerHistoryDiagnostics() { throw new Error('PRIVATE'); },
+    getTelemetryQueueDiagnostics: () => ({ get running() { throw new Error('PRIVATE'); } }) }];
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? devices : [] });
+  const report = createSupportSnapshot(instance);
+  const unit = report.drivers.find(d => d.id === 'stream_unit');
+  assert.equal(unit.recentPower[0].fields.bmsBatteryW.length, 16);
+  assert.equal(unit.recentPower[0].fields.bmsBatteryW[0].queueDelaySec, 0.5);
+  assert.equal(unit.recentPower[0].fields.gridPortW, undefined);
+  assert.deepEqual(unit.recentPower[1].fields, {});
+  assert.equal(unit.telemetryQueue[0].maxPendingBatches, 1);
+  assert.equal(unit.telemetryQueue[0].coalesced, 200);
+  assert.equal(unit.telemetryQueue[1].coalesced, 0);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('optional history failure does not lose an otherwise valid peer identity comparison', () => {
+  const now = Date.now(); const instance = homey(); const sn = 'BK31PRIVATE000001';
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [{
+    getData: () => ({ sn }), getUnitCorrelationDiagnostics: () => ({ bmsBatteryW: { value: -450, ageSec: 0, stale: false } }),
+    getPowerHistoryDiagnostics() { throw new Error('PRIVATE'); },
+  }] : id === 'stream_5000_unit' ? [{ getTopologyEvidence: () => ({ source: 'es22_peer_records', addressSn: 'ES22PRIVATE000001',
+    peers: [{ sn, seenAt: now, readings: { batteryPowerRawW: { value: 280, receivedAt: now } } }] }) }] : [] });
+  const result = createSupportSnapshot(instance);
+  assert.equal(result.peerCorrelation[0].peers[0].status, 'exact_identity_match');
+  assert.equal(result.peerCorrelation[0].peers[0].comparisons.rawPowerVersusBms.magnitudeDifferenceW, -170);
+  assert.ok(!JSON.stringify(result).includes('PRIVATE'));
+});
+
 test('original live freshness and limit projection are fixed, anonymous and read-only', () => {
   const instance = homey();
   instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [{
@@ -361,7 +397,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 15);
+  assert.equal(report.schemaVersion, 16);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {

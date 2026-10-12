@@ -176,6 +176,67 @@ test('failed BMS power write cannot invent battery state or direction', async ()
   await h.d.onTeardown();
 });
 
+test('slow Homey writes coalesce BK bursts, retain partial PV receipts and expose applied BMS components', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK61SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  let release; let started;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const start = new Promise(resolve => { started = resolve; });
+  const write = h.d.setCapabilityValue; let first = true;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (first && cap === 'stream_unit_power_battery_flow' && value !== null) {
+      first = false; started(); await blocked;
+    }
+    await write(cap, value);
+  };
+  handler(bmsFrame(0, 450, sn), `/app/device/property/${sn}`); await start;
+  now += 1000; handler(pvFrame(32), `/app/device/property/${sn}`);
+  for (let i = 0; i < 100; i++) {
+    now += 10; handler(bmsFrame(0, 500 + i, sn), `/app/device/property/${sn}`);
+  }
+  release(); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, -599);
+  assert.equal(h.values.stream_unit_pv3_voltage, 32);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_pv3_voltage.ageSec, 1);
+  assert.equal(h.d.getTelemetryQueueDiagnostics().batches, 2);
+  assert.ok(h.d.getTelemetryQueueDiagnostics().coalesced >= 99);
+  const { powerHistorySnapshot } = require('../.homeybuild/lib/streamPowerHistory');
+  const history = powerHistorySnapshot(h.d.getPowerHistoryDiagnostics(), now);
+  assert.deepEqual(history.fields.bmsBatteryW.map(s => s.valueW), [-450, -599]);
+  assert.equal(history.fields.bmsBatteryW[0].queueDelaySec, 2);
+  assert.equal(history.fields.bmsChargeW.at(-1).valueW, 0);
+  assert.equal(history.fields.bmsDischargeW.at(-1).valueW, 599);
+  assert.equal(h.d.getUnitCorrelationDiagnostics().bmsBatteryW.value, -599);
+  assert.equal(h.writes.length, 0);
+  await h.d.onTeardown();
+  assert.deepEqual(h.d.getPowerHistoryDiagnostics().fields, {});
+  assert.equal(h.d.getTelemetryQueueDiagnostics().pending, false);
+});
+
+test('queued BK BMS receipts cannot become fresh merely because slow writes finish later', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  let release; let started; const block = new Promise(resolve => { release = resolve; });
+  const start = new Promise(resolve => { started = resolve; });
+  const write = h.d.setCapabilityValue; let first = true;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (first && cap === 'stream_unit_power_battery_flow' && value !== null) { first = false; started(); await block; }
+    await write(cap, value);
+  };
+  handler(bmsFrame(0, 450, sn), `/app/device/property/${sn}`); await start;
+  now += 1; handler(bmsFrame(0, 500, sn), `/app/device/property/${sn}`);
+  now += 180001; release(); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null);
+  assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.d.getUnitCorrelationDiagnostics().bmsBatteryW, undefined);
+  assert.deepEqual(h.d.getPowerHistoryDiagnostics().fields, {});
+  await h.d.onTeardown();
+});
+
 test('AC Pro limit diagnostics use live property packets, not cached replies, and never create controls or PV tiles', async t => {
   let now = 1000000; t.mock.method(Date, 'now', () => now);
   const sn = 'BK31SYNTHETIC0001'; let handler; let subscriptions = 0;

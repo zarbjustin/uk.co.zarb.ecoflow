@@ -10,6 +10,16 @@ function frame(data, source, func = 32, id = 50) {
 }
 const sn = 'BK31SYNTHETIC0001';
 
+test('BMS detail exposes paired charge/discharge components without changing net scale or sign', () => {
+  const { decodeBkBatteryReading } = require('../.homeybuild/lib/streamBkBatteryTelemetry');
+  assert.deepEqual(decodeBkBatteryReading(frame(Buffer.concat([int(26, 0), int(27, 450)])), sn),
+    { chargeW: 0, dischargeW: 450, powerW: -450 });
+  assert.deepEqual(decodeBkBatteryReading(frame(Buffer.concat([int(26, 450), int(27, 0)])), sn),
+    { chargeW: 450, dischargeW: 0, powerW: 450 });
+  assert.equal(decodeBkBatteryReading(frame(Buffer.concat([int(26, 1), int(27, 450)])), sn), undefined);
+  assert.equal(decodeBkBatteryReading(frame(Buffer.concat([int(26, 0), int(26, 0), int(27, 450)])), sn), undefined);
+});
+
 test('pinned public masked group BMS captures reproduce DC discharge, charge and idle', () => {
   for (const sample of require('./fixtures/streamBkBatteryPublic.json').frames) {
     assert.equal(decode(frame(Buffer.from(sample.pdataHex, 'hex')), 'BK11SYNTHETIC0001'), sample.expectedPowerW, sample.label);

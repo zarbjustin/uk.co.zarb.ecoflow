@@ -17,7 +17,7 @@ function loadSettingsScript() {
   const source = blocks.find((b) => b.includes('onHomeyReady'));
   assert.ok(source, 'settings/index.html has no onHomeyReady script');
   const context = vm.createContext({
-    console, Promise, document: fakeDocument(),
+    console, Promise, TextEncoder, TextDecoder, btoa, atob, document: fakeDocument(),
   });
   const timers = new Map(); let next = 0;
   context.timers = timers;

@@ -6,6 +6,29 @@ const { StreamCounterContinuity, StreamUnitComparison, correlateStreamPeers, str
 const { Es22TopologyTracker } = require('../.homeybuild/lib/streamTopology');
 const { StreamOwnUnitObservations, systemReporterSnapshot } = require('../.homeybuild/lib/streamReporterEvidence');
 
+test('BMS, peer and port comparisons preserve scopes and age, never certify scaling or conversion loss', () => {
+  const peerSn = 'BK31SYNTHETIC0001'; const tracker = new Es22TopologyTracker('ES22SYNTHETIC0002');
+  tracker.observe({ unitsBySn: { [peerSn]: { batteryPowerRawW: 280 } } }, 100000, 100000);
+  const unit = new StreamUnitComparison();
+  unit.observe('stream_unit_power_battery_flow', -450, 90000, 100000);
+  unit.observe('stream_unit_power_grid', 282, 95000, 100000);
+  const result = correlateStreamPeers(tracker.evidence(), [{ sn: peerSn, driverId: 'stream_unit', deviceIndex: 0,
+    readings: unit.snapshot(100000) }], 100000)[0];
+  assert.equal(result.powerMeasurements.bmsBatteryW.valueW, -450);
+  assert.equal(result.powerMeasurements.bmsBatteryW.ageSec, 10);
+  assert.equal(result.powerMeasurements.gridPortW.scope, 'unit_grid_connection');
+  assert.equal(result.comparisons.rawPowerVersusBms.magnitudeDifferenceW, -170);
+  assert.equal(result.comparisons.rawPowerVersusBms.receiptSkewSec, 10);
+  assert.equal(result.comparisons.rawPowerVersusBms.signAndScaleVerified, false);
+  assert.equal(result.comparisons.rawPowerVersusBms.conversionLossVerified, false);
+  assert.equal(result.recentPower.peer.fields.peerRawW[0].valueW, 280);
+  const skewed = correlateStreamPeers(tracker.evidence(), [{ sn: peerSn, driverId: 'stream_unit', deviceIndex: 0,
+    readings: { bmsBatteryW: { value: -450, ageSec: 31, stale: false } } }], 100000)[0];
+  assert.equal(skewed.comparisons.rawPowerVersusBms.magnitudeDifferenceW, null);
+  assert.equal(skewed.comparisons.rawPowerVersusBms.status, 'unavailable_or_skewed');
+  unit.failed('stream_unit_power_battery_flow'); assert.equal(unit.snapshot(100000).bmsBatteryW, undefined);
+});
+
 test('mixed discharge replay separates idle self/Ultra, active AC Pro and combined system', () => {
   const sn = 'ES22SYNTHETIC0001'; const ultra = 'BK11SYNTHETIC0002'; const pro = 'BK31SYNTHETIC0003';
   const input = { sourceSn: sn, socPct: 80, batteryW: -420,

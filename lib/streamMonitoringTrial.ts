@@ -143,6 +143,21 @@ export function selectMonitoringReporter(homey: any, device: any, now: number,
 
 /** Fixed anonymous support projection, including partial/stale trial states. */
 export function monitoringTrialSnapshot(input: any): Record<string, unknown> {
+  let powerApplication: Record<string, unknown> = {};
+  try {
+    const evidence = input?.powerApplication;
+    const power = (value: unknown) => (typeof value === 'number' && Number.isFinite(value)
+      && Math.abs(value) <= 100000 && input?.enabled === true && ['active', 'pending_apply'].includes(input?.status) ? value : null);
+    const age = evidence?.lastApplyStartedAgeSec;
+    const fresh = typeof age === 'number' && Number.isFinite(age) && age >= 0 && age <= 180;
+    powerApplication = {
+      lastApplyStartedAgeSec: fresh ? age : null,
+      appliedPowerW: fresh ? power(evidence?.appliedPowerW) : null,
+      candidatePowerW: power(evidence?.candidatePowerW),
+      scope: 'monitoring_system_scope_unverified',
+      accountingUsed: false,
+    };
+  } catch { /* Optional getter failures do not suppress the rest of the report. */ }
   const statuses = ['disabled', 'waiting_for_validation', 'active', 'fields_missing_or_stale',
     'aggregate_unavailable', 'resolution_unavailable', 'resolution_stale', 'legacy_address_mismatch',
     'reporter_unchanged', 'resolved_reporter_not_paired', 'ambiguous_representations',
@@ -164,6 +179,7 @@ export function monitoringTrialSnapshot(input: any): Record<string, unknown> {
     rollbackAvailable: true,
     rollbackAwaitingFreshOriginal: input?.rollbackAwaitingFreshOriginal === true,
     updatePending: input?.enabled === true && input?.updatePending === true,
+    powerApplication,
     readiness: {
       eligibilityScope: 'activation_only',
       eligible: input?.readiness?.eligible === true && input?.enabled !== true

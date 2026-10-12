@@ -125,6 +125,61 @@
     return parts;
   }
 
+  function checksum(bytes) {
+    // Copy-integrity check, not authentication or encryption.
+    let hash = 2166136261;
+    bytes.forEach(byte => { hash = Math.imul(hash ^ byte, 16777619) >>> 0; });
+    return hash.toString(16).padStart(8, '0');
+  }
+
+  /** ASCII transport avoids smart quotes, checkbox conversion and split JSON. */
+  function reportMessages(text) {
+    if (typeof text !== 'string' || !text) return [];
+    const bytes = new TextEncoder().encode(text);
+    if (bytes.length > 2304000) throw new Error('Report exceeds message limit. Use the JSON download.');
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    const encoded = btoa(binary);
+    const count = Math.ceil(encoded.length / 6000);
+    const stamp = `${checksum(bytes)}-${bytes.length}`;
+    return Array.from({ length: count }, (_, i) =>
+      `\`\`\`text\nECOFLOW-REPORT-1 ${stamp} ${i + 1}/${count}\n${encoded.slice(i * 6000, (i + 1) * 6000)}\n\`\`\``);
+  }
+
+  /** Reassemble only complete, internally consistent parts. Never repair values. */
+  function reassembleReportMessages(messages) {
+    const fail = () => { throw new Error('Incomplete, mixed or damaged report parts.'); };
+    if (!Array.isArray(messages) || !messages.length || messages.length > 512) return fail();
+    let stamp; let count; const parts = new Map();
+    messages.forEach(message => {
+      if (typeof message !== 'string' || message.length > 8000) return fail();
+      let body = message.trim().replace(/\r\n/g, '\n');
+      // Also accept a rendered forum code block copied without Markdown fences.
+      if (body.startsWith('```')) {
+        const fenced = /^```text\r?\n([\s\S]*)\r?\n```$/.exec(body);
+        if (!fenced) return fail();
+        body = fenced[1];
+      }
+      const match = /^ECOFLOW-REPORT-1 ([a-f0-9]{8}-[0-9]+) ([0-9]+)\/([0-9]+)\r?\n([A-Za-z0-9+/=]+)$/.exec(body);
+      if (!match) return fail();
+      const index = Number(match[2]); const total = Number(match[3]);
+      if (total < 1 || total > 512 || index < 1 || index > total || parts.has(index)
+        || (stamp && stamp !== match[1]) || (count && count !== total)) return fail();
+      stamp = match[1]; count = total; parts.set(index, match[4]);
+    });
+    if (parts.size !== count) return fail();
+    let binary;
+    try { binary = atob(Array.from({ length: count }, (_, i) => parts.get(i + 1)).join('')); } catch { return fail(); }
+    if (binary.length > 2304000) return fail();
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    if (`${checksum(bytes)}-${bytes.length}` !== stamp) return fail();
+    try {
+      const result = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      JSON.parse(result);
+      return result;
+    } catch { return fail(); }
+  }
+
   function renderCapture(element, report, translate, now) {
     element.textContent = '';
     if (!report) return;
@@ -149,7 +204,7 @@
     });
   }
 
-  const api = { describe, render, download, reportParts, renderCapture, renderCaptureGuide };
+  const api = { describe, render, download, reportParts, reportMessages, reassembleReportMessages, renderCapture, renderCaptureGuide };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EcoFlowReporterStatus = api;
 }(typeof window === 'undefined' ? {} : window));

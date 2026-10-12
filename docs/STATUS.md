@@ -2,6 +2,45 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unreleased diagnostic follow-up — 12 October 2026
+
+Diagnostic changes on `codex/mixed-generation-reporting-diagnostics` after
+`a96853eecba8c7d8e85b9d6978e62249cb300aaa`. The user subsequently authorized
+commit/push, exact-source CI checks and a new Test release. Publication remains
+pending until those checks and the portal channel are verified. Mainline and
+Live must remain unchanged; no certification or Live action is authorized.
+
+- Support schema 16 adds anonymous BMS/peer/grid comparisons with separate
+  scopes and receipt ages. Peer minus BMS magnitude is diagnostic only: neither
+  common measurement, sign/scale nor conversion loss is certified. Exact serial
+  matching remains private; prefix, SOC and naming similarities never match.
+- Five-minute session-only histories retain at most 16 samples per fixed power
+  field. BMS charge/discharge components remain paired in the same 32/50 frame;
+  no rescaling, aggregate substitution, energy-source migration or new controls.
+- Original Unit app telemetry now has one running and one merged pending batch,
+  rather than an unbounded promise backlog. Partial fields keep their own receipt
+  times. Rejected/expired BMS writes cannot renew freshness; teardown discards
+  pending work, but cannot cancel an already-running Homey SDK write.
+- Monitoring trial diagnostics distinguish applied versus current candidate
+  watts and report the last application-start age. Its 15-second local cadence
+  and all accounting/control boundaries are unchanged.
+- Numbered report messages use ASCII-encoded, fenced parts with capture grouping,
+  part counts and a copy-integrity checksum. The JSON download is unchanged.
+  `scripts/reassemble-support-report.cjs` reconstructs complete parts locally;
+  missing, mixed or damaged parts fail closed. Encoding is not encryption.
+- Local validation: 638/638 tests, lint and Homey `verified` validation passed.
+  Tests cover slow SDK writes, burst coalescing, retained partial receipt ages,
+  stale queued samples, fixed privacy projections, Unicode report reconstruction
+  and inconsistent-part rejection. This does not certify physical accuracy.
+
+Latest field review confirmed installed v1.10.37 and the expected idle-versus-
+discharging remaining-time display in the supplied screenshots. Some screenshots
+and JSON receipts are not simultaneous; DC-pack and peer/grid values must not be
+treated as an established scale error. Native mobile file download is not proven
+by a pasted report. The separate app-log ID and Homey mobile app version remain
+outstanding. No new message is sent here; the user is reviewing a draft first.
+Private reports/screenshots/identities are not retained in this repository.
+
 ## Test v1.10.37 / Build 52 — support export and original Unit readings, 12 October 2026
 
 The diagnostic follow-up described below is now published to Test. Mainline and

@@ -2,6 +2,28 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+
+test('forum-safe parts preserve Unicode, empty arrays and literal smart quotes without hand repair', () => {
+  const { reportMessages, reassembleReportMessages } = require('../settings/reporter-status');
+  const text = JSON.stringify({ empty: [], quotes: '“text”', emoji: '🔋', padding: 'ä'.repeat(12000) }, null, 2);
+  const parts = reportMessages(text);
+  assert.ok(parts.length > 1); assert.ok(parts.every(p => p.length < 8000));
+  assert.ok(parts.every(p => !p.includes('[]') && !p.includes('“')));
+  assert.equal(reassembleReportMessages([...parts].reverse()), text);
+  assert.equal(reassembleReportMessages(parts.map(p => p.replaceAll('\n', '\r\n'))), text);
+  assert.equal(reassembleReportMessages(parts.map(p => p.split('\n').slice(1, -1).join('\n'))), text);
+  assert.deepEqual(reportMessages(''), []);
+  for (const broken of [parts.slice(1), [...parts, parts[0]],
+    [parts[0], ...reportMessages(JSON.stringify({ other: 1 })).slice(0, 1)],
+    parts.map((p, i) => i ? p : p.replace(/\n([A-Za-z0-9+/])/, '\nA')),
+    parts.map((p, i) => { if (i) return p; const lines = p.split('\n');
+      lines[2] = (lines[2][0] === 'A' ? 'B' : 'A') + lines[2].slice(1); return lines.join('\n'); })]) {
+    assert.throws(() => reassembleReportMessages(broken), /Incomplete, mixed or damaged/);
+  }
+  assert.throws(() => reassembleReportMessages(['PRIVATE']), /Incomplete, mixed or damaged/);
+  assert.throws(() => reportMessages('x'.repeat(2304001)), /message limit/);
+});
+
 const { renderCaptureGuide } = require('../settings/reporter-status');
 
 test('capture checklist renders five fixed instructions without polling or private text', () => {
@@ -276,7 +298,8 @@ test('settings readiness and JSON download work in the browser without hidden po
       if (!(await page.locator('#supportPartNext').isEnabled())) break;
       await page.locator('#supportPartNext').click();
     }
-    assert.ok(parts.length > 1); assert.equal(parts.join(''), JSON.stringify(report, null, 2));
+    assert.ok(parts.length > 1);
+    assert.equal(require('../settings/reporter-status').reassembleReportMessages(parts), JSON.stringify(report, null, 2));
     assert.equal(await page.locator('#supportPartNext').isEnabled(), false);
     await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true,
       value: { writeText: async () => { throw new Error('clipboard denied'); } } }));

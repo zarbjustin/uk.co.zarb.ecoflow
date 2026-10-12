@@ -30,7 +30,7 @@
       "snapshot": "Momentopname; vernieuw voor wijzigingen. Uitschakelen herstelt de oorspronkelijke bron zonder herkoppelen.",
       "download": "Integratie-JSON downloaden",
       "parts_title": "Download werkt niet? Verstuur het rapport in delen",
-      "parts_help": "Gebruik bij voorkeur het JSON-bestand. Als de telefoon downloads blokkeert, kopieer elk genummerd deel en stuur alle delen in afzonderlijke privéberichten met de opnametijd hierboven. Behoud de volgorde en wijzig niets. Niets wordt automatisch geüpload.",
+      "parts_help": "Gebruik bij voorkeur het JSON-bestand. Als downloaden wordt geblokkeerd, stuur alle genummerde delen in afzonderlijke privéberichten. Kopieer elk volledig deel, inclusief kopregel en backticks. De gecodeerde tekst beschermt JSON tegen forumopmaak; het is niet versleuteld. Wijzig niets en meng geen opnamen. Niets wordt automatisch geüpload.",
       "parts_previous": "Vorig deel",
       "parts_copy": "Dit deel kopiëren",
       "parts_next": "Volgend deel",

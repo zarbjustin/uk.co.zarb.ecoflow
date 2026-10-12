@@ -1,6 +1,7 @@
 'use strict';
 
 import type { StreamTopologyEvidence } from './streamTopology';
+import { powerHistorySnapshot } from './streamPowerHistory';
 
 const FRESH_MS = 180000;
 const COUNTERS = ['accuChgEnergy', 'accuDsgEnergy'] as const;
@@ -10,6 +11,7 @@ const identity = (value: unknown) => (typeof value === 'string' && /^[A-Z0-9]{4,
 const unitKeyFor = (cap: string) => {
   if (cap === 'measure_battery') return 'socPct';
   if (cap === 'stream_unit_power_grid') return 'gridPortW';
+  if (cap === 'stream_unit_power_battery_flow') return 'bmsBatteryW';
   return null;
 };
 
@@ -88,6 +90,7 @@ export class StreamCounterContinuity {
 export interface PairedUnitReference {
   driverId: string; deviceIndex: number; sn: string;
   readings?: Record<string, { value: number; ageSec: number; stale: boolean }>;
+  history?: unknown;
 }
 
 /** Exact identity matching stays private. Prefix/SOC similarity is never a match. */
@@ -108,7 +111,8 @@ export function correlateStreamPeers(evidence: StreamTopologyEvidence | null,
         const p = direct ?? (peerKey === 'socPrecisePct' ? peer.readings?.socPct : undefined);
         const u = unit?.readings?.[unitKey];
         const age = p && validAt(p.receivedAt, now) ? (now - p.receivedAt) / 1000 : Infinity;
-        const comparable = fresh && p && u && u.stale === false && Number.isFinite(u.value)
+        const comparable = fresh && p && Number.isFinite(p.value) && Math.abs(p.value) <= 100000
+        && u && u.stale === false && Number.isFinite(u.value)
         && (unitKey === 'socPct' ? u.value >= 0 && u.value <= 100 : Math.abs(u.value) <= 100000)
         && Number.isFinite(u.ageSec) && u.ageSec >= 0 && u.ageSec <= 180 && age <= 180
         && Math.abs(age - u.ageSec) <= 30;
@@ -121,16 +125,53 @@ export function correlateStreamPeers(evidence: StreamTopologyEvidence | null,
         return { status: 'unavailable_or_skewed', peerMinusUnit: null, receiptSkewSec: null };
       }
     };
+    const measurements: Record<string, unknown> = {};
+    if (status === 'exact_identity_match') {
+      for (const [key, scope] of [['bmsBatteryW', 'unit_dc_pack'], ['gridPortW', 'unit_grid_connection']]) {
+        try {
+          const field = unit?.readings?.[key];
+          const usable = field?.stale === false && Number.isFinite(field.value) && Math.abs(field.value) <= 100000
+            && Number.isFinite(field.ageSec) && field.ageSec >= 0 && field.ageSec <= 180;
+          measurements[key] = { scope, valueW: usable ? field!.value : null, ageSec: usable ? field!.ageSec : null };
+        } catch {
+          measurements[key] = { scope, valueW: null, ageSec: null };
+        }
+      }
+      const field = peer.readings?.batteryPowerRawW;
+      const usable = field && Number.isFinite(field.value) && Math.abs(field.value) <= 100000
+        && validAt(field.receivedAt, now) && now - field.receivedAt <= FRESH_MS;
+      measurements.peerRawW = {
+        scope: 'peer_record_sign_and_scale_unverified',
+        valueW: usable ? field.value : null,
+        ageSec: usable ? (now - field.receivedAt) / 1000 : null,
+      };
+    }
+    const bmsComparison = compare('batteryPowerRawW', 'bmsBatteryW');
+    const peerPower = measurements.peerRawW as any;
+    const bmsPower = measurements.bmsBatteryW as any;
     return {
       observationIndex,
       status,
       pairedDevice: fresh && unit ? { driverId: unit.driverId, deviceIndex: unit.deviceIndex } : null,
+      powerMeasurements: measurements,
+      recentPower: status === 'exact_identity_match' ? {
+        unit: powerHistorySnapshot(unit?.history, now), peer: powerHistorySnapshot(peer.history, now),
+      } : {},
       comparisons: status === 'exact_identity_match' ? {
         soc: compare('socPrecisePct', 'socPct'),
         rawPowerVersusPort: {
           ...compare('batteryPowerRawW', 'gridPortW'),
           sameMeasurementVerified: false,
           signAndScaleVerified: false,
+        },
+        rawPowerVersusBms: {
+          status: bmsComparison.status,
+          receiptSkewSec: bmsComparison.receiptSkewSec,
+          magnitudeDifferenceW: bmsComparison.status === 'comparable_receipts'
+            ? Math.abs(peerPower.valueW) - Math.abs(bmsPower.valueW) : null,
+          sameMeasurementVerified: false,
+          signAndScaleVerified: false,
+          conversionLossVerified: false,
         },
       } : {},
       installationMembershipVerified: false,

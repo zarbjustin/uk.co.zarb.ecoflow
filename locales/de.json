@@ -30,7 +30,7 @@
       "snapshot": "Momentaufnahme; für Änderungen erneuern. Ausschalten stellt die ursprüngliche Quelle ohne Neukopplung wieder her.",
       "download": "Integrations-JSON herunterladen",
       "parts_title": "Download funktioniert nicht? Bericht in Teilen senden",
-      "parts_help": "Die JSON-Datei ist vorzuziehen. Falls das Telefon Downloads blockiert, jeden nummerierten Teil kopieren und alle Teile in separaten privaten Nachrichten mit der Aufnahmezeit oben senden. Reihenfolge beibehalten und nichts ändern. Nichts wird automatisch hochgeladen.",
+      "parts_help": "Die JSON-Datei ist vorzuziehen. Falls Downloads blockiert sind, alle nummerierten Teile in separaten privaten Nachrichten senden. Jeden Teil mit Kopfzeile und Backticks vollständig kopieren. Der kodierte Text schützt JSON vor Forumsformatierung; er ist nicht verschlüsselt. Nichts ändern und keine Aufnahmen mischen. Nichts wird automatisch hochgeladen.",
       "parts_previous": "Vorheriger Teil",
       "parts_copy": "Diesen Teil kopieren",
       "parts_next": "Nächster Teil",

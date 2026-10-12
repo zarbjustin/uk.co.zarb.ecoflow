@@ -7,9 +7,9 @@ import { decodeFrameHeaders } from './streamAc5000Protocol';
  * at 12509ef6f198f57675a98872b08a870fc009943d (#486).
  * Never use 254/21 field 518 (aggregate) or 616 (grid connection).
  */
-export function decodeBkBatteryPower(frame: Buffer, sn: string): number | undefined {
+export function decodeBkBatteryReading(frame: Buffer, sn: string): { chargeW: number; dischargeW: number; powerW: number } | undefined {
   if (!/^(BK11|BK12|BK31|BK41|BK51|BK61)[A-Z0-9]+$/i.test(sn) || frame.length > 65536) return undefined;
-  let result: number | undefined;
+  let result: { chargeW: number; dischargeW: number; powerW: number } | undefined;
   try {
     for (const header of decodeFrameHeaders(frame)) {
       if (header.cmdFunc !== 32 || header.cmdId !== 50 || !header.pdata
@@ -48,11 +48,15 @@ export function decodeBkBatteryPower(frame: Buffer, sn: string): number | undefi
       const charge = fields.get(26); const discharge = fields.get(27);
       if (charge !== undefined && discharge !== undefined) {
         if (charge > 0 && discharge > 0) return undefined;
-        result = charge - discharge;
+        result = { chargeW: charge, dischargeW: discharge, powerW: charge - discharge };
       }
     }
   } catch {
     return undefined;
   }
   return result;
+}
+
+export function decodeBkBatteryPower(frame: Buffer, sn: string): number | undefined {
+  return decodeBkBatteryReading(frame, sn)?.powerW;
 }

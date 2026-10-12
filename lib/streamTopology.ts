@@ -2,6 +2,7 @@
 
 import { Es22Telemetry } from './streamAc5000Protocol';
 import { knownDeveloperApiRole } from './deviceIdentity';
+import { StreamPowerHistory, copyPowerHistory } from './streamPowerHistory';
 
 const PEER_FIELDS = ['socPct', 'socPrecisePct', 'batteryPowerRawW', 'pvTotalW',
   'pv1W', 'pv2W', 'pv3W', 'pv4W'] as const;
@@ -21,7 +22,7 @@ export interface StreamTopologyEvidence {
   source: 'bk_main_address' | 'es22_peer_records' | 'es21_peer_records';
   addressSn: string;
   peers: Array<{ sn: string; seenAt: number; socObserved?: boolean; rawBatteryPowerObserved?: boolean;
-    pvObserved?: boolean; readings?: PeerReadings }>;
+    pvObserved?: boolean; readings?: PeerReadings; history?: unknown }>;
   maxReportedRecordCount: number;
   lastPeerRecordAt: number | null;
   systemSocObserved: boolean;
@@ -62,6 +63,7 @@ export class Es22TopologyTracker {
   private readonly peers = new Map<string, number>();
   private readonly visibility = new Map<string, { socObserved: boolean; rawBatteryPowerObserved: boolean; pvObserved: boolean }>();
   private readonly readings = new Map<string, PeerReadings>();
+  private readonly histories = new Map<string, StreamPowerHistory>();
   private maxReportedRecordCount = 0;
   private lastPeerRecordAt: number | null = null;
   private systemSocObserved = false;
@@ -82,6 +84,7 @@ export class Es22TopologyTracker {
       this.peers.clear();
       this.visibility.clear();
       this.readings.clear();
+      this.histories.clear();
       this.lastPeerRecordAt = null;
       this.maxReportedRecordCount = 0;
       this.systemSocObserved = false;
@@ -128,6 +131,11 @@ export class Es22TopologyTracker {
         const value = values[key];
         if (validPeerValue(key, value) && at >= (readings[key]?.receivedAt ?? 0)) {
           readings[key] = { value, receivedAt: at };
+          if (key === 'batteryPowerRawW') {
+            const history = this.histories.get(sn) || new StreamPowerHistory();
+            history.observe('peerRawW', value, at, now);
+            this.histories.set(sn, history);
+          }
         }
       }
       this.readings.set(sn, readings);
@@ -144,6 +152,7 @@ export class Es22TopologyTracker {
         seenAt,
         ...this.visibility.get(sn),
         readings: copyPeerReadings(this.readings.get(sn)),
+        history: this.histories.get(sn)?.evidence(),
       })),
       maxReportedRecordCount: this.maxReportedRecordCount,
       lastPeerRecordAt: this.lastPeerRecordAt,
@@ -180,6 +189,7 @@ export function readStreamTopologyEvidence(device: any): StreamTopologyEvidence 
             rawBatteryPowerObserved: prior?.rawBatteryPowerObserved === true || peer.rawBatteryPowerObserved === true,
             pvObserved: prior?.pvObserved === true || peer.pvObserved === true,
             readings,
+            history: copyPowerHistory(peer.history),
           });
         }
       }

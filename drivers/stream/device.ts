@@ -141,6 +141,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       },
       timeline: this.monitoringTimeline.snapshot(Date.now()),
       coalescedLocalTicks: this.monitoringCoalescedTicks,
+      powerApplication: {
+        lastApplyStartedAgeSec: this.monitoringAppliedAt > 0 && this.monitoringAppliedAt <= Date.now()
+          ? (Date.now() - this.monitoringAppliedAt) / 1000 : null,
+        appliedPowerW: this.monitoringEnabled && this.monitoringAvailabilityReady(selected)
+          ? this.monitoringApplied?.values.measure_power : null,
+        candidatePowerW: this.monitoringEnabled && selected.status === 'active' ? selected.values.measure_power : null,
+      },
     });
   }
 
