@@ -14,7 +14,15 @@ export const STREAM_5000_UNIT_TITLES: Record<string, Record<string, string>> = {
 };
 
 export const STREAM_UNIT_GRID_TITLE = {
-  en: 'Unit grid-port power', de: 'Einheit: Netzanschlussleistung', nl: 'Unit: netaansluitvermogen',
+  en: 'Unit grid connection port', de: 'Einheit: Netzanschluss', nl: 'Unit: netaansluiting',
+};
+
+// Released v1.10.34 defaults: migrate these as well as the older import/export
+// titles. EcoFlow calls this connection "Grid connection port" in its app.
+const PREVIOUS_SCOPED_TITLES: Record<string, Record<string, string>> = {
+  stream_unit_power_grid: {
+    en: 'Unit grid-port power', de: 'Einheit: Netzanschlussleistung', nl: 'Unit: netaansluitvermogen',
+  },
 };
 
 const LEGACY_TITLES: Record<string, Record<string, string>> = {
@@ -39,12 +47,14 @@ export function scopedReadingOptions(key: string, options: any, titles: Record<s
   const current = options.title;
   if (current === undefined) return { ...options, title: { ...titles } };
   if (typeof current === 'string') {
-    return Object.values(legacy).includes(current) ? { ...options, title: { ...titles } } : null;
+    const defaults = [...Object.values(legacy), ...Object.values(PREVIOUS_SCOPED_TITLES[key] || {})];
+    return defaults.includes(current) ? { ...options, title: { ...titles } } : null;
   }
   if (!current || typeof current !== 'object' || Array.isArray(current)) return null;
   const next = { ...current };
   for (const lang of Object.keys(titles)) {
-    if (next[lang] === undefined || next[lang] === legacy[lang]) next[lang] = titles[lang];
+    if (next[lang] === undefined || next[lang] === legacy[lang]
+      || next[lang] === PREVIOUS_SCOPED_TITLES[key]?.[lang]) next[lang] = titles[lang];
   }
   return Object.keys(titles).some((lang) => next[lang] !== current[lang]) ? { ...options, title: next } : null;
 }

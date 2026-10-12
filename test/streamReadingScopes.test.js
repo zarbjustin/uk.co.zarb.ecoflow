@@ -41,6 +41,35 @@ test('original unit grid-port watts are not battery direction, system watts or s
   assert.equal(mapStreamQuota({ powGetBpCms: -1500 }, 'unit')['measure_power.grid'], undefined);
 });
 
+test('EcoFlow grid connection label migrates both released default generations, preserving custom options', () => {
+  const old = { en: 'Unit grid-port power', de: 'Einheit: Netzanschlussleistung', nl: 'Unit: netaansluitvermogen' };
+  assert.equal(STREAM_UNIT_GRID_TITLE.en, 'Unit grid connection port');
+  for (const name of ['Grid import/export', 'Netzbezug/-einspeisung', 'Netafname/-teruglevering', ...Object.values(old)]) {
+    const options = { title: name, decimals: 2, units: 'W', preventInsights: true };
+    assert.deepEqual(scopedReadingOptions('stream_unit_power_grid', options, STREAM_UNIT_GRID_TITLE),
+      { ...options, title: STREAM_UNIT_GRID_TITLE });
+    assert.equal(options.title, name);
+  }
+  const options = { title: { en: old.en, de: 'Meine Leitung', nl: 'Netafname/-teruglevering' }, decimals: 2 };
+  assert.deepEqual(scopedReadingOptions('stream_unit_power_grid', options, STREAM_UNIT_GRID_TITLE),
+    { title: { en: STREAM_UNIT_GRID_TITLE.en, de: 'Meine Leitung', nl: STREAM_UNIT_GRID_TITLE.nl }, decimals: 2 });
+  assert.equal(options.title.en, old.en);
+  assert.equal(scopedReadingOptions('stream_unit_power_grid', { title: 'My office cable' }, STREAM_UNIT_GRID_TITLE), null);
+  assert.equal(scopedReadingOptions('stream_unit_power_grid', { title: STREAM_UNIT_GRID_TITLE }, STREAM_UNIT_GRID_TITLE), null);
+  assert.deepEqual(scopedReadingOptions('stream_unit_power_grid', { title: { en: old.en } }, STREAM_UNIT_GRID_TITLE),
+    { title: STREAM_UNIT_GRID_TITLE });
+});
+
+test('grid connection naming is consistent in composed and packaged assets without changing signed values', () => {
+  const cap = require('../.homeycompose/capabilities/stream_unit_power_grid.json');
+  assert.deepEqual(require('../app.json').capabilities.stream_unit_power_grid.title, cap.title);
+  assert.equal(cap.units.en, 'W');
+  assert.equal(cap.setable, false);
+  assert.ok(require('../drivers/stream_unit/driver.compose.json').capabilities.includes('stream_unit_power_grid'));
+  for (const value of [800, -800, 0]) assert.equal(mapStreamQuota({ gridConnectionPower: value }, 'unit')['measure_power.grid'], value);
+  assert.match(require('../locales/en.json').settings.reporter.original_unit_scope, /Grid connection port/);
+});
+
 test('remaining-time default labels can be scoped without overwriting a custom name or units', () => {
   const titles = { en: 'Unit discharge time remaining', de: 'Einheit: Verbleibende Entladezeit', nl: 'Unit: resterende ontlaadtijd' };
   const options = scopedReadingOptions('discharge_remaining', { title: 'Discharge time remaining', units: 'min' }, titles);

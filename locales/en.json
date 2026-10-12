@@ -48,7 +48,7 @@
       "field_unavailable": "Unavailable or stale",
       "grid_scope": "Positive means import; negative means export. These are separate reported sources, not interchangeable installation totals. Close receipt times do not prove matching device sampling times. The difference is not verified loss. No change to energy accounting.",
       "unit_scope": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy.",
-      "original_unit_scope": "Original Unit grid-port power is the reported gridConnectionPower, not signed battery flow or AC socket output. Blank battery flow/state means individual direction is unverified. It does not mean zero or disconnection.",
+      "original_unit_scope": "Unit grid connection port follows EcoFlow's Grid connection port label and shows the unit's reported connection power in W (gridConnectionPower), not signed battery flow, whole-house grid power or AC socket output. Blank battery flow/state means individual direction is unverified. It does not mean zero or disconnection.",
       "application_failed": "EcoFlow data arrived, but Homey could not apply one or more readings. Their freshness is not renewed; see readingFreshness in the integration JSON.",
       "individual_flow_unverified": "Individual battery flow/direction is unverified. Blank does not mean zero or a connection failure.",
       "reading_expired": "One or more readings expired; unrelated updates cannot refresh old watts.",

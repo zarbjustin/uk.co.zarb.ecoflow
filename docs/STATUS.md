@@ -2,6 +2,31 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Naming Test release preparation — EcoFlow terminology, 12 October 2026
+
+Diagnostic branch only. Original STREAM's default grid tile now reads **Unit
+grid connection port**, matching the native EcoFlow app's **Grid connection
+port** with an explicit unit scope. EN/DE/NL capability assets and support
+explanations are consistent. The translations are ours, not a claim about
+EcoFlow's localized app labels. Migration recognizes both the pre-1.10.34
+import/export defaults and the released 1.10.34 grid-port defaults, while
+preserving custom titles, options, capability IDs and Flow references.
+
+The [official STREAM contract](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
+describes `gridConnectionPower` as grid-port active power in W with positive
+input and negative feed-in. The native app displays magnitude with Input/Output
+arrows. This is a wording change only: no sign conversion, inferred battery
+direction, energy accounting or control changes. Whole-house grid-meter and
+individual battery-flow capabilities remain separate. Naming regressions cover
+both default generations, partial localized custom names, idempotent migration,
+packaged/compose agreement and unchanged positive/negative/zero values.
+All 610 tests, lint and verified Homey validation passed. The user now authorizes
+commit/push and Test publication of this naming increment; release receipts will
+be recorded after exact-tag CI and portal verification. Test baseline is the
+tagged v1.10.34 / Build 49 below. Main and Live remain unchanged. Other suggested
+naming changes are not part of this increment. After release, the approved
+Robert follow-up goes privately to the Thanks! conversation, not the public topic.
+
 ## Test release v1.10.34 / Build 49 — original STREAM freshness and support capture, 12 October 2026
 
 The user now authorizes Test publication from the diagnostic branch, including

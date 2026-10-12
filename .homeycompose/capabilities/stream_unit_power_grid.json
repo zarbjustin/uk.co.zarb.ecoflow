@@ -1,9 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Unit grid-port power",
-    "de": "Einheit: Netzanschlussleistung",
-    "nl": "Unit: netaansluitvermogen"
+    "en": "Unit grid connection port",
+    "de": "Einheit: Netzanschluss",
+    "nl": "Unit: netaansluiting"
   },
   "units": {
     "en": "W",
