@@ -90,6 +90,27 @@ test('remaining-time diagnostics export only scoped source and application ages,
   assert.ok(!JSON.stringify(report).includes('PRIVATE'));
 });
 
+test('original BMS power and suppressed durations expose only finite anonymous scoped diagnostics', () => {
+  const instance = homey();
+  const device = {
+    getReadingDiagnostics: () => ({ stream_unit_power_battery_flow: { ageSec: 1, stale: false, applicationStatus: 'applied' } }),
+    getCapabilityValue: () => -404,
+    getRemainingTimeDiagnostics: () => ({ charge_remaining: { source: 'unit_bms_mqtt', receivedAgeSec: 2,
+      ageSec: null, stale: true, applicationStatus: 'unavailable', displayReason: 'inactive_direction',
+      reportedMinutes: 5939, serial: 'PRIVATE', raw: 'PRIVATE' } }),
+  };
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [device] : [] });
+  let driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_unit');
+  assert.equal(driver.originalUnitBattery[0].valueW, -404); assert.equal(driver.originalUnitBattery[0].energyContribution, false);
+  assert.equal(driver.originalUnitBattery[0].measurementSide, 'dc_pack');
+  assert.equal(driver.remainingTime[0].readings.charge_remaining.reportedMinutes, 5939);
+  assert.equal(driver.remainingTime[0].readings.charge_remaining.displayReason, 'inactive_direction');
+  assert.ok(!JSON.stringify(driver).includes('PRIVATE'));
+  device.getCapabilityValue = () => Infinity;
+  driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_unit');
+  assert.equal(driver.originalUnitBattery[0].valueW, null); assert.equal(driver.originalUnitBattery[0].stale, true);
+});
+
 test('active meter source projection is private and rejects stale or malformed readings', () => {
   for (const ageSec of [0, 91, -1, null, NaN]) {
     const instance = homey();
@@ -340,7 +361,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 14);
+  assert.equal(report.schemaVersion, 15);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {

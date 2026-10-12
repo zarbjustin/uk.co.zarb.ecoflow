@@ -87,21 +87,42 @@
     if (report.drivers?.some(driver => driver.id === 'stream_unit' && driver.pairedCount > 0)) append(translate('original_unit_scope'));
   }
 
-  function download(report, doc, urlApi, BlobType) {
+  function download(report, doc, urlApi, BlobType, schedule = setTimeout) {
     const date = typeof report?.capturedAt === 'string' ? new Date(report.capturedAt) : null;
     const stamp = date && Number.isFinite(date.getTime()) ? date.toISOString().replace(/[:.]/g, '-') : 'snapshot';
     const blob = new BlobType([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = urlApi.createObjectURL(blob);
     const anchor = doc.createElement('a');
+    let scheduled = false;
     try {
       anchor.href = url;
       anchor.download = `ecoflow-integration-${stamp}.json`;
       doc.body.appendChild(anchor);
       anchor.click();
+      // Some browsers/webviews consume the URL after the click has returned.
+      // Revoking synchronously races the actual download. This is a request,
+      // not proof that the mobile host has saved a file.
+      schedule(() => urlApi.revokeObjectURL(url), 60000);
+      scheduled = true;
     } finally {
       anchor.remove();
-      urlApi.revokeObjectURL(url);
+      if (!scheduled) urlApi.revokeObjectURL(url);
     }
+  }
+
+  /** Lossless fallback for hosts that block downloads and long forum posts.
+   * Parts belong to one frozen snapshot; concatenation reconstructs the JSON.
+   * No upload, polling, persistent storage, trimming or privacy expansion.
+   */
+  function reportParts(text) {
+    if (typeof text !== 'string' || !text) return [];
+    const parts = [];
+    for (let start = 0; start < text.length;) {
+      let end = Math.min(start + 8000, text.length);
+      if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1])) end--;
+      parts.push(text.slice(start, end)); start = end;
+    }
+    return parts;
   }
 
   function renderCapture(element, report, translate, now) {
@@ -128,7 +149,7 @@
     });
   }
 
-  const api = { describe, render, download, renderCapture, renderCaptureGuide };
+  const api = { describe, render, download, reportParts, renderCapture, renderCaptureGuide };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EcoFlowReporterStatus = api;
 }(typeof window === 'undefined' ? {} : window));

@@ -169,6 +169,7 @@ export function streamReadingExplanations(driverId: string, device: any, freshne
       if (!device.hasCapability?.(cap)) continue;
       const field = freshness?.[cap];
       if (field?.applicationStatus === 'write_failed') result[cap] = 'write_failed';
+      else if (driverId === 'stream_unit' && field?.applicationStatus === 'unavailable') result[cap] = 'not_reported';
       else if (field?.stale === true) result[cap] = 'expired';
       else if (device.getCapabilityValue?.(cap) !== null && device.getCapabilityValue?.(cap) !== undefined) result[cap] = 'available';
       else if (['stream_unit', 'stream_5000_unit', 'stream_ac5000'].includes(driverId)

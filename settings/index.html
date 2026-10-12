@@ -115,6 +115,15 @@
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
+  <details id="supportParts" hidden>
+    <summary id="supportPartsTitle">Download not working? Send the report in parts</summary>
+    <p id="supportPartsHelp" class="help"></p>
+    <p id="supportPartLabel" role="status" aria-live="polite"></p>
+    <textarea id="supportPartText" readonly aria-label="Integration report part" style="width:100%;box-sizing:border-box;height:180px;"></textarea>
+    <button id="supportPartPrevious" type="button">Previous part</button>
+    <button id="supportPartCopy" type="button">Copy this part</button>
+    <button id="supportPartNext" type="button">Next part</button>
+  </details>
   <p id="supportCaptureStatus" class="help" role="status" aria-live="polite"></p>
   <h2 id="supportCaptureGuideTitle" style="font-size:17px;">Capture a matching support set</h2>
   <div id="supportCaptureGuide" class="help"></div>
@@ -166,6 +175,8 @@
       var reportOperation = 0;
       var reportDeadline = null;
       var captureTimer = null;
+      var reportParts = [];
+      var reportPartIndex = 0;
       var showButton = document.getElementById('supportSnapshot');
       var checkButton = document.getElementById('refreshReporterDiagnostics');
       var downloadButton = document.getElementById('downloadSupportSnapshot');
@@ -183,8 +194,39 @@
       document.getElementById('supportCaptureGuideTitle').textContent = Homey.__('settings.reporter.capture_guide_title');
       document.getElementById('meterStatusTitle').textContent = Homey.__('settings.meter.title');
       document.getElementById('meterStatusHelp').textContent = Homey.__('settings.meter.help');
+      ['Title', 'Help', 'Previous', 'Copy', 'Next'].forEach(function (suffix) {
+        document.getElementById(suffix === 'Title' || suffix === 'Help' ? 'supportParts' + suffix : 'supportPart' + suffix)
+          .textContent = Homey.__('settings.reporter.parts_' + suffix.toLowerCase());
+      });
+      function renderReportPart() {
+        document.getElementById('supportParts').hidden = !reportParts.length;
+        document.getElementById('supportPartText').value = reportParts[reportPartIndex] || '';
+        document.getElementById('supportPartLabel').textContent = reportParts.length
+          ? Homey.__('settings.reporter.parts_part') + ' ' + (reportPartIndex + 1) + ' / ' + reportParts.length : '';
+        document.getElementById('supportPartPrevious').disabled = reportPartIndex === 0;
+        document.getElementById('supportPartNext').disabled = reportPartIndex >= reportParts.length - 1;
+        document.getElementById('supportPartCopy').disabled = !reportParts.length;
+      }
+      document.getElementById('supportPartPrevious').addEventListener('click', function () {
+        if (reportPartIndex > 0) reportPartIndex--; renderReportPart();
+      });
+      document.getElementById('supportPartNext').addEventListener('click', function () {
+        if (reportPartIndex < reportParts.length - 1) reportPartIndex++; renderReportPart();
+      });
+      document.getElementById('supportPartCopy').addEventListener('click', async function () {
+        if (!reportParts.length) return;
+        try {
+          await navigator.clipboard.writeText(reportParts[reportPartIndex]);
+          copyStatus.textContent = Homey.__('settings.reporter.parts_copied') + ' ' + (reportPartIndex + 1) + ' / ' + reportParts.length;
+        } catch (err) {
+          var part = document.getElementById('supportPartText'); part.focus(); part.select();
+          copyStatus.textContent = Homey.__('settings.reporter.parts_manual');
+        }
+      });
       function renderMeterStatus(report) {
         displayedReport = report;
+        reportParts = window.EcoFlowReporterStatus.reportParts(report ? reportText : '');
+        reportPartIndex = 0; renderReportPart();
         downloadButton.disabled = !report;
         window.EcoFlowReporterStatus.render(document.getElementById('reporterStatus'), report, function (key) {
           return Homey.__('settings.reporter.' + key);

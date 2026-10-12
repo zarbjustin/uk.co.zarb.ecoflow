@@ -5,7 +5,7 @@ export const STREAM_SYSTEM_LIVE_CAPS = ['measure_power', 'battery_charging_state
   'measure_power.pv', 'measure_power.pv1', 'measure_power.pv2', 'measure_power.pv3', 'measure_power.pv4',
   'measure_power.grid', 'measure_power.load', 'measure_power.schuko1', 'measure_power.schuko2',
   'measure_power.from_pv', 'measure_power.from_battery', 'measure_power.from_grid'] as const;
-export const STREAM_UNIT_LIVE_CAPS = ['stream_unit_power_grid', 'stream_unit_power_solar',
+export const STREAM_UNIT_LIVE_CAPS = ['stream_unit_power_battery_flow', 'battery_charging_state', 'stream_unit_power_grid', 'stream_unit_power_solar',
   'measure_power.load',
   'stream_unit_power_pv1', 'stream_unit_power_pv2', 'stream_unit_power_pv3', 'stream_unit_power_pv4',
   'stream_unit_power_ac1', 'stream_unit_power_ac2', 'stream_unit_power_from_solar',

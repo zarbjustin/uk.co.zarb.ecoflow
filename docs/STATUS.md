@@ -4,6 +4,46 @@
 
 ## Test v1.10.36 / Build 51 — original-Unit startup hotfix, 12 October 2026
 
+### Unpublished diagnostic follow-up — export, original Unit BMS flow and runtime
+
+The tester confirmed that v1.10.36 restored both original Units without restart
+or re-pairing. Later feedback describes a silent JSON-download failure, available
+grid-port watts but blank original battery flow/state, and simultaneous charge
+and discharge estimates. Private messages/images are not stored in Git.
+
+- Browser download now delays blob-URL revocation rather than racing the
+  download. UI says requested, not successfully saved. A manual, lossless
+  8000-character parts fallback works without downloads or clipboard permission;
+  it uses the same snapshot, resets on refresh/pagehide, never uploads or polls,
+  and includes EN/DE/NL instructions. Native Homey mobile download is not proven.
+- Original Units can restore their existing flow/state tiles from a live,
+  subscribed-identity BK BMS 32/50 packet containing both field 26 charge watts
+  and field 27 discharge watts. DC pack sign is charge minus discharge. No
+  aggregate/port fallback, cross-packet pairing, cached get-reply promotion,
+  Energy participation, or hardware control is added. Invalid packets fail
+  closed; writes use the device queue and independent three-minute freshness.
+- Pinned [upstream parser and public masked captures](https://github.com/shuette42/ecoflow-energy-ha/tree/12509ef6f198f57675a98872b08a870fc009943d)
+  support this BMS path. Included public masked pdata regressions reproduce
+  -843 W discharge, +532 W charge and -2 W idle; other admitted BK layouts and
+  the tester's installation still need physical comparison. DC pack power is
+  not expected to equal the app's AC-side system/connection power exactly.
+- Runtime tiles require fresh same-scope signed battery power; idle, unknown,
+  stale and opposite-direction estimates clear. A direction change requires a
+  new matching estimate, rather than reviving the old inactive duration. 5939
+  is not treated as a magic sentinel. Schema 15 keeps bounded raw minutes and
+  fixed suppression reasons plus anonymous original DC pack watts. Combined
+  trial time suppression and energy accounting remain unchanged. Known released
+  Time to full/empty defaults migrate safely to existing scoped titles.
+- Local verification: 625 automated tests passed, including lifecycle/SDK
+  failures, malformed/partial/wrong-source BMS, expiry, charging/discharging/
+  idle, runtime direction changes, public captures, and browser downloads,
+  lossless multipart/manual clipboard fallback, refresh and pagehide.
+  Verified Homey validation passed. Lint and final checks recorded in the turn.
+- Changes are local on `codex/mixed-generation-reporting-diagnostics`; no
+  version bump, commit/push, CI claim, Test publication, mainline merge or Live
+  action for this increment. Build 51 / v1.10.36 remains the published Test.
+  The response to the new feedback is draft only, pending user review.
+
 After Test v1.10.35, two original STREAM units were reported unavailable with
 `Invalid Capability: stream_unit_power_grid`; the combined Home Battery and
 5000 monitor remained available. The same exception was reproduced in a

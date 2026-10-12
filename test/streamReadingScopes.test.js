@@ -92,7 +92,7 @@ test('grid connection naming is consistent in composed and packaged assets witho
   assert.equal(cap.setable, false);
   assert.ok(require('../drivers/stream_unit/driver.compose.json').capabilities.includes('stream_unit_power_grid'));
   for (const value of [800, -800, 0]) assert.equal(mapStreamQuota({ gridConnectionPower: value }, 'unit')['measure_power.grid'], value);
-  assert.match(require('../locales/en.json').settings.reporter.original_unit_scope, /Grid connection port/);
+  assert.match(require('../locales/en.json').settings.reporter.original_unit_scope, /[Gg]rid connection port/);
 });
 
 test('remaining-time default labels can be scoped without overwriting a custom name or units', () => {
@@ -100,4 +100,14 @@ test('remaining-time default labels can be scoped without overwriting a custom n
   const options = scopedReadingOptions('discharge_remaining', { title: 'Discharge time remaining', units: 'min' }, titles);
   assert.deepEqual(options, { title: titles, units: 'min' });
   assert.equal(scopedReadingOptions('discharge_remaining', { title: 'My runtime' }, titles), null);
+});
+
+test('released Time to full/empty labels migrate to explicit unit or system scope', () => {
+  for (const [key, names] of [['charge_remaining', ['Time to full', 'Zeit bis voll', 'Tijd tot vol']],
+    ['discharge_remaining', ['Time to empty', 'Zeit bis leer', 'Tijd tot leeg']]]) {
+    for (const name of names) {
+      const title = { en: 'Unit time remaining', de: 'Einheit: Restzeit', nl: 'Unit: resterende tijd' };
+      assert.deepEqual(scopedReadingOptions(key, { title: name, units: 'min' }, title), { title, units: 'min' });
+    }
+  }
 });

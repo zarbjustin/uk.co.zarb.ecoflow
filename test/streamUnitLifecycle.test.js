@@ -102,6 +102,7 @@ test('original Ultra and AC Pro complete init, poll and MQTT startup despite unr
     assert.equal(typeof handler, 'function');
     handler({ f32ShowSoc: 80, gridConnectionPower: 421, bmsDsgRemTime: 25 });
     await h.d.queueDeviceWork(async () => {});
+    await h.d.applyRemainingTimePower(-400, Date.now());
     assert.equal(h.values.stream_unit_power_grid, 421);
     assert.equal(h.values.discharge_remaining, 25);
     assert.equal(h.values.measure_battery, 80);
@@ -117,6 +118,61 @@ function pvFrame(value) {
   const data = Buffer.alloc(6); data[0] = 0xb5; data[1] = 0x3e; data.writeFloatLE(value, 2);
   return Buffer.concat([Buffer.from([0x0a, 13, 0x0a, 6]), data, Buffer.from([0x40, 0xfe, 1, 0x48, 21])]);
 }
+
+function bmsFrame(charge, discharge, sn) {
+  const vi = n => { const b = []; do { b.push((n & 127) | (n > 127 ? 128 : 0)); n = Math.floor(n / 128); } while (n); return Buffer.from(b); };
+  const int = (n, v) => Buffer.concat([vi(n * 8), vi(v)]);
+  const msg = (n, b) => Buffer.concat([vi(n * 8 + 2), vi(b.length), b]);
+  return msg(1, Buffer.concat([msg(1, Buffer.concat([int(26, charge), int(27, discharge)])),
+    int(8, 32), int(9, 50), msg(25, Buffer.from(sn))]));
+}
+
+test('fresh BMS restores unit flow/state and only matching runtime without borrowing aggregate or cached packets', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, 'ES22SYNTHETIC0001', app, (_d, caps) => {
+    caps.add('charge_remaining'); caps.add('discharge_remaining');
+  });
+  const discharge = bmsFrame(0, 404, sn);
+  await h.d.applyQuota({ powGetBpCms: -440, gridConnectionPower: 403.42, bmsChgRemTime: 5939, bmsDsgRemTime: 168 });
+  assert.equal(h.values.stream_unit_power_battery_flow, null);
+  assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.values.discharge_remaining, null, 'no same-scope direction yet');
+  handler(discharge, `/app/test/${sn}/thing/property/get_reply`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null, 'cached replies cannot revive live pack flow');
+  handler(discharge, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, -404);
+  assert.equal(h.values.battery_charging_state, 'discharging');
+  assert.equal(h.values.discharge_remaining, 168); assert.equal(h.values.charge_remaining, null);
+  assert.equal(h.values.stream_unit_power_grid, 403.42, 'DC flow does not overwrite AC connection');
+  handler(bmsFrame(300, 0, sn), `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, 300);
+  assert.equal(h.values.battery_charging_state, 'charging');
+  assert.equal(h.values.charge_remaining, 5939); assert.equal(h.values.discharge_remaining, null);
+  now += 180001; await h.d.applyQuota({ temp: 30, gridConnectionPower: 400 });
+  h.intervals.get(h.d.remainingTimeTimer)(); await h.d.queueDeviceWork(async () => {});
+  assert.equal(h.values.stream_unit_power_battery_flow, null); assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.values.charge_remaining, null); assert.equal(h.values.discharge_remaining, null);
+  assert.equal(h.writes.length, 0); assert.equal(h.caps.has('measure_power'), false);
+  await h.d.onTeardown(); handler(discharge, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null); assert.equal(h.intervals.size, 0);
+});
+
+test('failed BMS power write cannot invent battery state or direction', async () => {
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  const write = h.d.setCapabilityValue;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (cap === 'stream_unit_power_battery_flow' && value !== null) throw new Error('SDK');
+    await write(cap, value);
+  };
+  handler(bmsFrame(0, 404, sn), `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null); assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_power_battery_flow.applicationStatus, 'write_failed');
+  await h.d.onTeardown();
+});
 
 test('AC Pro limit diagnostics use live property packets, not cached replies, and never create controls or PV tiles', async t => {
   let now = 1000000; t.mock.method(Date, 'now', () => now);
@@ -242,6 +298,7 @@ test('unit remaining estimates clear persisted values, expire independently, and
   h.values.discharge_remaining = 999;
   await h.d.startRemainingTime('unit');
   assert.equal(h.values.discharge_remaining, null);
+  await h.d.applyRemainingTimePower(-400, now);
   await h.d.applyQuota({ bmsDsgRemTime: 207, bmsChgRemTime: 5939 }, { receivedAt: now, source: 'mqtt' });
   assert.equal(h.values.discharge_remaining, 207);
   now += 180001;

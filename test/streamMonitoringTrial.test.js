@@ -158,7 +158,7 @@ test('Home Battery time estimates use only fresh CMS fields and cannot bypass tr
   await h.device.startRemainingTime('system');
   await h.legacy({ bmsDsgRemTime: 207 });
   assert.equal(h.device.values.discharge_remaining, null);
-  await h.legacy({ cmsDsgRemTime: 140 });
+  await h.legacy({ cmsDsgRemTime: 140, powGetBpCms: -400 });
   assert.equal(h.device.values.discharge_remaining, 140);
   h.setTime(now + 180001);
   assert.equal(h.device.getReadingDiagnostics().discharge_remaining.stale, true, 'widgets reject expired estimates before watchdog runs');
@@ -263,7 +263,7 @@ test('support snapshot exports anonymous trial state and never network-refreshes
     candidateDevice: { driverId: 'stream_5000_unit', deviceIndex: 0 }, serial: targetSn, password: 'DO_NOT_EXPORT' });
   old.refreshMonitoringTrial = () => { throw new Error('Unexpected mutation'); };
   const report = createSupportSnapshot(homey);
-  assert.equal(report.schemaVersion, 14);
+  assert.equal(report.schemaVersion, 15);
   assert.equal(report.drivers[0].monitoringTrial[0].status, 'active');
   assert.ok(!JSON.stringify(report).match(/SYNTHETIC|PRIVATE|DO_NOT_EXPORT/));
 });

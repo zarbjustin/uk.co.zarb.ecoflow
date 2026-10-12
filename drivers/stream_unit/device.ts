@@ -11,6 +11,7 @@ import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/strea
 import { migrateReadingTitle, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
 import { StreamUnitComparison } from '../../lib/streamDiagnosticChecks';
 import { decodeStreamLimits, StreamLimitObservations } from '../../lib/streamLimitDiagnostics';
+import { decodeBkBatteryPower } from '../../lib/streamBkBatteryTelemetry';
 
 type ControlWait = () => void;
 
@@ -89,9 +90,28 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       const values = decodeBkPvDiagnostics(payload, sn);
       // Cached get replies are not evidence of a fresh limit observation.
       const limits = topic === `/app/device/property/${sn}` ? decodeStreamLimits(payload, sn) : {};
+      const batteryPower = topic === `/app/device/property/${sn}` ? decodeBkBatteryPower(payload, sn) : undefined;
       this.pvChain = this.pvChain.then(async () => {
         if (!active()) return;
         this.limitObservations.observe(limits, at, 'app_property');
+        if (batteryPower !== undefined) {
+          await this.queueDeviceWork(async () => {
+            if (!active()) return;
+            const applied = await this.applyLiveReading('stream_unit_power_battery_flow', batteryPower, at);
+            if (!active()) return;
+            if (applied) {
+              // Positive charging, negative discharging; DC pack power, not AC grid watts.
+              let state = 'idle';
+              if (batteryPower > 5) state = 'charging';
+              if (batteryPower < -5) state = 'discharging';
+              await this.applyLiveReading('battery_charging_state', state, at);
+              await this.applyRemainingTimePower(batteryPower, at);
+            } else {
+              await this.applyLiveReading('battery_charging_state', null, at);
+              await this.applyRemainingTimePower(null, at);
+            }
+          });
+        }
         for (const [cap, value] of Object.entries(values)) {
           if (!active() || !this.pvReceipts.observe(cap, at, Date.now())) continue;
           if (!this.hasCapability(cap)) await this.addCapability(cap);
@@ -190,7 +210,8 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     await migrateReadingTitle(this, 'stream_unit_power_grid', STREAM_UNIT_GRID_TITLE, () => !this.isShuttingDown());
     await this.removeCapabilities(StreamUnitDevice.AC_CAPS.filter((cap) => !acCaps.includes(cap)));
     // Previous versions could copy aggregate battery power/state onto a unit.
-    // Clear persisted values: no proven signed per-unit path is exposed here.
+    // Clear persisted values; only a fresh, paired BMS charge/discharge packet
+    // may restore them. The aggregate and grid-port paths never populate them.
     await this.setCapabilityValue('stream_unit_power_battery_flow', null);
     await this.setCapabilityValue('battery_charging_state', null);
     await this.removeCapabilities(['measure_power', 'measure_power.grid', 'meter_power.charged', 'meter_power.discharged']);

@@ -313,10 +313,44 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
               stale: field.stale !== false || safeNumber(field.ageSec) === null || field.applicationStatus !== 'applied',
               applicationStatus: ['applied', 'write_failed', 'stale', 'unavailable'].includes(field.applicationStatus)
                 ? field.applicationStatus : 'unavailable',
+              displayReason: ['not_reported', 'invalid', 'expired', 'direction_unavailable', 'inactive_direction', 'fresh_estimate_required',
+                'active_direction', 'write_failed'].includes(field.displayReason) ? field.displayReason : 'not_reported',
+              reportedMinutes: safeNumber(field.reportedMinutes) !== null && field.reportedMinutes >= 0
+                && field.reportedMinutes <= 10000000 && safeNumber(field.receivedAgeSec) !== null
+                && field.receivedAgeSec >= 0 && field.receivedAgeSec <= 180 ? field.reportedMinutes : null,
             }];
           })),
         };
       }) : [],
+      originalUnitBattery: id !== 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
+        try {
+          const reading = device.getReadingDiagnostics?.()?.stream_unit_power_battery_flow;
+          const ageSec = safeNumber(reading?.ageSec);
+          const fresh = reading?.stale === false && reading?.applicationStatus === 'applied'
+            && ageSec !== null && ageSec >= 0 && ageSec <= 180;
+          const value = device.getCapabilityValue?.('stream_unit_power_battery_flow');
+          const usable = fresh && typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 100000;
+          return {
+            deviceIndex,
+            source: 'unit_bms_32_50',
+            measurementSide: 'dc_pack',
+            valueW: usable ? value : null,
+            ageSec,
+            stale: !usable,
+            energyContribution: false,
+          };
+        } catch {
+          return {
+            deviceIndex,
+            source: 'unit_bms_32_50',
+            measurementSide: 'dc_pack',
+            valueW: null,
+            ageSec: null,
+            stale: true,
+            energyContribution: false,
+          };
+        }
+      }),
       originalLimits: id === 'stream' || id === 'stream_unit' ? devices.map((device, deviceIndex) => {
         try {
           const input = device.getLimitDiagnostics?.();
@@ -397,7 +431,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
   return {
-    schemaVersion: 14,
+    schemaVersion: 15,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

@@ -20,6 +20,8 @@ export const STREAM_UNIT_GRID_TITLE = {
 // Released v1.10.34 defaults: migrate these as well as the older import/export
 // titles. EcoFlow calls this connection "Grid connection port" in its app.
 const PREVIOUS_SCOPED_TITLES: Record<string, Record<string, string>> = {
+  charge_remaining: { en: 'Time to full', de: 'Zeit bis voll', nl: 'Tijd tot vol' },
+  discharge_remaining: { en: 'Time to empty', de: 'Zeit bis leer', nl: 'Tijd tot leeg' },
   stream_unit_power_grid: {
     en: 'Unit grid-port power', de: 'Einheit: Netzanschlussleistung', nl: 'Unit: netaansluitvermogen',
   },

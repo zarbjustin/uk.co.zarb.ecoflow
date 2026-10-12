@@ -199,6 +199,15 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     if (!this.remainingTimeScope) return;
     const generation = this.remainingTimeGeneration;
     const scopedQuota = { ...quota };
+    // Only same-scope signed power may select an estimate. A unit port is not
+    // its pack flow, and neither BMS time nor BMS flow describes the system.
+    if (this.remainingTimeScope === 'system' && Object.prototype.hasOwnProperty.call(quota, 'powGetBpCms')) {
+      const raw = quota.powGetBpCms;
+      let power = NaN;
+      if (typeof raw === 'number') power = raw;
+      else if (typeof raw === 'string' && raw.trim()) power = Number(raw);
+      this.remainingTime.observePower(Number.isFinite(power) ? power : null, context?.receivedAt ?? Date.now());
+    }
     for (const cap of REMAINING_TIME_CAPS) {
       if (!this.hasCapability(cap)) delete scopedQuota[`${this.remainingTimeScope === 'unit' ? 'bms' : 'cms'}${cap === 'charge_remaining' ? 'Chg' : 'Dsg'}RemTime`];
     }
@@ -210,6 +219,15 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
         }
       },
       () => generation === this.remainingTimeGeneration && !this.isShuttingDown());
+  }
+
+  protected async applyRemainingTimePower(power: number | null, at: number): Promise<void> {
+    if (this.remainingTimeScope !== 'unit' || this.isShuttingDown()) return;
+    const generation = this.remainingTimeGeneration;
+    this.remainingTime.observePower(power, at);
+    await this.remainingTime.expire(async (cap, value) => {
+      if (this.hasCapability(cap)) await this.setCapabilityValue(cap, value);
+    }, () => generation === this.remainingTimeGeneration && !this.isShuttingDown());
   }
 
   /** The SN whose quota this device reads/polls and subscribes to over MQTT. */
