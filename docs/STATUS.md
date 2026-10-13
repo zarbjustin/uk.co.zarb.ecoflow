@@ -2,6 +2,42 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.39 / Build 54 — Dual CT discovery and reliability, 13 October 2026
+
+Published to Test from the diagnostic branch only. Combined implementation
+`b6ab1dd4c37aceb7049012727bb4e0dbc0326255`; exact release/tag `v1.10.39` is
+`61cb03f90607f909d6a04a84ecff58f40b7d2629`. A later documentation-only handover
+commit is not the uploaded release source.
+
+- [Source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38394491908).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38394773771).
+- [Exact release CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38394907919):
+  tests, lint, dependency audit and verified Homey validation.
+- [Upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38395137964).
+- [Build 54](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/54)
+  explicitly published to Test; portal readback says available for testing.
+  [Public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows v1.10.39
+  and the discovery/reliability changelog. No certification submission.
+- Protected local master remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote master remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Developer Tools still showed Live v1.10.3 / Build 18. No Mainline/Live action,
+  installation, hardware command or Community message was performed.
+- Local acceptance: 677 tests, lint and Homey 4.5.3 verified validation pass,
+  with synthetic/browser fixtures. Real Dual CT/broker behaviour remains pending.
+
+Optional testing: install the Test update in place; in app settings open Dual CT
+research and Start two-minute discovery. Afterwards refresh the local summary
+and export one integration report when convenient. No timed screenshots,
+deletion/re-pairing, operating-mode change or repeat of earlier live comparisons
+is needed for this exploratory capture. Shared account connections may affect
+an EcoFlow app session, as disclosed in the settings overview.
+
+This release is **not full Dual CT support**: actual channel values/roles/units
+remain unverified; vendor-contract registry and dormant channel foundation are
+not connected to live data. No Dual CT pairing, Energy contribution, Flows or
+controls are enabled. Next work must be evidence-led rather than guessing a
+channel mapping from discovery structure.
+
 ## Combined Dual CT diagnostic Test release preparation — 13 October 2026
 
 Owner approved commit/push and a new Test build from the diagnostic branch only.
