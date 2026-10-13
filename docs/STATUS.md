@@ -2,6 +2,31 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Dual CT sprint 1 Git/CI and sprint 2 foundation — 13 October 2026
+
+Sprint 1 committed/pushed as `bad386a7331c41302364aa97b4fed10fee8ac434` on
+`codex/mixed-generation-reporting-diagnostics`.
+[Exact source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38391007733),
+including tests, lint, audit and verified Homey validation. No version bump,
+Test upload/publication or Mainline/Live action.
+
+Sprint 2 is local/uncommitted: `DualCtChannels` prepares independent CT1/CT2
+normalized reading state, explicit unknown/grid/solar/load roles and one selected
+source per channel. Per-field measurement/receipt ages, zero/signed power,
+partial frames, source/role changes and clock rollback are covered by tests.
+Grid import/export direction requires an explicit sign convention; channels are
+never summed and missing voltage/current are never manufactured from power.
+
+This is deliberately dormant: no vendor field decoder or verified contract is
+registered, and it is not connected to the live research recorder, Homey
+capabilities, Energy, Flows or controls. Synthetic normalized fixtures establish
+software behaviour only. Hardware field units/channel roles remain unverified.
+
+Sprint 2 local verification: all 662 tests, lint and Homey 4.5.3 verified
+validation pass. Sprint 2 commit/push is now approved, with CI required before
+proceeding to sprint 3. No upload/publication is authorised. Protected
+local/remote master refs remain unchanged; existing Test/Live releases are untouched.
+
 ## Unpublished Dual CT research option — 13 October 2026
 
 Sprint 1 follow-up broadens manual discovery to independently authorised app and

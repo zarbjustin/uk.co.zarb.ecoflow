@@ -8,6 +8,14 @@ for Test on 10 October 2026; it is now published. Dual CT pairing remains disabl
 
 ### Dual CT sprint 1 audit and discovery broadening — 13 October 2026
 
+Sprint 2 prepares a dormant normalized channel-state adapter with independent
+CT1/CT2 roles, sources and field ages. The vendor-contract registry remains empty.
+No generic JSON key or protobuf position is used to decode actual channel values;
+the discovery recorder still retains structure only. A future verified decoder
+must supply canonical W/V/A values and measurement timestamps, with configured
+roles/sign conventions, before any device-capability or Energy integration.
+The adapter does not persist state or calculate cumulative energy.
+
 Unpublished diagnostic branch work; no full Dual CT adapter is claimed.
 The live [official STREAM document](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
 still describes the main-SN resolution, quota/all and quota MQTT routes with BK
