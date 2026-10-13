@@ -83,6 +83,14 @@
     "homey:manager:geolocation"
   ],
   "api": {
+    "startDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/start"
+    },
+    "stopDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/stop"
+    },
     "coordinationPreview": {
       "method": "POST",
       "path": "/coordination-preview"

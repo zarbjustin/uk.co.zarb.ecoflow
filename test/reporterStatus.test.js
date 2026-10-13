@@ -284,7 +284,7 @@ test('settings readiness and JSON download work in the browser without hidden po
     assert.match(await page.locator('#reporterStatus').innerText(), /Ready for the optional monitoring trial/);
     assert.match(await page.locator('#reporterStatus').innerText(), /New readings are waiting/);
     assert.match(await page.locator('#reporterStatus').innerText(), /Blank unit tiles do not mean zero/);
-    assert.equal(await page.locator('details:not(#supportParts)').getAttribute('open'), null, 'technical JSON is optional and collapsed');
+    assert.equal(await page.locator('details:not(#supportParts):not(#dualCtResearch)').getAttribute('open'), null, 'technical JSON is optional and collapsed');
     const downloadEvent = page.waitForEvent('download');
     await page.locator('#downloadSupportSnapshot').click();
     const file = await downloadEvent;

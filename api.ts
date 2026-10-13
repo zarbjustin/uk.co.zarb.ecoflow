@@ -5,6 +5,12 @@ import { createSupportSnapshot } from './lib/supportSnapshot';
 import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
+  async startDualCtResearch({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    return homey.app.startDualCtResearch();
+  },
+  async stopDualCtResearch({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    return homey.app.stopDualCtResearch();
+  },
   async coordinationPreview({ body }: { body: any }): Promise<Record<string, unknown>> {
     // The endpoint owns its clock; a supplied "now" cannot make stale readings fresh.
     const input = body?.input;

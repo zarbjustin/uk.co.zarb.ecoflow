@@ -9,6 +9,27 @@ const vm = require('node:vm');
 const SETTINGS_HTML = path.join(__dirname, '..', 'settings', 'index.html');
 const APP_AUTH_KEYS = ['appAuthEmail', 'appAuthPassword', 'appAuthHost'];
 
+test('Dual CT capture requires an explicit click, permits Stop, and ignores late callbacks', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
+  context.onHomeyReady(homey);
+  assert.equal(calls.length, 0);
+  context.document.getElementById('startDualCtResearch').click();
+  assert.equal(calls[0].url, '/dual-ct-research/start');
+  assert.deepEqual(Object.keys(calls[0].body), []);
+  context.document.getElementById('stopDualCtResearch').click();
+  assert.equal(calls[1].url, '/dual-ct-research/stop');
+  calls[1].callback(null, { status: 'stopped' });
+  calls[0].callback(null, { status: 'listening' });
+  assert.match(context.document.getElementById('dualCtResearchResult').textContent, /stopped/);
+  assert.equal([...context.timers.values()].filter((timer) => !timer.interval).length, 0);
+  context.document.getElementById('startDualCtResearch').click();
+  const deadline = [...context.timers.values()].find((timer) => !timer.interval); deadline.fn();
+  calls[2].callback(new Error('private token'));
+  assert.match(context.document.getElementById('dualCtResearchResult').textContent, /timed out/);
+  assert.doesNotMatch(context.document.getElementById('dualCtResearchResult').textContent, /private token/);
+});
+
 /** The inline settings script, run exactly as the settings page runs it. */
 function loadSettingsScript() {
   const html = fs.readFileSync(SETTINGS_HTML, 'utf8');

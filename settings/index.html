@@ -111,6 +111,20 @@
   <button id="copySupportSnapshot" type="button" disabled>Copy integration support report</button>
   <button id="downloadSupportSnapshot" type="button" disabled>Download integration JSON</button>
   <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
+  <details id="dualCtResearch">
+    <summary>Dual CT research — opt-in, read-only</summary>
+    <p>This is not Dual CT pairing or meter support. Start performs one account-list request using your saved
+      EcoFlow app login, then listens for up to two minutes to at most two owned devices explicitly labelled
+      Smart Meter Dual CT in product metadata. Renamed devices and shared devices are excluded.
+      It uses the existing shared app connection, which may affect an EcoFlow app session.
+      No commands, channel values, Energy sources or Flows are enabled. Only anonymous frame structure and
+      counts are retained in memory; no raw payloads, device names or complete serials are saved.
+      No reports are sent automatically. Afterwards use Show integration support report at your convenience.
+      No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
+    <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
+    <button id="stopDualCtResearch" type="button">Stop Dual CT discovery</button>
+    <pre id="dualCtResearchResult" role="status" aria-live="polite"></pre>
+  </details>
   <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
@@ -168,6 +182,31 @@
         });
       }
       refreshAppAuthState();
+
+      var dualCtOperation = 0;
+      var dualCtDeadline;
+      function dualCtAction(action) {
+        var operation = ++dualCtOperation;
+        clearTimeout(dualCtDeadline);
+        var result = document.getElementById('dualCtResearchResult');
+        var start = document.getElementById('startDualCtResearch');
+        start.disabled = true;
+        result.textContent = action === 'start' ? 'Discovering explicitly identified Dual CT devices...' : 'Stopping capture...';
+        dualCtDeadline = setTimeout(function () {
+          if (operation !== dualCtOperation) return;
+          dualCtOperation++;
+          start.disabled = false;
+          result.textContent = 'Request timed out. Capture may still be running; use Stop or check the local support report.';
+        }, 20000);
+        Homey.api('POST', '/dual-ct-research/' + action, {}, function (err, evidence) {
+          if (operation !== dualCtOperation) return;
+          clearTimeout(dualCtDeadline);
+          start.disabled = false;
+          result.textContent = err ? 'Discovery unavailable. Check your saved EcoFlow app account.' : JSON.stringify(evidence, null, 2);
+        });
+      }
+      document.getElementById('startDualCtResearch').addEventListener('click', function () { dualCtAction('start'); });
+      document.getElementById('stopDualCtResearch').addEventListener('click', function () { dualCtAction('stop'); });
 
       var reportText = '';
       var displayedReport = null;
@@ -253,6 +292,8 @@
       }
       startCaptureTimer();
       window.addEventListener('pagehide', function () {
+        dualCtOperation++;
+        clearTimeout(dualCtDeadline);
         reportOperation++;
         clearTimeout(reportDeadline);
         clearInterval(captureTimer);

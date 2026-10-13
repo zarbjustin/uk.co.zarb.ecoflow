@@ -114,3 +114,16 @@ test('anonymous discovery is cleared immediately on account changes and shutdown
   app.beginStreamDiscoveryObservation()(devices);
   assert.equal(app.getStreamDiscoveryEvidence(), null);
 });
+
+test('Dual CT research is never started automatically and is cleared on account unset and teardown', async () => {
+  const { app, settings } = harness();
+  await app.onInit();
+  assert.equal(app.getDualCtResearchSnapshot().status, 'not_started');
+  const calls = [];
+  app.dualCtResearch = { stop: (...args) => calls.push(args), snapshot: () => ({ status: 'stopped' }) };
+  settings.emit('unset', 'appAuthPassword');
+  assert.deepEqual(calls[0], ['account_changed', true]);
+  await app.onUninit();
+  assert.deepEqual(calls[1], ['stopped', true]);
+  assert.deepEqual(await app.startDualCtResearch(), { status: 'stopped' });
+});

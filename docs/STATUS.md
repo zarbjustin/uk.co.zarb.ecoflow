@@ -2,6 +2,42 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unpublished Dual CT research option — 13 October 2026
+
+Diagnostic branch only. Commit/push approved on 13 October; CI must pass before
+any future release decision. No version bump, Test upload/publication, Mainline
+merge or Live change is authorised by this work.
+
+- Settings offer explicit Start/Stop for a two-minute read-only discovery capture.
+  One saved app-account list request; at most two owned devices with exact Dual CT
+  product metadata. No guessed serial prefix, custom-name admission or shared devices.
+- Uses the existing shared app MQTT transport, not a second competing session.
+  Captures only exact live property topics; cached replies cannot count as fresh data.
+  Counts and protobuf command/field/wire structure only: no values, raw payloads,
+  names, serials, credentials or persistence. Shapes/frames/payload sizes are bounded.
+- Local support JSON adds `dualCtResearch`; no automatic upload or extra polling.
+  Stop, expiry, account change and teardown remove only this capture's callbacks.
+  Late inventory/subscription completions cannot resume stopped capture.
+- This is an opt-in transport/structure probe, **not** a Dual CT driver or verified
+  CT1/CT2 adapter. Product names may be absent and the meter may expose data via its
+  host or Developer transport instead; absent/rejected frames remain inconclusive.
+  No nested field interpretation, channel mapping, units/sign or native counters are
+  inferred. Dedicated pairing, capabilities, Energy and controls remain disabled.
+- Next evidence gate: confirm actual discovery identity/transport, then add a
+  narrowly allowlisted channel decoder once semantics are established. Existing
+  original-meter and battery accounting remain unchanged.
+
+Robert's live comparisons are accepted as display evidence for the conditions he
+tested. The one-minute multi-screen/report request has been withdrawn; no repeat
+capture is required before this software work can proceed.
+
+Verification: all 646 tests pass, lint passes, and Homey CLI 4.5.3 verified
+validation passes. Regression coverage includes explicit metadata admission,
+manual-only UI actions, cached/wrong-source/malformed/oversized frames, privacy
+projection, frame limits, expiry, clock rollback, account changes/teardown and
+late discovery/subscription/callback races. This does not validate real Dual CT
+hardware or establish that the meter uses the app protobuf transport.
+
 ## Test v1.10.38 / Build 53 — bounded comparison diagnostics, 12 October 2026
 
 Published to Test from `codex/mixed-generation-reporting-diagnostics` only.

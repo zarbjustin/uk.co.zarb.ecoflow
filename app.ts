@@ -5,6 +5,7 @@ import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
 import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
 import { StreamDiscoveryInventory } from './lib/streamDiscovery';
 import { AppDevice } from './lib/appDevices';
+import { DualCtResearch } from './lib/dualCtResearch';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -21,6 +22,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   private appSettingsTimer: NodeJS.Timeout | null = null;
   private stopping = false;
   private readonly streamDiscovery = new StreamDiscoveryInventory();
+  private dualCtResearch: DualCtResearch | null = null;
   private readonly settingsHandler = (key: string) => this.onSettingChanged(key);
 
   async onInit(): Promise<void> {
@@ -54,6 +56,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       }, 250);
     }
     if (APP_AUTH_SETTINGS.includes(key)) {
+      this.dualCtResearch?.stop('account_changed', true);
       this.streamDiscovery.clear();
       if (this.appSettingsTimer) this.homey.clearTimeout(this.appSettingsTimer);
       this.appSettingsTimer = this.homey.setTimeout(() => {
@@ -84,6 +87,7 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onUninit(): Promise<void> {
     this.stopping = true;
+    this.dualCtResearch?.stop('stopped', true);
     this.streamDiscovery.clear();
     this.homey.settings.removeListener('set', this.settingsHandler);
     this.homey.settings.removeListener('unset', this.settingsHandler);
@@ -168,6 +172,35 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   getStreamDiscoveryEvidence(): Record<string, unknown> | null {
     return this.streamDiscovery.evidenceSnapshot();
+  }
+
+  /** Explicit settings action only: no automatic discovery, pairing or Energy source. */
+  async startDualCtResearch(): Promise<Record<string, unknown>> {
+    if (this.stopping) return { status: 'stopped' };
+    if (!this.dualCtResearch) {
+      this.dualCtResearch = new DualCtResearch({
+        list: async () => {
+          const client = appAuthClientFromSettings(this.homey);
+          if (!client) throw new Error('Account unavailable');
+          return client.getDeviceList();
+        },
+        subscribe: (sn, handler) => this.subscribeAppRealtime(sn, handler),
+        unsubscribe: (sn, handler) => this.unsubscribeAppRealtime(sn, handler),
+        timer: (fn, ms) => this.homey.setTimeout(fn, ms),
+        cancel: (timer) => this.homey.clearTimeout(timer),
+      });
+    }
+    await this.dualCtResearch.start();
+    return this.dualCtResearch.snapshot();
+  }
+
+  stopDualCtResearch(): Record<string, unknown> {
+    this.dualCtResearch?.stop();
+    return this.getDualCtResearchSnapshot();
+  }
+
+  getDualCtResearchSnapshot(): Record<string, unknown> {
+    return this.dualCtResearch?.snapshot() || { status: 'not_started', contributesToEnergy: false, controlsEnabled: false };
   }
 
   /** Identity of the saved EcoFlow account, without exposing the password. */

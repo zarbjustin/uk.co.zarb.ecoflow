@@ -2,6 +2,7 @@
 
 import { isStream5000BetaEnabled } from './stream5000Beta';
 import { streamDiscoverySnapshot } from './streamDiscovery';
+import { dualCtResearchSnapshot } from './dualCtResearch';
 import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
 import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
@@ -452,6 +453,10 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
   let platform = 'unknown';
   if (homey?.platform === 'cloud' || homey?.platform === 'local') platform = homey.platform;
   let discovery = null;
+  let dualCtResearch = null;
+  try {
+    dualCtResearch = homey?.app?.getDualCtResearchSnapshot?.();
+  } catch { /* Optional local evidence. */ }
   try {
     discovery = homey?.app?.getStreamDiscoveryEvidence?.();
   } catch { /* No private exception text. */ }
@@ -488,5 +493,6 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       };
     }),
     streamDiscovery: streamDiscoverySnapshot(discovery, now),
+    dualCtResearch: dualCtResearchSnapshot(dualCtResearch),
   };
 }
