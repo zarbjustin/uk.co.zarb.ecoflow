@@ -127,3 +127,28 @@ test('Dual CT research is never started automatically and is cleared on account 
   assert.deepEqual(calls[1], ['stopped', true]);
   assert.deepEqual(await app.startDualCtResearch(), { status: 'stopped' });
 });
+
+test('restarted Dual CT capture owns its inventory independently of a late stopped-account list', async () => {
+  const pairing = require('../.homeybuild/lib/appAuthPairing');
+  const original = pairing.appAuthClientFromSettings;
+  const { app } = harness(); await app.onInit();
+  let release; let lists = 0; const attached = [];
+  const oldSn = 'ZZ98SYNTHETIC0001'; const newSn = 'ZZ99SYNTHETIC0001';
+  const device = (sn) => ({ sn, productName: 'Smart Meter Dual CT', shared: false });
+  pairing.appAuthClientFromSettings = () => ({ getDeviceList: async () => {
+    lists++;
+    if (lists === 1) return new Promise((resolve) => { release = resolve; });
+    return [device(newSn)];
+  } });
+  app.subscribeAppRealtime = async (sn) => { attached.push(sn); return true; };
+  app.unsubscribeAppRealtime = () => {};
+  try {
+    const oldCapture = app.startDualCtResearch();
+    app.stopDualCtResearch();
+    await app.startDualCtResearch();
+    release([device(oldSn)]); await oldCapture;
+    assert.deepEqual(attached, [newSn]);
+    assert.equal(app.getDualCtResearchSnapshot().status, 'listening');
+    assert.equal(app.getDualCtResearchSnapshot().deviceCount, 1);
+  } finally { pairing.appAuthClientFromSettings = original; await app.onUninit(); }
+});

@@ -6,6 +6,41 @@ for Test on 10 October 2026; it is now published. Dual CT pairing remains disabl
 
 ## Next-wave implementation status — original meter and Dual CT
 
+### Dual CT sprint 1 audit and discovery broadening — 13 October 2026
+
+Unpublished diagnostic branch work; no full Dual CT adapter is claimed.
+The live [official STREAM document](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
+still describes the main-SN resolution, quota/all and quota MQTT routes with BK
+examples. Its catalogue search for `Dual` returned no results. This is a bounded
+documentation observation, not proof that EcoFlow has no Dual CT API anywhere.
+
+Reviewed current developer source without running third-party code:
+
+- [shuette42](https://github.com/shuette42/ecoflow-energy-ha/blob/1471a74a117d78ce5120e30a9f1826b51e1c23a6/custom_components/ecoflow_energy/ecoflow/parsers/smart_meter_proto.py),
+  revision `1471a74a117d78ce5120e30a9f1826b51e1c23a6`: original BK21 meter protobuf
+  support, separate from STREAM hosts; no Dual CT adapter found in the reviewed tree.
+- [MichelFR](https://github.com/MichelFR/ha-ecoflow-iot/blob/45d9bb2952904cffa590cb811da0c316c66dd589/custom_components/ecoflow_iot/devices/solar_systems/stream.py),
+  revision `45d9bb2952904cffa590cb811da0c316c66dd589`: original BK21 Developer quota
+  support and host-localMeter fields, not a verified Dual CT contract.
+
+The manual research option now independently checks both saved account inventories
+and can observe app protobuf/JSON, Developer JSON MQTT and one-shot quota reads.
+Device product metadata must explicitly identify Dual CT; names/prefixes do not
+admit it. Each transport must independently authorise the exact device identity.
+At most two meters; each Developer meter has at most one own quota read, one
+main-SN resolution and one host quota read. Only a known STREAM host in that same
+Developer inventory can be read. No arbitrary/off-account host or guessed topics.
+
+Reports preserve source/empty/unavailable distinctions and bounded allowlisted
+JSON path/type structure, never values/raw strings or payloads. Linked-host
+structure is not CT membership, direction or units. Stop/expiry/account changes
+invalidate late callbacks and further reads. Each capture owns its clients and
+inventory, preventing a late previous list from altering a restarted capture.
+
+No authenticated Dual CT hardware observation was made in this sprint. Software
+fixtures are synthetic. Pairing, Energy, channel capabilities and controls remain
+disabled; a missing model or unrecognised payload remains inconclusive.
+
 The statement above concerns Dual CT. The original meter now has a local,
 unpublished implementation based on a fresh read-only authenticated audit:
 

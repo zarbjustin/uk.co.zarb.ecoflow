@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const { DualCtResearch, dualCtResearchDevices, dualCtResearchSnapshot } = require('../.homeybuild/lib/dualCtResearch');
 const sn = 'ZZ99SYNTHETIC0001';
 const device = { sn, productName: 'EcoFlow Smart Meter Dual CT', shared: false };
+const { mergeDualCtInventory, dualCtOwnedHost, probeDualCtDeveloper, dualCtJsonShape,
+  dualCtJsonShapesSnapshot } = require('../.homeybuild/lib/dualCtSources');
 function vi(n) { const out = []; do { out.push((n & 127) | (n > 127 ? 128 : 0)); n = Math.floor(n / 128); } while (n); return Buffer.from(out); }
 function int(n, v) { return Buffer.concat([vi(n * 8), vi(v)]); }
 function msg(n, value) { return Buffer.concat([vi(n * 8 + 2), vi(value.length), value]); }
@@ -100,4 +102,101 @@ test('public projection cannot promote arbitrary payloads or claim Energy/contro
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE/);
   assert.equal(evidence.status, 'not_started'); assert.equal(evidence.valuesCaptured, false);
   assert.equal(evidence.contributesToEnergy, false); assert.equal(evidence.controlsEnabled, false);
+});
+
+test('app and Developer discovery authorise routes independently with explicit metadata and exact identities', () => {
+  const developer = [{ sn, productName: device.productName, online: 1 }];
+  assert.deepEqual(mergeDualCtInventory([], developer).map((row) => [row.appListed, row.developerListed]), [[false, true]]);
+  assert.deepEqual(mergeDualCtInventory([device], [{ sn, productName: '', online: 1 }])
+    .map((row) => [row.appListed, row.developerListed]), [[true, true]]);
+  assert.equal(mergeDualCtInventory([{ ...device, shared: true }], []).length, 0);
+  assert.equal(mergeDualCtInventory([], [{ sn: 'BK21SYNTHETIC0001', deviceName: device.productName }]).length, 0);
+  assert.equal(mergeDualCtInventory([device], [{ ...developer[0], sn: `${sn}OTHER` }]).length, 2);
+  assert.equal(mergeDualCtInventory(Array.from({ length: 256 }, (_, i) => ({ ...device,
+    sn: `OTHERDEVICE${i}`, productName: 'Unknown' })), developer).length, 1);
+});
+
+test('linked-host lookup never probes unknown, non-STREAM, own-meter or off-account targets', async () => {
+  const host = 'BK61SYNTHETIC0001'; const calls = [];
+  const inventory = [{ sn }, { sn: host }];
+  assert.equal(dualCtOwnedHost(host, sn, inventory), true);
+  for (const target of [sn, 'OTHERACCOUNT123', '/bad/topic', 'BK21METER000001']) {
+    assert.equal(dualCtOwnedHost(target, sn, [...inventory, { sn: 'BK21METER000001' }]), false);
+    const result = await probeDualCtDeveloper({ getQuotaAll: async (targetSn) => { calls.push(targetSn); return {}; },
+      getMainSn: async () => target }, sn, inventory, () => true);
+    assert.equal(result[1].status, 'host_not_verified');
+  }
+  assert.deepEqual(calls, [sn, sn, sn, sn]);
+  const reads = [];
+  const result = await probeDualCtDeveloper({ getQuotaAll: async (target, options) => {
+    reads.push([target, options]); return { power: -100 }; }, getMainSn: async () => host }, sn, inventory, () => true);
+  assert.deepEqual(reads, [[sn, { fresh: true }], [host, { fresh: true }]]);
+  assert.equal(result[1].source, 'linked_host_rest');
+});
+
+test('Developer probes distinguish empty/error and stop additional reads after cancellation', async () => {
+  const result = await probeDualCtDeveloper({ getQuotaAll: async () => ({}),
+    getMainSn: async () => { throw new Error('PRIVATE TOKEN'); } }, sn, [{ sn }], () => true);
+  assert.equal(result[0].status, 'empty'); assert.equal(result[1].status, 'unavailable');
+  assert.doesNotMatch(JSON.stringify(result), /PRIVATE/);
+  let active = true; let resolves = 0;
+  const stopped = await probeDualCtDeveloper({ getQuotaAll: async () => { active = false; return { power: 1 }; },
+    getMainSn: async () => { resolves++; return sn; } }, sn, [{ sn }], () => active);
+  assert.deepEqual(stopped, []); assert.equal(resolves, 0);
+  assert.deepEqual(await probeDualCtDeveloper({ getQuotaAll: async () => assert.fail('off-account read'),
+    getMainSn: async () => assert.fail('off-account resolve') }, sn, [], () => true), []);
+});
+
+test('JSON shape handles wrappers/dotted paths/arrays without values, arbitrary keys or unbounded nesting', () => {
+  const circular = { ct1: { power: -123, current: 0 }, ct2: { voltage: 240 }, secret: 'PRIVATE',
+    'localMeter.power': 7, [sn]: 123, channels: [{ power: 1 }, { power: 2 }] };
+  circular.data = circular;
+  const shape = dualCtJsonShape(circular);
+  assert.equal(shape.empty, false);
+  assert(shape.fields.some((field) => field.path === 'ct1.current' && field.type === 'number'));
+  assert(shape.fields.some((field) => field.path === 'localMeter.power'));
+  assert(shape.fields.length <= 32);
+  assert.doesNotMatch(JSON.stringify(shape), /PRIVATE|ZZ99|123|240/);
+  const sanitized = dualCtJsonShapesSnapshot([{ deviceIndex: 0, source: 'developer_rest', secret: 'PRIVATE',
+    fields: [{ path: 'ct1.power', type: 'number', value: 7 }, { path: sn, type: 'string' }] }]);
+  assert.deepEqual(sanitized[0].fields, [{ path: 'ct1.power', type: 'number' }]);
+  assert.throws(() => dualCtJsonShape([]));
+});
+
+test('app JSON records structure; malformed JSON and cached replies cannot masquerade as live data', async () => {
+  const h = harness(); await h.capture.start(); const handler = h.handlers.get(sn);
+  handler(Buffer.from('{"params":{"ct1":{"power":0},"ct2":{"power":-50}},"secret":"PRIVATE"}'), `/app/device/property/${sn}`);
+  const evidence = h.capture.snapshot();
+  assert.equal(evidence.jsonShapes[0].source, 'app_json');
+  assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE|-50/);
+  handler(Buffer.from('{invalid'), `/app/device/property/${sn}`);
+  assert.equal(h.capture.snapshot().rejectedFrames, 1);
+  handler(Buffer.from('{"power":1}'), `/app/user/${sn}/thing/property/get_reply`);
+  assert.equal(h.capture.snapshot().frames, 2);
+  h.capture.stop();
+});
+
+test('Developer-only device can capture REST and MQTT independently of the app transport', async () => {
+  const h = harness(async () => [{ ...device, appListed: false, developerListed: true }]);
+  let callback; let unsubscribed = 0;
+  h.hooks.probe = async () => [{ source: 'developer_rest', status: 'empty', data: {} },
+    { source: 'linked_host_rest', status: 'host_not_verified' }];
+  h.hooks.developerSubscribe = async (_, handler) => { callback = handler; return true; };
+  h.hooks.developerUnsubscribe = () => { unsubscribed++; };
+  await h.capture.start(); assert.equal(h.counts().subscriptions, 0);
+  callback({ ct1: { power: 0 } });
+  assert.equal(h.capture.snapshot().jsonShapes[1].source, 'developer_mqtt');
+  h.capture.stop('account_changed', true);
+  callback({ ct1: { power: 7 } });
+  assert.equal(unsubscribed, 1); assert.deepEqual(h.capture.snapshot().jsonShapes, []);
+});
+
+test('late Developer subscription completion cannot restore a stopped capture', async () => {
+  const h = harness(async () => [{ ...device, appListed: false, developerListed: true }]);
+  let release; let detached = 0;
+  h.hooks.developerSubscribe = async () => new Promise((resolve) => { release = resolve; });
+  h.hooks.developerUnsubscribe = () => { detached++; };
+  const pending = h.capture.start(); await new Promise((resolve) => setImmediate(resolve));
+  h.capture.stop('stopped', true); release(true); await pending;
+  assert.equal(detached, 2); assert.equal(h.capture.snapshot().deviceCount, 0);
 });

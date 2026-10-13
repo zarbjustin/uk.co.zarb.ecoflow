@@ -6,6 +6,9 @@ import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
 import { StreamDiscoveryInventory } from './lib/streamDiscovery';
 import { AppDevice } from './lib/appDevices';
 import { DualCtResearch } from './lib/dualCtResearch';
+import { mergeDualCtInventory, probeDualCtDeveloper } from './lib/dualCtSources';
+import { EcoFlowClient } from './lib/EcoFlowClient';
+import { EcoFlowDevice } from './lib/types';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -49,6 +52,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   private onSettingChanged(key: string): void {
     if (this.stopping) return;
     if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
+      this.dualCtResearch?.stop('account_changed', true);
       if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
       this.settingsTimer = this.homey.setTimeout(() => {
         this.settingsTimer = null;
@@ -177,15 +181,39 @@ module.exports = class EcoFlowApp extends Homey.App {
   /** Explicit settings action only: no automatic discovery, pairing or Energy source. */
   async startDualCtResearch(): Promise<Record<string, unknown>> {
     if (this.stopping) return { status: 'stopped' };
-    if (!this.dualCtResearch) {
+    if (!this.dualCtResearch || !['discovering', 'listening'].includes(this.dualCtResearch.snapshot().status as string)) {
+      // Each manual capture owns its clients/inventory; late prior-account lists
+      // cannot overwrite the current capture's transport authorisation.
+      this.dualCtResearch?.stop('stopped', true);
+      let developer: EcoFlowClient | null = null;
+      let developerInventory: EcoFlowDevice[] = [];
       this.dualCtResearch = new DualCtResearch({
         list: async () => {
-          const client = appAuthClientFromSettings(this.homey);
-          if (!client) throw new Error('Account unavailable');
-          return client.getDeviceList();
+          const credentials = this.getCredentials();
+          developer = null;
+          try {
+            if (credentials.accessKey && credentials.secretKey) {
+              developer = new EcoFlowClient({ accessKey: credentials.accessKey, secretKey: credentials.secretKey, host: credentials.host });
+            }
+          } catch { /* An unavailable Developer configuration must not block app discovery. */ }
+          const observations = await Promise.allSettled([
+            (async () => {
+              const client = appAuthClientFromSettings(this.homey);
+              if (!client) throw new Error('App account unavailable');
+              return client.getDeviceList();
+            })(),
+            developer ? developer.getDeviceList() : Promise.reject(new Error('Developer account unavailable')),
+          ]);
+          if (observations.every((result) => result.status === 'rejected')) throw new Error('Discovery unavailable');
+          const appInventory = observations[0].status === 'fulfilled' ? observations[0].value as AppDevice[] : [];
+          developerInventory = observations[1].status === 'fulfilled' ? observations[1].value as EcoFlowDevice[] : [];
+          return mergeDualCtInventory(appInventory, developerInventory);
         },
         subscribe: (sn, handler) => this.subscribeAppRealtime(sn, handler),
         unsubscribe: (sn, handler) => this.unsubscribeAppRealtime(sn, handler),
+        developerSubscribe: (sn, handler) => this.subscribeRealtime(sn, handler),
+        developerUnsubscribe: (sn, handler) => this.unsubscribeRealtime(sn, handler),
+        probe: (sn, active) => (developer ? probeDualCtDeveloper(developer, sn, developerInventory, active) : Promise.resolve([])),
         timer: (fn, ms) => this.homey.setTimeout(fn, ms),
         cancel: (timer) => this.homey.clearTimeout(timer),
       });

@@ -4,16 +4,26 @@
 
 ## Unpublished Dual CT research option — 13 October 2026
 
+Sprint 1 follow-up broadens manual discovery to independently authorised app and
+Developer inventories, JSON/protobuf app frames, Developer JSON MQTT, and bounded
+own/resolved-host quota snapshots. Sources remain separate and values are not
+captured or promoted to capabilities. Host probing requires a known STREAM model
+in the same Developer inventory; resolution is not a CT-role or membership claim.
+Read [the model/API audit](SMART_METER_DUAL_CT_PLAN.md) for pinned upstream findings
+and the remaining hardware evidence gate. Sprint 1 commit/push is approved on
+13 October, with CI required before proceeding. No publication is authorised;
+prior opt-in probe commit `6164d84` already passed CI.
+
 Diagnostic branch only. Commit/push approved on 13 October; CI must pass before
 any future release decision. No version bump, Test upload/publication, Mainline
 merge or Live change is authorised by this work.
 
 - Settings offer explicit Start/Stop for a two-minute read-only discovery capture.
-  One saved app-account list request; at most two owned devices with exact Dual CT
+  One list operation per saved app/Developer account; at most two owned devices with exact Dual CT
   product metadata. No guessed serial prefix, custom-name admission or shared devices.
-- Uses the existing shared app MQTT transport, not a second competing session.
-  Captures only exact live property topics; cached replies cannot count as fresh data.
-  Counts and protobuf command/field/wire structure only: no values, raw payloads,
+- Uses shared app/Developer MQTT transports, not second competing sessions.
+  Cached app replies cannot count as fresh data; bounded REST snapshots are labelled separately.
+  Counts, protobuf command/field/wire and allowlisted JSON path/types only: no values, raw payloads,
   names, serials, credentials or persistence. Shapes/frames/payload sizes are bounded.
 - Local support JSON adds `dualCtResearch`; no automatic upload or extra polling.
   Stop, expiry, account change and teardown remove only this capture's callbacks.
@@ -31,12 +41,15 @@ Robert's live comparisons are accepted as display evidence for the conditions he
 tested. The one-minute multi-screen/report request has been withdrawn; no repeat
 capture is required before this software work can proceed.
 
-Verification: all 646 tests pass, lint passes, and Homey CLI 4.5.3 verified
+Verification after sprint 1: all 654 tests pass, lint passes, and Homey CLI 4.5.3 verified
 validation passes. Regression coverage includes explicit metadata admission,
 manual-only UI actions, cached/wrong-source/malformed/oversized frames, privacy
 projection, frame limits, expiry, clock rollback, account changes/teardown and
 late discovery/subscription/callback races. This does not validate real Dual CT
-hardware or establish that the meter uses the app protobuf transport.
+hardware or establish that the meter uses any particular transport. New regressions
+cover independent inventory authorisation, Developer-only discovery, off-account
+host rejection, bounded own/host reads, JSON wrappers/arrays/privacy, separate
+source labels and stopped/restarted account/subscription races.
 
 ## Test v1.10.38 / Build 53 — bounded comparison diagnostics, 12 October 2026
 

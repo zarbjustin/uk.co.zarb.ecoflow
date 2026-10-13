@@ -113,12 +113,18 @@
   <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
   <details id="dualCtResearch">
     <summary>Dual CT research — opt-in, read-only</summary>
-    <p>This is not Dual CT pairing or meter support. Start performs one account-list request using your saved
-      EcoFlow app login, then listens for up to two minutes to at most two owned devices explicitly labelled
+    <p>This is not Dual CT pairing or meter support. Start checks the saved EcoFlow app and Developer
+      accounts once each, then listens for up to two minutes to at most two owned devices explicitly labelled
       Smart Meter Dual CT in product metadata. Renamed devices and shared devices are excluded.
-      It uses the existing shared app connection, which may affect an EcoFlow app session.
+      It uses existing shared MQTT connections, which may affect an EcoFlow app session. Developer
+      observations require the device to appear in that account's inventory. At most three read-only
+      operations per identified meter check its quota and resolved host, using the existing request retry
+      policy; hosts must also be known STREAM
+      models in the same Developer inventory. A resolved host does not prove CT channel membership.
       No commands, channel values, Energy sources or Flows are enabled. Only anonymous frame structure and
-      counts are retained in memory; no raw payloads, device names or complete serials are saved.
+      counts and allowlisted JSON key/types are retained in memory; no values, raw payloads, device names
+      or complete serials are saved. The report separates empty, unavailable and observed responses;
+      observed telemetry does not establish units, direction or channel roles.
       No reports are sent automatically. Afterwards use Show integration support report at your convenience.
       No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
     <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>

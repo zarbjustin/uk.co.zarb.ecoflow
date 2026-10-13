@@ -1,5 +1,8 @@
 import { AppDevice } from './appDevices';
 import { decodeFrameHeaders } from './streamAc5000Protocol';
+import { dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot } from './dualCtSources';
+
+export { dualCtResearchDevices } from './dualCtSources';
 
 export const DUAL_CT_CAPTURE_MS = 120000;
 const MAX_FRAMES = 128;
@@ -11,7 +14,7 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     'account_changed', 'no_explicit_model', 'transport_unavailable', 'discovery_unavailable'];
   return {
     status: statuses.includes(input?.status) ? input.status : 'not_started',
-    source: 'manual_app_account_discovery',
+    source: 'manual_account_discovery',
     captureWindowSec: 120,
     captureAgeSec: typeof input?.captureAgeSec === 'number' && Number.isFinite(input.captureAgeSec)
       && input.captureAgeSec >= 0 ? input.captureAgeSec : null,
@@ -19,6 +22,11 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     deviceCount: bounded(input?.deviceCount, 2),
     frames: bounded(input?.frames, MAX_FRAMES),
     rejectedFrames: bounded(input?.rejectedFrames, MAX_FRAMES),
+    jsonShapes: dualCtJsonShapesSnapshot(input?.jsonShapes),
+    routes: Array.isArray(input?.routes) ? input.routes.slice(0, 8).filter((route: any) => [0, 1].includes(route?.deviceIndex)
+      && ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(route?.source)
+      && ['listening', 'unavailable', 'empty', 'observed', 'host_not_verified'].includes(route?.status))
+      .map((route: any) => ({ deviceIndex: route.deviceIndex, source: route.source, status: route.status })) : [],
     shapes: Array.isArray(input?.shapes) ? input.shapes.slice(0, MAX_SHAPES).map((shape: any) => ({
       deviceIndex: bounded(shape?.deviceIndex, 1),
       cmdFunc: bounded(shape?.cmdFunc, 65535),
@@ -32,18 +40,6 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     contributesToEnergy: false,
     controlsEnabled: false,
   };
-}
-
-/** Product metadata only. Never admit a renamed legacy meter or guess a prefix. */
-export function dualCtResearchDevices(devices: AppDevice[]): AppDevice[] {
-  const seen = new Set<string>();
-  return devices.slice(0, 256).filter((device) => {
-    const name = device.productName?.trim().replace(/[-_\s]+/g, ' ').toUpperCase();
-    if (!/^(?:ECOFLOW )?SMART METER DUAL CT$/.test(name || '') || device.shared
-      || !/^[A-Z0-9]{8,64}$/.test(device.sn) || seen.has(device.sn)) return false;
-    seen.add(device.sn);
-    return true;
-  }).slice(0, 2);
 }
 
 /** No payload values, strings, serials, raw frames or recursively guessed messages. */
@@ -77,18 +73,24 @@ function fields(data: Buffer): Array<{ field: number; wire: number }> {
 }
 
 interface ResearchHooks {
-  list: () => Promise<AppDevice[]>;
+  list: () => Promise<Array<AppDevice & { appListed?: boolean; developerListed?: boolean }>>;
   subscribe: (sn: string, handler: (data: Buffer, topic: string) => void) => Promise<boolean>;
   unsubscribe: (sn: string, handler: (data: Buffer, topic: string) => void) => void;
   timer: (callback: () => void, ms: number) => unknown;
   cancel: (timer: any) => void;
   now?: () => number;
+  developerSubscribe?: (sn: string, handler: (data: Record<string, any>) => void) => Promise<boolean>;
+  developerUnsubscribe?: (sn: string, handler: (data: Record<string, any>) => void) => void;
+  probe?: (sn: string, active: () => boolean) => Promise<Array<{ source: string; status: string; data?: unknown }>>;
 }
 
 export class DualCtResearch {
   private generation = 0;
   private timer: unknown = null;
   private bindings: Array<{ sn: string; handler: (data: Buffer, topic: string) => void }> = [];
+  private developerBindings: Array<{ sn: string; handler: (data: Record<string, any>) => void }> = [];
+  private jsonShapes: Array<Record<string, unknown>> = [];
+  private routes: Array<{ deviceIndex: number; source: string; status: string }> = [];
   private startedAt: number | null = null;
   private endedAt: number | null = null;
   private status = 'not_started';
@@ -113,11 +115,14 @@ export class DualCtResearch {
     this.timer = null;
     for (const binding of this.bindings) this.hooks.unsubscribe(binding.sn, binding.handler);
     this.bindings = [];
+    for (const binding of this.developerBindings) this.hooks.developerUnsubscribe?.(binding.sn, binding.handler);
+    this.developerBindings = [];
     this.status = status;
     this.endedAt = this.startedAt === null ? null : this.now();
     if (clear) {
       this.startedAt = null; this.endedAt = null; this.deviceCount = 0;
       this.frames = 0; this.rejected = 0; this.shapes = [];
+      this.jsonShapes = []; this.routes = [];
     }
   }
 
@@ -136,6 +141,28 @@ export class DualCtResearch {
       }
       this.status = 'listening';
       for (const [deviceIndex, device] of devices.entries()) {
+        const active = () => {
+          if (generation !== this.generation) return false;
+          if (this.now() < this.startedAt! || this.now() - this.startedAt! >= DUAL_CT_CAPTURE_MS) {
+            this.stop('complete'); return false;
+          }
+          return true;
+        };
+        const recordJson = (data: unknown, source: string, count = true) => {
+          if (!active()) return;
+          if (count && this.frames >= MAX_FRAMES) {
+            this.stop('sample_limit'); return;
+          }
+          if (count) this.frames += 1;
+          try {
+            const shape = { deviceIndex, source, ...dualCtJsonShape(data) };
+            if (this.jsonShapes.length < MAX_SHAPES && !this.jsonShapes.some((item) => JSON.stringify(item) === JSON.stringify(shape))) {
+              this.jsonShapes.push(shape);
+            }
+          } catch {
+            this.rejected += 1;
+          }
+        };
         const handler = (data: Buffer, topic: string) => {
           if (generation !== this.generation) return;
           if (this.now() < this.startedAt! || this.now() - this.startedAt! >= DUAL_CT_CAPTURE_MS) {
@@ -151,6 +178,10 @@ export class DualCtResearch {
             this.rejected += 1; return;
           }
           try {
+            const text = data.toString('utf8').trimStart();
+            if (text.startsWith('{')) {
+              recordJson(JSON.parse(text), 'app_json', false); return;
+            }
             const headers = decodeFrameHeaders(data);
             if (!headers.length || headers.length > 16) throw new Error('invalid');
             const candidates = headers.map((header) => {
@@ -170,14 +201,43 @@ export class DualCtResearch {
             this.rejected += 1;
           }
         };
-        this.bindings.push({ sn: device.sn, handler });
-        // eslint-disable-next-line no-await-in-loop
-        const attached = await this.hooks.subscribe(device.sn, handler);
-        if (generation !== this.generation) {
-          if (attached) this.hooks.unsubscribe(device.sn, handler);
-          return;
+        let appAttached = false;
+        if (device.appListed !== false) {
+          this.bindings.push({ sn: device.sn, handler });
+          // eslint-disable-next-line no-await-in-loop
+          try {
+            appAttached = await this.hooks.subscribe(device.sn, handler);
+          } catch { /* Try independently authorised Developer path. */ }
+          if (!active()) {
+            if (appAttached) this.hooks.unsubscribe(device.sn, handler);
+            return;
+          }
         }
-        if (!attached) {
+        this.routes.push({ deviceIndex, source: 'app_mqtt', status: appAttached ? 'listening' : 'unavailable' });
+        if (device.developerListed && this.hooks.probe) {
+          // eslint-disable-next-line no-await-in-loop
+          const probes = await this.hooks.probe(device.sn, active);
+          if (!active()) return;
+          for (const probe of probes.slice(0, 2)) {
+            this.routes.push({ deviceIndex, source: probe.source, status: probe.status });
+            if (probe.data !== undefined) recordJson(probe.data, probe.source);
+          }
+        }
+        let developerAttached = false;
+        if (device.developerListed && this.hooks.developerSubscribe) {
+          const developerHandler = (data: Record<string, any>) => recordJson(data, 'developer_mqtt');
+          this.developerBindings.push({ sn: device.sn, handler: developerHandler });
+          // eslint-disable-next-line no-await-in-loop
+          try {
+            developerAttached = await this.hooks.developerSubscribe(device.sn, developerHandler);
+          } catch { /* No private errors. */ }
+          if (!active()) {
+            if (developerAttached) this.hooks.developerUnsubscribe?.(device.sn, developerHandler);
+            return;
+          }
+          this.routes.push({ deviceIndex, source: 'developer_mqtt', status: developerAttached ? 'listening' : 'unavailable' });
+        }
+        if (!appAttached && !developerAttached && !device.developerListed) {
           this.stop('transport_unavailable'); return;
         }
       }
@@ -190,13 +250,15 @@ export class DualCtResearch {
     const age = this.startedAt === null || this.now() < this.startedAt ? null : (this.now() - this.startedAt) / 1000;
     return {
       status: this.status,
-      source: 'manual_app_account_discovery',
+      source: 'manual_account_discovery',
       captureWindowSec: DUAL_CT_CAPTURE_MS / 1000,
       captureAgeSec: age,
       completed: this.endedAt !== null,
       deviceCount: this.deviceCount,
       frames: this.frames,
       rejectedFrames: this.rejected,
+      jsonShapes: dualCtJsonShapesSnapshot(this.jsonShapes),
+      routes: this.routes.map((route) => ({ ...route })),
       shapes: this.shapes.map((shape) => ({ ...shape, fields: shape.fields.map((field) => ({ ...field })) })),
       channelMapping: 'unverified',
       valuesCaptured: false,
