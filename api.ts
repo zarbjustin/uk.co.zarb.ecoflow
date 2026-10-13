@@ -11,6 +11,10 @@ module.exports = {
   async dualCtPreview({ homey }: { homey: any }): Promise<Record<string, unknown>> {
     return homey.app.getDualCtPreviewSnapshot();
   },
+  async dualCtResearchView({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    // No cloud call, supplied serial, clock or permission changes.
+    return homey.app.getDualCtResearchView();
+  },
   async stopDualCtResearch({ homey }: { homey: any }): Promise<Record<string, unknown>> {
     return homey.app.stopDualCtResearch();
   },

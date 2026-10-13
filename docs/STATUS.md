@@ -4,6 +4,34 @@
 
 ## Test v1.10.43 / Build 58 — published 13 October 2026
 
+Unpublished diagnostic follow-up: per-transport receipt counts/ages and legacy
+history-backed UI correction; compact schema 4 includes preview consent/reason,
+header encoding buckets and decode attempt/accept counts, without numeric values.
+Unknown additional scalar IDs are structural evidence only. Encoding review
+supports absent flags on other EcoFlow paths but not an established Dual CT live
+contract, so explicit plaintext gating remains unchanged. Second-bank roles,
+units/signs and energy counters remain unverified. Tests and draft reply are local;
+no new commit/push/version/upload, certification or Live change. See
+SMART_METER_DUAL_CT_PLAN.md for pinned research and acceptance boundaries.
+Two additional unpublished workflow sprints now expose the effective capture
+mode and reused-Start mismatch without silently restarting or changing consent.
+The option is locked while an active capture is displayed. A dedicated local
+GET view refreshes structure and the separate preview together; no numeric values
+enter normal reports. Start also opens that preview after its explicit action.
+Sharing consent survives a successful refresh only for the same random local
+capture ID; new/unknown capture, account removal, Stop, failure and expiry clear
+prepared exports. Pending values cannot be copied. Copy/download fallback points
+to the candidate JSON itself. No automatic polling, upload or EcoFlow controls.
+
+Local acceptance: 730 tests, lint, diff checks, npm audit (0 vulnerabilities), and
+Homey 4.5.3 verified validation pass. Chromium desktop/mobile-sized workflow checks
+include receipt messaging, mode lock, same-capture refresh, separate consent,
+copy/download fallback and expiry. Native mobile/hardware acceptance remains
+open. Changes are uncommitted; remote CI for these changes has NOT run. Fetched
+diagnostic HEAD remains `0db15e6cd474a19ef09d55024aae07c76412da97`; its existing
+CI passed, which is baseline evidence only. No commit/push/version/publication
+was performed. Robert reply is draft-only and asks no new capture at this stage.
+
 Diagnostic implementation `41601e1e3a5521501dbdce4cb8e0f2c2bae81ece`;
 exact uploaded release/tag `v1.10.43` is
 `d030937aed34973b691e0ccd00efec21a92e77c6`. Later handover commits are not the

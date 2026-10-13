@@ -242,3 +242,81 @@ test('restarted Dual CT capture owns its inventory independently of a late stopp
     assert.equal(app.getDualCtResearchSnapshot().deviceCount, 1);
   } finally { pairing.appAuthClientFromSettings = original; await app.onUninit(); }
 });
+
+test('active Dual CT Start keeps its original consent and reports both requested and effective modes', async () => {
+  const pairing = require('../.homeybuild/lib/appAuthPairing');
+  const original = pairing.appAuthClientFromSettings;
+  try {
+    for (const enabled of [false, true]) {
+      const { app } = harness(); await app.onInit(); let lists = 0; let subscriptions = 0;
+      pairing.appAuthClientFromSettings = () => ({ getDeviceList: async () => {
+        lists++; return [{ sn: 'ZZ99SYNTHETIC0001', productName: '421',
+          modelCodes: [{ field: 'productType', code: 421 }], shared: false }];
+      } });
+      app.subscribeAppRealtime = async () => { subscriptions++; return true; };
+      app.unsubscribeAppRealtime = () => {};
+      const first = await app.startDualCtResearch(enabled);
+      assert.equal(first.captureStart.reused, false);
+      assert.equal(first.captureStart.effectivePreviewEnabled, enabled);
+      const view = app.getDualCtResearchView();
+      assert.match(view.captureId, /^[0-9a-f-]{36}$/);
+      assert.equal(view.preview.captureId, view.captureId);
+      assert.equal(view.preview.enabled, enabled);
+      const { dualCtResearchSnapshot } = require('../.homeybuild/lib/dualCtResearch');
+      const { compact } = require('../settings/dual-ct-status');
+      const accidentalEnvelope = { ...view.research, captureId: view.captureId,
+        preview: { devices: [{ value: 1234567, sn: 'PRIVATE' }] } };
+      for (const exported of [dualCtResearchSnapshot(accidentalEnvelope), compact(accidentalEnvelope)]) {
+        assert.doesNotMatch(JSON.stringify(exported), /captureId|1234567|PRIVATE|candidateUnit/);
+      }
+      const again = await app.startDualCtResearch(!enabled);
+      assert.equal(again.captureStart.reused, true);
+      assert.equal(again.captureStart.requestedPreviewEnabled, !enabled);
+      assert.equal(again.captureStart.effectivePreviewEnabled, enabled);
+      assert.equal(again.captureStart.requiresRestart, true);
+      assert.equal(app.getDualCtResearchView().captureId, view.captureId);
+      assert.equal(lists, 1); assert.equal(subscriptions, 1);
+      assert.doesNotMatch(JSON.stringify(app.getDualCtResearchSnapshot()), /captureId|candidateUnit|SYNTHETIC/);
+      app.stopDualCtResearch();
+      const restarted = await app.startDualCtResearch(!enabled);
+      assert.equal(restarted.captureStart.effectivePreviewEnabled, !enabled);
+      assert.equal(restarted.captureStart.requiresRestart, false);
+      assert.notEqual(app.getDualCtResearchView().captureId, view.captureId);
+      await app.onUninit();
+    }
+  } finally { pairing.appAuthClientFromSettings = original; }
+});
+
+test('local Dual CT view never discovers, subscribes or uses supplied request identities/clocks', async () => {
+  const { app } = harness(); await app.onInit();
+  const api = require('../.homeybuild/api');
+  const view = await api.dualCtResearchView({ homey: { app }, body: { sn: 'PRIVATE', now: 1, previewEnabled: true } });
+  assert.equal(view.research.status, 'not_started');
+  assert.equal(view.preview.enabled, false);
+  assert.deepEqual(view.preview.devices, []);
+  assert.equal(view.captureId, null);
+  assert.doesNotMatch(JSON.stringify(view), /PRIVATE/);
+  await app.onUninit();
+});
+
+test('concurrent Start during discovery does not change preview consent or attach another capture', async () => {
+  const pairing = require('../.homeybuild/lib/appAuthPairing'); const original = pairing.appAuthClientFromSettings;
+  const { app } = harness(); await app.onInit(); let resolveList; let lists = 0;
+  pairing.appAuthClientFromSettings = () => ({ getDeviceList: async () => {
+    lists++; return new Promise(resolve => { resolveList = resolve; });
+  } });
+  app.subscribeAppRealtime = async () => true; app.unsubscribeAppRealtime = () => {};
+  try {
+    const pending = app.startDualCtResearch(false);
+    const id = app.getDualCtResearchView().captureId;
+    const repeated = await app.startDualCtResearch(true);
+    assert.equal(repeated.status, 'discovering');
+    assert.equal(repeated.captureStart.reused, true);
+    assert.equal(repeated.captureStart.requiresRestart, true);
+    assert.equal(repeated.captureStart.effectivePreviewEnabled, false);
+    assert.equal(lists, 1); assert.equal(app.getDualCtResearchView().captureId, id);
+    resolveList([{ sn: 'ZZ99SYNTHETIC0001', productName: 'Smart Meter Dual CT', shared: false }]);
+    await pending;
+    assert.equal(app.getDualCtResearchView().preview.enabled, false);
+  } finally { pairing.appAuthClientFromSettings = original; await app.onUninit(); }
+});

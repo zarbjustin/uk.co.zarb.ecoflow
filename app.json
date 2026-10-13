@@ -83,6 +83,10 @@
     "homey:manager:geolocation"
   ],
   "api": {
+    "dualCtResearchView": {
+      "method": "GET",
+      "path": "/dual-ct-research/view"
+    },
     "dualCtPreview": {
       "method": "GET",
       "path": "/dual-ct-preview"

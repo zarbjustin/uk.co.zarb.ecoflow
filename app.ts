@@ -1,6 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
+import { randomUUID } from 'crypto';
 import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
 import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
 import { StreamDiscoveryInventory } from './lib/streamDiscovery';
@@ -29,6 +30,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   private releaseResearchMqttWhenIdle = false;
   private readonly streamDiscovery = new StreamDiscoveryInventory();
   private dualCtResearch: DualCtResearch | null = null;
+  private dualCtCaptureId: string | null = null;
   private readonly settingsHandler = (key: string) => this.onSettingChanged(key);
 
   async onInit(): Promise<void> {
@@ -205,10 +207,13 @@ module.exports = class EcoFlowApp extends Homey.App {
   /** Explicit settings action only: no automatic discovery, pairing or Energy source. */
   async startDualCtResearch(previewEnabled = false): Promise<Record<string, unknown>> {
     if (this.stopping) return { status: 'stopped' };
-    if (!this.dualCtResearch || !['discovering', 'listening'].includes(this.dualCtResearch.snapshot().status as string)) {
+    const reused = !!this.dualCtResearch && ['discovering', 'listening'].includes(this.dualCtResearch.snapshot().status as string);
+    if (!reused) {
       // Each manual capture owns its clients/inventory; late prior-account lists
       // cannot overwrite the current capture's transport authorisation.
       this.dualCtResearch?.stop('stopped', true);
+      // Local UI correlation only; never an account/device identity or report field.
+      this.dualCtCaptureId = randomUUID();
       let developer: EcoFlowClient | null = null;
       let developerInventory: EcoFlowDevice[] = [];
       let inventorySummary: unknown = [];
@@ -246,8 +251,20 @@ module.exports = class EcoFlowApp extends Homey.App {
         cancel: (timer) => this.homey.clearTimeout(timer),
       });
     }
-    await this.dualCtResearch.start();
-    return this.getDualCtResearchSnapshot();
+    const capture = this.dualCtResearch!;
+    await capture.start();
+    const research = this.getDualCtResearchSnapshot();
+    const effective = (research.previewDiagnostics as { enabled?: boolean } | undefined)?.enabled === true;
+    return {
+      ...research,
+      captureStart: {
+        reused,
+        superseded: capture !== this.dualCtResearch,
+        requestedPreviewEnabled: previewEnabled === true,
+        effectivePreviewEnabled: effective,
+        requiresRestart: ['discovering', 'listening'].includes(research.status as string) && effective !== (previewEnabled === true),
+      },
+    };
   }
 
   stopDualCtResearch(): Record<string, unknown> {
@@ -266,6 +283,16 @@ module.exports = class EcoFlowApp extends Homey.App {
     return {
       ...(this.dualCtResearch?.previewSnapshot() || { enabled: false, reason: 'disabled', devices: [] }),
       appVersion: this.homey.manifest?.version || 'unknown',
+      captureId: this.dualCtCaptureId,
+    };
+  }
+
+  /** Explicit local view only. Numeric preview remains separate from support exports. */
+  getDualCtResearchView(): Record<string, unknown> {
+    return {
+      captureId: this.dualCtCaptureId,
+      research: this.getDualCtResearchSnapshot(),
+      preview: this.getDualCtPreviewSnapshot(),
     };
   }
 

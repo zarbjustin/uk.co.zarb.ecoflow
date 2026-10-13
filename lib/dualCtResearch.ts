@@ -5,6 +5,7 @@ import {
 } from './dualCtSources';
 import { DualCtHistory, dualCtHistorySnapshot } from './dualCtHistory';
 import { DualCtPreview } from './dualCtPreview';
+import { dualCtPreviewDiagnostics, dualCtReceiptSnapshot } from './dualCtDiagnostics';
 
 export { dualCtResearchDevices } from './dualCtSources';
 
@@ -46,7 +47,10 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     routes: Array.isArray(input?.routes) ? input.routes.slice(0, 8).filter((route: any) => [0, 1].includes(route?.deviceIndex)
       && ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(route?.source)
       && ['listening', 'unavailable', 'empty', 'observed', 'host_not_verified'].includes(route?.status))
-      .map((route: any) => ({ deviceIndex: route.deviceIndex, source: route.source, status: route.status })) : [],
+      .map((route: any) => ({
+        deviceIndex: route.deviceIndex, source: route.source, status: route.status, ...dualCtReceiptSnapshot(route),
+      })) : [],
+    previewDiagnostics: dualCtPreviewDiagnostics(input?.previewDiagnostics),
     shapes: Array.isArray(input?.shapes) ? input.shapes.slice(0, MAX_SHAPES).map((shape: any) => ({
       deviceIndex: bounded(shape?.deviceIndex, 1),
       cmdFunc: bounded(shape?.cmdFunc, 65535),
@@ -127,6 +131,7 @@ export class DualCtResearch {
 
   private readonly hooks: ResearchHooks;
   private readonly preview: DualCtPreview;
+  private receipts = new Map<string, { count: number; lastAt: number }>();
 
   constructor(hooks: ResearchHooks) {
     this.hooks = hooks;
@@ -137,8 +142,15 @@ export class DualCtResearch {
     return (this.hooks.now || Date.now)();
   }
 
+  private recordReceipt(deviceIndex: number, source: string): void {
+    const now = this.now();
+    if ([...this.receipts.values()].some((row) => row.lastAt > now)) this.receipts.clear();
+    const key = `${deviceIndex}:${source}`;
+    this.receipts.set(key, { count: Math.min(128, (this.receipts.get(key)?.count || 0) + 1), lastAt: now });
+  }
+
   stop(status = 'stopped', clear = false): void {
-    if (clear || !['complete', 'sample_limit'].includes(status)) this.preview.clear();
+    if (clear || !['complete', 'sample_limit'].includes(status)) this.preview.clear(clear || status === 'account_changed');
     this.generation += 1;
     if (this.timer !== null) this.hooks.cancel(this.timer);
     this.timer = null;
@@ -164,6 +176,7 @@ export class DualCtResearch {
     this.endedAt = this.startedAt === null ? null : this.now();
     if (this.startedAt !== null) this.history.record(null, 'session', status, this.now());
     if (clear) {
+      this.receipts.clear();
       this.selected = [];
       this.startedAt = null; this.endedAt = null; this.deviceCount = 0;
       this.frames = 0; this.rejected = 0; this.shapes = [];
@@ -211,6 +224,7 @@ export class DualCtResearch {
             this.stop('sample_limit'); return;
           }
           if (count) this.frames += 1;
+          if (count) this.recordReceipt(deviceIndex, source);
           try {
             const shape = { deviceIndex, source, ...dualCtJsonShape(data) };
             this.history.record(deviceIndex, source, shape.empty ? 'empty' : 'json', this.now());
@@ -233,6 +247,7 @@ export class DualCtResearch {
             this.stop('sample_limit'); return;
           }
           this.frames += 1;
+          this.recordReceipt(deviceIndex, 'app_mqtt');
           if (data.length > 65536) {
             this.history.record(deviceIndex, 'app_mqtt', 'oversized', this.now());
             this.rejected += 1; return;
@@ -244,13 +259,26 @@ export class DualCtResearch {
             }
             const headers = decodeFrameHeaders(data);
             if (!headers.length || headers.length > 16) throw new Error('invalid');
-            const candidates = headers.map((header) => {
+            headers.forEach((header) => {
               if (!header.pdata || !Number.isInteger(header.cmdFunc) || !Number.isInteger(header.cmdId)
                 || header.cmdFunc < 0 || header.cmdFunc > 65535 || header.cmdId < 0 || header.cmdId > 65535
                 || (header.deviceSn && header.deviceSn !== device.sn)) throw new Error('invalid');
-              return {
-                deviceIndex, cmdFunc: header.cmdFunc, cmdId: header.cmdId, fields: fields(header.pdata),
-              };
+            });
+            // Header metadata must survive unreadable/masked inner payloads.
+            headers.forEach((header) => {
+              if (header.cmdFunc === 254 && header.cmdId === 21) {
+                this.preview.recordHeader(header.encType, header.candidateHeaderValid !== false, []);
+                if (header.candidateHeaderValid === false) this.preview.noteUnavailable('invalid_header');
+                else if (header.encType !== 0) this.preview.noteUnavailable(header.encType === undefined ? 'missing_encoding' : 'unsupported_encoding');
+              }
+            });
+            const candidates = headers.map((header) => ({
+              deviceIndex, cmdFunc: header.cmdFunc, cmdId: header.cmdId, fields: fields(header.pdata!),
+            }));
+            headers.forEach((header, index) => {
+              if (header.cmdFunc === 254 && header.cmdId === 21 && header.candidateHeaderValid !== false) {
+                this.preview.recordAdditionalFields(candidates[index].fields);
+              }
             });
             for (const shape of candidates) {
               if (this.shapes.length < MAX_SHAPES && !this.shapes.some((item) => JSON.stringify(item) === JSON.stringify(shape))) {
@@ -308,6 +336,7 @@ export class DualCtResearch {
             this.routes.push({ deviceIndex, source: probe.source, status: probe.status });
             this.history.record(deviceIndex, probe.source, probe.status, this.now());
             if (probe.data !== undefined) recordJson(probe.data, probe.source);
+            else if (['empty', 'observed'].includes(probe.status)) this.recordReceipt(deviceIndex, probe.source);
           }
         }
         let developerAttached = false;
@@ -335,6 +364,9 @@ export class DualCtResearch {
   }
 
   snapshot(): Record<string, unknown> {
+    const now = this.now();
+    if ([...this.receipts.values()].some((row) => row.lastAt > now)) this.receipts.clear();
+    const preview = this.previewSnapshot();
     const age = this.startedAt === null || this.now() < this.startedAt ? null : (this.now() - this.startedAt) / 1000;
     return {
       status: this.status,
@@ -350,7 +382,18 @@ export class DualCtResearch {
       inventory: this.status === 'account_changed' || this.startedAt === null ? [] : dualCtInventorySnapshot(this.hooks.inventory?.()),
       selected: dualCtSelectedSnapshot(this.selected),
       jsonShapes: dualCtJsonShapesSnapshot(this.jsonShapes),
-      routes: this.routes.map((route) => ({ ...route })),
+      routes: this.routes.map((route) => {
+        const receipt = this.receipts.get(`${route.deviceIndex}:${route.source}`);
+        return {
+          ...route,
+          ...dualCtReceiptSnapshot({
+            receiptConfirmed: !!receipt,
+            receivedPackets: receipt?.count,
+            lastReceiptAgeSec: receipt ? (now - receipt.lastAt) / 1000 : null,
+          }),
+        };
+      }),
+      previewDiagnostics: this.preview.diagnostics(preview.reason),
       shapes: this.shapes.map((shape) => ({ ...shape, fields: shape.fields.map((field) => ({ ...field })) })),
       channelMapping: 'unverified',
       valuesCaptured: this.preview.hasCaptured(),

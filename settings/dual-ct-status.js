@@ -4,6 +4,35 @@
   const SOURCES = ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'];
   const STATES = ['not_started', 'discovering', 'listening', 'stopped', 'complete', 'sample_limit',
     'account_changed', 'no_explicit_model', 'transport_unavailable', 'discovery_unavailable'];
+  function receiptFor(route, history) {
+    const validAge = age => Number.isFinite(age) && age >= 0 && age <= 86400;
+    if (route.receiptConfirmed === true && Number.isInteger(route.receivedPackets) && route.receivedPackets > 0
+      && route.receivedPackets <= 128 && validAge(route.lastReceiptAgeSec)) {
+      return { receiptConfirmed: true, receivedPackets: route.receivedPackets, lastReceiptAgeSec: route.lastReceiptAgeSec };
+    }
+    const events = (Array.isArray(history) ? history.slice(-24) : []).filter(event => event?.deviceIndex === route.deviceIndex
+      && (event.source === route.source || (route.source === 'app_mqtt' && event.source === 'app_json'))
+      && ['json', 'protobuf', 'empty', 'observed', 'unrecognised', 'oversized'].includes(event.status)
+      && Number.isInteger(event.samples) && event.samples > 0 && event.samples <= 128 && validAge(event.lastAgeSec));
+    return { receiptConfirmed: events.length > 0,
+      receivedPackets: Math.min(128, events.reduce((sum, event) => sum + event.samples, 0)),
+      lastReceiptAgeSec: events.length ? Math.min(...events.map(event => event.lastAgeSec)) : null };
+  }
+  function previewDiagnostics(input) {
+    const count = n => Number.isInteger(n) && n >= 0 && n <= 2048 ? n : 0;
+    const reasons = ['disabled', 'ready', 'no_samples', 'no_eligible_meter', 'missing_encoding', 'unsupported_encoding',
+      'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped', 'account_changed', 'capture_unavailable', 'not_reported'];
+    let enabled = null;
+    if (input?.enabled === true) enabled = true;
+    else if (input?.enabled === false) enabled = false;
+    return { enabled, reason: reasons.includes(input?.reason) ? input.reason : 'not_reported',
+      attemptedPayloads: count(input?.attemptedPayloads), acceptedPayloads: count(input?.acceptedPayloads),
+      encodingCounts: Object.fromEntries(['explicit_plain', 'missing', 'masked', 'unsupported', 'invalid_header']
+        .map(key => [key, count(input?.encodingCounts?.[key])])),
+      additionalScalarFieldsSeen: Array.isArray(input?.additionalScalarFieldsSeen)
+        ? [...new Set(input.additionalScalarFieldsSeen.slice(0, 128).filter(field => [985,986,987,988,989,990,991,992,993,998].includes(field)))].sort((a,b) => a-b) : [],
+      additionalBankMappingVerified: false, valuesIncluded: false };
+  }
   function describe(input) {
     const count = (value, max) => (Number.isInteger(value) && value >= 0 && value <= max ? value : 0);
     const summary = {
@@ -19,7 +48,8 @@
       routes: Array.isArray(input?.routes) ? input.routes.slice(0, 8).filter((route) => [0, 1].includes(route?.deviceIndex)
         && SOURCES.includes(route?.source)
         && ['listening', 'unavailable', 'empty', 'observed', 'host_not_verified'].includes(route?.status))
-        .map((route) => ({ index: route.deviceIndex + 1, source: route.source, status: route.status })) : [],
+        .map((route) => ({ index: route.deviceIndex + 1, source: route.source, status: route.status,
+          ...receiptFor(route, input?.history) })) : [],
     };
     summary.selected = Array.isArray(input?.selected) ? input.selected.slice(0, 2)
       .filter((row) => [0, 1].includes(row?.deviceIndex) && ['explicit_name', 'observed_app_product_type_421'].includes(row?.basis))
@@ -45,7 +75,12 @@
     if (status.cleanupFailures) append(translate('cleanup_warning'));
     append(`${translate('devices')}: ${status.devices}. ${translate('samples')}: ${status.samples}. ${translate('rejected')}: ${status.rejected}.`);
     if (status.age !== null) append(`${translate('age')}: ${status.age} s.`);
-    status.routes.forEach((route) => append(`${translate('meter')} ${route.index}: ${translate(route.source)} — ${translate('route_' + route.status)}.`));
+    status.routes.forEach((route) => {
+      append(`${translate('meter')} ${route.index}: ${translate(route.source)} — ${translate(route.receiptConfirmed ? 'route_received' : 'route_' + route.status)}.`);
+      if (route.receiptConfirmed) append(`${translate('samples')}: ${route.receivedPackets}. ${translate('preview_receipt_age')}: ${Math.floor(route.lastReceiptAgeSec)} s.`);
+    });
+    const preview = previewDiagnostics(evidence?.previewDiagnostics);
+    if (preview.enabled !== null) append(translate('preview_' + preview.reason));
     if (status.observed) append(translate('observed_help'));
     else if (status.state !== 'not_started' && status.state !== 'discovering') append(translate('no_data_help'));
     append(translate('snapshot_help'));
@@ -119,9 +154,10 @@
         retainedSamples: Math.min(128, (previous?.retainedSamples || 0) + event.samples),
         lastAgeSec: Math.min(previous?.lastAgeSec ?? Infinity, Math.floor(event.lastAgeSec)) });
     });
-    const report = { reportType: 'dual_ct_compact', schemaVersion: 3,
+    const report = { reportType: 'dual_ct_compact', schemaVersion: 4,
       appVersion: typeof version === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(version) ? version : 'unknown',
       summary: describe(evidence), inventory, jsonShapes: [], shapes: [], structureOmitted: false, metadataOmitted: false,
+      previewDiagnostics: previewDiagnostics(evidence?.previewDiagnostics),
       observationScope: 'retained_capture_history', recentObservations: Array.from(recent.values()).slice(0, 8),
       structureCoverage: { groupsAvailable: available.length, groupsIncluded: 0,
         fieldsAvailable: available.reduce((sum, shape) => sum + shape.fields.length, 0), fieldsIncluded: 0 },

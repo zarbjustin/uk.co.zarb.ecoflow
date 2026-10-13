@@ -2,6 +2,103 @@
 
 ## Field-mapping audit and candidate decoder — 13 October 2026
 
+### Capture-mode and refresh/export sprints — unpublished
+
+Start remains idempotent for a discovering/listening capture. Its response now
+distinguishes reused, superseded, requested preview mode, effective mode and
+whether an explicit Stop/new Start is needed. It never silently changes consent
+or restarts subscriptions. The settings checkbox reflects and locks the running
+capture's actual mode; completed captures unlock the next-capture choice.
+
+`GET /dual-ct-research/view` is a local-only explicit view: separate `research`
+and `preview` objects, no account request or supplied clock/serial. The summary
+refresh uses this single GET; an explicit Start follows its acknowledgement with
+the same view and opens the preview panel. There is no background numeric polling.
+Normal support snapshots still use only the structural projection. Random
+per-capture IDs correlate local UI refreshes, not device/account identities; they
+are excluded from compact/full/candidate exports.
+
+Same-capture successful refresh retains existing sharing consent and rebuilds
+the visible JSON with fresh receipt ages. No prepared values can be copied while
+the request is pending. A new/unknown capture, Stop, account change, request
+failure/timeout, clock rollback, navigation or expiry clears/revokes prepared
+exports. Completion preserves only still-fresh candidates; it does not renew
+their per-field 90-second receipt TTL. Standalone candidate refresh follows the
+same identity/consent/age rules. Fallback text points to the visible candidate
+JSON, not the separate compact structure report. No automatic clipboard/export.
+
+Regression coverage: active and concurrently discovering mode mismatches,
+idempotence, capture correlation, projection privacy, coherent summary/preview
+refresh, new/unknown identity consent reset, unavailable reason, late callbacks,
+Stop/account removal/navigation/expiry and manual sharing fallbacks. Desktop and
+mobile-sized Chromium workflows pass; native Homey webviews and physical field
+validation remain open. Local release checks: 730 tests, lint, npm audit with
+zero vulnerabilities, diff checks and Homey 4.5.3 verified validation. Current
+changes remain uncommitted; CI must run against the eventual release commit.
+No mainline/Live/version/Test publication or Robert message this turn.
+
+### .43 receipt/encoding investigation — unpublished follow-up
+
+The new structural field report confirms 49 app-MQTT packets, zero rejected and
+37 retained fields for 254/21. Two app screenshots independently show grid/home
+and solar views, each displaying three-phase power, voltage and current. These
+are not simultaneous numeric protobuf captures. No CT-port assignment, phase
+ordering, import/export sign or counter semantics is established by them.
+
+Receipt now has a per-device/per-transport count and relative age, separate from
+subscription attachment and from valid measurement decoding. It survives bounded
+history eviction, handles synchronous attach callbacks, ignores cached-reply
+topics and clears on account change/clock rollback. The UI also repairs legacy
+summaries from source-scoped retained history, never a global sample count. A
+received packet is not proof of a currently connected transport or usable data.
+
+Compact schema 4 adds fixed `previewDiagnostics`: actual capture opt-in state,
+current reason, decoder attempts/accepted payload counts and header buckets
+(`explicit_plain`, `missing`, `masked`, `unsupported`, `invalid_header`). Older
+reports retain unknown/not-reported state rather than implying opt-out. Header
+counts survive a structurally unreadable inner payload, without decrypting or
+retrying alternate interpretations. Only 254/21 affects these diagnostics;
+254/22 does not overwrite them. Full/compact reports still include no numeric
+measurement candidates, encryption keys, raw frames or device identities.
+
+Encoding source refresh: shuette42/ecoflow-energy-ha
+`325cf29c85705b812557e7f00127e89ab6ed0787` (new origin/main); meter parser,
+header decoder and generic runtime unchanged from the previous audit. The
+[BK21 parser](https://github.com/shuette42/ecoflow-energy-ha/blob/325cf29c85705b812557e7f00127e89ab6ed0787/custom_components/ecoflow_energy/ecoflow/parsers/smart_meter_proto.py)
+and tests accept absent encoding on cached plaintext get-reply bundles. Its live
+property captures also exercise per-header XOR masking. The
+[generic runtime](https://github.com/shuette42/ecoflow-energy-ha/blob/325cf29c85705b812557e7f00127e89ab6ed0787/custom_components/ecoflow_energy/ecoflow/proto/runtime.py)
+handles encoding 1 using sequence-derived XOR and otherwise offers untouched
+pdata. These are not a Dual CT live-packet contract. Protobuf implicit-presence
+[rules](https://protobuf.dev/programming-guides/field_presence/) permit omitting
+default-zero fields, but do not define EcoFlow's transport semantics. Refreshed
+Python/Markdown/proto search found no explicit Dual CT/421 implementation;
+MichelFR/ha-ecoflow-iot remains at `45d9bb2952904cffa590cb811da0c316c66dd589`.
+No executable third-party code or customer raw packet was imported into this repo.
+
+Decision: keep explicit-zero plaintext gating on the current candidate preview.
+Do not treat an absent flag as proven plaintext, apply XOR speculatively, accept
+unknown nonzero markers, or allow cached packets to renew measurement freshness.
+The new metadata will distinguish a missing flag from disabled opt-in before a
+model-specific policy change is considered. No additional tester capture yet.
+
+Possible second-bank arrangement, **hypothesis only**:
+
+| Additional float fields | Possible arrangement | Current acceptance |
+| --- | --- | --- |
+| 985–987 | Another voltage trio | Structural presence only; no V assignment |
+| 988–990 | Another current trio | Structural presence only; no A assignment |
+| 991–993 | Another active-power trio | Structural presence only; no W/phase assignment |
+| 998 | Another aggregate value | Structural presence only; no sum or sign interpretation |
+
+The metadata includes a bounded allowlist of additional scalar field IDs seen,
+with `additionalBankMappingVerified: false`. It does not decode those values or
+add them to the preview/export. `997` and `773` remain uninterpreted nested fields.
+Numbers also reused by STREAM battery messages do not establish meter meanings.
+Future acceptance requires values matched to both app views, evidence for each
+bank's configured role and direction, and full/delta/unused-channel behaviour.
+No driver, pairing, Energy, Flows, counters or control changes.
+
 The v1.10.42 structural report identifies app-MQTT protobuf 254/21 and 254/22.
 It contains field numbers/wire types only, not raw frames or scalar values.
 The observed shapes overlap the original BK21 meter parser, but overlap is not

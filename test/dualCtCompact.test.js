@@ -108,7 +108,7 @@ test('oversized mixed telemetry retains representative fields across formats, so
   const shapes = Array.from({ length: 16 }, (_, i) => ({ deviceIndex: i % 2, cmdFunc: 254, cmdId: i,
     fields: Array.from({ length: 32 }, (_, j) => ({ field: j + 1, wire: 0, value: 'PRIVATE' })) }));
   const report = compact({ jsonShapes, shapes, deviceCount: 2 });
-  assert.equal(report.schemaVersion, 3);
+  assert.equal(report.schemaVersion, 4);
   assert.ok(JSON.stringify(report, null, 2).length <= 7500);
   assert.equal(report.structureOmitted, true);
   assert.ok(report.jsonShapes.some((shape) => shape.fields.length));

@@ -1,4 +1,5 @@
 import { decodeDualCtCandidates, DualCtDecodeContext } from './dualCtDecoder';
+import { DUAL_CT_EXTRA_SCALARS, dualCtPreviewDiagnostics } from './dualCtDiagnostics';
 
 type Reading = NonNullable<ReturnType<typeof decodeDualCtCandidates>>['readings'][number];
 
@@ -8,6 +9,10 @@ export class DualCtPreview {
   private lastNow = 0;
   private captured = false;
   private unavailableReason = 'no_samples';
+  private attemptedPayloads = 0;
+  private acceptedPayloads = 0;
+  private encodingCounts: Record<string, number> = {};
+  private extraFields = new Set<number>();
 
   private readonly enabled: boolean;
 
@@ -15,10 +20,41 @@ export class DualCtPreview {
     this.enabled = enabled === true;
   }
 
-  clear(): void {
+  clear(resetDiagnostics = true): void {
     this.rows.clear();
     this.captured = false;
     this.unavailableReason = 'no_samples';
+    if (resetDiagnostics) {
+      this.attemptedPayloads = 0; this.acceptedPayloads = 0;
+      this.encodingCounts = {}; this.extraFields.clear();
+    }
+  }
+
+  recordHeader(encoding: number | undefined, valid: boolean, fields: Array<{ field: number; wire: number }>): void {
+    let key = 'unsupported';
+    if (!valid) key = 'invalid_header';
+    else if (encoding === undefined) key = 'missing';
+    else if (encoding === 0) key = 'explicit_plain';
+    else if (encoding === 1) key = 'masked';
+    this.encodingCounts[key] = Math.min(2048, (this.encodingCounts[key] || 0) + 1);
+    if (valid) this.recordAdditionalFields(fields);
+  }
+
+  recordAdditionalFields(fields: Array<{ field: number; wire: number }>): void {
+    fields.forEach((field) => {
+      if (field.wire === 5 && DUAL_CT_EXTRA_SCALARS.includes(field.field)) this.extraFields.add(field.field);
+    });
+  }
+
+  diagnostics(reason: string) {
+    return dualCtPreviewDiagnostics({
+      enabled: this.enabled,
+      reason,
+      attemptedPayloads: this.attemptedPayloads,
+      acceptedPayloads: this.acceptedPayloads,
+      encodingCounts: this.encodingCounts,
+      additionalScalarFieldsSeen: [...this.extraFields],
+    });
   }
 
   noteUnavailable(reason: string): void {
@@ -43,12 +79,14 @@ export class DualCtPreview {
 
   observe(deviceIndex: number, payload: Buffer, context: DualCtDecodeContext): void {
     if (!this.enabled || ![0, 1].includes(deviceIndex) || !this.clock(context.now)) return;
+    this.attemptedPayloads = Math.min(2048, this.attemptedPayloads + 1);
     const decoded = decodeDualCtCandidates(payload, context);
     if (!decoded) {
       this.unavailableReason = 'no_supported_candidates';
       return;
     }
     this.captured = true;
+    this.acceptedPayloads = Math.min(2048, this.acceptedPayloads + 1);
     const fields = this.rows.get(deviceIndex) || new Map();
     for (const reading of decoded.readings) {
       const previous = fields.get(reading.field);

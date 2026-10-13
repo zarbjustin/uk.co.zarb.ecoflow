@@ -16,7 +16,7 @@ test('compact Dual CT export follows local refresh, has a text fallback and clea
   context.onHomeyReady(homey);
   assert.equal(calls.length, 0);
   context.document.getElementById('refreshDualCtResearch').click();
-  calls[0].callback(null, { dualCtResearch: { status: 'no_explicit_model', appVersion: '1.10.39',
+  calls[0].callback(null, { research: { status: 'no_explicit_model', appVersion: '1.10.39',
     inventory: [{ source: 'app', available: true, inspected: 3 }] } });
   const report = JSON.parse(context.document.getElementById('dualCtCompactText').textContent);
   assert.equal(report.appVersion, '1.10.39');
@@ -34,7 +34,7 @@ test('compact Dual CT export follows local refresh, has a text fallback and clea
 test('compact copy success is acknowledged without starting discovery or sending data', async () => {
   const context = loadSettingsScript(); const homey = fakeHomey(); let copied = '';
   context.navigator = { clipboard: { writeText: async (text) => { copied = text; } } };
-  homey.api = (method, url, body, callback) => callback(null, { dualCtResearch: { status: 'complete' } });
+  homey.api = (method, url, body, callback) => callback(null, { research: { status: 'complete' } });
   context.onHomeyReady(homey);
   context.document.getElementById('refreshDualCtResearch').click();
   await context.document.getElementById('copyDualCtCompact').click();
@@ -49,6 +49,7 @@ test('an older integration report cannot overwrite a newer Dual CT action summar
   context.document.getElementById('supportSnapshot').click();
   context.document.getElementById('startDualCtResearch').click();
   calls[1].callback(null, { status: 'listening', deviceCount: 1 });
+  calls[2].callback(null, { research: { status: 'listening', deviceCount: 1 } });
   const element = context.document.getElementById('dualCtResearchResult'); const before = element.children.length;
   calls[0].callback(null, { dualCtResearch: { status: 'complete', deviceCount: 0 } });
   assert.equal(element.children.length, before);
@@ -56,14 +57,14 @@ test('an older integration report cannot overwrite a newer Dual CT action summar
   assert.equal(element.children.length, before, 'duplicate action callback cannot replace summary');
 });
 
-test('Dual CT summary refresh uses only local support GET and never starts a new capture', () => {
+test('Dual CT summary refresh uses one separate local view GET and never starts a new capture', () => {
   const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
   homey.api = (method, url, body, callback) => {
-    calls.push({ method, url, body }); callback(null, { dualCtResearch: { status: 'complete', frames: 3, deviceCount: 1 } });
+    calls.push({ method, url, body }); callback(null, { research: { status: 'complete', frames: 3, deviceCount: 1 } });
   };
   context.onHomeyReady(homey); assert.equal(calls.length, 0);
   context.document.getElementById('refreshDualCtResearch').click();
-  assert.deepEqual(calls.map((call) => [call.method, call.url, call.body]), [['GET', '/support-snapshot', null]]);
+  assert.deepEqual(calls.map((call) => [call.method, call.url, call.body]), [['GET', '/dual-ct-research/view', null]]);
   const result = context.document.getElementById('dualCtResearchResult').children.map((child) => child.textContent).join(' ');
   assert.match(result, /completed/); assert.match(result, /Observed samples: 3/);
 });
@@ -99,9 +100,11 @@ test('candidate preview opt-in is manual, separate from exports and invalidates 
   context.document.getElementById('startDualCtResearch').click();
   assert.equal(calls[0].body.previewEnabled, true);
   calls[0].callback(null, { status: 'listening', valuesCaptured: true });
+  calls[1].callback(null, { research: { status: 'listening', previewDiagnostics: { enabled: true } },
+    preview: { enabled: true, reason: 'no_samples', devices: [] } });
   context.document.getElementById('refreshDualCtPreview').click();
-  assert.equal(calls[1].url, '/dual-ct-preview'); assert.equal(calls[1].method, 'GET');
-  calls[1].callback(null, { enabled: true, interpretation: 'legacy_meter_overlap_unverified', unitsVerified: false,
+  assert.equal(calls[2].url, '/dual-ct-preview'); assert.equal(calls[2].method, 'GET');
+  calls[2].callback(null, { enabled: true, interpretation: 'legacy_meter_overlap_unverified', unitsVerified: false,
     directionVerified: false, devices: [{ deviceIndex: 0, readings: [{ field: 515, candidateUnit: 'W', value: -12345, receivedAgeSec: 0 }] }] });
   assert.match(context.document.getElementById('dualCtPreviewState').textContent, /515: -12345/);
   assert.doesNotMatch(context.document.getElementById('dualCtCompactText').textContent, /12345/);
@@ -110,7 +113,7 @@ test('candidate preview opt-in is manual, separate from exports and invalidates 
   assert.match(context.document.getElementById('dualCtPreviewState').textContent, /expired/);
   context.document.getElementById('refreshDualCtPreview').click();
   context.document.getElementById('stopDualCtResearch').click();
-  calls[2].callback(null, { enabled: true, devices: [] });
+  calls[3].callback(null, { enabled: true, devices: [] });
   assert.match(context.document.getElementById('dualCtPreviewState').textContent, /Not available/);
   context.events.pagehide();
   assert.equal(context.document.getElementById('enableDualCtPreview').checked, false);
@@ -137,6 +140,120 @@ test('candidate sharing requires separate consent, shows a manual fallback, and 
   assert.doesNotMatch(context.document.getElementById('dualCtCandidateShareStatus').textContent, /PRIVATE/);
   consent.checked = false; consent.change();
   assert.equal(text.textContent, ''); assert.equal(text.hidden, true);
+  assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true);
+});
+
+test('reused capture shows effective opt-out, locks checkbox and never silently restarts', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
+  context.onHomeyReady(homey);
+  context.document.getElementById('enableDualCtPreview').checked = true;
+  context.document.getElementById('startDualCtResearch').click();
+  calls[0].callback(null, { status: 'listening', captureStart: { reused: true, requiresRestart: true } });
+  calls[0].callback(null, { status: 'listening' });
+  assert.equal(calls.length, 2, 'duplicate Start callback cannot issue another local read');
+  calls[1].callback(null, { research: { status: 'listening', previewDiagnostics: { enabled: false } },
+    preview: { enabled: false, reason: 'disabled', devices: [] } });
+  assert.equal(context.document.getElementById('enableDualCtPreview').checked, false);
+  assert.equal(context.document.getElementById('enableDualCtPreview').disabled, true);
+  assert.match(context.document.getElementById('dualCtCaptureMode').textContent, /structure only.*mode is locked.*reused/s);
+  assert.equal(context.document.getElementById('dualCtPreviewPanel').open, true);
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /preview is off/);
+  assert.equal(calls.filter(call => call.method === 'POST').length, 1);
+  context.document.getElementById('stopDualCtResearch').click();
+  calls[2].callback(null, { status: 'stopped', previewDiagnostics: { enabled: false } });
+  assert.equal(context.document.getElementById('enableDualCtPreview').disabled, false);
+});
+
+const captureId = '11111111-1111-4111-8111-111111111111';
+function numericPreview(id = captureId, age = 0) {
+  return { captureId: id, enabled: true, reason: 'ready', interpretation: 'legacy_meter_overlap_unverified',
+    unitsVerified: false, directionVerified: false, devices: [{ deviceIndex: 0,
+      readings: [{ field: 515, value: -12345, candidateUnit: 'W', receivedAgeSec: age }] }] };
+}
+
+test('one explicit refresh retains same-capture sharing consent through completion, never in normal reports', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
+  context.onHomeyReady(homey);
+  context.document.getElementById('refreshDualCtPreview').click(); calls[0].callback(null, numericPreview());
+  const consent = context.document.getElementById('consentDualCtCandidateExport');
+  consent.checked = true; consent.change();
+  context.document.getElementById('refreshDualCtResearch').click();
+  assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true, 'pending data cannot be exported');
+  calls[1].callback(null, { captureId, research: { status: 'complete', previewDiagnostics: { enabled: true } },
+    preview: numericPreview(captureId, 30) });
+  assert.equal(consent.checked, true); assert.equal(consent.disabled, false);
+  assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, false);
+  assert.equal(JSON.parse(context.document.getElementById('dualCtCandidateText').textContent).devices[0].readings[0].value, -12345);
+  assert.doesNotMatch(context.document.getElementById('dualCtCompactText').textContent, /12345|candidateUnit|captureId/);
+  assert.equal(context.document.getElementById('enableDualCtPreview').disabled, false, 'completed capture unlocks next capture option');
+  assert.equal(calls.length, 2); assert.equal(calls[1].url, '/dual-ct-research/view');
+});
+
+test('changed capture or absent identity revokes sharing consent and clears stale prepared values', () => {
+  for (const id of ['22222222-2222-4222-8222-222222222222', null]) {
+    const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+    homey.api = (_method, _url, _body, callback) => calls.push(callback);
+    context.onHomeyReady(homey);
+    context.document.getElementById('refreshDualCtPreview').click(); calls[0](null, numericPreview());
+    const consent = context.document.getElementById('consentDualCtCandidateExport'); consent.checked = true; consent.change();
+    context.document.getElementById('refreshDualCtResearch').click();
+    calls[1](null, { research: { status: 'listening', previewDiagnostics: { enabled: true } }, preview: numericPreview(id) });
+    assert.equal(consent.checked, false);
+    assert.equal(context.document.getElementById('dualCtCandidateText').textContent, '');
+    assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true);
+  }
+});
+
+test('late local views after Stop, expiry, failure, timeout or navigation cannot restore candidate exports', () => {
+  for (const event of ['stop', 'timeout', 'pagehide', 'error', 'expired']) {
+    const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+    homey.api = (_method, url, _body, callback) => calls.push({ url, callback });
+    context.onHomeyReady(homey);
+    context.document.getElementById('refreshDualCtPreview').click(); calls[0].callback(null, numericPreview());
+    const consent = context.document.getElementById('consentDualCtCandidateExport'); consent.checked = true; consent.change();
+    context.document.getElementById('refreshDualCtResearch').click();
+    if (event === 'stop') {
+      context.document.getElementById('stopDualCtResearch').click(); calls[2].callback(null, { status: 'stopped' });
+    } else if (event === 'timeout') [...context.timers.values()].find(timer => timer.ms === 20000 && !timer.interval).fn();
+    else if (event === 'pagehide') context.events.pagehide();
+    else if (event === 'error') calls[1].callback(new Error('PRIVATE'));
+    else calls[1].callback(null, { research: { status: 'complete' }, preview: numericPreview(captureId, 90) });
+    calls[1].callback(null, { research: { status: 'listening' }, preview: numericPreview() });
+    assert.equal(consent.checked, false, event);
+    assert.equal(context.document.getElementById('dualCtCandidateText').textContent, '', event);
+    assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true, event);
+    assert.doesNotMatch(context.document.getElementById('dualCtPreviewState').textContent, /12345|PRIVATE/, event);
+  }
+});
+
+test('account removal invalidates pending summary/preview reads as well as prepared private exports', async () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (_method, _url, _body, callback) => calls.push(callback);
+  context.onHomeyReady(homey);
+  context.document.getElementById('refreshDualCtPreview').click(); calls[0](null, numericPreview());
+  const consent = context.document.getElementById('consentDualCtCandidateExport'); consent.checked = true; consent.change();
+  context.document.getElementById('refreshDualCtResearch').click();
+  await context.document.getElementById('clearAppAuth').click();
+  calls[1](null, { research: { status: 'listening', previewDiagnostics: { enabled: true } }, preview: numericPreview() });
+  assert.equal(context.document.getElementById('dualCtCompactText').textContent, '');
+  assert.equal(context.document.getElementById('dualCtCandidateText').textContent, '');
+  assert.equal(consent.checked, false);
+  assert.equal(context.document.getElementById('enableDualCtPreview').checked, false);
+  assert.equal(context.document.getElementById('startDualCtResearch').disabled, false);
+});
+
+test('coherent summary refresh shows the precise unavailable preview reason after capture discovery fails', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey();
+  homey.api = (_method, _url, _body, callback) => callback(null, {
+    research: { status: 'discovery_unavailable', previewDiagnostics: { enabled: true } },
+    preview: { enabled: true, reason: 'capture_unavailable', devices: [] },
+  });
+  context.onHomeyReady(homey);
+  context.document.getElementById('refreshDualCtResearch').click();
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /could not discover or listen/);
+  assert.equal(context.document.getElementById('enableDualCtPreview').disabled, false);
   assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true);
 });
 

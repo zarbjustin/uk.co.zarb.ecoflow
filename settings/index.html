@@ -141,11 +141,12 @@
     <button id="stopDualCtResearch" type="button">Stop Dual CT discovery</button>
     <button id="refreshDualCtResearch" type="button">Refresh local capture summary</button>
     <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
+    <p id="dualCtCaptureMode" role="status" aria-live="polite"></p>
     <div id="dualCtResearchResult" role="status" aria-live="polite"></div>
     <button id="copyDualCtCompact" type="button" disabled>Copy compact Dual CT report</button>
     <button id="downloadDualCtCompact" type="button" disabled>Download compact Dual CT report</button>
     <p id="dualCtShareStatus" role="status" aria-live="polite"></p>
-    <details><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
+    <details id="dualCtPreviewPanel"><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
       <button id="refreshDualCtPreview" type="button"></button>
       <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
       <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" disabled><span id="dualCtCandidateConsent"></span></label>
@@ -225,6 +226,19 @@
       var candidateSnapshot = null;
       var candidateReport = null;
       var candidateReadAt = 0;
+      var candidateCaptureId = null;
+      function renderCaptureMode(evidence) {
+        var active = ['discovering', 'listening'].includes(evidence?.status);
+        var enabled = evidence?.previewDiagnostics?.enabled;
+        var checkbox = document.getElementById('enableDualCtPreview');
+        checkbox.disabled = active;
+        if (active && typeof enabled === 'boolean') checkbox.checked = enabled;
+        var mode = document.getElementById('dualCtCaptureMode');
+        mode.textContent = evidence ? Homey.__('settings.dual_ct.' + (enabled === true ? 'capture_mode_numeric'
+          : enabled === false ? 'capture_mode_structure' : 'capture_mode_unknown')) : '';
+        if (active) mode.textContent += ' ' + Homey.__('settings.dual_ct.capture_mode_locked');
+        if (evidence?.captureStart?.requiresRestart === true) mode.textContent += ' ' + Homey.__('settings.dual_ct.capture_mode_mismatch');
+      }
       function prepareCandidateExport() {
         candidateReport = null;
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
@@ -241,22 +255,26 @@
         document.getElementById('copyDualCtCandidates').disabled = !candidateReport;
         document.getElementById('downloadDualCtCandidates').disabled = !candidateReport;
       }
-      function clearDualCtPreview(reason) {
+      function clearDualCtPreview(reason, preserveConsent) {
         previewOperation++;
         clearTimeout(previewDeadline);
         clearTimeout(previewExpiry);
         candidateSnapshot = null;
-        document.getElementById('consentDualCtCandidateExport').checked = false;
+        if (!preserveConsent) {
+          document.getElementById('consentDualCtCandidateExport').checked = false;
+          candidateCaptureId = null;
+        }
         document.getElementById('consentDualCtCandidateExport').disabled = true;
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
         prepareCandidateExport();
         window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), { reason: reason },
           function (key) { return Homey.__('settings.dual_ct.' + key); });
       }
-      function renderDualCt(evidence) {
+      function renderDualCt(evidence, preservePreview) {
         dualCtCompact = evidence ? window.EcoFlowDualCtStatus.compact(evidence, evidence.appVersion) : null;
         document.getElementById('dualCtShareStatus').textContent = '';
-        clearDualCtPreview();
+        renderCaptureMode(evidence);
+        if (!preservePreview || !evidence || ['stopped', 'account_changed', 'not_started', 'discovery_unavailable', 'transport_unavailable'].includes(evidence.status)) clearDualCtPreview(evidence?.status);
         document.getElementById('dualCtCompactText').textContent = dualCtCompact ? JSON.stringify(dualCtCompact, null, 2) : '';
         document.getElementById('copyDualCtCompact').disabled = !dualCtCompact;
         document.getElementById('downloadDualCtCompact').disabled = !dualCtCompact;
@@ -295,7 +313,7 @@
           await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
           if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copied');
         } catch {
-          if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback');
+          if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback');
         }
       });
       document.getElementById('downloadDualCtCandidates').addEventListener('click', function () {
@@ -303,12 +321,33 @@
         if (!candidateReport) return;
         try {
           window.EcoFlowReporterStatus.download(candidateReport, document, URL, Blob);
-          document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.download_requested');
-        } catch { document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
+          document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_download_requested');
+        } catch { document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback'); }
       });
       renderDualCt(null);
+      function applyDualCtPreview(evidence, requestedAt) {
+        var elapsed = Date.now() - requestedAt;
+        if (elapsed < 0 || elapsed >= 20000) { clearDualCtPreview('request_failed'); return; }
+        var id = typeof evidence?.captureId === 'string' && /^[0-9a-f-]{36}$/.test(evidence.captureId) ? evidence.captureId : null;
+        if (!id || id !== candidateCaptureId) document.getElementById('consentDualCtCandidateExport').checked = false;
+        candidateCaptureId = id;
+        // Account for request transit time; receipt age is not measurement age.
+        if (Array.isArray(evidence?.devices)) evidence.devices.forEach(function (device) {
+          if (Array.isArray(device?.readings)) device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+        });
+        document.getElementById('dualCtPreviewPanel').open = true;
+        var ttl = window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), evidence,
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+        if (ttl) {
+          candidateSnapshot = window.EcoFlowDualCtStatus.candidateExport(evidence);
+          candidateReadAt = Date.now();
+          document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
+          prepareCandidateExport();
+          previewExpiry = setTimeout(function () { clearDualCtPreview('expired'); }, ttl);
+        } else clearDualCtPreview(evidence?.reason);
+      }
       document.getElementById('refreshDualCtPreview').addEventListener('click', function () {
-        clearDualCtPreview();
+        clearDualCtPreview(undefined, true);
         var operation = previewOperation;
         var requestedAt = Date.now();
         previewDeadline = setTimeout(function () { clearDualCtPreview('request_failed'); }, 20000);
@@ -317,22 +356,7 @@
           clearTimeout(previewDeadline);
           previewOperation++;
           if (err) { clearDualCtPreview('request_failed'); return; }
-          // Account for request transit time; receipt age is not measurement age.
-          var elapsed = Date.now() - requestedAt;
-          if (elapsed < 0 || elapsed >= 20000) return;
-          if (Array.isArray(evidence?.devices)) evidence.devices.forEach(function (device) {
-            if (Array.isArray(device?.readings)) device.readings.forEach(function (row) {
-              row.receivedAgeSec += elapsed / 1000;
-            });
-          });
-          var ttl = window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), evidence,
-            function (key) { return Homey.__('settings.dual_ct.' + key); });
-          if (ttl) {
-            candidateSnapshot = window.EcoFlowDualCtStatus.candidateExport(evidence);
-            candidateReadAt = Date.now();
-            document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
-            previewExpiry = setTimeout(function () { clearDualCtPreview('expired'); }, ttl);
-          }
+          applyDualCtPreview(evidence, requestedAt);
         });
       });
       document.getElementById('copyDualCtCompact').addEventListener('click', async function () {
@@ -353,33 +377,60 @@
         } catch { document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
       });
       function dualCtAction(action) {
-        renderDualCt(null);
+        clearDualCtPreview(undefined, action === 'refresh');
+        dualCtCompact = null;
+        document.getElementById('dualCtCompactText').textContent = '';
+        document.getElementById('copyDualCtCompact').disabled = true;
+        document.getElementById('downloadDualCtCompact').disabled = true;
         var operation = ++dualCtOperation;
+        var previewGeneration = previewOperation;
+        var requestedAt = Date.now();
+        var startAcknowledged = false;
         clearTimeout(dualCtDeadline);
         var result = document.getElementById('dualCtResearchResult');
         var start = document.getElementById('startDualCtResearch');
         start.disabled = true;
+        document.getElementById('enableDualCtPreview').disabled = true;
         result.textContent = Homey.__('settings.dual_ct.' + (action === 'start' ? 'discovering' : action === 'refresh' ? 'refreshing' : 'stopping'));
         dualCtDeadline = setTimeout(function () {
           if (operation !== dualCtOperation) return;
           dualCtOperation++;
           start.disabled = false;
+          clearDualCtPreview('request_failed');
           result.textContent = Homey.__('settings.dual_ct.timeout');
         }, 20000);
-        Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/support-snapshot' : '/dual-ct-research/' + action,
-          action === 'refresh' ? null : action === 'start'
-            ? { previewEnabled: document.getElementById('enableDualCtPreview').checked === true } : {}, function (err, evidence) {
+        function finish(err, evidence, captureStart) {
           if (operation !== dualCtOperation) return;
           clearTimeout(dualCtDeadline);
           dualCtOperation++;
           start.disabled = false;
-          if (err) result.textContent = Homey.__('settings.dual_ct.error');
-          else renderDualCt(action === 'refresh' ? evidence?.dualCtResearch : evidence);
+          if (err) { clearDualCtPreview('request_failed'); result.textContent = Homey.__('settings.dual_ct.error'); return; }
+          if (action === 'stop') { renderDualCt(evidence); return; }
+          var showPreview = previewGeneration === previewOperation;
+          renderDualCt({ ...evidence?.research, captureStart: captureStart }, true);
+          if (showPreview) applyDualCtPreview(evidence?.preview, requestedAt);
+        }
+        Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/dual-ct-research/view' : '/dual-ct-research/' + action,
+          action === 'refresh' ? null : action === 'start'
+            ? { previewEnabled: document.getElementById('enableDualCtPreview').checked === true } : {}, function (err, evidence) {
+          if (operation !== dualCtOperation) return;
+          if (err || action !== 'start') { finish(err, evidence); return; }
+          if (startAcknowledged) return;
+          startAcknowledged = true;
+          // One explicit Start also shows its effective local preview; no background polling.
+          Homey.api('GET', '/dual-ct-research/view', null, function (viewError, view) { finish(viewError, view, evidence?.captureStart); });
         });
       }
       document.getElementById('startDualCtResearch').addEventListener('click', function () { dualCtAction('start'); });
       document.getElementById('stopDualCtResearch').addEventListener('click', function () { dualCtAction('stop'); });
       document.getElementById('refreshDualCtResearch').addEventListener('click', function () { dualCtAction('refresh'); });
+      function invalidateDualCtView() {
+        dualCtOperation++;
+        clearTimeout(dualCtDeadline);
+        document.getElementById('startDualCtResearch').disabled = false;
+        document.getElementById('enableDualCtPreview').checked = false;
+        renderDualCt(null);
+      }
 
       var reportText = '';
       var displayedReport = null;
@@ -600,7 +651,7 @@
       });
 
       document.getElementById('clearAppAuth').addEventListener('click', async function () {
-        clearDualCtPreview();
+        invalidateDualCtView();
         var status = document.getElementById('appAuthSaved');
         status.textContent = 'Removing...';
         try {
@@ -624,6 +675,7 @@
         var m = document.getElementById('mqtt').checked;
         var status = document.getElementById('saved');
         if (!a || !s) { status.textContent = 'Access Key and Secret Key are required.'; return; }
+        invalidateDualCtView();
         status.textContent = 'Saving...';
         try {
           await validateCredentials(Homey, a, s, h);
