@@ -238,5 +238,8 @@
   },
   "1.10.43": {
     "en": "Add optional read-only Dual CT numeric candidate preview with explicit consent, per-field expiry and clearer unavailable reasons. Provide a separate reviewed candidate JSON export; normal support reports remain structure-only. Units, channel roles and direction remain unverified; no Dual CT pairing, Energy, Flows or controls."
+  },
+  "1.10.44": {
+    "en": "Fix Dual CT receipt confirmation and add compact encoding/preview diagnostics. Show effective capture mode, keep consent explicit and refresh the local summary and preview together. Numeric candidates remain separate, unverified and excluded from normal reports; no Dual CT Energy, Flows or controls."
   }
 }
