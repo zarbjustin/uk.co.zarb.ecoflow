@@ -2,6 +2,41 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.44 / Build 59 — published 13 October 2026
+
+Diagnostic source `a3ff20aa45c84150e0a994d1a7c6b7c1230b2591`; exact release/tag
+`v1.10.44` is `7d020a62547869030afda98c9b02525b9f0389b2`. Later handover commits
+are not the uploaded source. Supersedes the unpublished follow-up notes below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38467980503 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38468217057 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38468410290 — passed: 730 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38468663549 — passed; created Build 59 and uploaded v1.10.44.
+- Build 59 was observed Draft with the correct version/changelog, then Publish
+  to Test was clicked. Browser control timed out during readback. Recovery used
+  the official Homey Apps API via the existing CLI login, without exposing tokens:
+  `getBuild` confirms build 59, version 1.10.44, state `test`; build 18 remains
+  version 1.10.3, state `live`. No duplicate publication or certification action.
+- No new portal screenshot/public store readback is available because browser
+  control became unavailable; the authenticated API is the channel proof.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No installation,
+  native Homey webview acceptance or physical Dual CT validation this turn.
+
+Release scope: per-route receipt evidence, compact schema 4 preview/encoding
+metadata, effective-mode feedback, locked active-capture option, coherent local
+summary/preview refresh and capture-correlated explicit candidate-sharing consent.
+Normal reports remain structural. Missing encoding remains a numeric blocker;
+second-bank units/roles/direction stay unverified. No new Dual CT driver, pairing,
+Energy source, Flows or controls. No raw customer telemetry committed.
+
+Robert's .43 Report conversation was refreshed: still two messages, with the
+49 app-packet observation and previously reviewed screenshots. Updated reply is
+draft-only. Optional next request is ONE compact report from .44; only if numeric
+candidates appear and he chooses to share them, one separate candidate export.
+If blocked/expired, exact preview wording suffices; no repeated capture, full
+report, new crash log or rushed screenshots. Nothing sent to Robert this turn.
+
 ## Test v1.10.43 / Build 58 — published 13 October 2026
 
 Unpublished diagnostic follow-up: per-transport receipt counts/ages and legacy

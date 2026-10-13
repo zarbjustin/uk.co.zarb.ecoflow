@@ -2,7 +2,13 @@
 
 ## Field-mapping audit and candidate decoder — 13 October 2026
 
-### Capture-mode and refresh/export sprints — unpublished
+### Capture-mode and refresh/export sprints — Test .44 / Build 59
+
+Published 13 October 2026 from exact tag `v1.10.44`
+(`7d020a62547869030afda98c9b02525b9f0389b2`). Source and exact-tag CI passed.
+Authenticated Homey Apps API readback confirms Build 59 state `test`; Live
+remains Build 18 / v1.10.3. See STATUS.md for release evidence. The earlier
+unpublished status below records the implementation stage, not current release.
 
 Start remains idempotent for a discovering/listening capture. Its response now
 distinguishes reused, superseded, requested preview mode, effective mode and
