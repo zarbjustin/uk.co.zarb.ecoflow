@@ -90,12 +90,67 @@ test('compact structure excludes scalar values and arbitrary field paths, and in
   assert.equal(report.valuesCaptured, false);
 });
 
-test('worst-case compact report stays below the message budget and declares omitted structure', () => {
+test('duplicate structures are merged instead of consuming the message budget', () => {
   const fields = Array.from({ length: 16 }, () => ({ path: Array(7).fill('gridConnectionPower').join('.'), type: 'number' }));
   const report = compact({ jsonShapes: Array(8).fill({ deviceIndex: 0, source: 'developer_rest', fields }) });
   assert.ok(JSON.stringify(report, null, 2).length <= 7500);
+  assert.equal(report.structureOmitted, false);
+  assert.equal(report.jsonShapes.length, 1);
+  assert.equal(report.jsonShapes[0].fields.length, 1);
+});
+
+test('oversized mixed telemetry retains representative fields across formats, sources and devices', () => {
+  const jsonShapes = ['app_json', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].flatMap((source) =>
+    [0, 1].map((deviceIndex) => ({ source, deviceIndex, fields: Array.from({ length: 32 }, (_, i) => ({
+      path: `${Array(5).fill('gridConnectionPower').join('.')}.channels.[${i % 4}].${['power', 'voltage', 'current', 'energy', 'frequency', 'phaseA', 'phaseB', 'phaseC'][Math.floor(i / 4)]}`,
+      type: 'number', value: 'PRIVATE',
+    })) })));
+  const shapes = Array.from({ length: 16 }, (_, i) => ({ deviceIndex: i % 2, cmdFunc: 254, cmdId: i,
+    fields: Array.from({ length: 32 }, (_, j) => ({ field: j + 1, wire: 0, value: 'PRIVATE' })) }));
+  const report = compact({ jsonShapes, shapes, deviceCount: 2 });
+  assert.equal(report.schemaVersion, 3);
+  assert.ok(JSON.stringify(report, null, 2).length <= 7500);
   assert.equal(report.structureOmitted, true);
-  assert.deepEqual(report.jsonShapes, []);
+  assert.ok(report.jsonShapes.some((shape) => shape.fields.length));
+  assert.ok(report.shapes.some((shape) => shape.fields.length));
+  assert.equal(report.structureCoverage.groupsIncluded, report.structureCoverage.groupsAvailable);
+  assert.ok(report.structureCoverage.fieldsIncluded > 0);
+  assert.ok(report.structureCoverage.fieldsIncluded < report.structureCoverage.fieldsAvailable);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE/);
+});
+
+test('field union retains later differences and compact generation never mutates stored capture', () => {
+  const input = { jsonShapes: [
+    { deviceIndex: 0, source: 'app_json', fields: [{ path: 'power', type: 'number' }] },
+    { deviceIndex: 0, source: 'app_json', fields: [{ path: 'power', type: 'number' }, { path: 'voltage', type: 'number' }] },
+  ] };
+  const before = JSON.stringify(input); const report = compact(input);
+  assert.equal(report.jsonShapes.length, 1);
+  assert.equal(report.jsonShapes[0].fields.length, 2);
+  assert.equal(JSON.stringify(input), before);
+  assert.equal(report.structureCoverage.fieldsAvailable, 2);
+  assert.deepEqual(compact(input), report);
+});
+
+test('source evidence distinguishes received structure from a subscription alone', () => {
+  const report = compact({ history: [
+    { deviceIndex: 0, source: 'app_mqtt', status: 'protobuf', samples: 25, lastAgeSec: 2 },
+    { deviceIndex: 0, source: 'app_mqtt', status: 'protobuf', samples: 3, lastAgeSec: 1 },
+    { deviceIndex: 0, source: 'developer_mqtt', status: 'listening', samples: 1, lastAgeSec: 0 },
+    { deviceIndex: 0, source: 'PRIVATE', status: 'json', samples: 1, lastAgeSec: 0 },
+  ] });
+  assert.equal(report.observationScope, 'retained_capture_history');
+  assert.deepEqual(report.recentObservations, [{ deviceIndex: 0, source: 'app_mqtt', format: 'protobuf', retainedSamples: 28, lastAgeSec: 1 }]);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE/);
+});
+
+test('representative JSON prioritises scalar leaves without inventing measurements', () => {
+  const report = compact({ jsonShapes: [{ deviceIndex: 0, source: 'app_json', fields: [
+    { path: 'channels', type: 'object' }, { path: 'channels.power', type: 'number', value: 999999 },
+  ] }] });
+  assert.equal(report.jsonShapes[0].fields[0].path, 'channels.power');
+  assert.equal(report.valuesCaptured, false);
+  assert.doesNotMatch(JSON.stringify(report), /999999/);
 });
 
 test('worst-case metadata also stays below the copy budget with an explicit omission flag', () => {

@@ -216,6 +216,12 @@
         document.getElementById('downloadDualCtCompact').disabled = !dualCtCompact;
         window.EcoFlowDualCtStatus.render(document.getElementById('dualCtResearchResult'), evidence,
           function (key) { return Homey.__('settings.dual_ct.' + key); });
+        if (dualCtCompact?.structureOmitted) {
+          var coverage = document.createElement('p');
+          coverage.textContent = Homey.__('settings.dual_ct.structure_partial') + ' '
+            + dualCtCompact.structureCoverage.fieldsIncluded + '/' + dualCtCompact.structureCoverage.fieldsAvailable;
+          document.getElementById('dualCtResearchResult').appendChild(coverage);
+        }
       }
       document.getElementById('dualCtTitle').textContent = Homey.__('settings.dual_ct.title');
       document.getElementById('dualCtOverview').textContent = Homey.__('settings.dual_ct.overview');

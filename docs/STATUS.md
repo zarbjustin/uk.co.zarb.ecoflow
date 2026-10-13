@@ -2,6 +2,57 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Dual CT structure-retaining exporter — unpublished diagnostic work
+
+Field feedback from v1.10.41 confirms provisional 421 admission, 58 accepted
+samples and recognised structure, but schema 2 dropped all structures at the
+size threshold. No retained field numbers/paths or measurement values were
+received from that report. Do not interpret its empty arrays as absent telemetry.
+
+### Sprint 1: representative export — implemented locally
+
+Compact schema 3 unions unique fields by JSON device/source and protobuf
+device/command. Duplicate packets no longer consume the budget. Optional
+inventory candidates are trimmed first to reserve structure space, headers
+are admitted across both formats, then fields are allocated round-robin with
+scalar JSON leaves ahead of containers. Selected identity and route results
+remain. A 7,400-character allocation ceiling reserves flag space within the
+7,500-character pretty-JSON limit. No all-or-nothing structural deletion.
+Coverage records included/available unique groups and fields; omission flags
+now indicate partial coverage. Counts concern sanitised bounded inputs only,
+not every packet or unknown field the vendor might send. Stored capture is not
+mutated, and refreshing/exporting remains local-only.
+
+### Sprint 2: reception provenance — implemented locally
+
+Protobuf structure explicitly belongs to app MQTT. Export retains up to eight
+anonymous recognised-source/format history summaries with relative receipt age
+and retained-history sample counts. A listening subscription is not counted as
+observed telemetry. Counts are bounded historical observations, not guaranteed
+total capture counts or confirmed measurement freshness. No raw values/identities.
+
+### Sprint 3: decoding evidence — gated pending retained structure
+
+Next inspect representative field paths/numbers and transport provenance, match
+them against audited vendor/upstream contracts, then build synthetic/redacted
+fixtures for genuinely evidenced fields. Establish grid versus solar roles,
+per-phase versus total values, units, sign and field-level freshness. The current
+58-sample summary does not permit those mappings. No guessed decoder or driver.
+
+### Sprint 4: read-only driver acceptance — later gate
+
+Only after mappings are supported by real evidence, enable dedicated read-only
+pairing and compare with EcoFlow. Keep Energy and controls independently gated.
+Existing STREAM/5000 production acceptance can progress without full Dual CT.
+
+No commit/push/version bump/Test publication in this implementation turn. Mainline
+and Live unchanged; Test remains v1.10.41 / Build 56. Capture lifetime remains
+in-memory only; do not promise earlier structure survives an app update/restart.
+Local acceptance: 696 tests and lint pass; diff checks pass. Regressions cover
+oversized mixed-format coverage, duplicate merging/field unions, privacy, size
+limits, deterministic non-mutating export, scalar prioritisation and received
+versus subscribed provenance. No new hardware observation or remote CI claimed.
+
 ## Test v1.10.41 / Build 56 — published 13 October 2026
 
 Diagnostic source `dbfc1a3bd5df2ed9dcfbad903d0fccf44893f8e2`; exact uploaded

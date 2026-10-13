@@ -71,34 +71,89 @@
       'channel1', 'channel2', 'power', 'totalPower', 'voltage', 'current', 'energy', 'powerFactor', 'frequency',
       'importEnergy', 'exportEnergy', 'phaseA', 'phaseB', 'phaseC', 'localMeter', 'powGetSysLoad', 'powGetSysGrid',
       'gridPower', 'activePower', 'meterPower', 'meterVoltage', 'meterCurrent', 'gridConnectionPower']);
-    const jsonShapes = Array.isArray(evidence?.jsonShapes) ? evidence.jsonShapes.slice(0, 8)
+    const jsonShapes = Array.isArray(evidence?.jsonShapes) ? evidence.jsonShapes.slice(0, 16)
       .filter((shape) => [0, 1].includes(shape?.deviceIndex)
         && ['app_json', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(shape?.source))
       .map((shape) => ({ deviceIndex: shape.deviceIndex, source: shape.source,
-        fields: Array.isArray(shape.fields) ? shape.fields.slice(0, 16).filter((field) =>
+        fields: Array.isArray(shape.fields) ? shape.fields.slice(0, 32).filter((field) =>
           typeof field?.path === 'string' && field.path.length <= 150
           && field.path.split('.').every((key) => keys.has(key) || /^\[[0-3]\]$/.test(key))
           && ['null', 'array', 'object', 'number', 'string', 'boolean'].includes(field.type))
           .map((field) => ({ path: field.path, type: field.type })) : [] })) : [];
-    const shapes = Array.isArray(evidence?.shapes) ? evidence.shapes.slice(0, 8)
+    const shapes = Array.isArray(evidence?.shapes) ? evidence.shapes.slice(0, 16)
       .filter((shape) => [0, 1].includes(shape?.deviceIndex) && Number.isInteger(shape.cmdFunc)
         && shape.cmdFunc >= 0 && shape.cmdFunc <= 65535 && Number.isInteger(shape.cmdId) && shape.cmdId >= 0 && shape.cmdId <= 65535)
-      .map((shape) => ({ deviceIndex: shape.deviceIndex, cmdFunc: shape.cmdFunc, cmdId: shape.cmdId,
-        fields: Array.isArray(shape.fields) ? shape.fields.slice(0, 16).filter((field) =>
+      .map((shape) => ({ deviceIndex: shape.deviceIndex, source: 'app_mqtt', cmdFunc: shape.cmdFunc, cmdId: shape.cmdId,
+        fields: Array.isArray(shape.fields) ? shape.fields.slice(0, 32).filter((field) =>
           Number.isInteger(field?.field) && field.field > 0 && field.field <= 536870911 && [0, 1, 2, 5].includes(field.wire))
           .map((field) => ({ field: field.field, wire: field.wire })) : [] })) : [];
-    const report = { reportType: 'dual_ct_compact', schemaVersion: 2,
+    // Union distinct fields per transport/message, so repeated packets do not
+    // consume the budget. Preserve headers and fair field coverage before metadata.
+    function group(input, key) {
+      const groups = new Map();
+      input.forEach((shape) => {
+        const id = key(shape);
+        if (!groups.has(id)) groups.set(id, { ...shape, fields: [] });
+        const target = groups.get(id);
+        shape.fields.forEach((field) => {
+          if (!target.fields.some((existing) => JSON.stringify(existing) === JSON.stringify(field))) target.fields.push(field);
+        });
+      });
+      return Array.from(groups.values());
+    }
+    const jsonGroups = group(jsonShapes, (shape) => `${shape.deviceIndex}:${shape.source}`);
+    const protoGroups = group(shapes, (shape) => `${shape.deviceIndex}:${shape.cmdFunc}:${shape.cmdId}`);
+    // Prefer scalar leaf structure over enclosing objects, without interpreting values.
+    jsonGroups.forEach((shape) => shape.fields.sort((a, b) =>
+      Number(['object', 'array'].includes(a.type)) - Number(['object', 'array'].includes(b.type))));
+    const available = jsonGroups.concat(protoGroups);
+    const recent = new Map();
+    if (Array.isArray(evidence?.history)) evidence.history.slice(-24).forEach((event) => {
+      if (![0, 1].includes(event?.deviceIndex) || !['json', 'protobuf'].includes(event.status)
+        || !['app_mqtt', 'app_json', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(event.source)
+        || !Number.isInteger(event.samples) || event.samples < 1 || event.samples > 128
+        || !Number.isFinite(event.lastAgeSec) || event.lastAgeSec < 0 || event.lastAgeSec > 86400) return;
+      const key = `${event.deviceIndex}:${event.source}:${event.status}`;
+      const previous = recent.get(key);
+      recent.set(key, { deviceIndex: event.deviceIndex, source: event.source, format: event.status,
+        retainedSamples: Math.min(128, (previous?.retainedSamples || 0) + event.samples),
+        lastAgeSec: Math.min(previous?.lastAgeSec ?? Infinity, Math.floor(event.lastAgeSec)) });
+    });
+    const report = { reportType: 'dual_ct_compact', schemaVersion: 3,
       appVersion: typeof version === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(version) ? version : 'unknown',
-      summary: describe(evidence), inventory, jsonShapes, shapes, structureOmitted: false, metadataOmitted: false,
+      summary: describe(evidence), inventory, jsonShapes: [], shapes: [], structureOmitted: false, metadataOmitted: false,
+      observationScope: 'retained_capture_history', recentObservations: Array.from(recent.values()).slice(0, 8),
+      structureCoverage: { groupsAvailable: available.length, groupsIncluded: 0,
+        fieldsAvailable: available.reduce((sum, shape) => sum + shape.fields.length, 0), fieldsIncluded: 0 },
       channelMapping: 'unverified', valuesCaptured: false, pairingEnabled: false,
       contributesToEnergy: false, controlsEnabled: false };
-    if (JSON.stringify(report, null, 2).length > 7500) {
-      report.jsonShapes = []; report.shapes = []; report.structureOmitted = true;
-    }
-    while (JSON.stringify(report, null, 2).length > 7500 && report.inventory.some((row) => row.candidates.length)) {
+    const size = () => JSON.stringify(report, null, 2).length;
+    // Reserve room for useful structure rather than spending it on unrelated candidates.
+    while ((size() > 3000 && available.length || size() > 7500) && report.inventory.some((row) => row.candidates.length)) {
       const largest = report.inventory.reduce((a, b) => (a.candidates.length >= b.candidates.length ? a : b));
       largest.candidates.pop(); report.metadataOmitted = true;
     }
+    const retained = [];
+    // Alternate formats; each message/source gets a header before any gets all fields.
+    for (let i = 0; i < Math.max(jsonGroups.length, protoGroups.length); i += 1) {
+      [[jsonGroups[i], report.jsonShapes], [protoGroups[i], report.shapes]].forEach(([shape, output]) => {
+        if (!shape) return;
+        const header = { ...shape, fields: [] };
+        output.push(header); report.structureCoverage.groupsIncluded += 1;
+        if (size() > 7400) { output.pop(); report.structureCoverage.groupsIncluded -= 1; }
+        else retained.push({ shape, header });
+      });
+    }
+    const longest = Math.max(0, ...retained.map((entry) => entry.shape.fields.length));
+    for (let i = 0; i < longest; i += 1) {
+      retained.forEach(({ shape, header }) => {
+        if (!shape.fields[i]) return;
+        header.fields.push(shape.fields[i]); report.structureCoverage.fieldsIncluded += 1;
+        if (size() > 7400) { header.fields.pop(); report.structureCoverage.fieldsIncluded -= 1; }
+      });
+    }
+    report.structureOmitted = report.structureCoverage.groupsIncluded < available.length
+      || report.structureCoverage.fieldsIncluded < report.structureCoverage.fieldsAvailable;
     return report;
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact };

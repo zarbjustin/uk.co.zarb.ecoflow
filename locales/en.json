@@ -10,6 +10,7 @@
       "compact_copy": "Copy compact Dual CT report",
       "compact_download": "Download compact Dual CT report",
       "preview_title": "Read-only Dual CT preview",
+      "structure_partial": "Compact report retains representative structure, not every field. Included/available unique fields:",
       "stage_not_identified": "No eligible meter identified.",
       "stage_identified": "Meter identified; checking read-only transports.",
       "stage_subscribed_no_samples": "Subscribed, but no recognised structure received yet.",

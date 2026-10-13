@@ -10,6 +10,7 @@
       "compact_copy": "Kompakten Dual-CT-Bericht kopieren",
       "compact_download": "Kompakten Dual-CT-Bericht herunterladen",
       "preview_title": "Schreibgeschützte Dual-CT-Vorschau",
+      "structure_partial": "Der kompakte Bericht enthält repräsentative Strukturen, nicht alle Felder. Enthaltene/verfügbare eindeutige Felder:",
       "stage_not_identified": "Kein geeigneter Zähler erkannt.",
       "stage_identified": "Zähler erkannt; schreibgeschützte Verbindungen werden geprüft.",
       "stage_subscribed_no_samples": "Abonniert, aber noch keine erkannte Struktur empfangen.",

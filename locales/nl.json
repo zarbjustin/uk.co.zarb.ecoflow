@@ -10,6 +10,7 @@
       "compact_copy": "Compact Dual CT-rapport kopiëren",
       "compact_download": "Compact Dual CT-rapport downloaden",
       "preview_title": "Alleen-lezen Dual CT-voorbeeld",
+      "structure_partial": "Het compacte rapport bevat representatieve structuur, niet elk veld. Opgenomen/beschikbare unieke velden:",
       "stage_not_identified": "Geen geschikte meter gevonden.",
       "stage_identified": "Meter gevonden; alleen-lezen verbindingen worden gecontroleerd.",
       "stage_subscribed_no_samples": "Geabonneerd, maar nog geen herkende structuur ontvangen.",
