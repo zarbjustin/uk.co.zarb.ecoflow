@@ -1,7 +1,7 @@
 import { AppDevice } from './appDevices';
 import { decodeFrameHeaders } from './streamAc5000Protocol';
 import {
-  dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot, dualCtInventorySnapshot,
+  dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot, dualCtInventorySnapshot, dualCtDiscoveryIdentity,
 } from './dualCtSources';
 import { DualCtHistory, dualCtHistorySnapshot } from './dualCtHistory';
 
@@ -10,6 +10,17 @@ export { dualCtResearchDevices } from './dualCtSources';
 export const DUAL_CT_CAPTURE_MS = 120000;
 const MAX_FRAMES = 128;
 const MAX_SHAPES = 16;
+
+export function dualCtSelectedSnapshot(input: any): Array<Record<string, unknown>> {
+  return Array.isArray(input) ? input.slice(0, 2).filter((row) => [0, 1].includes(row?.deviceIndex)
+    && ['explicit_name', 'observed_app_product_type_421'].includes(row?.basis)).map((row) => ({
+    deviceIndex: row.deviceIndex,
+    basis: row.basis,
+    provisional: row.basis === 'observed_app_product_type_421',
+    appListed: row.appListed === true,
+    developerListed: row.developerListed === true,
+  })) : [];
+}
 
 export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
   const bounded = (value: any, max: number) => (Number.isInteger(value) && value >= 0 && value <= max ? value : 0);
@@ -29,6 +40,7 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     cleanupFailures: bounded(input?.cleanupFailures, 65535),
     history: dualCtHistorySnapshot(input?.history),
     inventory: dualCtInventorySnapshot(input?.inventory),
+    selected: dualCtSelectedSnapshot(input?.selected),
     jsonShapes: dualCtJsonShapesSnapshot(input?.jsonShapes),
     routes: Array.isArray(input?.routes) ? input.routes.slice(0, 8).filter((route: any) => [0, 1].includes(route?.deviceIndex)
       && ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(route?.source)
@@ -93,6 +105,7 @@ interface ResearchHooks {
 }
 
 export class DualCtResearch {
+  private selected: Array<Record<string, unknown>> = [];
   private cleanupFailures = 0;
   private readonly history = new DualCtHistory();
   private generation = 0;
@@ -145,6 +158,7 @@ export class DualCtResearch {
     this.endedAt = this.startedAt === null ? null : this.now();
     if (this.startedAt !== null) this.history.record(null, 'session', status, this.now());
     if (clear) {
+      this.selected = [];
       this.startedAt = null; this.endedAt = null; this.deviceCount = 0;
       this.frames = 0; this.rejected = 0; this.shapes = [];
       this.jsonShapes = []; this.routes = [];
@@ -167,6 +181,12 @@ export class DualCtResearch {
         this.stop('complete'); return;
       }
       this.deviceCount = devices.length;
+      this.selected = devices.map((device, deviceIndex) => ({
+        deviceIndex,
+        basis: dualCtDiscoveryIdentity(device),
+        appListed: device.appListed !== false,
+        developerListed: device.developerListed === true,
+      }));
       if (!devices.length) {
         this.stop('no_explicit_model'); return;
       }
@@ -299,6 +319,7 @@ export class DualCtResearch {
       cleanupFailures: Math.min(65535, this.cleanupFailures),
       history: this.history.snapshot(this.now()),
       inventory: this.status === 'account_changed' || this.startedAt === null ? [] : dualCtInventorySnapshot(this.hooks.inventory?.()),
+      selected: dualCtSelectedSnapshot(this.selected),
       jsonShapes: dualCtJsonShapesSnapshot(this.jsonShapes),
       routes: this.routes.map((route) => ({ ...route })),
       shapes: this.shapes.map((shape) => ({ ...shape, fields: shape.fields.map((field) => ({ ...field })) })),

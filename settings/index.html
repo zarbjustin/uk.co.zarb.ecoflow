@@ -117,7 +117,9 @@
     <details id="dualCtTechnical"><summary id="dualCtTechnicalTitle">How capture works and privacy</summary>
     <p>This is not Dual CT pairing or meter support. Start checks the saved EcoFlow app and Developer
       accounts once each, then listens for up to two minutes to at most two owned devices explicitly labelled
-      Smart Meter Dual CT in product metadata. Renamed devices and shared devices are excluded.
+      Smart Meter Dual CT in product metadata, or the provisionally observed app productType 421.
+      A display name alone never qualifies; shared devices are excluded. ProductType 421 is
+      admitted for discovery only, not verified readings or pairing.
       It uses existing shared MQTT connections, which may affect an EcoFlow app session. Developer
       observations require the device to appear in that account's inventory. At most three read-only
       operations per identified meter check its quota and resolved host, using the existing request retry

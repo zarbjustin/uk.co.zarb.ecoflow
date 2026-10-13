@@ -2,6 +2,54 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Selected identity and discovery outcomes — unpublished diagnostic work
+
+Capture now retains up to two anonymous selected-meter records: identity basis,
+provisional flag and authorised account-route availability, never serial/name.
+The compact report preserves these and transport results ahead of optional
+candidate metadata/structure. EN/DE/NL settings distinguish identification,
+subscription without recognised structure, unavailable transports, unmapped
+responses and recognised structure. No measurement contract is inferred.
+
+### Production acceptance gates (separate from Dual CT completeness)
+
+- Existing devices: update-in-place, retained IDs/Flows/counters, restart and
+  account reconnect; no deletion/re-pairing required for a routine update.
+- STREAM/5000: compare unit versus installation scope, freshness and charging/
+  discharging signs; verify missing/stale telemetry cannot drive wrong decisions.
+- Energy: charging/discharging integration, outages/restarts and socket flows;
+  no double counting, discontinuity or unexpected cumulative-counter reset.
+- Reliability: concurrent normal/research subscriptions, connection recovery,
+  expired/cancelled captures and no diagnostic load regression during a soak.
+- Settings/report export: actual Homey mobile/web host acceptance and review of
+  privacy/size/fallback; passing synthetic DOM tests is not installed-host proof.
+- Release: exact source CI, upgrade smoke/soak evidence, clear supported-model
+  matrix and known limitations, then separately approved certification/Live.
+
+Dual CT can remain quarantined while otherwise validated app functionality
+progresses. Full Dual CT support additionally needs actual telemetry structure,
+field units/signs/channel roles (grid versus solar, per phase versus total),
+freshness, corroborated model identity, verified decoder fixtures, then dedicated
+read-only pairing acceptance. Energy and commands are later gates, not automatic
+consequences of identifying productType 421. Do not make repeated/time-limited
+tester captures a condition of progress; finish software checks independently.
+
+## ProductType 421 discovery fix — local only, 13 October 2026
+
+Unpublished diagnostic-branch work after Test v1.10.40. Field report plus matching
+EcoFlow screenshots corroborate app productType 421 on one Dual CT installation.
+Independent upstream/official confirmation is still absent (see Dual CT plan).
+Provisional opt-in discovery admits owned app productType 421 with empty/numeric
+fallback name, rejects contradictory names and other identifiers, and separates
+observed-code counts from explicit-name counts. It does not enable pairing,
+readings, Energy, Flows or controls. Mainline/Live unchanged; no publish, version
+bump, commit or push in this turn. Reply to tester is draft-only.
+Local verification: 691 tests pass, lint and diff checks pass. Regression coverage
+includes observed-code versus explicit-name counts, app-owned identity admission,
+Developer-only exclusion, contradictory names/shared/invalid identities, wrong
+code fields, cached-reply rejection, structure-only live capture and Stop cleanup.
+No real Dual CT telemetry or hardware validation occurred in this turn.
+
 ## Test v1.10.40 / Build 55 — published 13 October 2026
 
 Diagnostic branch source `ae9c5b70a47b63653af61953353386df17258b55`;

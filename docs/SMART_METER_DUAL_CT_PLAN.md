@@ -1,5 +1,32 @@
 # Smart Meter Dual CT — asset and integration assessment
 
+## Observed app productType 421 — read-only discovery, 13 October 2026
+
+A v1.10.40 field report shows one owned meter-like app candidate carrying
+numeric `productType: 421`, while matching EcoFlow screenshots identify an
+installed Dual CT meter. This is single-installation corroboration, not an
+official vendor identity contract or an independently established channel map.
+
+Public search and refreshed upstream review did not establish independent 421
+support. Reviewed refs: shuette42/ecoflow-energy-ha
+`563226ad9b2d40eb909eafb5b1b3aeaad39b3225` (model constants and smart-meter docs),
+MichelFR/ha-ecoflow-iot `45d9bb2952904cffa590cb811da0c316c66dd589`
+(custom_components). No 421/Dual CT identity contract found in those reviewed
+locations. The official PP3 page could not be read through the web tool this
+turn; earlier documentation review is not fresh proof of absence.
+
+Discovery provisionally accepts normalised app metadata `productType: 421`
+when productName is empty or its numeric fallback `421`. It rejects contradictory
+model names, shared/invalid identities, arbitrary display-name hints, productId
+421 and other codes. Developer-only numeric candidates remain excluded; an
+exact owned Developer serial match may authorise its read-only transport only
+after the app model is admitted. Existing two-device/capture/frame bounds remain.
+Reports count observed-code admissions separately from explicit-name matches.
+
+This gate exists only in opt-in research. No driver, pairing, decoded measurements,
+Homey Energy, Flows or commands are enabled. Further structure capture is required
+before any field interpretation. Keep raw reports and identifiers out of Git.
+
 Reviewed 10 October 2026. No new driver, pairing admission, control, capability
 or Energy source is enabled. The owner subsequently approved v1.10.27 / Build 42
 for Test on 10 October 2026; it is now published. Dual CT pairing remains disabled.

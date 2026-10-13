@@ -101,8 +101,82 @@ test('worst-case compact report stays below the message budget and declares omit
 test('worst-case metadata also stays below the copy budget with an explicit omission flag', () => {
   const candidate = { shared: true, metadataPresent: true, codes: ['productId', 'productType', 'modelId', 'deviceType']
     .map((field) => ({ field, code: 4294967295 })) };
-  const report = compact({ inventory: ['app', 'developer'].map((source) => ({ source,
+  const report = compact({ deviceCount: 1, selected: [{ deviceIndex: 0, basis: 'observed_app_product_type_421', appListed: true }],
+    routes: [{ deviceIndex: 0, source: 'app_mqtt', status: 'listening' }], inventory: ['app', 'developer'].map((source) => ({ source,
     available: true, inspected: 256, candidates: Array(8).fill(candidate) })) });
   assert.ok(JSON.stringify(report, null, 2).length <= 7500);
   assert.equal(report.metadataOmitted, true);
+  assert.equal(report.summary.selected[0].basis, 'observed_app_product_type_421');
+  assert.equal(report.summary.routes[0].status, 'listening');
+});
+
+test('field-observed productType 421 admits owned app rows without treating it as an explicit name', () => {
+  const { mergeDualCtInventory, dualCtDiscoveryIdentity } = require('../.homeybuild/lib/dualCtSources');
+  const app = normalizeAppDeviceList({ bound: [{ sn: 'ZZ99SYNTHETIC0421', productType: 421, deviceName: 'renamed' }] });
+  assert.equal(dualCtDiscoveryIdentity(app[0]), 'observed_app_product_type_421');
+  assert.equal(dualCtResearchDevices(app).length, 1);
+  const summary = dualCtInventorySummary(app, [], [true, true]);
+  assert.equal(summary[0].explicitMatches, 0);
+  assert.equal(summary[0].observedCodeMatches, 1);
+  assert.equal(compact({ inventory: summary }).inventory[0].observedCodeMatches, 1);
+  const merged = mergeDualCtInventory(app, [{ sn: app[0].sn, online: 1 }]);
+  assert.equal(merged[0].appListed, true);
+  assert.equal(merged[0].developerListed, true);
+  assert.deepEqual(mergeDualCtInventory([], [{ sn: app[0].sn, productName: '421', productType: 421 }]), []);
+});
+
+test('421 does not admit renamed original meters, shared devices, conflicting models or unrelated codes', () => {
+  const base = { sn: 'ZZ99SYNTHETIC0421', name: 'Smart Meter Dual CT', productName: '421',
+    shared: false, modelCodes: [{ field: 'productType', code: 421 }] };
+  const denied = [
+    { ...base, shared: true }, { ...base, sn: 'bad/serial' },
+    { ...base, productName: 'STREAM Ultra X' }, { ...base, productName: 'Smart Meter' },
+    { ...base, modelCodes: [] }, { ...base, modelCodes: [{ field: 'productId', code: 421 }] },
+    { ...base, modelCodes: [{ field: 'productType', code: 420 }] },
+  ];
+  denied.forEach((device) => assert.equal(dualCtResearchDevices([device]).length, 0));
+  const unknown = normalizeAppDeviceList({ bound: [{ sn: base.sn, productType: 422, deviceName: base.name }] });
+  assert.equal(dualCtResearchDevices(unknown).length, 0);
+  assert.equal(dualCtResearchDevices(Array(3).fill(base)).length, 1);
+});
+
+test('421 capture reaches read-only app subscription with live structure only and cleans up', async () => {
+  const app = normalizeAppDeviceList({ bound: [{ sn: 'ZZ99SYNTHETIC0421', productType: '421' }] });
+  let subscribed = null; let removed = false;
+  const capture = new DualCtResearch({ list: async () => app,
+    subscribe: async (sn, handler) => { subscribed = { sn, handler }; return true; },
+    unsubscribe: () => { removed = true; }, timer: () => 1, cancel: () => {} });
+  await capture.start();
+  assert.equal(capture.snapshot().status, 'listening');
+  assert.equal(capture.snapshot().selected[0].basis, 'observed_app_product_type_421');
+  assert.equal(subscribed.sn, app[0].sn);
+  assert.equal(capture.snapshot().pairingEnabled, false);
+  assert.equal(capture.snapshot().contributesToEnergy, false);
+  assert.equal(capture.snapshot().controlsEnabled, false);
+  const payload = Buffer.from(JSON.stringify({ phaseA: { power: 123456 }, privateValue: 'PRIVATE' }));
+  subscribed.handler(payload, `/app/device/property/${app[0].sn}/get_reply`);
+  assert.equal(capture.snapshot().frames, 0);
+  subscribed.handler(payload, `/app/device/property/${app[0].sn}`);
+  assert.equal(capture.snapshot().frames, 1);
+  assert.equal(capture.snapshot().valuesCaptured, false);
+  assert.doesNotMatch(JSON.stringify(capture.snapshot()), /123456|PRIVATE|ZZ99/);
+  capture.stop();
+  assert.equal(removed, true);
+  subscribed.handler(payload, `/app/device/property/${app[0].sn}`);
+  assert.equal(capture.snapshot().frames, 1);
+});
+
+test('selected identity and transport outcome survive compact budget trimming without private fields', () => {
+  const { describe } = require('../settings/dual-ct-status');
+  const selected = [{ deviceIndex: 0, basis: 'observed_app_product_type_421', sn: 'PRIVATE', provisional: false, appListed: true }];
+  const input = { status: 'listening', deviceCount: 1, selected,
+    routes: [{ deviceIndex: 0, source: 'app_mqtt', status: 'listening' }] };
+  assert.equal(describe(input).stage, 'subscribed_no_samples');
+  const report = compact(input);
+  assert.equal(report.summary.selected[0].provisional, true);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE/);
+  assert.equal(describe({ ...input, routes: [], status: 'transport_unavailable' }).stage, 'identified_no_transport');
+  assert.equal(describe({ ...input, routes: [] }).stage, 'identified');
+  assert.equal(describe({ ...input, history: [{ source: 'app_json', status: 'json', lastAgeSec: 1 }] }).stage, 'structure_captured');
+  assert.equal(describe({ status: 'no_explicit_model' }).stage, 'not_identified');
 });

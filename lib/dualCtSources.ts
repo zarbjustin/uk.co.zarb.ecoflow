@@ -4,12 +4,22 @@ import { knownDeveloperApiRole } from './deviceIdentity';
 import { isSupportedStream5000Sn } from './stream5000Models';
 import { dualCtModelCodes } from './dualCtMetadata';
 
+/** Field-observed app productType only; not an official model/measurement contract. */
+export function dualCtDiscoveryIdentity(device: AppDevice): 'explicit_name' | 'observed_app_product_type_421' | null {
+  const name = typeof device?.productName === 'string'
+    ? device.productName.trim().replace(/[-_\s]+/g, ' ').toUpperCase() : '';
+  if (/^(?:ECOFLOW )?SMART METER DUAL CT$/.test(name)) return 'explicit_name';
+  // The app normaliser uses numeric productType as a fallback productName.
+  // Preserve contradictory model names as a rejection, not an override.
+  if ((!name || name === '421') && dualCtModelCodes(device?.modelCodes)
+    .some((item) => item.field === 'productType' && item.code === 421)) return 'observed_app_product_type_421';
+  return null;
+}
+
 export function dualCtResearchDevices<T extends AppDevice>(devices: T[]): T[] {
   const seen = new Set<string>();
   return devices.slice(0, 256).filter((device) => {
-    const name = typeof device?.productName === 'string'
-      ? device.productName.trim().replace(/[-_\s]+/g, ' ').toUpperCase() : '';
-    if (!/^(?:ECOFLOW )?SMART METER DUAL CT$/.test(name) || device.shared
+    if (!dualCtDiscoveryIdentity(device) || device.shared
       || !/^[A-Z0-9]{8,64}$/.test(device.sn) || seen.has(device.sn)) return false;
     seen.add(device.sn);
     return true;
@@ -33,7 +43,9 @@ export function dualCtInventorySummary(app: AppDevice[], developer: EcoFlowDevic
       missingProductMetadata: bounded.filter((row) => !row?.productName?.trim()).length,
       explicitMatches: dualCtResearchDevices(bounded.map((row) => ({
         ...row, productName: row.productName || '', name: '', shared: 'shared' in row && row.shared === true,
-      }))).length,
+      }))).filter((row) => dualCtDiscoveryIdentity(row) === 'explicit_name').length,
+      observedCodeMatches: index === 0 ? dualCtResearchDevices(bounded as AppDevice[])
+        .filter((row) => dualCtDiscoveryIdentity(row) === 'observed_app_product_type_421').length : 0,
       displayNameHints: index === 0 ? (bounded as AppDevice[]).filter((row) => /dual[\s_-]*ct/i.test(row?.name || '')).length : 0,
       // Anonymous meter-like candidates only; a hint is never subscription authority.
       candidates: bounded.filter((row) => /meter|dual[\s_-]*ct/i.test(row?.productName || '')
@@ -57,6 +69,7 @@ export function dualCtInventorySnapshot(input: any): Array<Record<string, unknow
       truncated: row.truncated === true,
       missingProductMetadata: count(row.missingProductMetadata),
       explicitMatches: Math.min(2, count(row.explicitMatches)),
+      observedCodeMatches: Math.min(2, count(row.observedCodeMatches)),
       displayNameHints: count(row.displayNameHints),
       candidates: Array.isArray(row.candidates) ? row.candidates.slice(0, 8).map((candidate: any) => ({
         shared: candidate?.shared === true,

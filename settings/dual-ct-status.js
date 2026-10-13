@@ -6,7 +6,7 @@
     'account_changed', 'no_explicit_model', 'transport_unavailable', 'discovery_unavailable'];
   function describe(input) {
     const count = (value, max) => (Number.isInteger(value) && value >= 0 && value <= max ? value : 0);
-    return {
+    const summary = {
       state: STATES.includes(input?.status) ? input.status : 'not_started',
       devices: count(input?.deviceCount, 2), samples: count(input?.frames, 128),
       rejected: count(input?.rejectedFrames, 128),
@@ -21,11 +21,27 @@
         && ['listening', 'unavailable', 'empty', 'observed', 'host_not_verified'].includes(route?.status))
         .map((route) => ({ index: route.deviceIndex + 1, source: route.source, status: route.status })) : [],
     };
+    summary.selected = Array.isArray(input?.selected) ? input.selected.slice(0, 2)
+      .filter((row) => [0, 1].includes(row?.deviceIndex) && ['explicit_name', 'observed_app_product_type_421'].includes(row?.basis))
+      .map((row) => ({ index: row.deviceIndex + 1, basis: row.basis,
+        provisional: row.basis === 'observed_app_product_type_421',
+        appListed: row.appListed === true, developerListed: row.developerListed === true })): [];
+    summary.stage = 'not_identified';
+    if (summary.devices) {
+      if (summary.observed) summary.stage = 'structure_captured';
+      else if (summary.routes.some((route) => route.status === 'listening')) summary.stage = 'subscribed_no_samples';
+      else if (summary.routes.some((route) => route.status === 'observed')) summary.stage = 'received_unmapped';
+      else if (summary.state === 'transport_unavailable' || summary.routes.length) summary.stage = 'identified_no_transport';
+      else summary.stage = 'identified';
+    }
+    return summary;
   }
   function render(element, evidence, translate) {
     const status = describe(evidence); element.textContent = '';
     const append = (text) => { const p = element.ownerDocument.createElement('p'); p.textContent = text; element.appendChild(p); };
     append(translate(status.state));
+    append(translate('stage_' + status.stage));
+    status.selected.forEach((row) => append(`${translate('meter')} ${row.index}: ${translate('basis_' + row.basis)}.`));
     if (status.cleanupFailures) append(translate('cleanup_warning'));
     append(`${translate('devices')}: ${status.devices}. ${translate('samples')}: ${status.samples}. ${translate('rejected')}: ${status.rejected}.`);
     if (status.age !== null) append(`${translate('age')}: ${status.age} s.`);
@@ -42,6 +58,7 @@
         source: row.source, available: row.available === true, inspected: count(row.inspected),
         truncated: row.truncated === true, missingProductMetadata: count(row.missingProductMetadata),
         explicitMatches: Math.min(2, count(row.explicitMatches)), displayNameHints: count(row.displayNameHints),
+        observedCodeMatches: Math.min(2, count(row.observedCodeMatches)),
         candidates: Array.isArray(row.candidates) ? row.candidates.slice(0, 8).map((candidate) => ({
           shared: candidate?.shared === true, metadataPresent: candidate?.metadataPresent === true,
           codes: Array.isArray(candidate?.codes) ? candidate.codes.slice(0, 4).filter((item) =>
