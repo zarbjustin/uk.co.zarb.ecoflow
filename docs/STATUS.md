@@ -2,7 +2,39 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Dual CT candidate preview — unpublished diagnostic work
+## Test v1.10.43 / Build 58 — published 13 October 2026
+
+Diagnostic implementation `41601e1e3a5521501dbdce4cb8e0f2c2bae81ece`;
+exact uploaded release/tag `v1.10.43` is
+`d030937aed34973b691e0ccd00efec21a92e77c6`. Later handover commits are not the
+uploaded source.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38458787492 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38458982295 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38459130914 — passed (714 tests, lint, audit, Homey verified validation).
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38459375546 — passed.
+- Developer Tools Build 58 explicitly published to Test; readback confirms
+  v1.10.43 available for testing. Screenshot retained outside Git.
+- Public store readback was not verified: browser policy blocked accessing the
+  existing failed store tab. No workaround attempted; portal Test state is the
+  publication evidence. No installation or native mobile/hardware acceptance.
+- No certification submission; Live remains v1.10.3 / Build 18. Local master
+  `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged.
+
+Release scope: optional local read-only numeric candidate preview, explicit
+plaintext/model gates, per-field expiry, clear unavailable reasons and separate
+reviewed/consented candidate JSON. Normal support reports stay structure-only.
+No Dual CT driver/pairing, Energy source, Flows, controls or verified units/signs.
+
+Robert's .42 report was reread live: 105 app-MQTT samples, two message groups and
+41 retained field/wire entries; no numeric measurement values. Reply is draft
+only. Next optional evidence is ONE candidate export from .43, plus an EcoFlow
+Dual CT view/channel-role description for comparison. If preview is unavailable,
+the exact reason/screenshot suffices instead: no repeated captures, full report
+or crash-log request. No need to change operating mode or clamp configuration.
+
+## Dual CT candidate preview — implementation notes (now in Test .43)
 
 Preview-state/shareability follow-up: reason-specific unavailable messages,
 separate unchecked candidate-export consent, visible reviewable bounded numeric
