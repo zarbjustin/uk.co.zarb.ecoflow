@@ -229,5 +229,8 @@
   },
   "1.10.40": {
     "en": "Add compact Dual CT reports with bounded model-code evidence, safe telemetry structure, copy/download feedback and read-only preview guidance. Dual CT readings, pairing, Energy, Flows and controls remain disabled pending verification."
+  },
+  "1.10.41": {
+    "en": "Allow field-observed app productType 421 in opt-in read-only Dual CT discovery. Show provisional identity and clearer connection/capture outcomes, preserving selected-meter evidence in compact reports. Dual CT pairing, readings, Energy, Flows and controls remain disabled."
   }
 }
