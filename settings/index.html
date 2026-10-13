@@ -112,7 +112,9 @@
   <button id="downloadSupportSnapshot" type="button" disabled>Download integration JSON</button>
   <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
   <details id="dualCtResearch">
-    <summary>Dual CT research — opt-in, read-only</summary>
+    <summary id="dualCtTitle">Dual CT research — opt-in, read-only</summary>
+    <p id="dualCtOverview">Two-minute read-only discovery using saved accounts. It records structure only, not channel values, and does not enable Energy, Flows or commands. The shared connection may affect an EcoFlow app session.</p>
+    <details id="dualCtTechnical"><summary id="dualCtTechnicalTitle">How capture works and privacy</summary>
     <p>This is not Dual CT pairing or meter support. Start checks the saved EcoFlow app and Developer
       accounts once each, then listens for up to two minutes to at most two owned devices explicitly labelled
       Smart Meter Dual CT in product metadata. Renamed devices and shared devices are excluded.
@@ -127,9 +129,12 @@
       observed telemetry does not establish units, direction or channel roles.
       No reports are sent automatically. Afterwards use Show integration support report at your convenience.
       No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
+    </details>
     <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
     <button id="stopDualCtResearch" type="button">Stop Dual CT discovery</button>
-    <pre id="dualCtResearchResult" role="status" aria-live="polite"></pre>
+    <button id="refreshDualCtResearch" type="button">Refresh local capture summary</button>
+    <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
+    <div id="dualCtResearchResult" role="status" aria-live="polite"></div>
   </details>
   <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
@@ -161,12 +166,13 @@
   <h2 id="meterStatusTitle" style="font-size:17px;">Smart Meter readings</h2>
   <p id="meterStatusHelp" class="help"></p>
   <div id="meterStatus" role="status" aria-live="polite"></div>
-  <details><summary id="technicalReportTitle">Technical report (optional)</summary>
+  <details id="technicalReport"><summary id="technicalReportTitle">Technical report (optional)</summary>
     <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
   </details>
 
   <script src="meter-status.js"></script>
   <script src="reporter-status.js"></script>
+  <script src="dual-ct-status.js"></script>
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
@@ -191,28 +197,44 @@
 
       var dualCtOperation = 0;
       var dualCtDeadline;
+      function renderDualCt(evidence) {
+        window.EcoFlowDualCtStatus.render(document.getElementById('dualCtResearchResult'), evidence,
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+      }
+      document.getElementById('dualCtTitle').textContent = Homey.__('settings.dual_ct.title');
+      document.getElementById('dualCtOverview').textContent = Homey.__('settings.dual_ct.overview');
+      document.getElementById('dualCtTechnicalTitle').textContent = Homey.__('settings.dual_ct.technical_title');
+      document.getElementById('startDualCtResearch').textContent = Homey.__('settings.dual_ct.start');
+      document.getElementById('stopDualCtResearch').textContent = Homey.__('settings.dual_ct.stop');
+      document.getElementById('refreshDualCtResearch').textContent = Homey.__('settings.dual_ct.refresh');
+      document.getElementById('dualCtCaptureHelp').textContent = Homey.__('settings.dual_ct.capture_help');
+      renderDualCt(null);
       function dualCtAction(action) {
         var operation = ++dualCtOperation;
         clearTimeout(dualCtDeadline);
         var result = document.getElementById('dualCtResearchResult');
         var start = document.getElementById('startDualCtResearch');
         start.disabled = true;
-        result.textContent = action === 'start' ? 'Discovering explicitly identified Dual CT devices...' : 'Stopping capture...';
+        result.textContent = Homey.__('settings.dual_ct.' + (action === 'start' ? 'discovering' : action === 'refresh' ? 'refreshing' : 'stopping'));
         dualCtDeadline = setTimeout(function () {
           if (operation !== dualCtOperation) return;
           dualCtOperation++;
           start.disabled = false;
-          result.textContent = 'Request timed out. Capture may still be running; use Stop or check the local support report.';
+          result.textContent = Homey.__('settings.dual_ct.timeout');
         }, 20000);
-        Homey.api('POST', '/dual-ct-research/' + action, {}, function (err, evidence) {
+        Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/support-snapshot' : '/dual-ct-research/' + action,
+          action === 'refresh' ? null : {}, function (err, evidence) {
           if (operation !== dualCtOperation) return;
           clearTimeout(dualCtDeadline);
+          dualCtOperation++;
           start.disabled = false;
-          result.textContent = err ? 'Discovery unavailable. Check your saved EcoFlow app account.' : JSON.stringify(evidence, null, 2);
+          if (err) result.textContent = Homey.__('settings.dual_ct.error');
+          else renderDualCt(action === 'refresh' ? evidence?.dualCtResearch : evidence);
         });
       }
       document.getElementById('startDualCtResearch').addEventListener('click', function () { dualCtAction('start'); });
       document.getElementById('stopDualCtResearch').addEventListener('click', function () { dualCtAction('stop'); });
+      document.getElementById('refreshDualCtResearch').addEventListener('click', function () { dualCtAction('refresh'); });
 
       var reportText = '';
       var displayedReport = null;
@@ -336,6 +358,7 @@
         if (reportBusy) return;
         reportBusy = true;
         var operation = ++reportOperation;
+        var dualCtAtRequest = dualCtOperation;
         var output = document.getElementById('supportSnapshotResult');
         showButton.disabled = checkButton.disabled = true;
         reportText = '';
@@ -357,6 +380,7 @@
             || (remoteCheck ? 'Could not check the reporter. Use the local support report instead.' : 'Could not read local diagnostics. Please try again.');
           copyButton.disabled = !reportText;
           renderMeterStatus(reportText ? report : null);
+          if (reportText && dualCtAtRequest === dualCtOperation) renderDualCt(report.dualCtResearch);
         }
         // Longer than the server's bounded reporter lookup. Timeout does not cancel server work.
         reportDeadline = setTimeout(function () { finish(true, null, true); }, remoteCheck ? 180000 : 15000);

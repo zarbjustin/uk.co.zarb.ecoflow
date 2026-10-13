@@ -200,3 +200,47 @@ test('late Developer subscription completion cannot restore a stopped capture', 
   h.capture.stop('stopped', true); release(true); await pending;
   assert.equal(detached, 2); assert.equal(h.capture.snapshot().deviceCount, 0);
 });
+
+test('capture history records route/frame/stop ages and clears on account change without raw evidence', async () => {
+  const h = harness(); await h.capture.start(); const handler = h.handlers.get(sn);
+  h.advance(500); handler(frame(int(1, 12345)), `/app/device/property/${sn}`);
+  h.advance(500); handler(frame(int(1, 12345)), `/app/device/property/${sn}`);
+  h.capture.stop();
+  const history = h.capture.snapshot().history;
+  assert.equal(history.find((event) => event.status === 'protobuf').samples, 2);
+  assert.equal(history[history.length - 1].status, 'stopped');
+  assert.doesNotMatch(JSON.stringify(history), /ZZ99|12345|firstAt|lastAt/);
+  h.capture.stop('account_changed', true); assert.deepEqual(h.capture.snapshot().history, []);
+});
+
+test('slow inventory finishing after the window cannot start connections or quota probes', async () => {
+  let release; const h = harness(() => new Promise((resolve) => { release = resolve; }));
+  let probes = 0; h.hooks.probe = async () => { probes++; return []; };
+  const pending = h.capture.start(); h.advance(120000);
+  release([{ ...device, developerListed: true }]); await pending;
+  assert.equal(h.counts().subscriptions, 0); assert.equal(probes, 0);
+  assert.equal(h.capture.snapshot().status, 'complete'); assert.equal(h.timers.size, 0);
+});
+
+test('a cleanup failure cannot prevent other detachments or revive capture callbacks', async () => {
+  const second = `${sn}B`; const h = harness(async () => [device, { ...device, sn: second }]);
+  const removed = [];
+  h.hooks.unsubscribe = (serial) => { removed.push(serial); if (serial === sn) throw new Error('PRIVATE'); };
+  await h.capture.start(); const old = h.handlers.get(sn);
+  h.capture.stop(); old(frame(int(1, 2)), `/app/device/property/${sn}`);
+  assert.deepEqual(removed, [sn, second]);
+  assert.equal(h.capture.snapshot().cleanupFailures, 1); assert.equal(h.capture.snapshot().frames, 0);
+  assert.equal(h.capture.snapshot().status, 'stopped');
+  assert.doesNotMatch(JSON.stringify(h.capture.snapshot()), /PRIVATE/);
+});
+
+test('stopping during a slow probe discards results and prevents Developer attachment', async () => {
+  const h = harness(async () => [{ ...device, appListed: false, developerListed: true }]);
+  let release; let attached = 0;
+  h.hooks.probe = async () => new Promise((resolve) => { release = resolve; });
+  h.hooks.developerSubscribe = async () => { attached++; return true; };
+  const pending = h.capture.start(); await new Promise((resolve) => setImmediate(resolve));
+  h.capture.stop(); release([{ source: 'developer_rest', status: 'observed', data: { power: 1 } }]);
+  await pending;
+  assert.equal(attached, 0); assert.deepEqual(h.capture.snapshot().jsonShapes, []);
+});

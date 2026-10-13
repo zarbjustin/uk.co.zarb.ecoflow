@@ -24,6 +24,9 @@ module.exports = class EcoFlowApp extends Homey.App {
   private settingsTimer: NodeJS.Timeout | null = null;
   private appSettingsTimer: NodeJS.Timeout | null = null;
   private stopping = false;
+  private pendingRealtime = 0;
+  private pendingAppRealtime = 0;
+  private releaseResearchMqttWhenIdle = false;
   private readonly streamDiscovery = new StreamDiscoveryInventory();
   private dualCtResearch: DualCtResearch | null = null;
   private readonly settingsHandler = (key: string) => this.onSettingChanged(key);
@@ -154,16 +157,37 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   /** Subscribe a device SN to realtime updates. Safe no-op if MQTT is unavailable. */
-  async subscribeRealtime(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): Promise<boolean> {
-    if (this.stopping) return false;
-    const mqtt = await this.getMqtt();
-    if (this.stopping || !mqtt) return false;
-    mqtt.subscribe(sn, onQuota, onStatus);
-    return true;
+  async subscribeRealtime(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler, active: () => boolean = () => true): Promise<boolean> {
+    if (this.stopping || !active()) return false;
+    this.pendingRealtime += 1;
+    try {
+      const mqtt = await this.getMqtt();
+      if (this.stopping || !active() || !mqtt || mqtt !== this.mqtt) return false;
+      mqtt.subscribe(sn, onQuota, onStatus);
+      return true;
+    } finally {
+      this.pendingRealtime -= 1;
+      this.releaseResearchMqtt();
+    }
   }
 
   unsubscribeRealtime(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void {
     this.mqtt?.unsubscribe(sn, onQuota, onStatus);
+  }
+
+  private releaseResearchMqtt(): void {
+    if (!this.releaseResearchMqttWhenIdle || this.pendingRealtime > 0) return;
+    this.releaseResearchMqttWhenIdle = false;
+    if (!this.mqtt || this.mqtt.hasSubscribers) return;
+    const { mqtt } = this;
+    this.mqtt = null; this.mqttCredsKey = '';
+    mqtt.end().catch(() => {});
+  }
+
+  private unsubscribeResearchRealtime(sn: string, onQuota: QuotaHandler): void {
+    this.unsubscribeRealtime(sn, onQuota);
+    this.releaseResearchMqttWhenIdle = true;
+    this.releaseResearchMqtt();
   }
 
   // ----- App-auth realtime (verified STREAM 5000-family adapters) ------------
@@ -209,10 +233,10 @@ module.exports = class EcoFlowApp extends Homey.App {
           developerInventory = observations[1].status === 'fulfilled' ? observations[1].value as EcoFlowDevice[] : [];
           return mergeDualCtInventory(appInventory, developerInventory);
         },
-        subscribe: (sn, handler) => this.subscribeAppRealtime(sn, handler),
+        subscribe: (sn, handler, active) => this.subscribeAppRealtime(sn, handler, active),
         unsubscribe: (sn, handler) => this.unsubscribeAppRealtime(sn, handler),
-        developerSubscribe: (sn, handler) => this.subscribeRealtime(sn, handler),
-        developerUnsubscribe: (sn, handler) => this.unsubscribeRealtime(sn, handler),
+        developerSubscribe: (sn, handler, active) => this.subscribeRealtime(sn, handler, undefined, active),
+        developerUnsubscribe: (sn, handler) => this.unsubscribeResearchRealtime(sn, handler),
         probe: (sn, active) => (developer ? probeDualCtDeveloper(developer, sn, developerInventory, active) : Promise.resolve([])),
         timer: (fn, ms) => this.homey.setTimeout(fn, ms),
         cancel: (timer) => this.homey.clearTimeout(timer),
@@ -295,20 +319,30 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   /** Subscribe an admitted STREAM model to the read-only app-auth telemetry feed. */
-  async subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean> {
-    if (this.stopping) return false;
-    const mqtt = await this.getAppMqtt();
-    if (this.stopping || !mqtt) return false;
-    mqtt.subscribe(sn, onFrame);
-    return true;
+  async subscribeAppRealtime(sn: string, onFrame: AppFrameHandler, active: () => boolean = () => true): Promise<boolean> {
+    if (this.stopping || !active()) return false;
+    this.pendingAppRealtime += 1;
+    try {
+      const mqtt = await this.getAppMqtt();
+      if (this.stopping || !active() || !mqtt || mqtt !== this.appMqtt) return false;
+      mqtt.subscribe(sn, onFrame);
+      return true;
+    } finally {
+      this.pendingAppRealtime -= 1;
+      this.releaseAppMqttIfIdle();
+    }
   }
 
   unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void {
     if (!this.appMqtt) return;
     this.appMqtt.unsubscribe(sn, onFrame);
+    this.releaseAppMqttIfIdle();
+  }
+
+  private releaseAppMqttIfIdle(): void {
     // The last app-connected STREAM device just went: drop the session rather than hold an
     // idle authenticated WSS connection open.
-    if (this.appMqtt.hasSubscribers) return;
+    if (!this.appMqtt || this.appMqtt.hasSubscribers || this.pendingAppRealtime > 0) return;
     const mqtt = this.appMqtt;
     this.appMqtt = null;
     this.appMqttCredsKey = '';

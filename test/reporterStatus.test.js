@@ -34,7 +34,7 @@ test('capture checklist renders five fixed instructions without polling or priva
   renderCaptureGuide(element, report, key => require('../locales/en.json').settings.reporter[key]);
   const text = element.children.map(child => child.textContent).join('\n');
   assert.equal(element.children.length, 5);
-  assert.match(text, /Within one minute/); assert.match(text, /timezone/);
+  assert.match(text, /no one-minute deadline/); assert.match(text, /timezone/);
   assert.match(text, /log ID/); assert.match(text, /Download the integration JSON/);
   assert.doesNotMatch(text, /PRIVATE|script/);
   assert.equal(JSON.stringify(report), before);
@@ -262,6 +262,9 @@ test('settings readiness and JSON download work in the browser without hidden po
     const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
     await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
     const report = { capturedAt: '2026-10-11T01:02:03.004Z', appVersion: '1.10.31', schemaVersion: 11, padding: 'x'.repeat(19000),
+      dualCtResearch: { status: 'complete', deviceCount: 1, frames: 2, rejectedFrames: 0, captureAgeSec: 121,
+        routes: [{ deviceIndex: 0, source: 'app_mqtt', status: 'listening' }],
+        history: [{ deviceIndex: 0, source: 'app_mqtt', status: 'protobuf', lastAgeSec: 1 }] },
       drivers: [{ id: 'stream', monitoringTrial: [{ enabled: false, readiness: { eligible: true, status: 'active' } },
         { enabled: true, status: 'active', updatePending: true }] },
         { id: 'stream_5000_unit', physicalPower: [{ status: 'linked_power_unverified' }], systemFlow: [{ fields: {
@@ -284,7 +287,7 @@ test('settings readiness and JSON download work in the browser without hidden po
     assert.match(await page.locator('#reporterStatus').innerText(), /Ready for the optional monitoring trial/);
     assert.match(await page.locator('#reporterStatus').innerText(), /New readings are waiting/);
     assert.match(await page.locator('#reporterStatus').innerText(), /Blank unit tiles do not mean zero/);
-    assert.equal(await page.locator('details:not(#supportParts):not(#dualCtResearch)').getAttribute('open'), null, 'technical JSON is optional and collapsed');
+    assert.equal(await page.locator('#technicalReport').getAttribute('open'), null, 'technical JSON is optional and collapsed');
     const downloadEvent = page.waitForEvent('download');
     await page.locator('#downloadSupportSnapshot').click();
     const file = await downloadEvent;
@@ -313,7 +316,14 @@ test('settings readiness and JSON download work in the browser without hidden po
     assert.match(await page.locator('#reporterStatus').innerText(), /Reported grid-meter power: -5 W/);
     assert.match(await page.locator('#reporterStatus').innerText(), /Meter minus flow: 24 W/);
     await page.setViewportSize({ width: 390, height: 900 });
+    await page.locator('#dualCtTitle').click();
+    assert.match(await page.locator('#dualCtResearchResult').innerText(), /Channel mapping, units and direction are still unverified/);
+    await page.locator('#refreshDualCtResearch').click();
+    assert.equal(await page.evaluate(() => window.calls), 3, 'manual local refresh only');
+    await page.clock.runFor(20000);
+    assert.equal(await page.evaluate(() => window.calls), 3, 'summary has no hidden polling');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    await page.locator('#dualCtResearch').screenshot({ path: '/tmp/ecoflow-dualct-local-summary.png' });
     await page.locator('#reporterStatus').screenshot({ path: '/tmp/ecoflow-reporter-source-labels.png' });
     await page.locator('#supportCaptureStatus').screenshot({ path: '/tmp/ecoflow-diagnostic-capture-age.png' });
     await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));

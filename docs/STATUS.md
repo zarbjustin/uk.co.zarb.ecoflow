@@ -2,6 +2,69 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Combined Dual CT diagnostic Test release preparation — 13 October 2026
+
+Owner approved commit/push and a new Test build from the diagnostic branch only.
+Source and exact release CI must pass before upload and explicit Publish to Test.
+No Mainline merge, certification submission, Live update or hardware action.
+Dual CT discovery records anonymous structure only; channel-state foundation
+remains dormant and pairing, actual channel readings, Energy and controls remain
+disabled. Release verification receipts will be added after portal readback.
+
+## Dual CT sprint 4 reliability — 13 October 2026
+
+Local diagnostic-branch work on top of uncommitted sprint 3; no commit/push,
+version bump, Test publication or Mainline/Live action in this implementation.
+
+- App/Developer subscriptions accept a capture cancellation guard and re-check
+  it after connection readiness, preventing late stopped captures attaching.
+  Replaced connection objects cannot receive stale registrations.
+- Pending subscriber counts protect a shared connection while other devices
+  are awaiting readiness. Research removes only its own callbacks; normal meter
+  and status-only listeners keep the connection alive. An otherwise idle research
+  Developer connection is released after pending work settles, stopping its retry
+  activity without shutting down an active ordinary-device connection.
+- An inventory response arriving beyond the capture window cannot start further
+  connections/probes. Probe responses after Stop are discarded before attachment.
+- Cleanup exceptions are isolated per listener. Generation guards invalidate all
+  capture callbacks first; failures are counted anonymously and shown as a warning
+  rather than allowing one failed detachment to prevent all subsequent cleanup.
+- Synthetic tests use actual shared MQTT handler registries, including same-SN
+  research/ordinary meter coexistence. No hardware/Broker acceptance is inferred.
+
+All 677 tests, lint and Homey 4.5.3 verified validation pass locally. Release gate:
+commit/push the combined sprint 3/4 work, inspect exact-source CI, and obtain
+explicit Test-release approval before versioning/uploading. Real Dual CT identity,
+channel contract and account/broker behaviour still require hardware evidence.
+Pairing, channel readings, Energy and controls remain disabled.
+
+## Dual CT sprint 2 Git/CI and sprint 3 tester UX — 13 October 2026
+
+Sprint 2 pushed as `a6da2abc210d5e17652cf4c65705571a397fec17` on the diagnostic
+branch. [Exact source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38391670497)
+(tests, lint, audit and Homey verified validation). No Test build published.
+
+Sprint 3 is local/uncommitted: plain-language EN/DE/NL capture summary distinguishes
+model-not-found, source-unavailable, empty responses, subscribed-without-receipt
+and observed structure. It never claims confirmed channel values, units or roles.
+Manual summary refresh reads only the existing local support endpoint: no cloud
+enumeration, new capture or polling. Late/duplicate callbacks cannot replace newer
+action results. A bounded 24-entry anonymous event timeline coalesces repeated
+events, stores no payload/identity/values, exports relative ages and clears on
+account changes/restart. It is not a full packet trace or measurement history.
+
+The legacy one-minute screenshot/report deadline has been removed from support
+guidance in EN/DE/NL. Existing live comparisons are acknowledged; fresh captures
+are requested only for a specific issue and can be sent when convenient.
+Pairing, actual channel decoder, Energy and controls remain disabled. Mainline,
+Live and current Test releases are untouched; no version bump or upload.
+
+Sprint 3 local verification: all 669 tests pass, lint passes and Homey 4.5.3
+verified validation passes. Chromium settings checks at 390px confirm readable
+summary, no horizontal overflow, one local request per explicit refresh and no
+hidden polling; JSON download/message-part integrity remains covered. Synthetic
+preview at `/tmp/ecoflow-dualct-local-summary.png` is not a hardware capture.
+
 ## Dual CT sprint 1 Git/CI and sprint 2 foundation — 13 October 2026
 
 Sprint 1 committed/pushed as `bad386a7331c41302364aa97b4fed10fee8ac434` on
@@ -10,7 +73,7 @@ Sprint 1 committed/pushed as `bad386a7331c41302364aa97b4fed10fee8ac434` on
 including tests, lint, audit and verified Homey validation. No version bump,
 Test upload/publication or Mainline/Live action.
 
-Sprint 2 is local/uncommitted: `DualCtChannels` prepares independent CT1/CT2
+Sprint 2 (now committed/pushed as noted above): `DualCtChannels` prepares independent CT1/CT2
 normalized reading state, explicit unknown/grid/solar/load roles and one selected
 source per channel. Per-field measurement/receipt ages, zero/signed power,
 partial frames, source/role changes and clock rollback are covered by tests.
@@ -23,8 +86,8 @@ capabilities, Energy, Flows or controls. Synthetic normalized fixtures establish
 software behaviour only. Hardware field units/channel roles remain unverified.
 
 Sprint 2 local verification: all 662 tests, lint and Homey 4.5.3 verified
-validation pass. Sprint 2 commit/push is now approved, with CI required before
-proceeding to sprint 3. No upload/publication is authorised. Protected
+validation pass; exact-source CI subsequently passed before sprint 3 began.
+No upload/publication is authorised. Protected
 local/remote master refs remain unchanged; existing Test/Live releases are untouched.
 
 ## Unpublished Dual CT research option — 13 October 2026

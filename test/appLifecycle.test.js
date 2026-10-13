@@ -31,6 +31,96 @@ function harness() {
   return { app, settings, timers };
 }
 
+test('cancelled research cannot attach after slow app/Developer connections finish', async () => {
+  for (const transport of ['app', 'developer']) {
+    const { app } = harness(); await app.onInit();
+    let release; let attached = 0; let active = true;
+    const waiting = new Promise((resolve) => { release = resolve; });
+    const mqtt = { subscribe() { attached++; }, unsubscribe() {}, hasSubscribers: false, end: async () => {} };
+    if (transport === 'app') { app.appMqtt = mqtt; app.getAppMqtt = async () => waiting; }
+    else { app.mqtt = mqtt; app.getMqtt = async () => waiting; }
+    const pending = transport === 'app' ? app.subscribeAppRealtime('ZZ99SYNTHETIC0001', () => {}, () => active)
+      : app.subscribeRealtime('ZZ99SYNTHETIC0001', () => {}, undefined, () => active);
+    active = false;
+    if (transport === 'app') app.unsubscribeAppRealtime('ZZ99SYNTHETIC0001', () => {});
+    else app.unsubscribeResearchRealtime('ZZ99SYNTHETIC0001', () => {});
+    release(mqtt); assert.equal(await pending, false); assert.equal(attached, 0);
+    await app.onUninit();
+  }
+});
+
+test('a connection replaced while awaiting readiness cannot receive a stale subscription', async () => {
+  for (const transport of ['app', 'developer']) {
+    const { app } = harness(); await app.onInit(); let release; let attaches = 0;
+    const old = { subscribe() { attaches++; }, hasSubscribers: false, end: async () => {} };
+    const replacement = { hasSubscribers: true, end: async () => assert.fail('replacement closed') };
+    const waiting = new Promise((resolve) => { release = resolve; });
+    if (transport === 'app') { app.appMqtt = old; app.getAppMqtt = async () => waiting; }
+    else { app.mqtt = old; app.getMqtt = async () => waiting; }
+    const pending = transport === 'app' ? app.subscribeAppRealtime('BK21SYNTHETIC0001', () => {})
+      : app.subscribeRealtime('BK21SYNTHETIC0001', () => {});
+    if (transport === 'app') app.appMqtt = replacement;
+    else app.mqtt = replacement;
+    release(old); assert.equal(await pending, false); assert.equal(attaches, 0);
+    replacement.end = async () => {}; await app.onUninit();
+  }
+});
+
+test('stopping discovery preserves another pending app subscriber and its later readings', async () => {
+  const { EcoFlowAppMqtt } = require('../.homeybuild/lib/EcoFlowAppMqtt');
+  const { app } = harness(); await app.onInit();
+  const mqtt = new EcoFlowAppMqtt({ client: {} }); let ends = 0; let readings = 0;
+  mqtt.end = async () => { ends++; };
+  app.appMqtt = mqtt; let release;
+  app.getAppMqtt = async () => new Promise((resolve) => { release = resolve; });
+  const regular = () => { readings++; }; const research = () => {};
+  const pending = app.subscribeAppRealtime('BK21SYNTHETIC0001', regular);
+  app.unsubscribeAppRealtime('ZZ99SYNTHETIC0001', research);
+  assert.equal(ends, 0);
+  release(mqtt); assert.equal(await pending, true);
+  mqtt.onMessage('/app/device/property/BK21SYNTHETIC0001', Buffer.from('{}'));
+  assert.equal(readings, 1); assert.equal(ends, 0);
+  app.unsubscribeAppRealtime('BK21SYNTHETIC0001', regular); assert.equal(ends, 1);
+  await app.onUninit();
+});
+
+test('discovery unsubscribes only its callbacks on a shared meter identity in both transports', async () => {
+  const { EcoFlowMqtt } = require('../.homeybuild/lib/EcoFlowMqtt');
+  const { EcoFlowAppMqtt } = require('../.homeybuild/lib/EcoFlowAppMqtt');
+  const { app } = harness(); await app.onInit(); const sn = 'BK21SYNTHETIC0001';
+  const mqtt = new EcoFlowMqtt({ accessKey: 'synthetic', secretKey: 'synthetic' });
+  const appMqtt = new EcoFlowAppMqtt({ client: {} }); let ends = 0;
+  mqtt.end = appMqtt.end = async () => { ends++; };
+  app.mqtt = mqtt; app.appMqtt = appMqtt;
+  app.getMqtt = async () => mqtt; app.getAppMqtt = async () => appMqtt;
+  let regularQuota = 0; let regularFrames = 0; let researchSamples = 0;
+  const regular = () => { regularQuota++; }; const regularFrame = () => { regularFrames++; };
+  const research = () => { researchSamples++; }; const researchFrame = () => { researchSamples++; };
+  await app.subscribeRealtime(sn, regular); await app.subscribeRealtime(sn, research);
+  await app.subscribeAppRealtime(sn, regularFrame); await app.subscribeAppRealtime(sn, researchFrame);
+  app.unsubscribeResearchRealtime(sn, research); app.unsubscribeAppRealtime(sn, researchFrame);
+  mqtt.onMessage(`/open/synthetic/${sn}/quota`, Buffer.from('{"power":5}'));
+  appMqtt.onMessage(`/app/device/property/${sn}`, Buffer.from('{}'));
+  assert.equal(regularQuota, 1); assert.equal(regularFrames, 1); assert.equal(researchSamples, 0);
+  assert.equal(ends, 0); assert.equal(mqtt.hasSubscribers, true);
+  await app.onUninit();
+});
+
+test('idle research Developer connection is released only after another pending subscription settles', async () => {
+  const { EcoFlowMqtt } = require('../.homeybuild/lib/EcoFlowMqtt');
+  const { app } = harness(); await app.onInit();
+  const mqtt = new EcoFlowMqtt({ accessKey: 'synthetic', secretKey: 'synthetic' }); let ends = 0;
+  mqtt.end = async () => { ends++; }; app.mqtt = mqtt; let release;
+  app.getMqtt = async () => new Promise((resolve) => { release = resolve; });
+  const regular = () => {};
+  const pending = app.subscribeRealtime('BK21SYNTHETIC0001', regular);
+  app.unsubscribeResearchRealtime('ZZ99SYNTHETIC0001', () => {}); assert.equal(ends, 0);
+  release(mqtt); assert.equal(await pending, true); assert.equal(ends, 0);
+  app.unsubscribeRealtime('BK21SYNTHETIC0001', regular);
+  app.unsubscribeResearchRealtime('ZZ99SYNTHETIC0001', () => {}); assert.equal(ends, 1);
+  await app.onUninit();
+});
+
 test('5000 read-only conditions route to fresh device observations, not a control method', async () => {
   const { app } = harness();
   const listeners = new Map();

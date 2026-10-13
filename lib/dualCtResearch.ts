@@ -1,6 +1,7 @@
 import { AppDevice } from './appDevices';
 import { decodeFrameHeaders } from './streamAc5000Protocol';
 import { dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot } from './dualCtSources';
+import { DualCtHistory, dualCtHistorySnapshot } from './dualCtHistory';
 
 export { dualCtResearchDevices } from './dualCtSources';
 
@@ -22,6 +23,8 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     deviceCount: bounded(input?.deviceCount, 2),
     frames: bounded(input?.frames, MAX_FRAMES),
     rejectedFrames: bounded(input?.rejectedFrames, MAX_FRAMES),
+    cleanupFailures: bounded(input?.cleanupFailures, 65535),
+    history: dualCtHistorySnapshot(input?.history),
     jsonShapes: dualCtJsonShapesSnapshot(input?.jsonShapes),
     routes: Array.isArray(input?.routes) ? input.routes.slice(0, 8).filter((route: any) => [0, 1].includes(route?.deviceIndex)
       && ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(route?.source)
@@ -74,17 +77,19 @@ function fields(data: Buffer): Array<{ field: number; wire: number }> {
 
 interface ResearchHooks {
   list: () => Promise<Array<AppDevice & { appListed?: boolean; developerListed?: boolean }>>;
-  subscribe: (sn: string, handler: (data: Buffer, topic: string) => void) => Promise<boolean>;
+  subscribe: (sn: string, handler: (data: Buffer, topic: string) => void, active?: () => boolean) => Promise<boolean>;
   unsubscribe: (sn: string, handler: (data: Buffer, topic: string) => void) => void;
   timer: (callback: () => void, ms: number) => unknown;
   cancel: (timer: any) => void;
   now?: () => number;
-  developerSubscribe?: (sn: string, handler: (data: Record<string, any>) => void) => Promise<boolean>;
+  developerSubscribe?: (sn: string, handler: (data: Record<string, any>) => void, active?: () => boolean) => Promise<boolean>;
   developerUnsubscribe?: (sn: string, handler: (data: Record<string, any>) => void) => void;
   probe?: (sn: string, active: () => boolean) => Promise<Array<{ source: string; status: string; data?: unknown }>>;
 }
 
 export class DualCtResearch {
+  private cleanupFailures = 0;
+  private readonly history = new DualCtHistory();
   private generation = 0;
   private timer: unknown = null;
   private bindings: Array<{ sn: string; handler: (data: Buffer, topic: string) => void }> = [];
@@ -113,16 +118,33 @@ export class DualCtResearch {
     this.generation += 1;
     if (this.timer !== null) this.hooks.cancel(this.timer);
     this.timer = null;
-    for (const binding of this.bindings) this.hooks.unsubscribe(binding.sn, binding.handler);
+    const { bindings } = this;
     this.bindings = [];
-    for (const binding of this.developerBindings) this.hooks.developerUnsubscribe?.(binding.sn, binding.handler);
+    const { developerBindings } = this;
     this.developerBindings = [];
+    for (const binding of bindings) {
+      try {
+        this.hooks.unsubscribe(binding.sn, binding.handler);
+      } catch {
+        this.cleanupFailures += 1;
+      }
+    }
+    for (const binding of developerBindings) {
+      try {
+        this.hooks.developerUnsubscribe?.(binding.sn, binding.handler);
+      } catch {
+        this.cleanupFailures += 1;
+      }
+    }
     this.status = status;
     this.endedAt = this.startedAt === null ? null : this.now();
+    if (this.startedAt !== null) this.history.record(null, 'session', status, this.now());
     if (clear) {
       this.startedAt = null; this.endedAt = null; this.deviceCount = 0;
       this.frames = 0; this.rejected = 0; this.shapes = [];
       this.jsonShapes = []; this.routes = [];
+      this.history.clear();
+      this.cleanupFailures = 0;
     }
   }
 
@@ -131,10 +153,14 @@ export class DualCtResearch {
     this.stop('discovering', true);
     const { generation } = this;
     this.startedAt = this.now(); this.endedAt = null;
+    this.history.record(null, 'session', 'discovering', this.now());
     this.timer = this.hooks.timer(() => this.stop('complete'), DUAL_CT_CAPTURE_MS);
     try {
       const devices = dualCtResearchDevices(await this.hooks.list());
       if (generation !== this.generation) return;
+      if (this.now() < this.startedAt! || this.now() - this.startedAt! >= DUAL_CT_CAPTURE_MS) {
+        this.stop('complete'); return;
+      }
       this.deviceCount = devices.length;
       if (!devices.length) {
         this.stop('no_explicit_model'); return;
@@ -156,11 +182,13 @@ export class DualCtResearch {
           if (count) this.frames += 1;
           try {
             const shape = { deviceIndex, source, ...dualCtJsonShape(data) };
+            this.history.record(deviceIndex, source, shape.empty ? 'empty' : 'json', this.now());
             if (this.jsonShapes.length < MAX_SHAPES && !this.jsonShapes.some((item) => JSON.stringify(item) === JSON.stringify(shape))) {
               this.jsonShapes.push(shape);
             }
           } catch {
             this.rejected += 1;
+            this.history.record(deviceIndex, source, 'unrecognised', this.now());
           }
         };
         const handler = (data: Buffer, topic: string) => {
@@ -175,6 +203,7 @@ export class DualCtResearch {
           }
           this.frames += 1;
           if (data.length > 65536) {
+            this.history.record(deviceIndex, 'app_mqtt', 'oversized', this.now());
             this.rejected += 1; return;
           }
           try {
@@ -197,8 +226,10 @@ export class DualCtResearch {
                 this.shapes.push(shape);
               }
             }
+            this.history.record(deviceIndex, 'app_mqtt', 'protobuf', this.now());
           } catch {
             this.rejected += 1;
+            this.history.record(deviceIndex, 'app_mqtt', 'unrecognised', this.now());
           }
         };
         let appAttached = false;
@@ -206,7 +237,7 @@ export class DualCtResearch {
           this.bindings.push({ sn: device.sn, handler });
           // eslint-disable-next-line no-await-in-loop
           try {
-            appAttached = await this.hooks.subscribe(device.sn, handler);
+            appAttached = await this.hooks.subscribe(device.sn, handler, active);
           } catch { /* Try independently authorised Developer path. */ }
           if (!active()) {
             if (appAttached) this.hooks.unsubscribe(device.sn, handler);
@@ -214,12 +245,14 @@ export class DualCtResearch {
           }
         }
         this.routes.push({ deviceIndex, source: 'app_mqtt', status: appAttached ? 'listening' : 'unavailable' });
+        this.history.record(deviceIndex, 'app_mqtt', appAttached ? 'listening' : 'unavailable', this.now());
         if (device.developerListed && this.hooks.probe) {
           // eslint-disable-next-line no-await-in-loop
           const probes = await this.hooks.probe(device.sn, active);
           if (!active()) return;
           for (const probe of probes.slice(0, 2)) {
             this.routes.push({ deviceIndex, source: probe.source, status: probe.status });
+            this.history.record(deviceIndex, probe.source, probe.status, this.now());
             if (probe.data !== undefined) recordJson(probe.data, probe.source);
           }
         }
@@ -229,13 +262,14 @@ export class DualCtResearch {
           this.developerBindings.push({ sn: device.sn, handler: developerHandler });
           // eslint-disable-next-line no-await-in-loop
           try {
-            developerAttached = await this.hooks.developerSubscribe(device.sn, developerHandler);
+            developerAttached = await this.hooks.developerSubscribe(device.sn, developerHandler, active);
           } catch { /* No private errors. */ }
           if (!active()) {
             if (developerAttached) this.hooks.developerUnsubscribe?.(device.sn, developerHandler);
             return;
           }
           this.routes.push({ deviceIndex, source: 'developer_mqtt', status: developerAttached ? 'listening' : 'unavailable' });
+          this.history.record(deviceIndex, 'developer_mqtt', developerAttached ? 'listening' : 'unavailable', this.now());
         }
         if (!appAttached && !developerAttached && !device.developerListed) {
           this.stop('transport_unavailable'); return;
@@ -257,6 +291,8 @@ export class DualCtResearch {
       deviceCount: this.deviceCount,
       frames: this.frames,
       rejectedFrames: this.rejected,
+      cleanupFailures: Math.min(65535, this.cleanupFailures),
+      history: this.history.snapshot(this.now()),
       jsonShapes: dualCtJsonShapesSnapshot(this.jsonShapes),
       routes: this.routes.map((route) => ({ ...route })),
       shapes: this.shapes.map((shape) => ({ ...shape, fields: shape.fields.map((field) => ({ ...field })) })),

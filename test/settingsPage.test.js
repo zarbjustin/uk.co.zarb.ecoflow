@@ -9,6 +9,32 @@ const vm = require('node:vm');
 const SETTINGS_HTML = path.join(__dirname, '..', 'settings', 'index.html');
 const APP_AUTH_KEYS = ['appAuthEmail', 'appAuthPassword', 'appAuthHost'];
 
+test('an older integration report cannot overwrite a newer Dual CT action summary', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
+  context.onHomeyReady(homey);
+  context.document.getElementById('supportSnapshot').click();
+  context.document.getElementById('startDualCtResearch').click();
+  calls[1].callback(null, { status: 'listening', deviceCount: 1 });
+  const element = context.document.getElementById('dualCtResearchResult'); const before = element.children.length;
+  calls[0].callback(null, { dualCtResearch: { status: 'complete', deviceCount: 0 } });
+  assert.equal(element.children.length, before);
+  calls[1].callback(null, { status: 'complete', deviceCount: 0 });
+  assert.equal(element.children.length, before, 'duplicate action callback cannot replace summary');
+});
+
+test('Dual CT summary refresh uses only local support GET and never starts a new capture', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => {
+    calls.push({ method, url, body }); callback(null, { dualCtResearch: { status: 'complete', frames: 3, deviceCount: 1 } });
+  };
+  context.onHomeyReady(homey); assert.equal(calls.length, 0);
+  context.document.getElementById('refreshDualCtResearch').click();
+  assert.deepEqual(calls.map((call) => [call.method, call.url, call.body]), [['GET', '/support-snapshot', null]]);
+  const result = context.document.getElementById('dualCtResearchResult').children.map((child) => child.textContent).join(' ');
+  assert.match(result, /completed/); assert.match(result, /Observed samples: 3/);
+});
+
 test('Dual CT capture requires an explicit click, permits Stop, and ignores late callbacks', () => {
   const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
   homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
@@ -21,7 +47,7 @@ test('Dual CT capture requires an explicit click, permits Stop, and ignores late
   assert.equal(calls[1].url, '/dual-ct-research/stop');
   calls[1].callback(null, { status: 'stopped' });
   calls[0].callback(null, { status: 'listening' });
-  assert.match(context.document.getElementById('dualCtResearchResult').textContent, /stopped/);
+  assert.match(context.document.getElementById('dualCtResearchResult').children.map((child) => child.textContent).join(' '), /stopped/i);
   assert.equal([...context.timers.values()].filter((timer) => !timer.interval).length, 0);
   context.document.getElementById('startDualCtResearch').click();
   const deadline = [...context.timers.values()].find((timer) => !timer.interval); deadline.fn();
@@ -50,6 +76,7 @@ function loadSettingsScript() {
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'meter-status.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'reporter-status.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'dual-ct-status.js'), 'utf8'), context);
   vm.runInContext(source, context);
   return context;
 }

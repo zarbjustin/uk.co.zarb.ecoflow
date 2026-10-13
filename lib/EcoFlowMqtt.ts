@@ -36,6 +36,11 @@ export class EcoFlowMqtt {
     this.log = opts.log || (() => {});
   }
 
+  /** Include status-only listeners when deciding whether a shared connection is idle. */
+  get hasSubscribers(): boolean {
+    return this.quotaHandlers.size > 0 || this.statusHandlers.size > 0;
+  }
+
   /** Update credentials/region; the next (re)connect uses them. */
   updateOptions(opts: EcoFlowMqttOptions): void {
     this.opts = opts;

@@ -8,6 +8,20 @@ for Test on 10 October 2026; it is now published. Dual CT pairing remains disabl
 
 ### Dual CT sprint 1 audit and discovery broadening — 13 October 2026
 
+Sprint 4 hardens slow-connection cancellation and shared-subscription lifecycle.
+Pending ordinary subscribers prevent idle teardown, and discovery detaches only
+its own callbacks. Stopped/replaced sessions cannot attach later; expired lists
+and stopped probes cannot trigger new reads. Cleanup exceptions are isolated and
+reported without private error text. Local tests exercise real MQTT registries,
+not actual cloud sessions. Broker/hardware acceptance remains open.
+
+Sprint 3 adds a plain-language local capture summary and a bounded anonymous
+event timeline, not raw packets or measured channel values. The summary labels
+subscription attachment separately from actual receipt; an empty/unavailable
+response is not zero. Manual refresh makes no cloud call or new capture. Support
+guidance no longer demands a one-minute capture, and screenshots/logs can be
+requested for a specific unresolved issue rather than repeated as a checklist.
+
 Sprint 2 prepares a dormant normalized channel-state adapter with independent
 CT1/CT2 roles, sources and field ages. The vendor-contract registry remains empty.
 No generic JSON key or protobuf position is used to decode actual channel values;
