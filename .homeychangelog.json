@@ -226,5 +226,8 @@
   },
   "1.10.39": {
     "en": "Add opt-in read-only Dual CT discovery across saved app and Developer accounts, clearer local capture summaries and anonymous observation history. Harden slow-connection cancellation and shared subscription cleanup. Remove the one-minute support capture deadline. Dual CT pairing, channel readings, Energy and controls remain disabled pending verification."
+  },
+  "1.10.40": {
+    "en": "Add compact Dual CT reports with bounded model-code evidence, safe telemetry structure, copy/download feedback and read-only preview guidance. Dual CT readings, pairing, Energy, Flows and controls remain disabled pending verification."
   }
 }
