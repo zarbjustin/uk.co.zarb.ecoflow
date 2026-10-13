@@ -2,6 +2,32 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.40 / Build 55 — published 13 October 2026
+
+Diagnostic branch source `ae9c5b70a47b63653af61953353386df17258b55`;
+exact release/tag `v1.10.40` is `775958850e9764458c040bc6524746f82d5b0d13`.
+Later handover commits are not the uploaded release source.
+
+- Source CI passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38441836511
+- Version workflow passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38442012964
+- Exact tag CI passed (tests/lint/audit/Homey verified validation): https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38442809440
+- Upload passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38443074136
+- Developer Tools Build 55 explicitly published to Test; readback confirms
+  available for testing. Public Test store shows v1.10.40 and its changelog.
+- Mainline refs unchanged: local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`,
+  remote master `66b1cb5f828a53333739798281fce86125f61c28`.
+  Portal Live remains v1.10.3 / Build 18. No certification submission or install.
+- 688 local tests and lint pass; hardware/mobile-host acceptance remains open.
+
+Optional next evidence: install Test v1.10.40, open app settings in Homey,
+Dual CT research, Start two-minute discovery, then Refresh local summary and
+Copy compact Dual CT report. Send that small report privately when convenient;
+download and displayed-text fallback are available. No full integration report,
+manual splitting or repeated screenshots requested. Even no_explicit_model is
+useful identification evidence. Do not claim the model or channel mapping is fixed.
+Dual CT values, pairing, Energy, Flows and controls are still disabled.
+Reply to Robert is draft-only pending owner review.
+
 ## Dual CT next-wave sprints — unpublished, 13 October 2026
 
 Sprints 1–2 implemented locally on the diagnostic branch, extending the compact
