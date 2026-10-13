@@ -235,5 +235,8 @@
   },
   "1.10.42": {
     "en": "Retain representative Dual CT JSON and protobuf structure in compact reports instead of discarding all structure at the size limit. Merge duplicates, show partial coverage and record received-source provenance. Diagnostic only; Dual CT pairing, readings, Energy, Flows and controls remain disabled."
+  },
+  "1.10.43": {
+    "en": "Add optional read-only Dual CT numeric candidate preview with explicit consent, per-field expiry and clearer unavailable reasons. Provide a separate reviewed candidate JSON export; normal support reports remain structure-only. Units, channel roles and direction remain unverified; no Dual CT pairing, Energy, Flows or controls."
   }
 }
