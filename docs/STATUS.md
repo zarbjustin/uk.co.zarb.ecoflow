@@ -2,6 +2,32 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.41 / Build 56 — published 13 October 2026
+
+Diagnostic source `dbfc1a3bd5df2ed9dcfbad903d0fccf44893f8e2`; exact uploaded
+release/tag `v1.10.41` is `349cb7df59cfe002afbb13f07f863884112dedea`.
+Later documentation-only commits are not the uploaded source.
+
+- Source CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446293310 — passed.
+- Version: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446511526 — passed.
+- Exact release CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446697699 — passed (tests, lint, audit, verified Homey validation).
+- Upload: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446932148 — passed.
+- Build 56 explicitly published to Test; portal readback confirms available for
+  testing and public Test listing shows v1.10.41. No certification submission.
+- 692 local tests and lint pass. No actual Dual CT capture/decoded measurement,
+  installed-host/mobile acceptance or physical validation claimed.
+- Mainline/Live untouched. Portal Live still v1.10.3 / Build 18 before Test action.
+  Protected local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote
+  master `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged.
+
+Provisional productType 421 admission affects opt-in discovery only. Dual CT
+driver/pairing/readings/Energy/Flows/controls remain disabled. Optional next
+capture: install v1.10.41, Homey app settings > Dual CT research > Start two-minute
+discovery, then Refresh local summary and Copy compact Dual CT report. One private
+compact report when convenient; no new screenshots/full JSON/manual splitting.
+Report even a failure outcome: identification, subscription and structure are
+separate gates. Reply to Robert remains draft-only for owner review.
+
 ## Selected identity and discovery outcomes — unpublished diagnostic work
 
 Capture now retains up to two anonymous selected-meter records: identity basis,
