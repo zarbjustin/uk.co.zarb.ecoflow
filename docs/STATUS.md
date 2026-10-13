@@ -2,6 +2,61 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Dual CT next-wave sprints — unpublished, 13 October 2026
+
+Sprints 1–2 implemented locally on the diagnostic branch, extending the compact
+report work below. Capture retains only allowlisted numeric vendor model/type
+codes for up to eight anonymous meter-like candidates per account. App inventory
+normalisation preserves those codes; Developer inventory is projected directly.
+No custom names, serials, arbitrary metadata strings or measurement values are
+exported. Codes and display-name hints do not authorise capture or pairing.
+Unsupported string model identifiers remain an evidence gap, not guessed models.
+
+Compact schema 2 includes safe installed app version, inventory evidence,
+allowlisted JSON paths/types and bounded protobuf field/wire structure. Pretty
+JSON is limited to 7,500 characters by omitting structure, then excess candidate
+metadata, with explicit flags when necessary. Copy acknowledgement, failed-copy/download fallback, a distinct
+download filename and mobile download-request wording are provided in EN/DE/NL.
+Exports remain manual/local; no automatic transmission or new telemetry polling.
+
+Sprint 3 has an honest gated preview in opt-in research settings: grid, solar
+and phase readings are explicitly Not available, not zero. There is no verified
+Dual CT channel decoder or live field contract yet, so candidate measurements
+are not implemented. No selectable driver, Energy, Flows or controls enabled.
+
+Sprint 4 release is held: no commit/push, remote CI, version bump, upload or Test
+publication this turn. Mainline and Live remain unchanged. Next step is owner
+review, then approved Git/CI/Test release and one convenient compact report from
+Robert. Do not request repeated screenshots or promise the model issue is fixed.
+
+Local acceptance: 688 tests pass, lint and diff checks pass. Regressions include
+numeric model-code projection, unsafe metadata rejection, structural export
+privacy, report size/omission flags, settings copy success/fallback, local-only
+refresh, clearing on navigation and the distinct compact download filename.
+No hardware, actual mobile download or remote CI acceptance claimed.
+
+## Dual CT identification and compact report — local work, 13 October 2026
+
+Unpublished diagnostic-branch changes. Robert reports `no_explicit_model` with
+zero devices/frames while EcoFlow shows house/grid and solar three-phase views.
+This proves discovery selected no eligible model, not that telemetry is absent.
+No raw inventory/report has been received to establish the rejected metadata.
+
+- Retain exact product-metadata and ownership admission; display-name hints do
+  not authorise subscriptions or infer a model/channel mapping.
+- Manual discovery now retains anonymous per-account inventory availability,
+  bounded row counts, missing metadata, explicit matches and display-name hints.
+  No names, serials, account identifiers or raw metadata are exported.
+- Settings provide a compact fixed-field Dual CT summary, copy and JSON download
+  with visible text fallback; unrelated integration payloads are excluded.
+  This is an identification summary, not a substitute for full protocol evidence.
+- Main/Live unchanged; no publication, version bump, commit or push requested.
+  Real Dual CT mapping still requires evidence; no Energy/control enablement.
+- Local verification: 682 tests pass, lint and diff whitespace checks pass.
+  Five new regressions cover name-only rejection, ownership/bounds, compact
+  export privacy, forged input and clearing inventory after account changes.
+  No new hardware validation or remote CI run claimed.
+
 ## Test v1.10.39 / Build 54 — Dual CT discovery and reliability, 13 October 2026
 
 Published to Test from the diagnostic branch only. Combined implementation

@@ -92,6 +92,8 @@ test('download keeps JSON formatting and UTC filename, cleans URLs and does not 
   assert.equal(appended, anchor); assert.equal(removed, true); assert.equal(revoked, undefined);
   cleanup(); assert.equal(revoked, 'blob:synthetic');
   assert.deepEqual(JSON.parse(blob.text), report); assert.equal(blob.type, 'application/json');
+  anchor.click = () => { assert.equal(anchor.download, 'ecoflow-dual-ct-compact.json'); };
+  download({ reportType: 'dual_ct_compact', schemaVersion: 2 }, doc, urls, BlobMock, () => {});
   anchor.click = () => { throw new Error('blocked download'); };
   assert.throws(() => download({ capturedAt: 'PRIVATE' }, doc, urls, BlobMock), /blocked/);
   assert.equal(anchor.download, 'ecoflow-integration-snapshot.json');

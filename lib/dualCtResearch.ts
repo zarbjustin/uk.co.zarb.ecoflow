@@ -1,6 +1,8 @@
 import { AppDevice } from './appDevices';
 import { decodeFrameHeaders } from './streamAc5000Protocol';
-import { dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot } from './dualCtSources';
+import {
+  dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot, dualCtInventorySnapshot,
+} from './dualCtSources';
 import { DualCtHistory, dualCtHistorySnapshot } from './dualCtHistory';
 
 export { dualCtResearchDevices } from './dualCtSources';
@@ -14,6 +16,7 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
   const statuses = ['not_started', 'discovering', 'listening', 'stopped', 'complete', 'sample_limit',
     'account_changed', 'no_explicit_model', 'transport_unavailable', 'discovery_unavailable'];
   return {
+    appVersion: typeof input?.appVersion === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(input.appVersion) ? input.appVersion : 'unknown',
     status: statuses.includes(input?.status) ? input.status : 'not_started',
     source: 'manual_account_discovery',
     captureWindowSec: 120,
@@ -25,6 +28,7 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
     rejectedFrames: bounded(input?.rejectedFrames, MAX_FRAMES),
     cleanupFailures: bounded(input?.cleanupFailures, 65535),
     history: dualCtHistorySnapshot(input?.history),
+    inventory: dualCtInventorySnapshot(input?.inventory),
     jsonShapes: dualCtJsonShapesSnapshot(input?.jsonShapes),
     routes: Array.isArray(input?.routes) ? input.routes.slice(0, 8).filter((route: any) => [0, 1].includes(route?.deviceIndex)
       && ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'].includes(route?.source)
@@ -76,6 +80,7 @@ function fields(data: Buffer): Array<{ field: number; wire: number }> {
 }
 
 interface ResearchHooks {
+  inventory?: () => unknown;
   list: () => Promise<Array<AppDevice & { appListed?: boolean; developerListed?: boolean }>>;
   subscribe: (sn: string, handler: (data: Buffer, topic: string) => void, active?: () => boolean) => Promise<boolean>;
   unsubscribe: (sn: string, handler: (data: Buffer, topic: string) => void) => void;
@@ -293,6 +298,7 @@ export class DualCtResearch {
       rejectedFrames: this.rejected,
       cleanupFailures: Math.min(65535, this.cleanupFailures),
       history: this.history.snapshot(this.now()),
+      inventory: this.status === 'account_changed' || this.startedAt === null ? [] : dualCtInventorySnapshot(this.hooks.inventory?.()),
       jsonShapes: dualCtJsonShapesSnapshot(this.jsonShapes),
       routes: this.routes.map((route) => ({ ...route })),
       shapes: this.shapes.map((shape) => ({ ...shape, fields: shape.fields.map((field) => ({ ...field })) })),

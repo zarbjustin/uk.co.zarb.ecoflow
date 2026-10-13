@@ -135,6 +135,13 @@
     <button id="refreshDualCtResearch" type="button">Refresh local capture summary</button>
     <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
     <div id="dualCtResearchResult" role="status" aria-live="polite"></div>
+    <button id="copyDualCtCompact" type="button" disabled>Copy compact Dual CT report</button>
+    <button id="downloadDualCtCompact" type="button" disabled>Download compact Dual CT report</button>
+    <p id="dualCtShareStatus" role="status" aria-live="polite"></p>
+    <details><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
+      <p id="dualCtPreviewState"></p>
+    </details>
+    <pre id="dualCtCompactText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
   </details>
   <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
@@ -197,7 +204,14 @@
 
       var dualCtOperation = 0;
       var dualCtDeadline;
+      var dualCtCompact = null;
       function renderDualCt(evidence) {
+        dualCtCompact = evidence ? window.EcoFlowDualCtStatus.compact(evidence, evidence.appVersion) : null;
+        document.getElementById('dualCtShareStatus').textContent = '';
+        document.getElementById('dualCtPreviewState').textContent = Homey.__('settings.dual_ct.preview_unavailable');
+        document.getElementById('dualCtCompactText').textContent = dualCtCompact ? JSON.stringify(dualCtCompact, null, 2) : '';
+        document.getElementById('copyDualCtCompact').disabled = !dualCtCompact;
+        document.getElementById('downloadDualCtCompact').disabled = !dualCtCompact;
         window.EcoFlowDualCtStatus.render(document.getElementById('dualCtResearchResult'), evidence,
           function (key) { return Homey.__('settings.dual_ct.' + key); });
       }
@@ -208,8 +222,29 @@
       document.getElementById('stopDualCtResearch').textContent = Homey.__('settings.dual_ct.stop');
       document.getElementById('refreshDualCtResearch').textContent = Homey.__('settings.dual_ct.refresh');
       document.getElementById('dualCtCaptureHelp').textContent = Homey.__('settings.dual_ct.capture_help');
+      document.getElementById('copyDualCtCompact').textContent = Homey.__('settings.dual_ct.compact_copy');
+      document.getElementById('downloadDualCtCompact').textContent = Homey.__('settings.dual_ct.compact_download');
+      document.getElementById('dualCtPreviewTitle').textContent = Homey.__('settings.dual_ct.preview_title');
       renderDualCt(null);
+      document.getElementById('copyDualCtCompact').addEventListener('click', async function () {
+        if (!dualCtCompact) return;
+        var reportToCopy = dualCtCompact;
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(reportToCopy, null, 2));
+          if (dualCtCompact === reportToCopy) document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copied');
+        } catch {
+          if (dualCtCompact === reportToCopy) document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback');
+        }
+      });
+      document.getElementById('downloadDualCtCompact').addEventListener('click', function () {
+        if (!dualCtCompact) return;
+        try {
+          window.EcoFlowReporterStatus.download(dualCtCompact, document, URL, Blob);
+          document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.download_requested');
+        } catch { document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
+      });
       function dualCtAction(action) {
+        renderDualCt(null);
         var operation = ++dualCtOperation;
         clearTimeout(dualCtDeadline);
         var result = document.getElementById('dualCtResearchResult');
@@ -320,6 +355,7 @@
       }
       startCaptureTimer();
       window.addEventListener('pagehide', function () {
+        renderDualCt(null);
         dualCtOperation++;
         clearTimeout(dualCtDeadline);
         reportOperation++;

@@ -96,7 +96,7 @@
     let scheduled = false;
     try {
       anchor.href = url;
-      anchor.download = `ecoflow-integration-${stamp}.json`;
+      anchor.download = report?.reportType === 'dual_ct_compact' ? 'ecoflow-dual-ct-compact.json' : `ecoflow-integration-${stamp}.json`;
       doc.body.appendChild(anchor);
       anchor.click();
       // Some browsers/webviews consume the URL after the click has returned.

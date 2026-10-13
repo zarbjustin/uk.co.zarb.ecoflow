@@ -9,6 +9,39 @@ const vm = require('node:vm');
 const SETTINGS_HTML = path.join(__dirname, '..', 'settings', 'index.html');
 const APP_AUTH_KEYS = ['appAuthEmail', 'appAuthPassword', 'appAuthHost'];
 
+test('compact Dual CT export follows local refresh, has a text fallback and clears on navigation', async () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  context.navigator = { clipboard: { writeText: async () => { throw new Error('private browser failure'); } } };
+  homey.api = (method, url, body, callback) => calls.push({ method, url, callback });
+  context.onHomeyReady(homey);
+  assert.equal(calls.length, 0);
+  context.document.getElementById('refreshDualCtResearch').click();
+  calls[0].callback(null, { dualCtResearch: { status: 'no_explicit_model', appVersion: '1.10.39',
+    inventory: [{ source: 'app', available: true, inspected: 3 }] } });
+  const report = JSON.parse(context.document.getElementById('dualCtCompactText').textContent);
+  assert.equal(report.appVersion, '1.10.39');
+  assert.equal(report.summary.state, 'no_explicit_model');
+  assert.equal(report.valuesCaptured, false);
+  await context.document.getElementById('copyDualCtCompact').click();
+  assert.match(context.document.getElementById('dualCtShareStatus').textContent, /manually/);
+  assert.doesNotMatch(context.document.getElementById('dualCtShareStatus').textContent, /private browser failure/);
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /Not available/);
+  context.events.pagehide();
+  assert.equal(context.document.getElementById('dualCtCompactText').textContent, '');
+  assert.equal(context.document.getElementById('copyDualCtCompact').disabled, true);
+});
+
+test('compact copy success is acknowledged without starting discovery or sending data', async () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); let copied = '';
+  context.navigator = { clipboard: { writeText: async (text) => { copied = text; } } };
+  homey.api = (method, url, body, callback) => callback(null, { dualCtResearch: { status: 'complete' } });
+  context.onHomeyReady(homey);
+  context.document.getElementById('refreshDualCtResearch').click();
+  await context.document.getElementById('copyDualCtCompact').click();
+  assert.equal(JSON.parse(copied).reportType, 'dual_ct_compact');
+  assert.match(context.document.getElementById('dualCtShareStatus').textContent, /copied/);
+});
+
 test('an older integration report cannot overwrite a newer Dual CT action summary', () => {
   const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
   homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });

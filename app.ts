@@ -6,7 +6,7 @@ import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
 import { StreamDiscoveryInventory } from './lib/streamDiscovery';
 import { AppDevice } from './lib/appDevices';
 import { DualCtResearch } from './lib/dualCtResearch';
-import { mergeDualCtInventory, probeDualCtDeveloper } from './lib/dualCtSources';
+import { mergeDualCtInventory, probeDualCtDeveloper, dualCtInventorySummary } from './lib/dualCtSources';
 import { EcoFlowClient } from './lib/EcoFlowClient';
 import { EcoFlowDevice } from './lib/types';
 import {
@@ -211,7 +211,9 @@ module.exports = class EcoFlowApp extends Homey.App {
       this.dualCtResearch?.stop('stopped', true);
       let developer: EcoFlowClient | null = null;
       let developerInventory: EcoFlowDevice[] = [];
+      let inventorySummary: unknown = [];
       this.dualCtResearch = new DualCtResearch({
+        inventory: () => inventorySummary,
         list: async () => {
           const credentials = this.getCredentials();
           developer = null;
@@ -228,9 +230,10 @@ module.exports = class EcoFlowApp extends Homey.App {
             })(),
             developer ? developer.getDeviceList() : Promise.reject(new Error('Developer account unavailable')),
           ]);
-          if (observations.every((result) => result.status === 'rejected')) throw new Error('Discovery unavailable');
           const appInventory = observations[0].status === 'fulfilled' ? observations[0].value as AppDevice[] : [];
           developerInventory = observations[1].status === 'fulfilled' ? observations[1].value as EcoFlowDevice[] : [];
+          inventorySummary = dualCtInventorySummary(appInventory, developerInventory, observations.map((result) => result.status === 'fulfilled'));
+          if (observations.every((result) => result.status === 'rejected')) throw new Error('Discovery unavailable');
           return mergeDualCtInventory(appInventory, developerInventory);
         },
         subscribe: (sn, handler, active) => this.subscribeAppRealtime(sn, handler, active),
@@ -243,7 +246,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       });
     }
     await this.dualCtResearch.start();
-    return this.dualCtResearch.snapshot();
+    return this.getDualCtResearchSnapshot();
   }
 
   stopDualCtResearch(): Record<string, unknown> {
@@ -252,7 +255,10 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   getDualCtResearchSnapshot(): Record<string, unknown> {
-    return this.dualCtResearch?.snapshot() || { status: 'not_started', contributesToEnergy: false, controlsEnabled: false };
+    return {
+      ...(this.dualCtResearch?.snapshot() || { status: 'not_started', contributesToEnergy: false, controlsEnabled: false }),
+      appVersion: this.homey.manifest?.version || 'unknown',
+    };
   }
 
   /** Identity of the saved EcoFlow account, without exposing the password. */

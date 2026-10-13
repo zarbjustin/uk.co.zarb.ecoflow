@@ -2,6 +2,7 @@ import { AppDevice } from './appDevices';
 import { EcoFlowDevice } from './types';
 import { knownDeveloperApiRole } from './deviceIdentity';
 import { isSupportedStream5000Sn } from './stream5000Models';
+import { dualCtModelCodes } from './dualCtMetadata';
 
 export function dualCtResearchDevices<T extends AppDevice>(devices: T[]): T[] {
   const seen = new Set<string>();
@@ -18,6 +19,51 @@ export function dualCtResearchDevices<T extends AppDevice>(devices: T[]): T[] {
 export interface DualCtResearchDevice extends AppDevice {
   appListed: boolean;
   developerListed: boolean;
+}
+
+/** Anonymous inventory evidence, never an alternative authorisation rule. */
+export function dualCtInventorySummary(app: AppDevice[], developer: EcoFlowDevice[], available: boolean[]) {
+  return [app, developer].map((rows, index) => {
+    const bounded = rows.slice(0, 256);
+    return {
+      source: index === 0 ? 'app' : 'developer',
+      available: available[index] === true,
+      inspected: bounded.length,
+      truncated: rows.length > 256,
+      missingProductMetadata: bounded.filter((row) => !row?.productName?.trim()).length,
+      explicitMatches: dualCtResearchDevices(bounded.map((row) => ({
+        ...row, productName: row.productName || '', name: '', shared: 'shared' in row && row.shared === true,
+      }))).length,
+      displayNameHints: index === 0 ? (bounded as AppDevice[]).filter((row) => /dual[\s_-]*ct/i.test(row?.name || '')).length : 0,
+      // Anonymous meter-like candidates only; a hint is never subscription authority.
+      candidates: bounded.filter((row) => /meter|dual[\s_-]*ct/i.test(row?.productName || '')
+        || (index === 0 && /meter|dual[\s_-]*ct/i.test((row as AppDevice).name || ''))).slice(0, 8)
+        .map((row) => ({
+          shared: 'shared' in row && row.shared === true,
+          metadataPresent: typeof row.productName === 'string' && row.productName.trim().length > 0,
+          codes: dualCtModelCodes('modelCodes' in row ? row.modelCodes : row),
+        })),
+    };
+  });
+}
+
+export function dualCtInventorySnapshot(input: any): Array<Record<string, unknown>> {
+  const count = (n: any) => (Number.isInteger(n) && n >= 0 && n <= 256 ? n : 0);
+  return Array.isArray(input) ? input.slice(0, 2).filter((row) => ['app', 'developer'].includes(row?.source))
+    .map((row) => ({
+      source: row.source,
+      available: row.available === true,
+      inspected: count(row.inspected),
+      truncated: row.truncated === true,
+      missingProductMetadata: count(row.missingProductMetadata),
+      explicitMatches: Math.min(2, count(row.explicitMatches)),
+      displayNameHints: count(row.displayNameHints),
+      candidates: Array.isArray(row.candidates) ? row.candidates.slice(0, 8).map((candidate: any) => ({
+        shared: candidate?.shared === true,
+        metadataPresent: candidate?.metadataPresent === true,
+        codes: dualCtModelCodes(candidate?.codes),
+      })) : [],
+    })) : [];
 }
 
 /** Explicit model metadata plus independently authorised transport inventory. */
