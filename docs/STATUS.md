@@ -2,6 +2,33 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.42 / Build 57 — published 13 October 2026
+
+Diagnostic source `8029a019f35453487b11ce49887da1766776d0ea`; exact uploaded
+release/tag `v1.10.42` is `557a5787671ba42f323a88463a1579dcc3c8cb9e`.
+Later documentation-only commits are not the uploaded release source.
+
+- Source CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450103020 — passed.
+- Version: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450330827 — passed.
+- Exact tag CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450467205 — passed (tests/lint/audit/verified Homey validation).
+- Upload: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450707887 — passed.
+- Build 57 explicitly published to Test. Developer Tools readback confirms
+  v1.10.42 available for testing; screenshot retained privately outside Git.
+  Public-store browser readback timed out; do not claim it was verified this turn.
+- 696 local tests and lint pass. No real Dual CT mapping, installed-host/mobile
+  acceptance, installation or physical validation claimed.
+- Mainline/Live untouched: local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`,
+  remote master `66b1cb5f828a53333739798281fce86125f61c28` unchanged. Portal Live
+  remained v1.10.3 / Build 18 before Test action. No certification submission.
+
+Compact schema 3 preserves representative structure/coverage/provenance, not
+measurement values. Next optional evidence: install v1.10.42, Homey app settings
+> Dual CT research > Start two-minute discovery and let finish; Refresh local
+summary, then Copy compact Dual CT report and send one private report. No full
+integration JSON/new screenshots/manual splitting requested. Update restarts the
+app, so old in-memory captures cannot be assumed retained. Dual CT pairing,
+measurements, Energy, Flows and controls remain disabled. Robert reply is draft-only.
+
 ## Dual CT structure-retaining exporter — unpublished diagnostic work
 
 Field feedback from v1.10.41 confirms provisional 421 admission, 58 accepted
