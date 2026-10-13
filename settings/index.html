@@ -16,6 +16,7 @@
     .beta-warning { border: 1px solid #e0a800; background: #fff8e1; color: #5e4700; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; }
     .beta-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
     .beta-toggle input { width:auto; margin-top:3px; }
+    button:disabled { opacity:0.5; cursor:default; }
   </style>
 </head>
 <body>
@@ -113,7 +114,7 @@
   <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
   <details id="dualCtResearch">
     <summary id="dualCtTitle">Dual CT research — opt-in, read-only</summary>
-    <p id="dualCtOverview">Two-minute read-only discovery using saved accounts. It records structure only, not channel values, and does not enable Energy, Flows or commands. The shared connection may affect an EcoFlow app session.</p>
+    <p id="dualCtOverview">Two-minute read-only discovery using saved accounts. Default capture records structure only. Local numeric candidates are optional; sharing them requires additional consent. Energy, Flows and commands remain disabled.</p>
     <details id="dualCtTechnical"><summary id="dualCtTechnicalTitle">How capture works and privacy</summary>
     <p>This is not Dual CT pairing or meter support. Start checks the saved EcoFlow app and Developer
       accounts once each, then listens for up to two minutes to at most two owned devices explicitly labelled
@@ -125,14 +126,18 @@
       operations per identified meter check its quota and resolved host, using the existing request retry
       policy; hosts must also be known STREAM
       models in the same Developer inventory. A resolved host does not prove CT channel membership.
-      No commands, channel values, Energy sources or Flows are enabled. Only anonymous frame structure and
+      No commands, verified channel readings, Energy sources or Flows are enabled. By default only anonymous frame structure and
       counts and allowlisted JSON key/types are retained in memory; no values, raw payloads, device names
       or complete serials are saved. The report separates empty, unavailable and observed responses;
-      observed telemetry does not establish units, direction or channel roles.
+      observed telemetry does not establish units, direction or channel roles. The separate optional
+      numeric preview retains unverified candidates in memory only, never in normal support exports.
+      A separate candidate export requires explicit consent and a manual Copy or Download action. It requires
+      explicit plaintext headers; missing encoding metadata will leave it unavailable.
       No reports are sent automatically. Afterwards use Show integration support report at your convenience.
       No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
     </details>
     <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
+    <label class="beta-toggle"><input id="enableDualCtPreview" type="checkbox"><span id="dualCtPreviewOptIn"></span></label>
     <button id="stopDualCtResearch" type="button">Stop Dual CT discovery</button>
     <button id="refreshDualCtResearch" type="button">Refresh local capture summary</button>
     <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
@@ -141,7 +146,14 @@
     <button id="downloadDualCtCompact" type="button" disabled>Download compact Dual CT report</button>
     <p id="dualCtShareStatus" role="status" aria-live="polite"></p>
     <details><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
-      <p id="dualCtPreviewState"></p>
+      <button id="refreshDualCtPreview" type="button"></button>
+      <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
+      <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" disabled><span id="dualCtCandidateConsent"></span></label>
+      <p id="dualCtCandidateHelp" class="help"></p>
+      <pre id="dualCtCandidateText" hidden></pre>
+      <button id="copyDualCtCandidates" type="button" disabled></button>
+      <button id="downloadDualCtCandidates" type="button" disabled></button>
+      <p id="dualCtCandidateShareStatus" role="status" aria-live="polite"></p>
     </details>
     <pre id="dualCtCompactText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
   </details>
@@ -207,10 +219,44 @@
       var dualCtOperation = 0;
       var dualCtDeadline;
       var dualCtCompact = null;
+      var previewOperation = 0;
+      var previewDeadline;
+      var previewExpiry;
+      var candidateSnapshot = null;
+      var candidateReport = null;
+      var candidateReadAt = 0;
+      function prepareCandidateExport() {
+        candidateReport = null;
+        document.getElementById('dualCtCandidateShareStatus').textContent = '';
+        var consent = document.getElementById('consentDualCtCandidateExport');
+        var elapsed = Date.now() - candidateReadAt;
+        if (consent.checked === true && candidateSnapshot && elapsed >= 0) {
+          var aged = JSON.parse(JSON.stringify(candidateSnapshot));
+          aged.devices.forEach(function (device) { device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; }); });
+          candidateReport = window.EcoFlowDualCtStatus.candidateExport(aged);
+        }
+        var text = document.getElementById('dualCtCandidateText');
+        text.textContent = candidateReport ? JSON.stringify(candidateReport, null, 2) : '';
+        text.hidden = !candidateReport;
+        document.getElementById('copyDualCtCandidates').disabled = !candidateReport;
+        document.getElementById('downloadDualCtCandidates').disabled = !candidateReport;
+      }
+      function clearDualCtPreview(reason) {
+        previewOperation++;
+        clearTimeout(previewDeadline);
+        clearTimeout(previewExpiry);
+        candidateSnapshot = null;
+        document.getElementById('consentDualCtCandidateExport').checked = false;
+        document.getElementById('consentDualCtCandidateExport').disabled = true;
+        document.getElementById('dualCtCandidateShareStatus').textContent = '';
+        prepareCandidateExport();
+        window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), { reason: reason },
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+      }
       function renderDualCt(evidence) {
         dualCtCompact = evidence ? window.EcoFlowDualCtStatus.compact(evidence, evidence.appVersion) : null;
         document.getElementById('dualCtShareStatus').textContent = '';
-        document.getElementById('dualCtPreviewState').textContent = Homey.__('settings.dual_ct.preview_unavailable');
+        clearDualCtPreview();
         document.getElementById('dualCtCompactText').textContent = dualCtCompact ? JSON.stringify(dualCtCompact, null, 2) : '';
         document.getElementById('copyDualCtCompact').disabled = !dualCtCompact;
         document.getElementById('downloadDualCtCompact').disabled = !dualCtCompact;
@@ -233,7 +279,62 @@
       document.getElementById('copyDualCtCompact').textContent = Homey.__('settings.dual_ct.compact_copy');
       document.getElementById('downloadDualCtCompact').textContent = Homey.__('settings.dual_ct.compact_download');
       document.getElementById('dualCtPreviewTitle').textContent = Homey.__('settings.dual_ct.preview_title');
+      document.getElementById('dualCtPreviewOptIn').textContent = Homey.__('settings.dual_ct.preview_opt_in');
+      document.getElementById('enableDualCtPreview').checked = false;
+      document.getElementById('refreshDualCtPreview').textContent = Homey.__('settings.dual_ct.preview_refresh');
+      document.getElementById('dualCtCandidateConsent').textContent = Homey.__('settings.dual_ct.candidate_consent');
+      document.getElementById('dualCtCandidateHelp').textContent = Homey.__('settings.dual_ct.candidate_help');
+      document.getElementById('copyDualCtCandidates').textContent = Homey.__('settings.dual_ct.candidate_copy');
+      document.getElementById('downloadDualCtCandidates').textContent = Homey.__('settings.dual_ct.candidate_download');
+      document.getElementById('consentDualCtCandidateExport').addEventListener('change', prepareCandidateExport);
+      document.getElementById('copyDualCtCandidates').addEventListener('click', async function () {
+        prepareCandidateExport();
+        if (!candidateReport) return;
+        var report = candidateReport;
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+          if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copied');
+        } catch {
+          if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback');
+        }
+      });
+      document.getElementById('downloadDualCtCandidates').addEventListener('click', function () {
+        prepareCandidateExport();
+        if (!candidateReport) return;
+        try {
+          window.EcoFlowReporterStatus.download(candidateReport, document, URL, Blob);
+          document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.download_requested');
+        } catch { document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
+      });
       renderDualCt(null);
+      document.getElementById('refreshDualCtPreview').addEventListener('click', function () {
+        clearDualCtPreview();
+        var operation = previewOperation;
+        var requestedAt = Date.now();
+        previewDeadline = setTimeout(function () { clearDualCtPreview('request_failed'); }, 20000);
+        Homey.api('GET', '/dual-ct-preview', null, function (err, evidence) {
+          if (operation !== previewOperation) return;
+          clearTimeout(previewDeadline);
+          previewOperation++;
+          if (err) { clearDualCtPreview('request_failed'); return; }
+          // Account for request transit time; receipt age is not measurement age.
+          var elapsed = Date.now() - requestedAt;
+          if (elapsed < 0 || elapsed >= 20000) return;
+          if (Array.isArray(evidence?.devices)) evidence.devices.forEach(function (device) {
+            if (Array.isArray(device?.readings)) device.readings.forEach(function (row) {
+              row.receivedAgeSec += elapsed / 1000;
+            });
+          });
+          var ttl = window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), evidence,
+            function (key) { return Homey.__('settings.dual_ct.' + key); });
+          if (ttl) {
+            candidateSnapshot = window.EcoFlowDualCtStatus.candidateExport(evidence);
+            candidateReadAt = Date.now();
+            document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
+            previewExpiry = setTimeout(function () { clearDualCtPreview('expired'); }, ttl);
+          }
+        });
+      });
       document.getElementById('copyDualCtCompact').addEventListener('click', async function () {
         if (!dualCtCompact) return;
         var reportToCopy = dualCtCompact;
@@ -266,7 +367,8 @@
           result.textContent = Homey.__('settings.dual_ct.timeout');
         }, 20000);
         Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/support-snapshot' : '/dual-ct-research/' + action,
-          action === 'refresh' ? null : {}, function (err, evidence) {
+          action === 'refresh' ? null : action === 'start'
+            ? { previewEnabled: document.getElementById('enableDualCtPreview').checked === true } : {}, function (err, evidence) {
           if (operation !== dualCtOperation) return;
           clearTimeout(dualCtDeadline);
           dualCtOperation++;
@@ -363,6 +465,7 @@
       }
       startCaptureTimer();
       window.addEventListener('pagehide', function () {
+        document.getElementById('enableDualCtPreview').checked = false;
         renderDualCt(null);
         dualCtOperation++;
         clearTimeout(dualCtDeadline);
@@ -377,7 +480,7 @@
         document.getElementById('supportSnapshotResult').textContent = '';
         renderMeterStatus(null);
       });
-      window.addEventListener('pageshow', function () { startCaptureTimer(); renderCaptureStatus(); });
+      window.addEventListener('pageshow', function () { clearDualCtPreview(); startCaptureTimer(); renderCaptureStatus(); });
       renderMeterStatus(null);
       downloadButton.addEventListener('click', function () {
         renderCaptureStatus();
@@ -497,6 +600,7 @@
       });
 
       document.getElementById('clearAppAuth').addEventListener('click', async function () {
+        clearDualCtPreview();
         var status = document.getElementById('appAuthSaved');
         status.textContent = 'Removing...';
         try {

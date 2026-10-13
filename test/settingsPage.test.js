@@ -75,7 +75,7 @@ test('Dual CT capture requires an explicit click, permits Stop, and ignores late
   assert.equal(calls.length, 0);
   context.document.getElementById('startDualCtResearch').click();
   assert.equal(calls[0].url, '/dual-ct-research/start');
-  assert.deepEqual(Object.keys(calls[0].body), []);
+  assert.equal(calls[0].body.previewEnabled, false);
   context.document.getElementById('stopDualCtResearch').click();
   assert.equal(calls[1].url, '/dual-ct-research/stop');
   calls[1].callback(null, { status: 'stopped' });
@@ -90,6 +90,56 @@ test('Dual CT capture requires an explicit click, permits Stop, and ignores late
 });
 
 /** The inline settings script, run exactly as the settings page runs it. */
+test('candidate preview opt-in is manual, separate from exports and invalidates late callbacks on stop/navigation', () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
+  context.onHomeyReady(homey);
+  assert.equal(calls.length, 0);
+  context.document.getElementById('enableDualCtPreview').checked = true;
+  context.document.getElementById('startDualCtResearch').click();
+  assert.equal(calls[0].body.previewEnabled, true);
+  calls[0].callback(null, { status: 'listening', valuesCaptured: true });
+  context.document.getElementById('refreshDualCtPreview').click();
+  assert.equal(calls[1].url, '/dual-ct-preview'); assert.equal(calls[1].method, 'GET');
+  calls[1].callback(null, { enabled: true, interpretation: 'legacy_meter_overlap_unverified', unitsVerified: false,
+    directionVerified: false, devices: [{ deviceIndex: 0, readings: [{ field: 515, candidateUnit: 'W', value: -12345, receivedAgeSec: 0 }] }] });
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /515: -12345/);
+  assert.doesNotMatch(context.document.getElementById('dualCtCompactText').textContent, /12345/);
+  const expiry = [...context.timers.values()].find(timer => timer.ms > 80000 && !timer.interval);
+  assert.ok(expiry); expiry.fn();
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /expired/);
+  context.document.getElementById('refreshDualCtPreview').click();
+  context.document.getElementById('stopDualCtResearch').click();
+  calls[2].callback(null, { enabled: true, devices: [] });
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /Not available/);
+  context.events.pagehide();
+  assert.equal(context.document.getElementById('enableDualCtPreview').checked, false);
+});
+
+test('candidate sharing requires separate consent, shows a manual fallback, and clears on consent removal', async () => {
+  const context = loadSettingsScript(); const homey = fakeHomey(); let writes = 0;
+  context.navigator = { clipboard: { writeText: async () => { writes++; throw new Error('PRIVATE'); } } };
+  homey.api = (_method, _url, _body, callback) => callback(null, { enabled: true,
+    interpretation: 'legacy_meter_overlap_unverified', unitsVerified: false, directionVerified: false,
+    devices: [{ deviceIndex: 0, sn: 'PRIVATE', readings: [{ field: 515, value: -500, candidateUnit: 'W', receivedAgeSec: 0 }] }] });
+  context.onHomeyReady(homey);
+  context.document.getElementById('refreshDualCtPreview').click();
+  await context.document.getElementById('copyDualCtCandidates').click();
+  assert.equal(writes, 0);
+  const consent = context.document.getElementById('consentDualCtCandidateExport');
+  consent.checked = true; consent.change();
+  const text = context.document.getElementById('dualCtCandidateText');
+  assert.equal(JSON.parse(text.textContent).devices[0].readings[0].value, -500);
+  assert.doesNotMatch(text.textContent, /PRIVATE/);
+  await context.document.getElementById('copyDualCtCandidates').click();
+  assert.equal(writes, 1);
+  assert.match(context.document.getElementById('dualCtCandidateShareStatus').textContent, /manually/);
+  assert.doesNotMatch(context.document.getElementById('dualCtCandidateShareStatus').textContent, /PRIVATE/);
+  consent.checked = false; consent.change();
+  assert.equal(text.textContent, ''); assert.equal(text.hidden, true);
+  assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true);
+});
+
 function loadSettingsScript() {
   const html = fs.readFileSync(SETTINGS_HTML, 'utf8');
   const blocks = [...html.matchAll(/<script type="text\/javascript">([\s\S]*?)<\/script>/g)]

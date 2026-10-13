@@ -125,7 +125,8 @@
       observationScope: 'retained_capture_history', recentObservations: Array.from(recent.values()).slice(0, 8),
       structureCoverage: { groupsAvailable: available.length, groupsIncluded: 0,
         fieldsAvailable: available.reduce((sum, shape) => sum + shape.fields.length, 0), fieldsIncluded: 0 },
-      channelMapping: 'unverified', valuesCaptured: false, pairingEnabled: false,
+      channelMapping: 'unverified', valuesCaptured: evidence?.valuesCaptured === true,
+      valuesIncluded: false, pairingEnabled: false,
       contributesToEnergy: false, controlsEnabled: false };
     const size = () => JSON.stringify(report, null, 2).length;
     // Reserve room for useful structure rather than spending it on unrelated candidates.
@@ -156,6 +157,61 @@
       || report.structureCoverage.fieldsIncluded < report.structureCoverage.fieldsAvailable;
     return report;
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact };
-  else root.EcoFlowDualCtStatus = { describe, render, compact };
+  // Separate consented export. Fixed fields only; never include identities or raw frames.
+  function candidateExport(input) {
+    if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
+      || input.unitsVerified !== false || input.directionVerified !== false) return null;
+    const units = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A' };
+    const devices = []; const seen = new Set();
+    (Array.isArray(input.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
+      if (![0, 1].includes(device?.deviceIndex)) return;
+      const readings = [];
+      (Array.isArray(device.readings) ? device.readings.slice(0, 10) : []).forEach((row) => {
+        const key = device.deviceIndex + ':' + row?.field;
+        if (!Number.isInteger(row?.field) || !units[row.field] || units[row.field] !== row.candidateUnit || seen.has(key)
+          || !Number.isFinite(row.value) || Math.abs(row.value) > 1000000
+          || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= 90) return;
+        seen.add(key);
+        readings.push({ field: row.field, value: row.value, candidateUnit: row.candidateUnit, receivedAgeSec: row.receivedAgeSec });
+      });
+      if (readings.length) devices.push({ deviceIndex: device.deviceIndex, readings });
+    });
+    if (!devices.length) return null;
+    return { reportType: 'dual_ct_candidate_preview', schemaVersion: 1, enabled: true,
+      appVersion: typeof input.appVersion === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(input.appVersion) ? input.appVersion : 'unknown',
+      interpretation: 'legacy_meter_overlap_unverified', source: 'app_mqtt', cmdFunc: 254, cmdId: 21,
+      unitsVerified: false, directionVerified: false, measurementTimestampKnown: false, hardwareValidated: false,
+      channelMapping: 'unverified', pairingEnabled: false, contributesToEnergy: false, controlsEnabled: false, devices };
+  }
+
+  // Separate local display only: never pass candidate values to compact().
+  function renderPreview(element, input, translate) {
+    element.textContent = translate('preview_unavailable');
+    const reasons = ['disabled', 'no_samples', 'no_eligible_meter', 'missing_encoding', 'unsupported_encoding',
+      'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped', 'account_changed', 'request_failed', 'capture_unavailable'];
+    if (reasons.includes(input?.reason)) element.textContent = translate('preview_' + input.reason);
+    if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
+      || input.unitsVerified !== false || input.directionVerified !== false) return 0;
+    const units = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A' };
+    let lifetime = 0;
+    const rows = [];
+    const seen = new Set();
+    (Array.isArray(input.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
+      if (![0, 1].includes(device?.deviceIndex)) return;
+      (Array.isArray(device.readings) ? device.readings.slice(0, 10) : []).forEach((row) => {
+        const key = device.deviceIndex + ':' + row?.field;
+        if (!Number.isInteger(row?.field) || !units[row.field] || units[row.field] !== row.candidateUnit || seen.has(key)
+          || !Number.isFinite(row.value) || Math.abs(row.value) > 1000000
+          || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= 90) return;
+        seen.add(key);
+        const ttl = (90 - row.receivedAgeSec) * 1000;
+        lifetime = lifetime ? Math.min(lifetime, ttl) : ttl;
+        rows.push(`${translate('meter')} ${device.deviceIndex + 1} · ${translate('preview_field')} ${row.field}: ${row.value} (${translate('preview_candidate_unit')}: ${row.candidateUnit}) · ${translate('preview_receipt_age')}: ${Math.floor(row.receivedAgeSec)} s`);
+      });
+    });
+    if (rows.length) element.textContent = translate('preview_warning') + '\n' + rows.join('\n');
+    return lifetime;
+  }
+  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport };
+  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport };
 }(typeof window === 'undefined' ? {} : window));

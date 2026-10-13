@@ -100,7 +100,8 @@ test('public projection cannot promote arbitrary payloads or claim Energy/contro
     shapes: [{ deviceIndex: 0, cmdId: 1, cmdFunc: 2, raw: 'PRIVATE', fields: [{ field: 1, wire: 0, value: 'PRIVATE' }] }],
     contributesToEnergy: true, controlsEnabled: true, valuesCaptured: true });
   assert.doesNotMatch(JSON.stringify(evidence), /PRIVATE/);
-  assert.equal(evidence.status, 'not_started'); assert.equal(evidence.valuesCaptured, false);
+  assert.equal(evidence.status, 'not_started'); assert.equal(evidence.valuesCaptured, true);
+  assert.equal(evidence.valuesIncluded, false);
   assert.equal(evidence.contributesToEnergy, false); assert.equal(evidence.controlsEnabled, false);
 });
 

@@ -203,7 +203,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   /** Explicit settings action only: no automatic discovery, pairing or Energy source. */
-  async startDualCtResearch(): Promise<Record<string, unknown>> {
+  async startDualCtResearch(previewEnabled = false): Promise<Record<string, unknown>> {
     if (this.stopping) return { status: 'stopped' };
     if (!this.dualCtResearch || !['discovering', 'listening'].includes(this.dualCtResearch.snapshot().status as string)) {
       // Each manual capture owns its clients/inventory; late prior-account lists
@@ -213,6 +213,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       let developerInventory: EcoFlowDevice[] = [];
       let inventorySummary: unknown = [];
       this.dualCtResearch = new DualCtResearch({
+        previewEnabled: previewEnabled === true,
         inventory: () => inventorySummary,
         list: async () => {
           const credentials = this.getCredentials();
@@ -257,6 +258,13 @@ module.exports = class EcoFlowApp extends Homey.App {
   getDualCtResearchSnapshot(): Record<string, unknown> {
     return {
       ...(this.dualCtResearch?.snapshot() || { status: 'not_started', contributesToEnergy: false, controlsEnabled: false }),
+      appVersion: this.homey.manifest?.version || 'unknown',
+    };
+  }
+
+  getDualCtPreviewSnapshot(): Record<string, unknown> {
+    return {
+      ...(this.dualCtResearch?.previewSnapshot() || { enabled: false, reason: 'disabled', devices: [] }),
       appVersion: this.homey.manifest?.version || 'unknown',
     };
   }

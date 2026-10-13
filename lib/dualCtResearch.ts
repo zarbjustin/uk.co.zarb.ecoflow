@@ -4,6 +4,7 @@ import {
   dualCtResearchDevices, dualCtJsonShape, dualCtJsonShapesSnapshot, dualCtInventorySnapshot, dualCtDiscoveryIdentity,
 } from './dualCtSources';
 import { DualCtHistory, dualCtHistorySnapshot } from './dualCtHistory';
+import { DualCtPreview } from './dualCtPreview';
 
 export { dualCtResearchDevices } from './dualCtSources';
 
@@ -54,7 +55,8 @@ export function dualCtResearchSnapshot(input: any): Record<string, unknown> {
         && [0, 1, 2, 5].includes(field?.wire)).map((field: any) => ({ field: field.field, wire: field.wire })) : [],
     })) : [],
     channelMapping: 'unverified',
-    valuesCaptured: false,
+    valuesCaptured: input?.valuesCaptured === true,
+    valuesIncluded: false,
     pairingEnabled: false,
     contributesToEnergy: false,
     controlsEnabled: false,
@@ -92,6 +94,7 @@ function fields(data: Buffer): Array<{ field: number; wire: number }> {
 }
 
 interface ResearchHooks {
+  previewEnabled?: boolean;
   inventory?: () => unknown;
   list: () => Promise<Array<AppDevice & { appListed?: boolean; developerListed?: boolean }>>;
   subscribe: (sn: string, handler: (data: Buffer, topic: string) => void, active?: () => boolean) => Promise<boolean>;
@@ -123,9 +126,11 @@ export class DualCtResearch {
   private shapes: Array<{ deviceIndex: number; cmdFunc: number; cmdId: number; fields: Array<{ field: number; wire: number }> }> = [];
 
   private readonly hooks: ResearchHooks;
+  private readonly preview: DualCtPreview;
 
   constructor(hooks: ResearchHooks) {
     this.hooks = hooks;
+    this.preview = new DualCtPreview(hooks.previewEnabled === true);
   }
 
   private now(): number {
@@ -133,6 +138,7 @@ export class DualCtResearch {
   }
 
   stop(status = 'stopped', clear = false): void {
+    if (clear || !['complete', 'sample_limit'].includes(status)) this.preview.clear();
     this.generation += 1;
     if (this.timer !== null) this.hooks.cancel(this.timer);
     this.timer = null;
@@ -251,6 +257,29 @@ export class DualCtResearch {
                 this.shapes.push(shape);
               }
             }
+            // Explicit plaintext marker only. Do not guess, decrypt or interpret cached quota.
+            if (device.modelCodes?.some((code) => code.field === 'productType' && code.code === 421)) {
+              const receivedAt = this.now();
+              for (const header of headers) {
+                if (header.cmdFunc !== 254 || header.cmdId !== 21) continue;
+                if (header.candidateHeaderValid === false) {
+                  this.preview.noteUnavailable('invalid_header'); continue;
+                }
+                if (header.encType !== 0) {
+                  this.preview.noteUnavailable(header.encType === undefined ? 'missing_encoding' : 'unsupported_encoding');
+                  continue;
+                }
+                this.preview.observe(deviceIndex, header.pdata!, {
+                  productType: 421,
+                  cmdFunc: header.cmdFunc,
+                  cmdId: header.cmdId,
+                  source: 'app_mqtt',
+                  encoding: 'plain',
+                  receivedAt,
+                  now: receivedAt,
+                });
+              }
+            } else this.preview.noteUnavailable('model_unverified');
             this.history.record(deviceIndex, 'app_mqtt', 'protobuf', this.now());
           } catch {
             this.rejected += 1;
@@ -324,10 +353,21 @@ export class DualCtResearch {
       routes: this.routes.map((route) => ({ ...route })),
       shapes: this.shapes.map((shape) => ({ ...shape, fields: shape.fields.map((field) => ({ ...field })) })),
       channelMapping: 'unverified',
-      valuesCaptured: false,
+      valuesCaptured: this.preview.hasCaptured(),
+      valuesIncluded: false,
       pairingEnabled: false,
       contributesToEnergy: false,
       controlsEnabled: false,
     };
+  }
+
+  previewSnapshot() {
+    const preview = this.preview.snapshot(this.now());
+    if (preview.enabled && !preview.devices.length) {
+      if (this.status === 'no_explicit_model') preview.reason = 'no_eligible_meter';
+      else if (['stopped', 'account_changed'].includes(this.status)) preview.reason = this.status;
+      else if (['transport_unavailable', 'discovery_unavailable'].includes(this.status)) preview.reason = 'capture_unavailable';
+    }
+    return preview;
   }
 }

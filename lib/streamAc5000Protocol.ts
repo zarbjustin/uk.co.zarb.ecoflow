@@ -270,16 +270,27 @@ export interface Es22FrameHeader {
   cmdId: number;
   deviceSn?: string;
   pdata?: Buffer;
+  /** Optional research gate only; absence is not assumed to mean plaintext. */
+  encType?: number;
+  candidateHeaderValid?: boolean;
 }
 
 function decodeHeader(buf: Buffer): Es22FrameHeader {
   const header: Es22FrameHeader = { cmdFunc: -1, cmdId: -1 };
+  const seen = new Set<number>();
   let pos = 0;
   while (pos < buf.length) {
     const tag = readVarint(buf, pos);
     pos = tag.next;
+    if (tag.value < 8n || tag.value > 0xffffffffn) header.candidateHeaderValid = false;
     const fieldNumber = Number(tag.value >> 3n);
     const wireType = Number(tag.value & 0x07n);
+    if ([1, 6, 8, 9, 25].includes(fieldNumber)) {
+      if (seen.has(fieldNumber) || wireType !== ([1, 25].includes(fieldNumber) ? 2 : 0)) {
+        header.candidateHeaderValid = false;
+      }
+      seen.add(fieldNumber);
+    }
     const field = readField(buf, pos, wireType);
     pos = field.next;
     if (fieldNumber === HEADER_PDATA && wireType === 2) header.pdata = field.bytes;
@@ -288,6 +299,7 @@ function decodeHeader(buf: Buffer): Es22FrameHeader {
       const value = signedFromVarint(readVarint(field.bytes, 0).value);
       if (fieldNumber === HEADER_CMD_FUNC) header.cmdFunc = value;
       else if (fieldNumber === HEADER_CMD_ID) header.cmdId = value;
+      else if (fieldNumber === 6) header.encType = value;
     }
   }
   return header;
@@ -296,16 +308,23 @@ function decodeHeader(buf: Buffer): Es22FrameHeader {
 /** Decode the EcoFlow frame wrapper into its headers (field 1, repeated). */
 export function decodeFrameHeaders(frame: Buffer): Es22FrameHeader[] {
   const headers: Es22FrameHeader[] = [];
+  let candidateWrapperValid = true;
   let pos = 0;
   while (pos < frame.length) {
     const tag = readVarint(frame, pos);
     pos = tag.next;
     const fieldNumber = Number(tag.value >> 3n);
     const wireType = Number(tag.value & 0x07n);
+    if (tag.value < 8n || tag.value > 0xffffffffn || (fieldNumber === 1 && wireType !== 2)) candidateWrapperValid = false;
     const field = readField(frame, pos, wireType);
     pos = field.next;
     if (fieldNumber !== 1 || wireType !== 2) continue;
     headers.push(decodeHeader(field.bytes));
+  }
+  if (!candidateWrapperValid) {
+    headers.forEach((header) => {
+      header.candidateHeaderValid = false;
+    });
   }
   return headers;
 }

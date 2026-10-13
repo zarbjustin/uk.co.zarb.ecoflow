@@ -2,6 +2,45 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Dual CT candidate preview — unpublished diagnostic work
+
+Preview-state/shareability follow-up: reason-specific unavailable messages,
+separate unchecked candidate-export consent, visible reviewable bounded numeric
+JSON with manual Copy/Download/fallback and dedicated filename. Normal reports
+stay structure-only. Expiry/navigation/account changes and consent removal clear
+the prepared export. EN/DE/NL wording now reflects both opt-ins. Receipt age is
+labelled separately from capture-window age. Desktop and mobile-sized Chromium
+workflow regression added; native Homey mobile webview and hardware acceptance
+remain unverified. No publication, mainline or Live changes.
+
+Audit of v1.10.42 structural fields against official STREAM guidance and pinned
+third-party meter implementations supports ten legacy-overlap scalar candidates,
+not a verified Dual CT contract. See SMART_METER_DUAL_CT_PLAN.md for field map,
+provenance and the intentionally unmapped second-channel/energy fields.
+
+Pure decoder added for explicitly plain 421/app-MQTT/254-21 pdata only, with
+strict protobuf/size/duplicate/context/receipt-age checks. Output is unverified
+numeric candidates with candidate units, never Energy/capability values. The
+decoder is connected only to an explicit opt-in, bounded local research preview.
+Default discovery remains structure-only. Numeric candidates are never included
+in support exports; capture consent and export exclusion are distinguished.
+No automatic measured value export, driver, pairing, commands or accounting changes. No masked-frame
+guessing, phase summing, V*A inference, counters or zero substitution.
+
+Mainline/Live unchanged; no commit/push/version bump/Test publication. Test stays
+v1.10.42 / Build 57. The mappings are software-tested with synthetic fixtures,
+not physically validated. No new tester request made this turn.
+Preview requires explicit plaintext marker and app productType 421, shows field
+numbers with unverified candidate units and receipt age, and never assigns CT,
+phase, import/export or Energy roles. Per-field expiry is 90 seconds; stop/account
+change/clock rollback clear private candidates. Missing encoding metadata leaves
+the preview unavailable. Tests cover decoder gates, per-field expiry, UI consent,
+late callbacks, export exclusion and API separation. No raw customer telemetry
+added to Git. Local acceptance: 714 tests pass, including desktop/mobile-sized
+Chromium workflow and sharing/privacy regressions; lint, diff checks and Homey
+4.5.3 verified-level validation pass. These are software checks, not Dual CT
+hardware acceptance. Source work remains uncommitted on the diagnostic branch.
+
 ## Test v1.10.42 / Build 57 — published 13 October 2026
 
 Diagnostic source `8029a019f35453487b11ce49887da1766776d0ea`; exact uploaded

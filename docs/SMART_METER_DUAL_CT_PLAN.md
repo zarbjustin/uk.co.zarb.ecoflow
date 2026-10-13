@@ -1,5 +1,123 @@
 # Smart Meter Dual CT — asset and integration assessment
 
+## Field-mapping audit and candidate decoder — 13 October 2026
+
+The v1.10.42 structural report identifies app-MQTT protobuf 254/21 and 254/22.
+It contains field numbers/wire types only, not raw frames or scalar values.
+The observed shapes overlap the original BK21 meter parser, but overlap is not
+a verified Dual CT measurement contract.
+
+Reviewed primary developer source:
+[shuette42 smart-meter parser](https://github.com/shuette42/ecoflow-energy-ha/blob/563226ad9b2d40eb909eafb5b1b3aeaad39b3225/custom_components/ecoflow_energy/ecoflow/parsers/smart_meter_proto.py).
+Refresh of its remote confirms this ref; this parser is unchanged from the
+previously reviewed 1471a74 ref. It explicitly validates its meanings on BK21,
+not Dual CT. MichelFR/ha-ecoflow-iot at
+`45d9bb2952904cffa590cb811da0c316c66dd589`, STREAM quota mappings, does not supply
+a Dual CT protobuf field-number contract; its energy-name assumptions are not
+transferred to this implementation.
+
+[Official STREAM page](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
+was successfully read in the browser this turn (web tool could not access it).
+It documents quota/main-device/MQTT transport and scalar quota names, but not
+the Dual CT protobuf field numbers. Some field descriptions are inconsistent
+(e.g. system-grid and battery-SoC labelled as load power); the page cannot alone
+establish a meter's role or units. No claim about undocumented APIs elsewhere.
+
+| 254/21 field | Legacy BK21 candidate meaning | Candidate unit |
+| --- | --- | --- |
+| 515 | Aggregate power | W |
+| 962, 963, 772 | Phase 1, 2, 3 active power | W |
+| 956, 957, 771 | Phase 1, 2, 3 voltage | V |
+| 958, 959, 784 | Phase 1, 2, 3 current | A |
+
+All ten were observed as wire 5 in the structural evidence and are float32
+candidates according to the BK21 parser. Do not yet label them validated grid
+readings, split import/export, sum phases, infer power from V*A or bind to Energy.
+
+`lib/dualCtDecoder.ts` implements a pure candidate decoder for explicitly plain
+pdata from 421/app-MQTT/254-21 only. It returns named unverified candidates,
+candidate units and receipt age, with hardwareValidated false and no measurement
+timestamp claim. A separate opt-in local preview now calls it from the bounded
+research subscription, never drivers or capabilities. It does not handle
+masking/encryption or guess alternate payloads.
+Malformed/oversized/duplicate/truncated frames, invalid context, wrong commands,
+nonfinite/corrupt values and stale/future receipt times fail closed. Absent fields
+stay absent, while explicit zero is preserved.
+
+Still unmapped: 985–993 and 998 (additional meter values), 997 (nested data),
+773 (energy record), PF/connection fields and other configuration/status fields.
+254/22 remains excluded from readings: original-meter evidence describes it as
+runtime/configuration, and no Dual CT scalar interpretation is confirmed.
+Counter direction/lifetime/zero-fill behaviour from BK21 is explicitly not reused.
+
+### Optional local candidate preview (unpublished)
+
+Settings has an unchecked, per-capture consent option and a separate manual
+`GET /dual-ct-preview` refresh. No automatic numeric capture, polling, persistence
+or upload. The existing two-minute/128-frame/two-owned-device limits apply.
+Model admission additionally requires app `productType: 421`. A header must
+explicitly carry `enc_type` field 6 = 0, with no duplicate/wrong-wire critical
+header fields. Missing encoding metadata is inconclusive, not plaintext. This
+conservative gate may leave genuine devices unavailable; do not remove it just
+because a protobuf-shaped payload parses. Header layout follows the pinned
+[upstream decoder](https://github.com/shuette42/ecoflow-energy-ha/blob/563226ad9b2d40eb909eafb5b1b3aeaad39b3225/custom_components/ecoflow_energy/ecoflow/proto/decoder.py).
+
+The local display uses field numbers and **candidate** units, not labels such as
+CT1/grid/solar/import/export. The legacy named candidates remain an internal
+hypothesis only. Signed values are preserved without interpreting direction;
+no scaling, phase sum, V*A calculation or counter conversion. Each field expires
+after 90 seconds since receipt, independently of other fields. This is NOT a
+measurement timestamp or freshness guarantee at EcoFlow. Manual stop, account
+change and clock rollback clear values; restart/new capture starts empty.
+At automatic capture completion, remaining values expire normally. The page
+also removes its display at expiry/navigation; refresh obtains a new local
+snapshot, not a device poll.
+
+Full and compact exports retain **no numeric candidate values**. Their
+`valuesCaptured` flag records whether candidates were actually decoded during
+the current local session (cleared on manual stop/account change), and
+`valuesIncluded: false` distinguishes the structure-only export. Raw frames,
+identities and numeric values are not logged or written to Git.
+
+### Preview states and voluntary candidate sharing
+
+The preview now distinguishes opt-out, no eligible meter, no samples, unverified
+model code, missing/unsupported encoding, invalid header, no supported candidate
+values, expired values, stopped/account-changed capture and unavailable requests.
+No-data states never imply zero or confirmed absence of hardware. Only accepted
+254/21 packets influence encoding/candidate state; 254/22 runtime packets do not
+overwrite that explanation. No encoding gate was relaxed to make a tile appear.
+
+A **separate** candidate export can be prepared only from fresh numeric preview
+data and an additional, unchecked sharing-consent checkbox. Its entire JSON is
+visible before manual Copy/Download; no automatic upload. Fixed schema v1
+`dual_ct_candidate_preview` includes app version, anonymous device index, field
+number, signed candidate value/unit, receipt age, source/command and explicit
+unverified flags. It excludes identities, credentials, raw frames, arbitrary keys
+and derived channel roles. Bound: two meters, ten allowlisted fields each. Native
+energy counters remain excluded. A dedicated filename distinguishes it from the
+structure-only support report. Clipboard/download failures retain a visible text
+fallback, without claiming a mobile file was saved.
+
+Consent removal, expiry, stop/refresh/account clearing and page navigation remove
+the prepared JSON and disable sharing. Copy/Download re-check freshness and
+update receipt ages rather than copying stale readings. Existing full/compact
+support paths still contain no numeric candidates. EN/DE/NL overview and privacy
+wording distinguish default structural capture, optional local numeric capture
+and separately consented sharing.
+
+Regression browser checks use synthetic values in Chromium at 1280x900 desktop
+and 390x844 mobile-sized viewports: no automatic requests/sharing, separate
+consent, exact reviewed JSON, dedicated download, normal-report exclusion,
+no horizontal overflow, expiry and navigation clearing. This is not physical
+Dual CT acceptance or proof of native Homey/iOS/Android webview downloads.
+
+Next gate: compare actual field values with EcoFlow's configured channel roles
+and units, ideally with known import/export and a secondary circuit. The existing
+structural report cannot validate units or direction, and synthetic regression
+tests cannot replace this acceptance. Unknown new fields/energy stay unmapped.
+No new capture request, hardware command, publication or Energy change.
+
 ## Observed app productType 421 — read-only discovery, 13 October 2026
 
 A v1.10.40 field report shows one owned meter-like app candidate carrying

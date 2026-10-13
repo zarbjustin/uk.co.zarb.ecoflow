@@ -5,8 +5,11 @@ import { createSupportSnapshot } from './lib/supportSnapshot';
 import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
-  async startDualCtResearch({ homey }: { homey: any }): Promise<Record<string, unknown>> {
-    return homey.app.startDualCtResearch();
+  async startDualCtResearch({ homey, body }: { homey: any; body?: any }): Promise<Record<string, unknown>> {
+    return homey.app.startDualCtResearch(body?.previewEnabled === true);
+  },
+  async dualCtPreview({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    return homey.app.getDualCtPreviewSnapshot();
   },
   async stopDualCtResearch({ homey }: { homey: any }): Promise<Record<string, unknown>> {
     return homey.app.stopDualCtResearch();
