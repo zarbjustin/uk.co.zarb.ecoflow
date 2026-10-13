@@ -223,5 +223,8 @@
   },
   "1.10.38": {
     "en": "Adds scoped BMS, peer and grid reading comparisons with short session-only histories, bounds queued original STREAM telemetry during slow Homey writes, and protects pasted integration report parts against forum formatting. Energy accounting, device pairing and hardware controls remain unchanged."
+  },
+  "1.10.39": {
+    "en": "Add opt-in read-only Dual CT discovery across saved app and Developer accounts, clearer local capture summaries and anonymous observation history. Harden slow-connection cancellation and shared subscription cleanup. Remove the one-minute support capture deadline. Dual CT pairing, channel readings, Energy and controls remain disabled pending verification."
   }
 }

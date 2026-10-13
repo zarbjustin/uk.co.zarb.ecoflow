@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.38",
+  "version": "1.10.39",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -82,8 +82,14 @@
     "homey:manager:geolocation"
   ],
   "api": {
-    "startDualCtResearch": { "method": "POST", "path": "/dual-ct-research/start" },
-    "stopDualCtResearch": { "method": "POST", "path": "/dual-ct-research/stop" },
+    "startDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/start"
+    },
+    "stopDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/stop"
+    },
     "coordinationPreview": {
       "method": "POST",
       "path": "/coordination-preview"
