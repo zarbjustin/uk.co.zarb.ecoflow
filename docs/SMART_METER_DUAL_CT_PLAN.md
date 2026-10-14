@@ -1,6 +1,14 @@
 # Smart Meter Dual CT — asset and integration assessment
 
-## Historical export and per-field expiry — unpublished, 14 October 2026
+## Historical export and per-field expiry — Test .46 / Build 61, 14 October 2026
+
+Published from exact tag `v1.10.46`
+(`a76cb5d90fc7db159c1b7f40580250b84acc44ba`) after source and exact-tag CI passed
+749 tests, lint, audit and Homey verified validation. Official Homey Apps API
+readback at 2026-10-14 21:04:24 UTC confirms Build 61 / v1.10.46 state `test`;
+Live remains Build 18 / v1.10.3. Mainline refs remain unchanged. See STATUS.md for
+workflow links and acceptance boundaries. This supersedes the initial local
+implementation status below; no physical/native-webview acceptance is claimed.
 
 The .45 report confirms 41 accepted numeric candidate payloads, but the next
 message identifies an export-workflow failure: live expiry also erased the
@@ -31,8 +39,9 @@ Regressions cover mixed-age expiry, delayed export after live expiry/completion,
 fixed retention without polling, actual cleanup timer, no callback resurrection,
 consent withdrawal/capture identity/Stop/account/navigation/rollback/restart,
 projection privacy and two-meter size limits, with desktop/mobile-sized Chromium
-checks. Local acceptance is recorded in STATUS.md. Uncommitted and unpublished;
-Robert's updated reply is draft-only with no repeat capture requested now.
+checks. Local and exact-release acceptance are recorded in STATUS.md. Published
+to Test only; Robert's updated reply is draft-only and asks for one optional
+candidate export from .46, not another compact report or rushed screenshots.
 
 ## Field-mapping audit and candidate decoder — 13 October 2026
 

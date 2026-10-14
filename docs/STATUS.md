@@ -2,7 +2,40 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Unpublished Dual CT export/expiry fix — 14 October 2026
+## Test v1.10.46 / Build 61 — published 14 October 2026
+
+Diagnostic source `81e34ace714e6097ab4d7ab27d6b6d15843e47c0`; exact release/tag
+`v1.10.46` is `a76cb5d90fc7db159c1b7f40580250b84acc44ba`. Later handover commits
+are not the uploaded source. Supersedes the implementation checkpoint below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38636434166 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38636640942 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38636848877 — passed: 749 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38637133817 — passed; created Build 61 / v1.10.46.
+- Authenticated official Homey Apps API first confirmed the exact build as Draft.
+  Test-only publication succeeded; readback at 2026-10-14 21:04:24 UTC confirms
+  Build 61 / v1.10.46 `test`. Build 18 / v1.10.3 remains `live`.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No certification,
+  Live, installation or physical-acceptance action. Native Homey webview and
+  physical Dual CT acceptance remain open.
+
+Release scope: live fields expire individually at 90 seconds; separate historical
+candidate evidence is retained in memory for a fixed 15 minutes from the first
+accepted packet and exported only after separate consent/review. Schema 3 labels
+historical/not-live/non-simultaneous and retains ages/provenance, unverified units
+and bounded coverage. Stop/new capture/account change/restart/rollback clear
+evidence. No Energy accounting, driver, pairing, Flows or control changes.
+
+Robert's private .45 conversation was refreshed: still three posts, including
+41/41 candidate acceptance and the disabled export after expiry; no separate
+candidate JSON. Updated reply remains draft-only for owner review. It requests
+one fresh .46 capture for ONE optional candidate export, not another compact/full
+report or timed screenshots. Export before Stop/new capture; those erase evidence.
+Expired .45 values cannot be recovered. If unavailable, exact wording suffices;
+no repeated attempts. No message sent this release turn.
+
+## Dual CT export/expiry fix — implementation checkpoint, 14 October 2026
 
 Diagnostic branch only, based on `67ca6bab12f34cd30f49cb08738753efc3eadb56`.
 Robert's .45 compact report confirms 41/41 accepted numeric candidate payloads;
