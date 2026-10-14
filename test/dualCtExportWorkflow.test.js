@@ -17,13 +17,18 @@ async function setup(browser, viewport, expired = false) {
       const retainedForSec=(window.expiredInitially?200:80)+elapsed;
       const rows=[{field:515,value:-7,candidateUnit:'W',receivedAgeSec:(window.expiredInitially?200:80)+elapsed,encodingBasis:'omitted_zero_candidate'},
         {field:956,value:230,candidateUnit:'V',receivedAgeSec:(window.expiredInitially?130:10)+elapsed,encodingBasis:'explicit_zero'}];
+      rows.forEach((row,index)=>{row.packetIndex=index+1;});
+      const checkBase={bank:'A',scope:'single_decoded_payload',encodingBasis:'explicit_zero',mappingVerified:false,roleVerified:false,measurementSimultaneityVerified:false};
+      const bankChecks=[{deviceIndex:0,bank:'A',latest:{...checkBase,packetIndex:2,status:'partial',presentPowerFields:[],receivedAgeSec:rows[1].receivedAgeSec},
+        lastComplete:{...checkBase,packetIndex:1,status:'consistent',presentPowerFields:[515,962,963,772],receivedAgeSec:rows[0].receivedAgeSec,
+          reportedTotal:-7,phaseValues:[-1,-2,-4],phaseSum:-7,difference:0,tolerance:0.001014}}];
       const fresh=rows.filter(row=>row.receivedAgeSec<90);
       return {enabled:true,reason:fresh.length?'ready':'expired',captureId:window.id,appVersion:'1.10.45',
         interpretation:'legacy_meter_overlap_unverified',unitsVerified:false,directionVerified:false,
         devices:fresh.length?[{deviceIndex:0,readings:fresh}]:[],
         diagnosticSnapshot:retainedForSec<900?{kind:'historical_capture',simultaneous:false,retainedForSec,
           retentionRemainingSec:900-retainedForSec,lastPacketAgeSec:rows[1].receivedAgeSec,
-          devices:[{deviceIndex:0,sn:'PRIVATE',readings:rows}]}:null};
+          devices:[{deviceIndex:0,sn:'PRIVATE',readings:rows}],bankChecks}:null};
     };
     Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copied=value;}}});
     window.onHomeyReady({ready(){},get(_key,cb){cb(null,null);},
@@ -56,6 +61,10 @@ test('desktop/mobile per-field expiry preserves newer live fields and consented 
       assert.match(await page.locator('#dualCtPreviewState').innerText(),/956: 230/);
       assert.equal(await page.locator('#consentDualCtCandidateExport').isChecked(),false);
       assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(),true);
+      assert.match(await page.locator('#dualCtPreviewState').innerText(),/Candidate bank A.*candidate phase 1.*voltage/);
+      assert.match(await page.locator('#dualCtBankState').innerText(),/NOT CT1\/CT2/);
+      assert.match(await page.locator('#dualCtBankState').innerText(),/latest payload #2: incomplete/);
+      assert.match(await page.locator('#dualCtBankState').innerText(),/last complete power payload #1: arithmetic consistent only/);
       await page.clock.runFor(10000);
       const partial=await page.locator('#dualCtPreviewState').innerText();
       assert.doesNotMatch(partial,/515: -7/); assert.match(partial,/956: 230/);
@@ -66,18 +75,23 @@ test('desktop/mobile per-field expiry preserves newer live fields and consented 
       assert.equal(await page.locator('#consentDualCtCandidateExport').isDisabled(),false);
       await page.locator('#consentDualCtCandidateExport').check();
       const reviewed=JSON.parse(await page.locator('#dualCtCandidateText').innerText());
-      assert.equal(reviewed.schemaVersion,3); assert.equal(reviewed.historical,true); assert.equal(reviewed.notLive,true);
+      assert.equal(reviewed.schemaVersion,4); assert.equal(reviewed.historical,true); assert.equal(reviewed.notLive,true);
       assert.equal(reviewed.devices[0].readings.length,2); assert.ok(reviewed.devices[0].readings[0].receivedAgeSec>90);
+      assert.equal(reviewed.bankChecks[0].latest.packetIndex,2);
+      assert.equal(reviewed.bankChecks[0].lastComplete.packetIndex,1);
+      assert.ok(reviewed.bankChecks[0].lastComplete.receivedAgeSec>90);
       assert.doesNotMatch(JSON.stringify(reviewed),/PRIVATE|captureId/);
       await page.locator('#copyDualCtCandidates').click();
       const copied=JSON.parse(await page.evaluate(()=>window.copied));
       assert.equal(copied.devices[0].readings[0].value,reviewed.devices[0].readings[0].value);
       assert.ok(copied.devices[0].readings[0].receivedAgeSec>=reviewed.devices[0].readings[0].receivedAgeSec);
       assert.ok(copied.retentionRemainingSec<=reviewed.retentionRemainingSec);
+      assert.ok(copied.bankChecks[0].lastComplete.receivedAgeSec>=reviewed.bankChecks[0].lastComplete.receivedAgeSec);
       assert.equal(await page.evaluate(()=>window.calls.length),calls);
       await page.locator('#consentDualCtCandidateExport').uncheck();
       assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(),true);
       assert.equal(await page.locator('#dualCtCandidateText').textContent(),'');
+      assert.match(await page.locator('#dualCtBankState').innerText(),/Historical same-payload/,'local metadata remains available without sharing consent');
       await page.locator('#consentDualCtCandidateExport').check();
       await page.locator('#refreshDualCtResearch').click();
       assert.equal(await page.locator('#consentDualCtCandidateExport').isChecked(),true,'same capture retains explicit consent');
@@ -91,6 +105,7 @@ test('desktop/mobile per-field expiry preserves newer live fields and consented 
       assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(),true);
       assert.equal(await page.locator('#dualCtCandidateText').textContent(),'');
       assert.match(await page.locator('#dualCtDiagnosticState').innerText(),/retention window ended/);
+      assert.equal(await page.locator('#dualCtBankState').textContent(),'');
       assert.equal(await page.evaluate(()=>window.calls.length),afterRefresh,'refresh did not renew retention or poll');
       await page.close();
     }

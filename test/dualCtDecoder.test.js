@@ -22,7 +22,7 @@ test('observed overlapping fields decode unverified candidates with no phase sum
 test('additional fields expose float32 candidates only, with no guessed units, nested energy or runtime readings', () => {
   const result = decodeDualCtCandidates(Buffer.concat([991, 992, 993, 998, 985, 986, 987, 988, 989, 990].map((field) => float(field, 123))), context);
   assert.equal(result.readings.length, 10);
-  for (const row of result.readings) { assert.equal(row.candidateUnit, null); assert.equal(row.candidate, 'unmapped_scalar'); }
+  for (const row of result.readings) { assert.equal(row.candidateUnit, null); assert.match(row.candidate, /^bankB_/); }
   assert.equal(result.additionalBankMappingVerified, false);
   const nested = Buffer.concat([vi(773 * 8 + 2), vi(4), Buffer.from('TEST')]);
   assert.equal(decodeDualCtCandidates(nested, context), null);

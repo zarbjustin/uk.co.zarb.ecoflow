@@ -152,6 +152,7 @@
       <button id="refreshDualCtPreview" type="button"></button>
       <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
       <p id="dualCtDiagnosticState" class="help" role="status" aria-live="polite"></p>
+      <p id="dualCtBankState" class="help" style="white-space:pre-wrap" role="status" aria-live="polite"></p>
       <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" disabled><span id="dualCtCandidateConsent"></span></label>
       <p id="dualCtCandidateHelp" class="help"></p>
       <pre id="dualCtCandidateText" hidden></pre>
@@ -238,6 +239,7 @@
         candidateSnapshot = null;
         document.getElementById('consentDualCtCandidateExport').checked = false;
         document.getElementById('consentDualCtCandidateExport').disabled = true;
+        document.getElementById('dualCtBankState').textContent = '';
         document.getElementById('dualCtDiagnosticState').textContent = reason
           ? Homey.__('settings.dual_ct.' + reason) : '';
       }
@@ -267,6 +269,7 @@
           aged.retainedForSec += elapsed / 1000;
           aged.retentionRemainingSec -= elapsed / 1000;
           aged.lastPacketAgeSec += elapsed / 1000;
+          ageBankChecks(aged.bankChecks, elapsed / 1000);
           candidateReport = window.EcoFlowDualCtStatus.diagnosticExport({ ...aged,
             diagnosticSnapshot: { ...aged, kind: 'historical_capture' } });
         }
@@ -275,6 +278,25 @@
         text.hidden = !candidateReport;
         document.getElementById('copyDualCtCandidates').disabled = !candidateReport;
         document.getElementById('downloadDualCtCandidates').disabled = !candidateReport;
+      }
+      function ageBankChecks(checks, seconds) {
+        if (Array.isArray(checks)) checks.forEach(function (entry) {
+          [entry.latest, entry.lastComplete].forEach(function (check) { if (check) check.receivedAgeSec += seconds; });
+        });
+      }
+      function renderBankChecks() {
+        var checks = candidateSnapshot?.bankChecks || [];
+        document.getElementById('dualCtBankState').textContent = checks.length
+          ? Homey.__('settings.dual_ct.bank_warning') + '\n' + checks.map(function (entry) {
+            var latest = entry.latest;
+            var text = Homey.__('settings.dual_ct.meter') + ' ' + (entry.deviceIndex + 1) + ' · '
+              + Homey.__('settings.dual_ct.bank_candidate') + ' ' + entry.bank + ' · '
+              + Homey.__('settings.dual_ct.bank_latest') + ' #' + latest.packetIndex + ': '
+              + Homey.__('settings.dual_ct.bank_' + latest.status);
+            if (entry.lastComplete) text += ' · ' + Homey.__('settings.dual_ct.bank_last_complete') + ' #'
+              + entry.lastComplete.packetIndex + ': ' + Homey.__('settings.dual_ct.bank_' + entry.lastComplete.status);
+            return text;
+          }).join('\n') : '';
       }
       function clearDualCtPreview(reason, preserveConsent) {
         previewOperation++;
@@ -290,6 +312,7 @@
         document.getElementById('consentDualCtCandidateExport').disabled = true;
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
         document.getElementById('dualCtDiagnosticState').textContent = '';
+        document.getElementById('dualCtBankState').textContent = '';
         prepareCandidateExport();
         window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), { reason: reason },
           function (key) { return Homey.__('settings.dual_ct.' + key); });
@@ -386,6 +409,7 @@
           evidence.diagnosticSnapshot.retainedForSec += elapsed / 1000;
           evidence.diagnosticSnapshot.retentionRemainingSec -= elapsed / 1000;
           evidence.diagnosticSnapshot.lastPacketAgeSec += elapsed / 1000;
+          ageBankChecks(evidence.diagnosticSnapshot.bankChecks, elapsed / 1000);
           evidence.diagnosticSnapshot.devices?.forEach(function (device) {
             device.readings?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
           });
@@ -405,6 +429,7 @@
             clearCandidateExport('candidate_snapshot_expired'); prepareCandidateExport();
           }, Math.ceil(candidateSnapshot.retentionRemainingSec * 1000));
         } else clearCandidateExport();
+        renderBankChecks();
         prepareCandidateExport();
       }
       document.getElementById('refreshDualCtPreview').addEventListener('click', function () {

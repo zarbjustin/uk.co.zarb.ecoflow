@@ -2,6 +2,18 @@
   "settings": {
     "dual_ct": {
       "preview_unknown_unit": "onbekend; geen eenheid toegewezen",
+      "bank_candidate": "Kandidaatbank",
+      "bank_phase": "vermoedelijke fase",
+      "bank_total_power": "hypothese totaalvermogen",
+      "bank_power": "vermogenshypothese",
+      "bank_voltage": "spanningshypothese",
+      "bank_current": "stroomhypothese",
+      "bank_latest": "laatste payload",
+      "bank_last_complete": "laatste volledige vermogenspayload",
+      "bank_partial": "onvolledig; geen somcontrole",
+      "bank_consistent": "alleen rekenkundig consistent",
+      "bank_mismatch": "rekenkundige afwijking; onderzoeken",
+      "bank_warning": "Historische rekencontrole binnen één payload. Bank A/B en fasen zijn hypotheses, GEEN CT1/CT2-, net- of solarrollen. Pakketindices identificeren gedecodeerde payloads, geen meettijdstippen. Kloppende sommen bevestigen geen eenheden, richting, fasevolgorde of gelijktijdige metingen. Geen Energy, Flows of bediening.",
       "preview_encoding_basis": "coderingsbasis",
       "preview_basis_explicit_zero": "expliciete nulmarkering",
       "preview_basis_omitted_zero_candidate": "markering ontbreekt; alleen kandidaat nul-/standaardwaarde",

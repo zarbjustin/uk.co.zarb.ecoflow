@@ -2,6 +2,53 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unpublished Dual CT candidate banks/coherent-payload checks — 14 October 2026
+
+Diagnostic branch only, based on `a2b8c6e99d6da9430f85c73b120c7f0603dfcc2f`.
+Robert's .46 private topic 160876 contains a successful schema 3 historical
+export with 20/20 fields and no trimming. Candidate phase sums match both totals,
+but that export has no payload indices: equal receipt ages do NOT establish
+same-payload provenance retrospectively. No customer values/raw packets were
+added to fixtures or source. The .45 approved reply was posted and reopened at
+160872/post 4; this turn's .46 response remains draft-only.
+
+Implemented locally:
+
+- Neutral Bank A/B hypotheses for the 20 candidate fields. No CT1/CT2, grid,
+  solar/load or import/export assignment. Existing secondary `candidateUnit`
+  remains null; possible W/V/A and phase ordering are explicit hypotheses only.
+- Strict decoding performs separate signed power-sum checks only when a total
+  and all three phase candidates occur in ONE decoded pdata. Missing is not zero;
+  no cross-bank sum, V*A, absolute-value conversion or cached-field completion.
+  Float32 tolerance checks arithmetic only. Mismatches are retained as evidence,
+  not used to discard otherwise valid readings or change controls/accounting.
+- Every accepted payload observation receives a bounded capture-local index,
+  including distinct headers delivered together at the same receipt time.
+  Latest payload status and independently aged last-complete evidence remain
+  separate per device/bank; partial deltas cannot refresh old complete evidence.
+- Consented historical schema 4 export includes fixed hypotheses, provenance,
+  bounded same-payload check evidence and honest reading/check trimming counts.
+  Historical/not-live/non-simultaneous and all verification gates remain false.
+  Support/compact reports stay numeric-free. The existing 90-second per-field
+  preview and fixed 15-minute historical retention/Stop/account cleanup remain.
+
+Screenshot comparison: re-opened all three images in .43 topic 160827/post 1.
+The grid-style page displays net import/export and phase A/B/C; the Solar page
+has separate L1/L2/L3 power/voltage/current. Screenshot clocks show 22:23 and
+22:24; the later .46 export is not a matching-time sample. Earlier Solar phase
+values are nonzero/signed, unlike some later zero candidates: do not label those
+phases unused/disconnected or infer a universal sign rule. This corroborates a
+two-view arrangement, not bank-to-port/role/phase/direction verification.
+The upstream BK21 parser was rechecked at `1471a74a117d78ce5120e30a9f1826b51e1c23a6`;
+it supports original-meter overlap, not a Dual CT second-bank contract.
+
+Local acceptance: 762 automated tests, lint, audit (0 vulnerabilities), diff
+checks and Homey 4.5.3 verified validation pass. Chromium desktop/mobile-sized
+checks cover the neutral labels, latest-partial/last-complete distinction,
+delayed export, age advancement and retention expiry. Native/physical acceptance
+remains open. Uncommitted, no new CI/version/upload/publication, no message sent.
+Mainline refs and Live remain unchanged; last published Test is .46 / Build 61.
+
 ## Test v1.10.46 / Build 61 — published 14 October 2026
 
 Diagnostic source `81e34ace714e6097ab4d7ab27d6b6d15843e47c0`; exact release/tag

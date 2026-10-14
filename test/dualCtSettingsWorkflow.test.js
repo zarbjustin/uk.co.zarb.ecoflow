@@ -84,7 +84,7 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       await page.locator('#consentDualCtCandidateExport').check();
       const reviewed = JSON.parse(await page.locator('#dualCtCandidateText').innerText());
       assert.equal(reviewed.devices[0].readings[0].value, -123.5);
-      assert.equal(reviewed.schemaVersion, 3);
+      assert.equal(reviewed.schemaVersion, 4);
       assert.equal(reviewed.historical, true); assert.equal(reviewed.notLive, true);
       assert.equal(reviewed.encodingVerified, false);
       assert.equal(reviewed.devices[0].readings.find(row => row.field === 985).candidateUnit, null);

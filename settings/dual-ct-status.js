@@ -198,6 +198,20 @@
   // Separate consented export. Fixed fields only; never include identities or raw frames.
   const CANDIDATE_UNITS = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A',
     985: null, 986: null, 987: null, 988: null, 989: null, 990: null, 991: null, 992: null, 993: null, 998: null };
+  const BANK_HYPOTHESES = [
+    { bank: 'A', total: 515, power: [962, 963, 772], voltage: [956, 957, 771], current: [958, 959, 784] },
+    { bank: 'B', total: 998, power: [991, 992, 993], voltage: [985, 986, 987], current: [988, 989, 990] },
+  ];
+  function bankCandidate(field) {
+    for (const bank of BANK_HYPOTHESES) {
+      if (field === bank.total) return { bank: bank.bank, phase: null, quantity: 'total_power', suggestedUnit: 'W' };
+      for (const [quantity, unit] of [['power', 'W'], ['voltage', 'V'], ['current', 'A']]) {
+        const index = bank[quantity].indexOf(field);
+        if (index >= 0) return { bank: bank.bank, phase: index + 1, quantity, suggestedUnit: unit };
+      }
+    }
+    return null;
+  }
   function candidateRows(input, maxAge = 90) {
     const devices = []; const seen = new Set();
     (Array.isArray(input?.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
@@ -212,8 +226,10 @@
           || !Number.isFinite(row.value) || Math.abs(row.value) > 1000000
           || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= maxAge) return;
         seen.add(key);
+        const packetIndex = Number.isInteger(row.packetIndex) && row.packetIndex > 0 && row.packetIndex <= 2048 ? row.packetIndex : null;
         readings.push({ field: row.field, value: row.value, candidateUnit: row.candidateUnit,
-          receivedAgeSec: row.receivedAgeSec, encodingBasis: basis, representation: 'float32_candidate' });
+          receivedAgeSec: row.receivedAgeSec, encodingBasis: basis, representation: 'float32_candidate',
+          ...(packetIndex !== null ? { packetIndex } : {}) });
       });
       if (readings.length) devices.push({ deviceIndex: device.deviceIndex, readings });
     });
@@ -227,7 +243,7 @@
     const included = devices.reduce((sum, device) => sum + device.readings.length, 0);
     const priorTrimmed = ['dual_ct_candidate_preview', 'dual_ct_candidate_snapshot'].includes(input.reportType) && input.readingsOmitted === true
       && Number.isInteger(input.readingsAvailable) && input.readingsAvailable >= included && input.readingsAvailable <= 40;
-    const report = { reportType: historical ? 'dual_ct_candidate_snapshot' : 'dual_ct_candidate_preview', schemaVersion: historical ? 3 : 2, enabled: true,
+    const report = { reportType: historical ? 'dual_ct_candidate_snapshot' : 'dual_ct_candidate_preview', schemaVersion: historical ? 4 : 2, enabled: true,
       appVersion: typeof input.appVersion === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(input.appVersion) ? input.appVersion : 'unknown',
       interpretation: 'legacy_meter_overlap_unverified', source: 'app_mqtt', cmdFunc: 254, cmdId: 21,
       unitsVerified: false, directionVerified: false, measurementTimestampKnown: false, hardwareValidated: false,
@@ -236,16 +252,64 @@
       channelMapping: 'unverified', pairingEnabled: false, contributesToEnergy: false, controlsEnabled: false, devices };
     if (historical) Object.assign(report, { historical: true, notLive: true, simultaneous: false,
       retainedForSec: input.retainedForSec, retentionRemainingSec: input.retentionRemainingSec, lastPacketAgeSec: input.lastPacketAgeSec });
+    if (historical) {
+      report.bankHypotheses = BANK_HYPOTHESES.map(bank => ({ ...bank, power: [...bank.power], voltage: [...bank.voltage], current: [...bank.current] }));
+      report.bankMappingVerified = false; report.measurementSimultaneityVerified = false;
+      report.coherenceScope = 'single_decoded_payload';
+      report.bankChecks = bankChecks(input);
+      const prior = input.reportType === 'dual_ct_candidate_snapshot' && input.bankChecksOmitted === true
+        && Number.isInteger(input.bankChecksAvailable) && input.bankChecksAvailable >= report.bankChecks.length && input.bankChecksAvailable <= 4;
+      report.bankChecksAvailable = prior ? input.bankChecksAvailable : report.bankChecks.length;
+      report.bankChecksIncluded = report.bankChecks.length; report.bankChecksOmitted = prior;
+    }
     // Bound the expanded two-meter export. Signal trimming, preserve some evidence from both meters.
     while (JSON.stringify(report, null, 2).length > 7500) {
       const largest = report.devices.reduce((a, b) => a.readings.length >= b.readings.length ? a : b);
-      if (largest.readings.length <= 1) return null;
-      largest.readings.pop(); report.readingsIncluded--; report.readingsOmitted = true;
+      if (largest.readings.length > 1) { largest.readings.pop(); report.readingsIncluded--; report.readingsOmitted = true; }
+      else if (report.bankChecks?.length) { report.bankChecks.pop(); report.bankChecksIncluded--; report.bankChecksOmitted = true; }
+      else return null;
     }
     return report;
   }
 
   function candidateExport(input) { return buildCandidateExport(input, false); }
+
+  function bankChecks(input) {
+    const result = []; const seen = new Set();
+    for (const entry of (Array.isArray(input?.bankChecks) ? input.bankChecks.slice(0, 4) : [])) {
+      const hypothesis = BANK_HYPOTHESES.find(bank => bank.bank === entry?.bank);
+      const key = entry?.deviceIndex + ':' + entry?.bank;
+      if (!hypothesis || ![0, 1].includes(entry.deviceIndex) || seen.has(key)) continue;
+      const project = (check) => {
+        if (!check || check.bank !== entry.bank || check.scope !== 'single_decoded_payload'
+          || !Number.isInteger(check.packetIndex) || check.packetIndex < 1 || check.packetIndex > 2048
+          || !Number.isFinite(check.receivedAgeSec) || check.receivedAgeSec < 0 || check.receivedAgeSec >= 990
+          || check.receivedAgeSec < input.lastPacketAgeSec || check.receivedAgeSec > input.retainedForSec + 90
+          || !['explicit_zero', 'omitted_zero_candidate'].includes(check.encodingBasis)) return null;
+        const required = [hypothesis.total, ...hypothesis.power];
+        const present = Array.isArray(check.presentPowerFields) ? check.presentPowerFields : [];
+        if (present.length > 4 || new Set(present).size !== present.length || present.some(field => !required.includes(field))) return null;
+        const output = { bank: entry.bank, scope: 'single_decoded_payload', packetIndex: check.packetIndex,
+          receivedAgeSec: check.receivedAgeSec, encodingBasis: check.encodingBasis, presentPowerFields: [...present],
+          mappingVerified: false, roleVerified: false, measurementSimultaneityVerified: false };
+        if (check.status === 'partial' && present.length < 4) return { ...output, status: 'partial' };
+        if (present.length !== 4 || !Array.isArray(check.phaseValues) || check.phaseValues.length !== 3
+          || ![check.reportedTotal, ...check.phaseValues].every(value => Number.isFinite(value) && Math.abs(value) <= 1000000)) return null;
+        const phaseSum = check.phaseValues.reduce((sum, value) => sum + value, 0);
+        const difference = check.reportedTotal - phaseSum;
+        const tolerance = 0.001 + 0.000001 * (Math.abs(check.reportedTotal) + check.phaseValues.reduce((sum, value) => sum + Math.abs(value), 0));
+        const status = Math.abs(difference) <= tolerance ? 'consistent' : 'mismatch';
+        if (check.status !== status) return null;
+        return { ...output, status, reportedTotal: check.reportedTotal, phaseValues: [...check.phaseValues], phaseSum, difference, tolerance };
+      };
+      const latest = project(entry.latest); const lastComplete = project(entry.lastComplete);
+      if (!latest || (lastComplete && (lastComplete.status === 'partial' || lastComplete.packetIndex > latest.packetIndex
+        || lastComplete.receivedAgeSec < latest.receivedAgeSec
+        || (lastComplete.packetIndex === latest.packetIndex && JSON.stringify(lastComplete) !== JSON.stringify(latest))))) continue;
+      seen.add(key); result.push({ deviceIndex: entry.deviceIndex, bank: entry.bank, latest, lastComplete });
+    }
+    return result;
+  }
 
   // Separate historical evidence, never admitted back to the fresh preview or normal reports.
   function diagnosticExport(input) {
@@ -275,13 +339,16 @@
       device.readings.forEach((row) => {
         const ttl = (90 - row.receivedAgeSec) * 1000;
         lifetime = lifetime ? Math.min(lifetime, ttl) : ttl;
-        rows.push(`${translate('meter')} ${device.deviceIndex + 1} · ${translate('preview_field')} ${row.field}: ${row.value} (${translate('preview_candidate_unit')}: ${row.candidateUnit || translate('preview_unknown_unit')}) · ${translate('preview_encoding_basis')}: ${translate('preview_basis_' + row.encodingBasis)} · ${translate('preview_receipt_age')}: ${Math.floor(row.receivedAgeSec)} s`);
+        const mapping = bankCandidate(row.field);
+        const hint = mapping ? ` · ${translate('bank_candidate')} ${mapping.bank} / ${mapping.phase === null ? translate('bank_total_power')
+          : translate('bank_phase') + ' ' + mapping.phase + ' ' + translate('bank_' + mapping.quantity)} (${mapping.suggestedUnit}?)` : '';
+        rows.push(`${translate('meter')} ${device.deviceIndex + 1} · ${translate('preview_field')} ${row.field}: ${row.value} (${translate('preview_candidate_unit')}: ${row.candidateUnit || translate('preview_unknown_unit')})${hint} · ${translate('preview_encoding_basis')}: ${translate('preview_basis_' + row.encodingBasis)} · ${translate('preview_receipt_age')}: ${Math.floor(row.receivedAgeSec)} s`);
       });
     });
     if (rows.length) element.textContent = translate('preview_warning') + '\n' + rows.join('\n');
     else if (input.reason === 'ready') element.textContent = translate('preview_expired');
     return lifetime;
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport, diagnosticExport };
-  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport, diagnosticExport };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport, diagnosticExport, bankCandidate };
+  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport, diagnosticExport, bankCandidate };
 }(typeof window === 'undefined' ? {} : window));

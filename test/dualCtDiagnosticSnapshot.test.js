@@ -19,7 +19,7 @@ test('historical export survives live expiry, keeps genuine zero and original pe
   assert.equal(view.devices[0].readings.length,1,'exact 90-second boundary removes only older field');
   let report=archive(preview,180000);
   assert.deepEqual(preview.snapshot(180000).devices,[]);
-  assert.equal(report.reportType,'dual_ct_candidate_snapshot'); assert.equal(report.schemaVersion,3);
+  assert.equal(report.reportType,'dual_ct_candidate_snapshot'); assert.equal(report.schemaVersion,4);
   assert.equal(report.historical,true); assert.equal(report.notLive,true); assert.equal(report.simultaneous,false);
   assert.equal(report.devices[0].readings.find(r=>r.field===515).value,0);
   assert.equal(report.devices[0].readings.find(r=>r.field===515).receivedAgeSec,100);

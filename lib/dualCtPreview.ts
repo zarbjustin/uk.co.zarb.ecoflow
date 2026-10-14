@@ -1,13 +1,17 @@
 import { decodeDualCtCandidates, DualCtDecodeContext } from './dualCtDecoder';
 import { DUAL_CT_EXTRA_SCALARS, dualCtPreviewDiagnostics } from './dualCtDiagnostics';
+import { DualCtBankCheck } from './dualCtBanks';
 
 type Reading = NonNullable<ReturnType<typeof decodeDualCtCandidates>>['readings'][number];
+type RetainedReading = Reading & { packetIndex: number };
+type PacketCheck = { check: DualCtBankCheck; packetIndex: number; receivedAt: number; encodingBasis: string };
 const DIAGNOSTIC_RETENTION_MS = 15 * 60 * 1000;
 
 /** Private, bounded candidate cache. Never include this object in support exports. */
 export class DualCtPreview {
-  private rows = new Map<number, Map<number, { reading: Reading; receivedAt: number }>>();
-  private diagnosticRows = new Map<number, Map<number, { reading: Reading; receivedAt: number }>>();
+  private rows = new Map<number, Map<number, { reading: RetainedReading; receivedAt: number }>>();
+  private diagnosticRows = new Map<number, Map<number, { reading: RetainedReading; receivedAt: number }>>();
+  private bankChecks = new Map<number, Map<string, { latest: PacketCheck; lastComplete?: PacketCheck }>>();
   private diagnosticStartedAt: number | null = null;
   private diagnosticLatestAt = 0;
   private diagnosticExpired = false;
@@ -45,6 +49,7 @@ export class DualCtPreview {
 
   private clearDiagnostic(): void {
     this.diagnosticRows.clear();
+    this.bankChecks.clear();
     if (this.diagnosticTimer !== null) clearTimeout(this.diagnosticTimer);
     this.diagnosticTimer = null;
   }
@@ -105,7 +110,7 @@ export class DualCtPreview {
       this.clearDiagnostic();
       this.rows.clear();
     }
-    if (this.diagnosticExpired) return;
+    if (this.diagnosticExpired || this.acceptedPayloads >= 2048) return;
     this.attemptedPayloads = Math.min(2048, this.attemptedPayloads + 1);
     if (context.encodingBasis === 'omitted_zero_candidate') this.omittedMarkerAttempts = Math.min(2048, this.omittedMarkerAttempts + 1);
     const decoded = decodeDualCtCandidates(payload, context);
@@ -120,7 +125,7 @@ export class DualCtPreview {
     for (const reading of decoded.readings) {
       const previous = fields.get(reading.field);
       if (!previous || context.receivedAt >= previous.receivedAt) {
-        fields.set(reading.field, { reading: { ...reading }, receivedAt: context.receivedAt });
+        fields.set(reading.field, { reading: { ...reading, packetIndex: this.acceptedPayloads }, receivedAt: context.receivedAt });
       }
     }
     this.rows.set(deviceIndex, fields);
@@ -141,11 +146,27 @@ export class DualCtPreview {
       for (const reading of decoded.readings) {
         const previous = retained.get(reading.field);
         if (!previous || context.receivedAt >= previous.receivedAt) {
-          retained.set(reading.field, { reading: { ...reading }, receivedAt: context.receivedAt });
+          retained.set(reading.field, { reading: { ...reading, packetIndex: this.acceptedPayloads }, receivedAt: context.receivedAt });
         }
       }
       this.diagnosticRows.set(deviceIndex, retained);
       this.diagnosticLatestAt = Math.max(this.diagnosticLatestAt, context.receivedAt);
+      const checks = this.bankChecks.get(deviceIndex) || new Map();
+      for (const check of decoded.bankChecks) {
+        const previous = checks.get(check.bank);
+        if (previous && context.receivedAt < previous.latest.receivedAt) continue;
+        const packet = {
+          check,
+          packetIndex: this.acceptedPayloads,
+          receivedAt: context.receivedAt,
+          encodingBasis: context.encodingBasis || 'explicit_zero',
+        };
+        checks.set(check.bank, {
+          latest: packet,
+          lastComplete: ['consistent', 'mismatch'].includes(check.status) ? packet : previous?.lastComplete,
+        });
+      }
+      this.bankChecks.set(deviceIndex, checks);
     }
   }
 
@@ -175,6 +196,19 @@ export class DualCtPreview {
       lastPacketAgeSec: (now - this.diagnosticLatestAt) / 1000,
       simultaneous: false,
       devices: retainedDevices,
+      bankChecks: [...this.bankChecks].flatMap(([deviceIndex, checks]) => [...checks.values()].map(({ latest, lastComplete }) => {
+        const project = (packet: PacketCheck) => ({
+          ...packet.check,
+          presentPowerFields: [...packet.check.presentPowerFields],
+          ...('phaseValues' in packet.check ? { phaseValues: [...packet.check.phaseValues] } : {}),
+          packetIndex: packet.packetIndex,
+          receivedAgeSec: (now - packet.receivedAt) / 1000,
+          encodingBasis: packet.encodingBasis,
+        });
+        return {
+          deviceIndex, bank: latest.check.bank, latest: project(latest), lastComplete: lastComplete ? project(lastComplete) : null,
+        };
+      })),
     } : null;
     let reason = this.unavailableReason;
     if (this.captured) reason = 'expired';

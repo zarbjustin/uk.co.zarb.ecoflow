@@ -5,6 +5,7 @@
  */
 import { DUAL_CT_EXTRA_SCALARS } from './dualCtDiagnostics';
 import { DualCtEncodingBasis } from './dualCtEncoding';
+import { checkDualCtBanks, dualCtBankCandidate } from './dualCtBanks';
 
 const CANDIDATES: Record<number, { key: string; unit: string }> = {
   515: { key: 'aggregatePower', unit: 'W' },
@@ -87,7 +88,7 @@ export function decodeDualCtCandidates(payload: Buffer, context: DualCtDecodeCon
         if (mapping) legacyFields += 1;
         readings.push({
           field,
-          candidate: mapping?.key || 'unmapped_scalar',
+          candidate: mapping?.key || `bankB_${dualCtBankCandidate(field)!.quantity}`,
           value,
           candidateUnit: mapping?.unit || null,
           encodingBasis,
@@ -111,6 +112,7 @@ export function decodeDualCtCandidates(payload: Buffer, context: DualCtDecodeCon
     hardwareValidated: false,
     encodingVerified: false,
     additionalBankMappingVerified: false,
+    bankChecks: checkDualCtBanks(readings),
     readings,
     channelMapping: 'unverified',
     pairingEnabled: false,

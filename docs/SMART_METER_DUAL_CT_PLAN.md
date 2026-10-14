@@ -1,5 +1,64 @@
 # Smart Meter Dual CT — asset and integration assessment
 
+## Candidate banks and coherent decoded payloads — unpublished, 14 October 2026
+
+The .46 historical export supplies all 20 allowlisted numeric candidates and
+shows two matching power-sum relationships. It has receipt ages but no payload
+provenance, so existing values cannot be labelled same-payload merely because
+their ages match. Its primary/secondary units, roles, ordering and direction are
+still unverified. No raw customer numeric fixture was imported into Git.
+
+Research mapping (hypothesis, NOT CT port or installation role):
+
+| Candidate bank | Total power | Phase power 1/2/3 | Voltage 1/2/3 | Current 1/2/3 |
+| --- | --- | --- | --- | --- |
+| A | 515 | 962 / 963 / 772 | 956 / 957 / 771 | 958 / 959 / 784 |
+| B | 998 | 991 / 992 / 993 | 985 / 986 / 987 | 988 / 989 / 990 |
+
+`dualCtBanks.ts` defines these neutral hypotheses. Possible secondary W/V/A are
+display hints, not a promotion from null units to verified measurements. The
+existing model-421/live-topic/254/21/encoding-signature admission is unchanged.
+The [reviewed upstream BK21 parser](https://github.com/shuette42/ecoflow-energy-ha/blob/1471a74a117d78ce5120e30a9f1826b51e1c23a6/custom_components/ecoflow_energy/ecoflow/parsers/smart_meter_proto.py)
+supports the original field overlap only; it is not a Dual CT bank-B contract.
+
+Each strictly decoded pdata is checked before caching. A bank needs its reported
+total and all three power fields together; partial packets never borrow previous
+values. Difference is signed reported total minus signed phase sum; tolerance
+`0.001 + 1e-6 * (abs(total) + sum(abs(phases)))` handles float32 arithmetic only,
+not meter accuracy. No cross-bank aggregation, V*A, sign flipping, zero filling
+or control/accounting change. An inconsistent total is diagnostic evidence,
+not permission to reject otherwise valid candidate readings or choose a source.
+
+Per-reading capture-local payload indices distinguish multiple headers at the
+same receipt clock. They are not native sequence numbers/measurement timestamps.
+Each device/bank retains latest payload completeness and a separate last-complete
+power check with its own index, encoding basis and receipt age. A newer partial
+update cannot renew an older complete sample. Matching arithmetic does NOT verify
+simultaneous physical sampling, phase order, units, CT assignment or direction.
+
+Schema 4 optional historical export projects these fixed hypotheses and bounded
+check records. It preserves the 7500-character budget with independent honest
+reading/check omission counts, per-meter evidence and privacy allowlists.
+Normal support/compact reports stay numeric-free. No backfilling of provenance
+for older exports. Existing capture/export consent, 90-second live freshness,
+15-minute fixed historical retention and Stop/account/restart/rollback clearing
+apply equally to the added evidence.
+
+Comparison against the actual .43 screenshots: net-import/export and Solar views
+each show three phase power/voltage/current readings. Solar includes negative
+phase power/current and all three phases are represented. The captures predate
+.46 and their on-screen times differ; they are not numeric acceptance matches.
+Later explicit zeros cannot imply permanently unused channels. The evidence
+supports the two-bank hypothesis but cannot bind A/B to home/grid/Solar/CT ports
+or settle signs. Keep unknown bank role and direction closed until compared with
+configuration and appropriately matched evidence; no immediate tester repeat.
+
+762 tests plus lint/audit/Homey verified validation pass locally, including
+same-clock split payloads and multi-header deliveries, signed cancellation,
+roundoff/mismatch/zeros/missing fields, phase reactivation, per-device isolation,
+immutable retention, bounded provenance, privacy, size and desktop/mobile workflow.
+Mainline/Live unchanged; uncommitted/unpublished; reply draft only.
+
 ## Historical export and per-field expiry — Test .46 / Build 61, 14 October 2026
 
 Published from exact tag `v1.10.46`

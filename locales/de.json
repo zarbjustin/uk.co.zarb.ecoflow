@@ -2,6 +2,18 @@
   "settings": {
     "dual_ct": {
       "preview_unknown_unit": "unbekannt; keine Einheit zugewiesen",
+      "bank_candidate": "Kandidatenbank",
+      "bank_phase": "vermutete Phase",
+      "bank_total_power": "Gesamtleistungshypothese",
+      "bank_power": "Leistungshypothese",
+      "bank_voltage": "Spannungshypothese",
+      "bank_current": "Stromhypothese",
+      "bank_latest": "letzte Nutzlast",
+      "bank_last_complete": "letzte vollständige Leistungsnutzlast",
+      "bank_partial": "unvollständig; keine Summenprüfung",
+      "bank_consistent": "nur arithmetisch konsistent",
+      "bank_mismatch": "arithmetische Abweichung; prüfen",
+      "bank_warning": "Historische Rechenprüfungen innerhalb einer Nutzlast. Bank A/B und Phasen sind Hypothesen, NICHT CT1/CT2, Netz- oder Solarzuordnungen. Paketindizes bezeichnen dekodierte Nutzlasten, keine Messzeitpunkte. Passende Summen bestätigen weder Einheiten, Richtung, Phasenreihenfolge noch gleichzeitige Messung. Kein Energy, keine Flows oder Steuerung.",
       "preview_encoding_basis": "Kodierungsgrundlage",
       "preview_basis_explicit_zero": "expliziter Null-Marker",
       "preview_basis_omitted_zero_candidate": "Marker fehlt; Null-/Standardwert nur als Kandidat",
