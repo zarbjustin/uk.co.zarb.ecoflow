@@ -241,5 +241,8 @@
   },
   "1.10.44": {
     "en": "Fix Dual CT receipt confirmation and add compact encoding/preview diagnostics. Show effective capture mode, keep consent explicit and refresh the local summary and preview together. Numeric candidates remain separate, unverified and excluded from normal reports; no Dual CT Energy, Flows or controls."
+  },
+  "1.10.45": {
+    "en": "Improve optional read-only Dual CT candidate decoding for omitted encoding markers, add field provenance and unitless additional candidates, and clarify compact report coverage. Energy accounting and controls are unchanged."
   }
 }
