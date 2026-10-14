@@ -1,6 +1,14 @@
 # Smart Meter Dual CT — asset and integration assessment
 
-## Candidate banks and coherent decoded payloads — unpublished, 14 October 2026
+## Candidate banks and coherent decoded payloads — Test .47 / Build 62, 14 October 2026
+
+Published from exact tag `v1.10.47`
+(`29ceba7b3475d9ec6791be550d54d0fcfaeeb9c4`) after source and exact-tag CI passed
+762 tests, lint, audit and Homey verified validation. Official Homey Apps API
+readback at 2026-10-14 22:33:00 UTC confirms Build 62 / v1.10.47 `test`;
+Live remains Build 18 / v1.10.3. Mainline refs remain unchanged. See STATUS.md for
+workflow links and acceptance boundaries. No physical/native-webview acceptance
+is claimed; the .46 reply is draft-only and no extra night-time captures requested.
 
 The .46 historical export supplies all 20 allowlisted numeric candidates and
 shows two matching power-sum relationships. It has receipt ages but no payload
@@ -57,7 +65,7 @@ configuration and appropriately matched evidence; no immediate tester repeat.
 same-clock split payloads and multi-header deliveries, signed cancellation,
 roundoff/mismatch/zeros/missing fields, phase reactivation, per-device isolation,
 immutable retention, bounded provenance, privacy, size and desktop/mobile workflow.
-Mainline/Live unchanged; uncommitted/unpublished; reply draft only.
+Mainline/Live unchanged; published only to Test as recorded above; reply draft only.
 
 ## Historical export and per-field expiry — Test .46 / Build 61, 14 October 2026
 

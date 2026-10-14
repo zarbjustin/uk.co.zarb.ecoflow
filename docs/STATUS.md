@@ -2,7 +2,37 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Unpublished Dual CT candidate banks/coherent-payload checks — 14 October 2026
+## Test v1.10.47 / Build 62 — published 14 October 2026
+
+Diagnostic source `57f962f1b0647f80460607d3f3b3d65d429c6797`; exact release/tag
+`v1.10.47` is `29ceba7b3475d9ec6791be550d54d0fcfaeeb9c4`. Later handover commits
+are not the uploaded source. Supersedes the unpublished implementation checkpoint below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38647762422 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38647903265 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38647991635 — passed: 762 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38648234169 — passed; created Build 62 / v1.10.47.
+- Official authenticated Homey Apps API confirmed Draft at 2026-10-14 22:32:55 UTC,
+  then Test-only publication/readback at 22:33:00 UTC: Build 62 / v1.10.47 `test`.
+  Build 18 / v1.10.3 remains `live`.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No certification,
+  Live, installation, control or physical-acceptance action. Native Homey webview
+  and physical Dual CT acceptance remain open.
+
+Release adds read-only neutral candidate bank labels, capture-local decoded-payload
+indices and same-payload signed power-sum diagnostics with independently aged
+latest/last-complete evidence. Historical candidate export is schema 4; normal
+support/compact remains numeric-free. No CT port/grid/Solar role assignment,
+verified units/direction, Energy accounting, driver, pairing, Flow or control changes.
+
+Robert's .46 reply remains a draft for owner review, not sent. It acknowledges
+the successful 20-field export and earlier screenshots without claiming a matched
+measurement. It explains the Test build and that late-night conditions are not a
+useful sunlight-generation comparison; no further captures are requested tonight.
+Do not ask him to repeat the exports already supplied.
+
+## Dual CT candidate banks/coherent-payload checks — implementation checkpoint, 14 October 2026
 
 Diagnostic branch only, based on `a2b8c6e99d6da9430f85c73b120c7f0603dfcc2f`.
 Robert's .46 private topic 160876 contains a successful schema 3 historical
