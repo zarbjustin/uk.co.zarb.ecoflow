@@ -2,12 +2,14 @@
 
 ## Field-mapping audit and candidate decoder — 13 October 2026
 
-## Omitted-marker investigation wave — 14 October 2026, unpublished
+## Omitted-marker investigation wave — Test .45 / Build 60, 14 October 2026
 
-Sprints 1–3 and the local/software part of Sprint 4 are implemented on the
-diagnostic branch. No commit/push/version bump/Test publication or tester request
-this turn. Mainline/Live and energy accounting remain unchanged. Publication and
-physical field acceptance require a later approved release/validation step.
+Sprints 1–3 and the software part of Sprint 4 are implemented on the diagnostic
+branch. Exact release `v1.10.45` (`a82055ca1737451dfeb9691500a16e69f07cb5a2`)
+passed CI and was uploaded as Build 60. Official Homey Apps API readback confirms
+Test at 2026-10-14 20:20:24 UTC; Live remains Build 18 / v1.10.3. Mainline and
+energy accounting remain unchanged. Physical field acceptance is still pending;
+Robert's reply remains a draft for review. See STATUS.md for exact release gates.
 
 ### Sprint 1: evidence and limitations
 
@@ -45,8 +47,8 @@ No commands, foreign-account probes, credentials or raw telemetry were exported.
 Decision: evidence supports a strictly bounded **candidate** trial of unchanged
 bytes when the marker is absent, not certification as plaintext. Actual header
 presence remains preserved; the shared decoder does not default all missing
-markers to zero. The current Test .44 explicit-marker behaviour is superseded
-only in the unpublished candidate policy described below.
+markers to zero. Test .45 supersedes .44's explicit-marker-only candidate guard
+with the tightly scoped candidate policy described below.
 
 ### Sprint 2: guarded numeric candidate path
 
@@ -92,9 +94,10 @@ Local checks: 739 tests, lint, audit (0 vulnerabilities), diff checks and Homey
 4.5.3 verified validation pass. Desktop/mobile-sized Chromium workflow checks
 cover neutral unitless display, marker provenance, reviewed optional export,
 refresh, expiry and manual fallback. These are not native Homey/hardware tests.
-Current changes are uncommitted; exact-commit CI/publication have not run.
+Source and exact-tag CI also pass all 739 tests, lint, audit and Homey validation.
+Test publication is confirmed; installation and physical acceptance are not.
 
-After release approval, publish one diagnostic Test build. Next optional tester
+One diagnostic Test build is published. Next optional tester
 request: ONE compact report; only if candidates appear and sharing consent is
 given, ONE separate candidate export. A normal EcoFlow app view/channel-role
 description is needed only for a specific field-mapping question, without a

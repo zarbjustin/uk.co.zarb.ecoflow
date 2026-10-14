@@ -2,7 +2,39 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Dual CT encoding wave — release preparation, 14 October 2026
+## Test v1.10.45 / Build 60 — published 14 October 2026
+
+Diagnostic source `ce747ee9b176b6f732c750b63ab4de8727c1f3e5`; exact release/tag
+`v1.10.45` is `a82055ca1737451dfeb9691500a16e69f07cb5a2`. Later documentation
+commits are not the uploaded source. This supersedes the preparation checkpoint
+below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38630258029 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38630527288 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38630688421 — passed: 739 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38631012286 — passed; created Build 60 / v1.10.45.
+- Official Homey Apps API, using the existing CLI authentication, first confirmed
+  Build 60 as Draft. Test-only channel publication succeeded; authenticated
+  readback at 2026-10-14 20:20:24 UTC confirms Build 60 / v1.10.45 state `test`.
+  Build 18 / v1.10.3 remains `live`. No certification or Live action.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No installation,
+  native Homey webview or physical Dual CT acceptance is claimed.
+
+Release scope: narrowly gated absent-marker unchanged-byte candidate decoding,
+per-field encoding provenance, unitless additional scalar candidates, compact
+schema 5 structural coverage and separate consented candidate schema 2 export.
+These remain unverified candidates, not a supported Dual CT measurement contract.
+No driver pairing, Energy source, Flows, controls or energy-accounting changes.
+No customer raw telemetry or credentials committed.
+
+Robert's reply is draft-only for owner review. Optional next request: ONE compact
+report from .45; only if values appear and he wants to share them, ONE separate
+reviewed candidate export. If blocked/rejected/expired, the compact report and
+exact preview wording suffice; no repeated capture, full report, crash log or
+rushed screenshots requested. No message sent this release turn.
+
+## Dual CT encoding wave — preparation checkpoint, 14 October 2026
 
 Diagnostic branch `codex/mixed-generation-reporting-diagnostics` only. Sprints
 1–3 and local/software release checks are complete; physical acceptance remains
