@@ -6,6 +6,7 @@ import {
 import { DualCtHistory, dualCtHistorySnapshot } from './dualCtHistory';
 import { DualCtPreview } from './dualCtPreview';
 import { dualCtPreviewDiagnostics, dualCtReceiptSnapshot } from './dualCtDiagnostics';
+import { dualCtEncodingPolicy } from './dualCtEncoding';
 
 export { dualCtResearchDevices } from './dualCtSources';
 
@@ -285,17 +286,14 @@ export class DualCtResearch {
                 this.shapes.push(shape);
               }
             }
-            // Explicit plaintext marker only. Do not guess, decrypt or interpret cached quota.
+            // Candidate-only model/route policy; no decryption or cached-quota interpretation.
             if (device.modelCodes?.some((code) => code.field === 'productType' && code.code === 421)) {
               const receivedAt = this.now();
               for (const header of headers) {
                 if (header.cmdFunc !== 254 || header.cmdId !== 21) continue;
-                if (header.candidateHeaderValid === false) {
-                  this.preview.noteUnavailable('invalid_header'); continue;
-                }
-                if (header.encType !== 0) {
-                  this.preview.noteUnavailable(header.encType === undefined ? 'missing_encoding' : 'unsupported_encoding');
-                  continue;
+                const policy = dualCtEncodingPolicy(header, 421, 'app_mqtt');
+                if (!policy.basis) {
+                  this.preview.noteUnavailable(policy.reason!); continue;
                 }
                 this.preview.observe(deviceIndex, header.pdata!, {
                   productType: 421,
@@ -303,6 +301,7 @@ export class DualCtResearch {
                   cmdId: header.cmdId,
                   source: 'app_mqtt',
                   encoding: 'plain',
+                  encodingBasis: policy.basis,
                   receivedAt,
                   now: receivedAt,
                 });

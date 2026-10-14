@@ -1,6 +1,13 @@
 {
   "settings": {
     "dual_ct": {
+      "preview_unknown_unit": "onbekend; geen eenheid toegewezen",
+      "preview_encoding_basis": "coderingsbasis",
+      "preview_basis_explicit_zero": "expliciete nulmarkering",
+      "preview_basis_omitted_zero_candidate": "markering ontbreekt; alleen kandidaat nul-/standaardwaarde",
+      "preview_basis_not_reported": "niet gemeld in deze oudere preview",
+      "preview_omitted_encoding_rejected": "De coderingsmarkering ontbreekt, maar de strengere controles zijn niet geslaagd. Geen numerieke waarden bewaard; herhaal de opname alleen bij een gerichte vervolgvraag.",
+      "metadata_trimmed": "Inventarisdetails zijn ingekort voor het compacte rapport. Structuurdekking betreft bewaarde opnamevormen, niet alle ooit verzonden velden. Extra velddiagnostiek kan latere pakketten bevatten.",
       "candidate_copy_fallback": "Kopiëren of downloaden is hier niet beschikbaar. Selecteer de kandidaten-JSON hierboven en kopieer die handmatig; er is niets verzonden.",
       "candidate_download_requested": "Download van kandidaten-JSON aangevraagd. Controleer je opgeslagen bestanden; als de mobiele webview niets opslaat, kopieer de JSON hierboven handmatig.",
       "capture_mode_numeric": "Opnamemodus: structuur en optionele lokale numerieke kandidaten. Normale rapporten bevatten geen meetwaarden.",
@@ -24,7 +31,7 @@
       "preview_no_samples": "Nog geen geschikte live meetpakketten ontvangen. Ververs tijdens de opname.",
       "preview_no_eligible_meter": "Geen geschikte eigen Dual CT-meter geïdentificeerd.",
       "preview_capture_unavailable": "Meter niet gevonden of beluisterd. Controleer account-/verbindingsstatus in de lokale samenvatting; geen kandidaten beschikbaar.",
-      "preview_missing_encoding": "Meetpakket zonder expliciete platte-tekstmarkering. Numerieke decodering geblokkeerd; versleuteling wordt niet geraden.",
+      "preview_missing_encoding": "De coderingsmarkering ontbreekt. Deze momentopname heeft geen bruikbare kandidaten. Ontbreken bewijst geen platte tekst; controleer poging-/acceptatietellers in het compacte rapport.",
       "preview_unsupported_encoding": "Niet-ondersteunde codering in het meetpakket. Numerieke decodering geblokkeerd.",
       "preview_invalid_header": "Ongeldige of dubbelzinnige pakketheader. Niet gebruikt voor het numerieke voorbeeld.",
       "preview_model_unverified": "Telemetrie ontvangen, maar app-productType 421 niet bevestigd. Numerieke decodering blijft geblokkeerd.",
@@ -43,7 +50,7 @@
       "preview_field": "Veld",
       "preview_receipt_age": "Ontvangstleeftijd bij voorbeeld",
       "preview_candidate_unit": "mogelijke eenheid",
-      "preview_warning": "Onbevestigde kandidaten van de oudere meter, geen bevestigde Dual CT-metingen. Eenheden, CT-/faserollen en richting zijn onbekend. Leeftijd sinds ontvangst, niet sinds meting. Niet gebruiken voor beslissingen of automatisering. Waarden vervallen na 90 seconden en blijven lokaal, behalve bij vrijwillige aparte export; geen Energy, Flows of bediening.",
+      "preview_warning": "Onbevestigde numerieke kandidaten, geen bevestigde Dual CT-metingen. Eenheden van oudere meter-velden zijn suggesties; extra velden hebben geen eenheid. CT-/faserollen en richting blijven onbekend. Een ontbrekende coderingsmarkering is alleen een kandidaat nul-/standaardwaarde, geen bewezen platte tekst. Leeftijd sinds ontvangst, niet sinds meting. Niet gebruiken voor beslissingen of automatisering. Waarden vervallen na 90 seconden en blijven lokaal, behalve bij vrijwillige aparte export; geen Energy, Flows of bediening.",
       "structure_partial": "Het compacte rapport bevat representatieve structuur, niet elk veld. Opgenomen/beschikbare unieke velden:",
       "stage_not_identified": "Geen geschikte meter gevonden.",
       "stage_identified": "Meter gevonden; alleen-lezen verbindingen worden gecontroleerd.",

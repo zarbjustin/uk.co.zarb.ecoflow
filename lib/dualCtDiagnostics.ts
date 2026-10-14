@@ -2,7 +2,7 @@
 export const DUAL_CT_EXTRA_SCALARS = [985, 986, 987, 988, 989, 990, 991, 992, 993, 998];
 export const DUAL_CT_PREVIEW_REASONS = ['disabled', 'ready', 'no_samples', 'no_eligible_meter', 'missing_encoding',
   'unsupported_encoding', 'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped',
-  'account_changed', 'capture_unavailable', 'not_reported'];
+  'account_changed', 'capture_unavailable', 'not_reported', 'omitted_encoding_rejected'];
 
 export function dualCtReceiptSnapshot(input: any) {
   const count = Number.isInteger(input?.receivedPackets) && input.receivedPackets > 0 && input.receivedPackets <= 128
@@ -23,6 +23,10 @@ export function dualCtPreviewDiagnostics(input: any) {
     reason: DUAL_CT_PREVIEW_REASONS.includes(input?.reason) ? input.reason : 'not_reported',
     attemptedPayloads: count(input?.attemptedPayloads),
     acceptedPayloads: count(input?.acceptedPayloads),
+    omittedMarkerAttempts: count(input?.omittedMarkerAttempts),
+    omittedMarkerAccepted: count(input?.omittedMarkerAccepted),
+    encodingPolicy: 'dual_ct_live_candidate_v1',
+    encodingVerified: false,
     encodingCounts: Object.fromEntries(['explicit_plain', 'missing', 'masked', 'unsupported', 'invalid_header']
       .map((key) => [key, count(input?.encodingCounts?.[key])])),
     additionalScalarFieldsSeen: Array.isArray(input?.additionalScalarFieldsSeen)

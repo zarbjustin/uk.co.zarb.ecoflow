@@ -270,7 +270,7 @@ export interface Es22FrameHeader {
   cmdId: number;
   deviceSn?: string;
   pdata?: Buffer;
-  /** Optional research gate only; absence is not assumed to mean plaintext. */
+  /** Preserve actual marker presence; only a scoped research policy may trial an absent marker. */
   encType?: number;
   candidateHeaderValid?: boolean;
 }
@@ -278,6 +278,7 @@ export interface Es22FrameHeader {
 function decodeHeader(buf: Buffer): Es22FrameHeader {
   const header: Es22FrameHeader = { cmdFunc: -1, cmdId: -1 };
   const seen = new Set<number>();
+  let declaredLength: number | undefined;
   let pos = 0;
   while (pos < buf.length) {
     const tag = readVarint(buf, pos);
@@ -285,7 +286,7 @@ function decodeHeader(buf: Buffer): Es22FrameHeader {
     if (tag.value < 8n || tag.value > 0xffffffffn) header.candidateHeaderValid = false;
     const fieldNumber = Number(tag.value >> 3n);
     const wireType = Number(tag.value & 0x07n);
-    if ([1, 6, 8, 9, 25].includes(fieldNumber)) {
+    if ([1, 6, 8, 9, 10, 25].includes(fieldNumber)) {
       if (seen.has(fieldNumber) || wireType !== ([1, 25].includes(fieldNumber) ? 2 : 0)) {
         header.candidateHeaderValid = false;
       }
@@ -296,12 +297,17 @@ function decodeHeader(buf: Buffer): Es22FrameHeader {
     if (fieldNumber === HEADER_PDATA && wireType === 2) header.pdata = field.bytes;
     else if (fieldNumber === HEADER_DEVICE_SN && wireType === 2) header.deviceSn = field.bytes.toString('utf8');
     else if (wireType === 0) {
-      const value = signedFromVarint(readVarint(field.bytes, 0).value);
+      const raw = readVarint(field.bytes, 0).value;
+      const value = signedFromVarint(raw);
+      // Research validity only: an over-wide integer must not wrap into a zero marker.
+      if ([6, 8, 9, 10].includes(fieldNumber) && (raw >= TWO_POW_64 || !Number.isSafeInteger(value))) header.candidateHeaderValid = false;
       if (fieldNumber === HEADER_CMD_FUNC) header.cmdFunc = value;
       else if (fieldNumber === HEADER_CMD_ID) header.cmdId = value;
       else if (fieldNumber === 6) header.encType = value;
+      else if (fieldNumber === 10) declaredLength = value;
     }
   }
+  if (declaredLength !== undefined && (!header.pdata || declaredLength !== header.pdata.length)) header.candidateHeaderValid = false;
   return header;
 }
 

@@ -1,6 +1,13 @@
 {
   "settings": {
     "dual_ct": {
+      "preview_unknown_unit": "unbekannt; keine Einheit zugewiesen",
+      "preview_encoding_basis": "Kodierungsgrundlage",
+      "preview_basis_explicit_zero": "expliziter Null-Marker",
+      "preview_basis_omitted_zero_candidate": "Marker fehlt; Null-/Standardwert nur als Kandidat",
+      "preview_basis_not_reported": "in dieser älteren Vorschau nicht gemeldet",
+      "preview_omitted_encoding_rejected": "Der Kodierungsmarker fehlt, aber die strengeren Nutzdatenprüfungen wurden nicht bestanden. Keine Zahlen gespeichert; Erfassung nur bei gezielter Rückfrage wiederholen.",
+      "metadata_trimmed": "Inventardetails wurden für den kompakten Bericht gekürzt. Die Strukturabdeckung gilt für gespeicherte Erfassungsformen, nicht alle jemals gesendeten Felder. Zusätzliche Felddiagnostik kann spätere Pakete enthalten.",
       "candidate_copy_fallback": "Kopieren oder Herunterladen ist hier nicht verfügbar. Den oben angezeigten Kandidaten-JSON manuell kopieren; es wurde nichts gesendet.",
       "candidate_download_requested": "Download der Kandidaten-JSON angefordert. Gespeicherte Dateien prüfen; falls die mobile Webansicht nichts speichert, die oben angezeigte JSON manuell kopieren.",
       "capture_mode_numeric": "Erfassungsmodus: Struktur und optionale lokale Zahlenkandidaten. Normale Berichte enthalten keine Messwerte.",
@@ -24,7 +31,7 @@
       "preview_no_samples": "Noch keine geeigneten Live-Messpakete. Während der Erfassung aktualisieren.",
       "preview_no_eligible_meter": "Kein geeigneter eigener Dual-CT-Zähler identifiziert.",
       "preview_capture_unavailable": "Zähler konnte nicht gefunden oder abonniert werden. Konto-/Verbindungsstatus in der lokalen Übersicht prüfen; keine Kandidaten verfügbar.",
-      "preview_missing_encoding": "Messpaket ohne ausdrückliche Klartext-Markierung. Zahlen werden nicht decodiert; keine Verschlüsselung wird geraten.",
+      "preview_missing_encoding": "Der Kodierungsmarker fehlt. In dieser Momentaufnahme sind keine nutzbaren Kandidaten verfügbar. Das Fehlen beweist keinen Klartext; Versuchs- und Annahmezähler im kompakten Bericht prüfen.",
       "preview_unsupported_encoding": "Nicht unterstützte Codierung im Messpaket. Zahlen werden nicht decodiert.",
       "preview_invalid_header": "Ungültiger oder mehrdeutiger Paketkopf. Keine Zahlenvorschau aus diesem Paket.",
       "preview_model_unverified": "Telemetrie empfangen, aber App-productType 421 ist nicht bestätigt. Zahlendecodierung bleibt gesperrt.",
@@ -43,7 +50,7 @@
       "preview_field": "Feld",
       "preview_receipt_age": "Alter seit Empfang bei Vorschau",
       "preview_candidate_unit": "mögliche Einheit",
-      "preview_warning": "Unbestätigte Kandidaten des älteren Zählers, keine bestätigten Dual-CT-Messwerte. Einheiten, CT-/Phasenzuordnung und Richtung sind unbekannt. Alter seit Empfang, nicht seit Messung. Nicht für Entscheidungen oder Automatisierung verwenden. Werte verfallen nach 90 Sekunden und bleiben lokal, außer beim freiwilligen separaten Export; kein Energy, keine Flows oder Steuerung.",
+      "preview_warning": "Unbestätigte Zahlenkandidaten, keine bestätigten Dual-CT-Messwerte. Einheiten der älteren Zählerfelder sind Vorschläge; zusätzliche Felder haben keine Einheit. CT-/Phasenzuordnung und Richtung bleiben unbekannt. Ein fehlender Kodierungsmarker wird nur als Null-/Standardwert-Kandidat gelesen, nicht als bewiesener Klartext. Alter seit Empfang, nicht seit Messung. Nicht für Entscheidungen oder Automatisierung verwenden. Werte verfallen nach 90 Sekunden und bleiben lokal, außer beim freiwilligen separaten Export; kein Energy, keine Flows oder Steuerung.",
       "structure_partial": "Der kompakte Bericht enthält repräsentative Strukturen, nicht alle Felder. Enthaltene/verfügbare eindeutige Felder:",
       "stage_not_identified": "Kein geeigneter Zähler erkannt.",
       "stage_identified": "Zähler erkannt; schreibgeschützte Verbindungen werden geprüft.",

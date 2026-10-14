@@ -73,13 +73,14 @@ test('compact diagnostics distinguish disabled capture, missing/masked/unsupport
   const h = harness(true); await h.capture.start();
   h.emit(frame(undefined)); h.emit(frame(1)); h.emit(frame(2));
   let diagnostics = compact(h.capture.snapshot(), '1.10.43').previewDiagnostics;
-  assert.equal(diagnostics.enabled, true); assert.equal(diagnostics.attemptedPayloads, 0);
+  assert.equal(diagnostics.enabled, true); assert.equal(diagnostics.attemptedPayloads, 1);
+  assert.equal(diagnostics.omittedMarkerAttempts, 1); assert.equal(diagnostics.omittedMarkerAccepted, 0);
   assert.equal(diagnostics.encodingCounts.missing, 1); assert.equal(diagnostics.encodingCounts.masked, 1);
   assert.equal(diagnostics.encodingCounts.unsupported, 1); assert.equal(diagnostics.reason, 'unsupported_encoding');
   h.emit(frame(0));
   diagnostics = h.capture.snapshot().previewDiagnostics;
   assert.equal(diagnostics.reason, 'ready'); assert.equal(diagnostics.acceptedPayloads, 1);
-  assert.equal(diagnostics.attemptedPayloads, 1);
+  assert.equal(diagnostics.attemptedPayloads, 2);
   h.emit(frame(1, integer(293, 5), 22));
   assert.deepEqual(h.capture.snapshot().previewDiagnostics, diagnostics, 'runtime/configuration does not override measurement diagnostics');
   for (const output of [h.capture.snapshot(), dualCtResearchSnapshot(h.capture.snapshot()), compact(h.capture.snapshot(), '1.10.43')]) {

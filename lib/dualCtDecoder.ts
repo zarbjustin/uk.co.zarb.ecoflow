@@ -1,8 +1,11 @@
 /**
  * Experimental scalar candidates only. Numbers/wires overlap the BK21 parser:
- * shuette42/ecoflow-energy-ha, smart_meter_proto.py at 563226ad9b2d40eb909eafb5b1b3aeaad39b3225.
+ * shuette42/ecoflow-energy-ha, smart_meter_proto.py at 4c6c54991515a2a5f200ab876f50331e799f4cc2.
  * Dual CT units, roles and direction have NOT been validated. Not wired to Homey.
  */
+import { DUAL_CT_EXTRA_SCALARS } from './dualCtDiagnostics';
+import { DualCtEncodingBasis } from './dualCtEncoding';
+
 const CANDIDATES: Record<number, { key: string; unit: string }> = {
   515: { key: 'aggregatePower', unit: 'W' },
   962: { key: 'phase1Power', unit: 'W' },
@@ -24,18 +27,23 @@ export interface DualCtDecodeContext {
   encoding: string;
   receivedAt: number;
   now: number;
+  encodingBasis?: DualCtEncodingBasis;
 }
 
-/** Input is one explicitly plain pdata, not an encrypted frame or JSON quota. */
+/** Input is one unchanged pdata candidate, never decrypted bytes or cached JSON quota. */
 export function decodeDualCtCandidates(payload: Buffer, context: DualCtDecodeContext) {
   if (!context || typeof context !== 'object' || !Buffer.isBuffer(payload) || !payload.length || payload.length > 65536
     || context.productType !== 421 || context.cmdFunc !== 254 || context.cmdId !== 21
     || context.source !== 'app_mqtt' || context.encoding !== 'plain'
+    || (context.encodingBasis !== undefined && !['explicit_zero', 'omitted_zero_candidate'].includes(context.encodingBasis))
     || !Number.isFinite(context.now) || !Number.isFinite(context.receivedAt)
     || context.receivedAt <= 0 || context.receivedAt > context.now || context.now - context.receivedAt > 90000) return null;
   let pos = 0; let count = 0;
-  const readings: Array<{ field: number; candidate: string; value: number; candidateUnit: string }> = [];
+  const encodingBasis = context.encodingBasis || 'explicit_zero';
+  const readings: Array<{ field: number; candidate: string; value: number; candidateUnit: string | null;
+    encodingBasis: DualCtEncodingBasis; representation: 'float32_candidate' }> = [];
   const seen = new Set<number>();
+  let legacyFields = 0;
   const varint = (): bigint => {
     let n = 0n;
     for (let i = 0; i < 10; i += 1) {
@@ -53,6 +61,13 @@ export function decodeDualCtCandidates(payload: Buffer, context: DualCtDecodeCon
       const tag = varint();
       if (tag < 8n || tag > 0xffffffffn) return null;
       const field = Number(tag >> 3n); const wire = Number(tag & 7n);
+      const mapping = CANDIDATES[field];
+      const extra = DUAL_CT_EXTRA_SCALARS.includes(field);
+      if (mapping || extra) {
+        // Mixed/wrong-wire duplicates are ambiguous even when one copy is well formed.
+        if (wire !== 5 || seen.has(field)) return null;
+        seen.add(field);
+      }
       if (wire === 0) {
         varint(); continue;
       }
@@ -65,30 +80,37 @@ export function decodeDualCtCandidates(payload: Buffer, context: DualCtDecodeCon
       else if (wire === 5) length = 4;
       else return null;
       if (pos + length > payload.length) return null;
-      const mapping = CANDIDATES[field];
-      if (mapping && wire === 5) {
-        if (seen.has(field)) return null; // Conflicting duplicates must not silently win.
-        seen.add(field);
+      if (mapping || extra) {
         const value = payload.readFloatLE(pos);
         // Broad corruption limit, not a rating or a validated measurement range.
-        if (Number.isFinite(value) && Math.abs(value) <= 1000000) {
-          readings.push({
-            field, candidate: mapping.key, value, candidateUnit: mapping.unit,
-          });
-        }
+        if (!Number.isFinite(value) || Math.abs(value) > 1000000) return null;
+        if (mapping) legacyFields += 1;
+        readings.push({
+          field,
+          candidate: mapping?.key || 'unmapped_scalar',
+          value,
+          candidateUnit: mapping?.unit || null,
+          encodingBasis,
+          representation: 'float32_candidate',
+        });
       }
       pos += length;
     }
   } catch {
     return null;
   }
-  if (!readings.length) return null;
+  // An absent marker never admits a lone plausible float/unknown-bank-only payload.
+  // Two legacy wire-5 fields plus a fully valid payload are a candidate signature,
+  // not proof that arbitrary absent-marker frames are plaintext.
+  if (!readings.length || (encodingBasis === 'omitted_zero_candidate' && legacyFields < 2)) return null;
   return {
     source: 'app_mqtt',
     interpretation: 'legacy_meter_overlap_unverified',
     receivedAgeSec: (context.now - context.receivedAt) / 1000,
     measurementTimestampKnown: false,
     hardwareValidated: false,
+    encodingVerified: false,
+    additionalBankMappingVerified: false,
     readings,
     channelMapping: 'unverified',
     pairingEnabled: false,

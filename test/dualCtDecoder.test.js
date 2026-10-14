@@ -19,11 +19,30 @@ test('observed overlapping fields decode unverified candidates with no phase sum
   assert.equal(result.pairingEnabled, false);
 });
 
-test('new Dual CT fields, nested energy and runtime messages are not guessed', () => {
-  assert.equal(decodeDualCtCandidates(Buffer.concat([991, 992, 993, 998, 985, 986, 987, 988, 989, 990].map((field) => float(field, 123))), context), null);
+test('additional fields expose float32 candidates only, with no guessed units, nested energy or runtime readings', () => {
+  const result = decodeDualCtCandidates(Buffer.concat([991, 992, 993, 998, 985, 986, 987, 988, 989, 990].map((field) => float(field, 123))), context);
+  assert.equal(result.readings.length, 10);
+  for (const row of result.readings) { assert.equal(row.candidateUnit, null); assert.equal(row.candidate, 'unmapped_scalar'); }
+  assert.equal(result.additionalBankMappingVerified, false);
   const nested = Buffer.concat([vi(773 * 8 + 2), vi(4), Buffer.from('TEST')]);
   assert.equal(decodeDualCtCandidates(nested, context), null);
   assert.equal(decodeDualCtCandidates(float(515, 123), { ...context, cmdId: 22 }), null);
+});
+
+test('omitted-marker interpretation requires two correctly wired legacy fields and carries its provenance', () => {
+  const omitted = { ...context, encodingBasis: 'omitted_zero_candidate' };
+  assert.equal(decodeDualCtCandidates(float(515, 1), omitted), null);
+  assert.equal(decodeDualCtCandidates(Buffer.concat([float(985, 230),float(991, -20)]), omitted), null);
+  const result = decodeDualCtCandidates(Buffer.concat([float(515, -1),float(962, 0),float(998, -2)]), omitted);
+  assert.equal(result.readings.length, 3);
+  assert.equal(result.readings[1].value, 0);
+  assert.equal(result.readings[2].candidateUnit, null);
+  assert.equal(result.encodingVerified, false);
+  assert.ok(result.readings.every(row => row.encodingBasis === 'omitted_zero_candidate'));
+  for (const bad of [float(998,NaN),float(957,Infinity),float(988,1000001),
+    Buffer.concat([vi(962*8),vi(2)]),float(962,7)]) {
+    assert.equal(decodeDualCtCandidates(Buffer.concat([float(515,1),float(962,2),bad]), omitted), null);
+  }
 });
 
 test('missing fields remain absent; wrong wires and nonfinite values never fabricate readings', () => {

@@ -2,6 +2,41 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Dual CT encoding wave — release preparation, 14 October 2026
+
+Diagnostic branch `codex/mixed-generation-reporting-diagnostics` only. Sprints
+1–3 and local/software release checks are complete; physical acceptance remains
+pending. Commit/push, exact-release CI and Test-only publication are now approved.
+The release is not published at this preparation checkpoint; record the exact
+source, CI and channel readback below when verified. Robert's reply remains a
+draft for review. Main and Live must remain unchanged.
+
+The .44 evidence isolates the numeric blocker: preview enabled, 68 app packets,
+all absent encoding markers, no decoder attempts. Refreshed primary sources
+support a narrow unchanged-byte candidate trial, not verified plaintext. The
+new model-421/live-254/21 policy preserves marker presence, blocks masked/unknown
+encodings and requires two known correctly wired legacy fields for the absent
+marker path. No global header defaulting, XOR fallback or cached-packet renewal.
+Per-field provenance and omitted-marker attempt/accept metadata remain separate
+from units, roles, direction and hardware validation. Critical-header overflow
+and payload-length ambiguity are rejected for research only.
+
+Additional 985–993/998 float32 candidates are unitless and unassigned; nested
+energy/counters remain untouched. Normal compact schema 5 includes no numeric
+values. Separate consented candidate schema 2 retains provenance and honest
+size-coverage metadata. Existing consent, per-field freshness and clear-on-Stop/
+account-change behaviour remain enforced.
+
+Own-account read-only Developer inventory/original-meter quota checks did not
+provide a binary Dual CT envelope; no hardware claim follows. The official
+STREAM page and pinned third-party sources were refreshed. Details and remaining
+field gates are in SMART_METER_DUAL_CT_PLAN.md.
+
+Local checks: 739 tests, lint, zero-vulnerability audit, diff checks and Homey
+4.5.3 verified validation pass, including desktop/mobile-sized Chromium preview/
+sharing checks. Mainline refs remain unchanged. No controls, driver pairing,
+Flows or energy accounting changed; native/hardware validation stays open.
+
 ## Test v1.10.44 / Build 59 — published 13 October 2026
 
 Diagnostic source `a3ff20aa45c84150e0a994d1a7c6b7c1230b2591`; exact release/tag

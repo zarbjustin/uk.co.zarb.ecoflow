@@ -132,7 +132,9 @@
       observed telemetry does not establish units, direction or channel roles. The separate optional
       numeric preview retains unverified candidates in memory only, never in normal support exports.
       A separate candidate export requires explicit consent and a manual Copy or Download action. It requires
-      explicit plaintext headers; missing encoding metadata will leave it unavailable.
+      valid model/message headers and a supported encoding interpretation. An omitted marker
+      is tested as an unverified zero/default candidate only after strict payload checks;
+      masked or unsupported markers remain blocked. Additional scalar fields have no assigned units or channel roles.
       No reports are sent automatically. Afterwards use Show integration support report at your convenience.
       No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
     </details>
@@ -285,6 +287,11 @@
           coverage.textContent = Homey.__('settings.dual_ct.structure_partial') + ' '
             + dualCtCompact.structureCoverage.fieldsIncluded + '/' + dualCtCompact.structureCoverage.fieldsAvailable;
           document.getElementById('dualCtResearchResult').appendChild(coverage);
+        }
+        if (dualCtCompact?.metadataOmitted) {
+          var trimmed = document.createElement('p');
+          trimmed.textContent = Homey.__('settings.dual_ct.metadata_trimmed');
+          document.getElementById('dualCtResearchResult').appendChild(trimmed);
         }
       }
       document.getElementById('dualCtTitle').textContent = Homey.__('settings.dual_ct.title');

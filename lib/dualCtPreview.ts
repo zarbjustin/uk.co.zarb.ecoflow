@@ -11,6 +11,8 @@ export class DualCtPreview {
   private unavailableReason = 'no_samples';
   private attemptedPayloads = 0;
   private acceptedPayloads = 0;
+  private omittedMarkerAttempts = 0;
+  private omittedMarkerAccepted = 0;
   private encodingCounts: Record<string, number> = {};
   private extraFields = new Set<number>();
 
@@ -26,6 +28,7 @@ export class DualCtPreview {
     this.unavailableReason = 'no_samples';
     if (resetDiagnostics) {
       this.attemptedPayloads = 0; this.acceptedPayloads = 0;
+      this.omittedMarkerAttempts = 0; this.omittedMarkerAccepted = 0;
       this.encodingCounts = {}; this.extraFields.clear();
     }
   }
@@ -52,6 +55,8 @@ export class DualCtPreview {
       reason,
       attemptedPayloads: this.attemptedPayloads,
       acceptedPayloads: this.acceptedPayloads,
+      omittedMarkerAttempts: this.omittedMarkerAttempts,
+      omittedMarkerAccepted: this.omittedMarkerAccepted,
       encodingCounts: this.encodingCounts,
       additionalScalarFieldsSeen: [...this.extraFields],
     });
@@ -80,13 +85,15 @@ export class DualCtPreview {
   observe(deviceIndex: number, payload: Buffer, context: DualCtDecodeContext): void {
     if (!this.enabled || ![0, 1].includes(deviceIndex) || !this.clock(context.now)) return;
     this.attemptedPayloads = Math.min(2048, this.attemptedPayloads + 1);
+    if (context.encodingBasis === 'omitted_zero_candidate') this.omittedMarkerAttempts = Math.min(2048, this.omittedMarkerAttempts + 1);
     const decoded = decodeDualCtCandidates(payload, context);
     if (!decoded) {
-      this.unavailableReason = 'no_supported_candidates';
+      this.unavailableReason = context.encodingBasis === 'omitted_zero_candidate' ? 'omitted_encoding_rejected' : 'no_supported_candidates';
       return;
     }
     this.captured = true;
     this.acceptedPayloads = Math.min(2048, this.acceptedPayloads + 1);
+    if (context.encodingBasis === 'omitted_zero_candidate') this.omittedMarkerAccepted = Math.min(2048, this.omittedMarkerAccepted + 1);
     const fields = this.rows.get(deviceIndex) || new Map();
     for (const reading of decoded.readings) {
       const previous = fields.get(reading.field);
@@ -121,6 +128,8 @@ export class DualCtPreview {
       channelMapping: 'unverified',
       measurementTimestampKnown: false,
       hardwareValidated: false,
+      encodingVerified: false,
+      additionalBankMappingVerified: false,
       contributesToEnergy: false,
       controlsEnabled: false,
       pairingEnabled: false,

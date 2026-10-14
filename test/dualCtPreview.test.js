@@ -121,7 +121,7 @@ test('preview reasons distinguish opt-out, unsupported encoding, missing candida
     renderPreview(element, preview.snapshot(1000), key => key);
     assert.equal(element.textContent, 'preview_' + reason);
   }
-  preview.observe(0, float(998, 20), context);
+  preview.observe(0, float(777, 20), context);
   assert.equal(preview.snapshot(1000).reason, 'no_supported_candidates');
   preview.observe(0, float(515, 0), context);
   assert.equal(preview.snapshot(1000).reason, 'ready');

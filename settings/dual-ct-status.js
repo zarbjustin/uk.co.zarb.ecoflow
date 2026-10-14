@@ -21,12 +21,14 @@
   function previewDiagnostics(input) {
     const count = n => Number.isInteger(n) && n >= 0 && n <= 2048 ? n : 0;
     const reasons = ['disabled', 'ready', 'no_samples', 'no_eligible_meter', 'missing_encoding', 'unsupported_encoding',
-      'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped', 'account_changed', 'capture_unavailable', 'not_reported'];
+      'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped', 'account_changed', 'capture_unavailable', 'not_reported', 'omitted_encoding_rejected'];
     let enabled = null;
     if (input?.enabled === true) enabled = true;
     else if (input?.enabled === false) enabled = false;
     return { enabled, reason: reasons.includes(input?.reason) ? input.reason : 'not_reported',
       attemptedPayloads: count(input?.attemptedPayloads), acceptedPayloads: count(input?.acceptedPayloads),
+      omittedMarkerAttempts: count(input?.omittedMarkerAttempts), omittedMarkerAccepted: count(input?.omittedMarkerAccepted),
+      encodingPolicy: 'dual_ct_live_candidate_v1', encodingVerified: false,
       encodingCounts: Object.fromEntries(['explicit_plain', 'missing', 'masked', 'unsupported', 'invalid_header']
         .map(key => [key, count(input?.encodingCounts?.[key])])),
       additionalScalarFieldsSeen: Array.isArray(input?.additionalScalarFieldsSeen)
@@ -154,12 +156,12 @@
         retainedSamples: Math.min(128, (previous?.retainedSamples || 0) + event.samples),
         lastAgeSec: Math.min(previous?.lastAgeSec ?? Infinity, Math.floor(event.lastAgeSec)) });
     });
-    const report = { reportType: 'dual_ct_compact', schemaVersion: 4,
+    const report = { reportType: 'dual_ct_compact', schemaVersion: 5,
       appVersion: typeof version === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(version) ? version : 'unknown',
       summary: describe(evidence), inventory, jsonShapes: [], shapes: [], structureOmitted: false, metadataOmitted: false,
       previewDiagnostics: previewDiagnostics(evidence?.previewDiagnostics),
       observationScope: 'retained_capture_history', recentObservations: Array.from(recent.values()).slice(0, 8),
-      structureCoverage: { groupsAvailable: available.length, groupsIncluded: 0,
+      structureCoverage: { scope: 'retained_capture_structure', groupsAvailable: available.length, groupsIncluded: 0,
         fieldsAvailable: available.reduce((sum, shape) => sum + shape.fields.length, 0), fieldsIncluded: 0 },
       channelMapping: 'unverified', valuesCaptured: evidence?.valuesCaptured === true,
       valuesIncluded: false, pairingEnabled: false,
@@ -194,55 +196,68 @@
     return report;
   }
   // Separate consented export. Fixed fields only; never include identities or raw frames.
-  function candidateExport(input) {
-    if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
-      || input.unitsVerified !== false || input.directionVerified !== false) return null;
-    const units = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A' };
+  const CANDIDATE_UNITS = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A',
+    985: null, 986: null, 987: null, 988: null, 989: null, 990: null, 991: null, 992: null, 993: null, 998: null };
+  function candidateRows(input) {
     const devices = []; const seen = new Set();
-    (Array.isArray(input.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
+    (Array.isArray(input?.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
       if (![0, 1].includes(device?.deviceIndex)) return;
       const readings = [];
-      (Array.isArray(device.readings) ? device.readings.slice(0, 10) : []).forEach((row) => {
+      (Array.isArray(device.readings) ? device.readings.slice(0, 20) : []).forEach((row) => {
         const key = device.deviceIndex + ':' + row?.field;
-        if (!Number.isInteger(row?.field) || !units[row.field] || units[row.field] !== row.candidateUnit || seen.has(key)
+        const basis = row?.encodingBasis === undefined ? 'not_reported' : row.encodingBasis;
+        if (!Number.isInteger(row?.field) || !Object.prototype.hasOwnProperty.call(CANDIDATE_UNITS, row.field)
+          || CANDIDATE_UNITS[row.field] !== row.candidateUnit || seen.has(key)
+          || !['explicit_zero', 'omitted_zero_candidate', 'not_reported'].includes(basis)
           || !Number.isFinite(row.value) || Math.abs(row.value) > 1000000
           || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= 90) return;
         seen.add(key);
-        readings.push({ field: row.field, value: row.value, candidateUnit: row.candidateUnit, receivedAgeSec: row.receivedAgeSec });
+        readings.push({ field: row.field, value: row.value, candidateUnit: row.candidateUnit,
+          receivedAgeSec: row.receivedAgeSec, encodingBasis: basis, representation: 'float32_candidate' });
       });
       if (readings.length) devices.push({ deviceIndex: device.deviceIndex, readings });
     });
+    return devices;
+  }
+  function candidateExport(input) {
+    if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
+      || input.unitsVerified !== false || input.directionVerified !== false) return null;
+    const devices = candidateRows(input);
     if (!devices.length) return null;
-    return { reportType: 'dual_ct_candidate_preview', schemaVersion: 1, enabled: true,
+    const included = devices.reduce((sum, device) => sum + device.readings.length, 0);
+    const priorTrimmed = input.reportType === 'dual_ct_candidate_preview' && input.readingsOmitted === true
+      && Number.isInteger(input.readingsAvailable) && input.readingsAvailable >= included && input.readingsAvailable <= 40;
+    const report = { reportType: 'dual_ct_candidate_preview', schemaVersion: 2, enabled: true,
       appVersion: typeof input.appVersion === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(input.appVersion) ? input.appVersion : 'unknown',
       interpretation: 'legacy_meter_overlap_unverified', source: 'app_mqtt', cmdFunc: 254, cmdId: 21,
       unitsVerified: false, directionVerified: false, measurementTimestampKnown: false, hardwareValidated: false,
+      encodingVerified: false, additionalBankMappingVerified: false,
+      readingsAvailable: priorTrimmed ? input.readingsAvailable : included, readingsIncluded: included, readingsOmitted: priorTrimmed,
       channelMapping: 'unverified', pairingEnabled: false, contributesToEnergy: false, controlsEnabled: false, devices };
+    // Bound the expanded two-meter export. Signal trimming, preserve some evidence from both meters.
+    while (JSON.stringify(report, null, 2).length > 7500) {
+      const largest = report.devices.reduce((a, b) => a.readings.length >= b.readings.length ? a : b);
+      if (largest.readings.length <= 1) return null;
+      largest.readings.pop(); report.readingsIncluded--; report.readingsOmitted = true;
+    }
+    return report;
   }
 
   // Separate local display only: never pass candidate values to compact().
   function renderPreview(element, input, translate) {
     element.textContent = translate('preview_unavailable');
     const reasons = ['disabled', 'no_samples', 'no_eligible_meter', 'missing_encoding', 'unsupported_encoding',
-      'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped', 'account_changed', 'request_failed', 'capture_unavailable'];
+      'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped', 'account_changed', 'request_failed', 'capture_unavailable', 'omitted_encoding_rejected'];
     if (reasons.includes(input?.reason)) element.textContent = translate('preview_' + input.reason);
     if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
       || input.unitsVerified !== false || input.directionVerified !== false) return 0;
-    const units = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A' };
     let lifetime = 0;
     const rows = [];
-    const seen = new Set();
-    (Array.isArray(input.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
-      if (![0, 1].includes(device?.deviceIndex)) return;
-      (Array.isArray(device.readings) ? device.readings.slice(0, 10) : []).forEach((row) => {
-        const key = device.deviceIndex + ':' + row?.field;
-        if (!Number.isInteger(row?.field) || !units[row.field] || units[row.field] !== row.candidateUnit || seen.has(key)
-          || !Number.isFinite(row.value) || Math.abs(row.value) > 1000000
-          || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= 90) return;
-        seen.add(key);
+    candidateRows(input).forEach((device) => {
+      device.readings.forEach((row) => {
         const ttl = (90 - row.receivedAgeSec) * 1000;
         lifetime = lifetime ? Math.min(lifetime, ttl) : ttl;
-        rows.push(`${translate('meter')} ${device.deviceIndex + 1} · ${translate('preview_field')} ${row.field}: ${row.value} (${translate('preview_candidate_unit')}: ${row.candidateUnit}) · ${translate('preview_receipt_age')}: ${Math.floor(row.receivedAgeSec)} s`);
+        rows.push(`${translate('meter')} ${device.deviceIndex + 1} · ${translate('preview_field')} ${row.field}: ${row.value} (${translate('preview_candidate_unit')}: ${row.candidateUnit || translate('preview_unknown_unit')}) · ${translate('preview_encoding_basis')}: ${translate('preview_basis_' + row.encodingBasis)} · ${translate('preview_receipt_age')}: ${Math.floor(row.receivedAgeSec)} s`);
       });
     });
     if (rows.length) element.textContent = translate('preview_warning') + '\n' + rows.join('\n');

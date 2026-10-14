@@ -60,16 +60,18 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       assert.match(summary, /Developer telemetry — subscription attached; receipt not established/);
       await page.evaluate(() => { window.previewResponse = { enabled: true, reason: 'missing_encoding', devices: [] }; });
       await page.locator('#refreshDualCtPreview').click();
-      assert.match(await page.locator('#dualCtPreviewState').innerText(), /without an explicit plaintext/);
+      assert.match(await page.locator('#dualCtPreviewState').innerText(), /encoding marker was omitted/);
       await page.evaluate(() => {
         window.previewResponse = { enabled: true, reason: 'ready', interpretation: 'legacy_meter_overlap_unverified',
           captureId: '11111111-1111-4111-8111-111111111111',
           unitsVerified: false, directionVerified: false, appVersion: '1.10.42', sn: 'PRIVATE',
           devices: [{ deviceIndex: 0, sn: 'PRIVATE', readings: [{ field: 515, value: -123.5, candidateUnit: 'W', receivedAgeSec: 0 },
-            { field: 956, value: 230, candidateUnit: 'V', receivedAgeSec: 0 }] }] };
+            { field: 956, value: 230, candidateUnit: 'V', receivedAgeSec: 0 },
+            { field: 985, value: 231, candidateUnit: null, receivedAgeSec: 0, encodingBasis: 'omitted_zero_candidate' }] }] };
       });
       await page.locator('#refreshDualCtPreview').click();
       assert.match(await page.locator('#dualCtPreviewState').innerText(), /515: -123.5/);
+      assert.match(await page.locator('#dualCtPreviewState').innerText(), /985: 231.*unknown; no unit assigned.*omitted marker/);
       assert.equal(await page.locator('#consentDualCtCandidateExport').isChecked(), false);
       assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(), true);
       assert.equal(await page.locator('#dualCtCandidateText').isVisible(), false);
@@ -77,6 +79,9 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       await page.locator('#consentDualCtCandidateExport').check();
       const reviewed = JSON.parse(await page.locator('#dualCtCandidateText').innerText());
       assert.equal(reviewed.devices[0].readings[0].value, -123.5);
+      assert.equal(reviewed.schemaVersion, 2);
+      assert.equal(reviewed.encodingVerified, false);
+      assert.equal(reviewed.devices[0].readings.find(row => row.field === 985).candidateUnit, null);
       assert.doesNotMatch(JSON.stringify(reviewed), /PRIVATE/);
       await page.locator('#copyDualCtCandidates').click();
       assert.equal(JSON.parse(await page.evaluate(() => window.copiedCandidate)).reportType, 'dual_ct_candidate_preview');

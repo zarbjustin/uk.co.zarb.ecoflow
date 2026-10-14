@@ -2,6 +2,107 @@
 
 ## Field-mapping audit and candidate decoder — 13 October 2026
 
+## Omitted-marker investigation wave — 14 October 2026, unpublished
+
+Sprints 1–3 and the local/software part of Sprint 4 are implemented on the
+diagnostic branch. No commit/push/version bump/Test publication or tester request
+this turn. Mainline/Live and energy accounting remain unchanged. Publication and
+physical field acceptance require a later approved release/validation step.
+
+### Sprint 1: evidence and limitations
+
+New structural evidence from Test .44 establishes enabled preview, 68 live
+app-MQTT packets, zero rejected, all 68 missing the encoding marker and zero
+decoder attempts. This isolates the existing explicit-zero guard; it does not
+verify plaintext, scalar meanings or the second bank. Developer MQTT has an
+attached subscription but no confirmed receipt; REST routes are unavailable.
+
+Primary-source refresh: shuette42/ecoflow-energy-ha
+`4c6c54991515a2a5f200ab876f50331e799f4cc2`; its header decoder, original-meter
+parser and STREAM candidate helper are unchanged from the previous pinned audit.
+[Header decoder](https://github.com/shuette42/ecoflow-energy-ha/blob/4c6c54991515a2a5f200ab876f50331e799f4cc2/custom_components/ecoflow_energy/ecoflow/proto/decoder.py)
+identifies field 6 as integer `enc_type` without inserting absent defaults.
+[Candidate helper](https://github.com/shuette42/ecoflow-energy-ha/blob/4c6c54991515a2a5f200ab876f50331e799f4cc2/custom_components/ecoflow_energy/ecoflow/parsers/stream_proto.py)
+offers unchanged pdata for absent markers; masked-byte retries in that project
+are intentionally NOT copied. BK21 absent-marker fixtures include cached replies,
+which are not admitted here. No explicit Dual CT/421 contract was found in the
+reviewed Python/proto/Markdown source. MichelFR/ha-ecoflow-iot refreshed to
+`f4b4fbb2c329f95d726173940a6e3e4cf0b945ab`; targeted source search found no
+Dual CT/421/enc_type implementation there either.
+
+[Protobuf presence guidance](https://protobuf.dev/programming-guides/field_presence/)
+permits implicit numeric zero to be omitted, but is not an EcoFlow encoding
+contract. The official STREAM page was reread through the browser: it documents
+HTTP main-device/quota/history and MQTT quota/status, not a Dual CT binary
+encoding contract. No claim is made about all other developer-portal pages.
+
+The supplied Developer credentials were used for an owned-inventory query and
+one fresh quota request for its original BK21 meter. The quota was empty JSON,
+not a binary app-MQTT envelope. No confirmed Dual CT productType was present in
+that Developer inventory. This adds no Dual CT header/hardware validation.
+No commands, foreign-account probes, credentials or raw telemetry were exported.
+
+Decision: evidence supports a strictly bounded **candidate** trial of unchanged
+bytes when the marker is absent, not certification as plaintext. Actual header
+presence remains preserved; the shared decoder does not default all missing
+markers to zero. The current Test .44 explicit-marker behaviour is superseded
+only in the unpublished candidate policy described below.
+
+### Sprint 2: guarded numeric candidate path
+
+`dualCtEncodingPolicy` admits only the already-owned model-421 live app-MQTT
+254/21 route with valid headers, bounded nonempty pdata and either explicit zero
+or absent marker. Nonzero/masked markers, cached replies, unknown models,
+duplicate/wrong-wire critical headers and malformed payloads remain rejected.
+Absent-marker payloads additionally require at least two distinct legacy
+wire-5 candidates and full valid protobuf traversal. All mapped floats must be
+finite/in range; conflicting or mixed-wire duplicates reject the whole packet.
+There is no XOR, alternate-byte retry, guessed key or synthetic missing zero.
+
+Each retained reading carries `explicit_zero` or `omitted_zero_candidate` plus
+`float32_candidate` representation. `encodingVerified`, units/direction and
+hardware validation remain false. Per-field 90-second receipt freshness,
+account/Stop clearing and separate capture/export consent are unchanged.
+Omitted-marker attempt/accept counters are metadata only; actual missing-marker
+counts remain missing, never rewritten to explicit plaintext.
+
+Research-validity hardening rejects over-wide header integers that could wrap
+to a zero marker, and conflicting/mismatched declared payload lengths. These
+checks set only the research validity flag; they do not change existing 5000
+telemetry interpretation or commands.
+
+### Sprint 3: additional fields and honest report coverage
+
+Allowlisted wire-5 fields 985–993 and 998 can be interpreted as local float32
+**candidates**, with `candidateUnit: null`, no phase/CT/grid/solar assignment and
+`additionalBankMappingVerified: false`. This does not establish native scalar
+types or units. Nested 773/997, runtime 254/22, counters, phase totals, V*A
+inference and import/export signs remain unmapped.
+
+Compact schema 5 remains structural-only and declares coverage scope as retained
+capture structure. Inventory trimming is explained separately from retained
+field coverage. Candidate schema 2 is a separate explicit-consent export:
+up to two meters/20 fields each, fixed provenance, no identities/raw packets and
+a 7500-character pretty-JSON budget. Coverage counts flag any truncation and
+survive re-export; absence never becomes a zero reading or a guessed unit.
+
+### Sprint 4: software checks and bounded physical acceptance
+
+Local checks: 739 tests, lint, audit (0 vulnerabilities), diff checks and Homey
+4.5.3 verified validation pass. Desktop/mobile-sized Chromium workflow checks
+cover neutral unitless display, marker provenance, reviewed optional export,
+refresh, expiry and manual fallback. These are not native Homey/hardware tests.
+Current changes are uncommitted; exact-commit CI/publication have not run.
+
+After release approval, publish one diagnostic Test build. Next optional tester
+request: ONE compact report; only if candidates appear and sharing consent is
+given, ONE separate candidate export. A normal EcoFlow app view/channel-role
+description is needed only for a specific field-mapping question, without a
+synchronised deadline. A blocked/rejected/expired preview reason is sufficient
+instead; do not request repeated captures/full reports/new logs by default.
+Physical units, role/direction, delta/full and idle-channel acceptance remain
+open before any driver/Energy/Flow promotion.
+
 ### Capture-mode and refresh/export sprints — Test .44 / Build 59
 
 Published 13 October 2026 from exact tag `v1.10.44`
