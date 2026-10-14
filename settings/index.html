@@ -151,6 +151,7 @@
     <details id="dualCtPreviewPanel"><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
       <button id="refreshDualCtPreview" type="button"></button>
       <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
+      <p id="dualCtDiagnosticState" class="help" role="status" aria-live="polite"></p>
       <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" disabled><span id="dualCtCandidateConsent"></span></label>
       <p id="dualCtCandidateHelp" class="help"></p>
       <pre id="dualCtCandidateText" hidden></pre>
@@ -225,10 +226,21 @@
       var previewOperation = 0;
       var previewDeadline;
       var previewExpiry;
+      var previewSnapshot = null;
+      var previewReadAt = 0;
+      var candidateExpiry;
       var candidateSnapshot = null;
       var candidateReport = null;
       var candidateReadAt = 0;
       var candidateCaptureId = null;
+      function clearCandidateExport(reason) {
+        clearTimeout(candidateExpiry);
+        candidateSnapshot = null;
+        document.getElementById('consentDualCtCandidateExport').checked = false;
+        document.getElementById('consentDualCtCandidateExport').disabled = true;
+        document.getElementById('dualCtDiagnosticState').textContent = reason
+          ? Homey.__('settings.dual_ct.' + reason) : '';
+      }
       function renderCaptureMode(evidence) {
         var active = ['discovering', 'listening'].includes(evidence?.status);
         var enabled = evidence?.previewDiagnostics?.enabled;
@@ -246,10 +258,17 @@
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
         var consent = document.getElementById('consentDualCtCandidateExport');
         var elapsed = Date.now() - candidateReadAt;
+        if (candidateSnapshot && (elapsed < 0 || elapsed >= candidateSnapshot.retentionRemainingSec * 1000)) {
+          clearCandidateExport('candidate_snapshot_expired');
+        }
         if (consent.checked === true && candidateSnapshot && elapsed >= 0) {
           var aged = JSON.parse(JSON.stringify(candidateSnapshot));
           aged.devices.forEach(function (device) { device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; }); });
-          candidateReport = window.EcoFlowDualCtStatus.candidateExport(aged);
+          aged.retainedForSec += elapsed / 1000;
+          aged.retentionRemainingSec -= elapsed / 1000;
+          aged.lastPacketAgeSec += elapsed / 1000;
+          candidateReport = window.EcoFlowDualCtStatus.diagnosticExport({ ...aged,
+            diagnosticSnapshot: { ...aged, kind: 'historical_capture' } });
         }
         var text = document.getElementById('dualCtCandidateText');
         text.textContent = candidateReport ? JSON.stringify(candidateReport, null, 2) : '';
@@ -261,6 +280,8 @@
         previewOperation++;
         clearTimeout(previewDeadline);
         clearTimeout(previewExpiry);
+        clearTimeout(candidateExpiry);
+        previewSnapshot = null;
         candidateSnapshot = null;
         if (!preserveConsent) {
           document.getElementById('consentDualCtCandidateExport').checked = false;
@@ -268,6 +289,7 @@
         }
         document.getElementById('consentDualCtCandidateExport').disabled = true;
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
+        document.getElementById('dualCtDiagnosticState').textContent = '';
         prepareCandidateExport();
         window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), { reason: reason },
           function (key) { return Homey.__('settings.dual_ct.' + key); });
@@ -332,6 +354,24 @@
         } catch { document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback'); }
       });
       renderDualCt(null);
+      function renderLocalPreview() {
+        clearTimeout(previewExpiry);
+        if (!previewSnapshot) return;
+        var elapsed = Date.now() - previewReadAt;
+        if (elapsed < 0) { clearDualCtPreview('request_failed'); return; }
+        var aged = JSON.parse(JSON.stringify(previewSnapshot));
+        var hadRows = aged.devices.some(function (device) { return device.readings.length; });
+        aged.devices.forEach(function (device) { device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; }); });
+        aged.devices.forEach(function (device) { device.readings = device.readings.filter(function (row) { return row.receivedAgeSec >= 0 && row.receivedAgeSec < 90; }); });
+        aged.devices = aged.devices.filter(function (device) { return device.readings.length; });
+        if (hadRows && !aged.devices.length) aged.reason = 'expired';
+        previewSnapshot = aged;
+        previewReadAt = Date.now();
+        // Re-render at each field deadline; do not clear newer fields or historical evidence.
+        var ttl = window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), aged,
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+        if (ttl) previewExpiry = setTimeout(renderLocalPreview, Math.max(1, Math.ceil(ttl)));
+      }
       function applyDualCtPreview(evidence, requestedAt) {
         var elapsed = Date.now() - requestedAt;
         if (elapsed < 0 || elapsed >= 20000) { clearDualCtPreview('request_failed'); return; }
@@ -342,16 +382,30 @@
         if (Array.isArray(evidence?.devices)) evidence.devices.forEach(function (device) {
           if (Array.isArray(device?.readings)) device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
         });
+        if (evidence?.diagnosticSnapshot) {
+          evidence.diagnosticSnapshot.retainedForSec += elapsed / 1000;
+          evidence.diagnosticSnapshot.retentionRemainingSec -= elapsed / 1000;
+          evidence.diagnosticSnapshot.lastPacketAgeSec += elapsed / 1000;
+          evidence.diagnosticSnapshot.devices?.forEach(function (device) {
+            device.readings?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+          });
+        }
         document.getElementById('dualCtPreviewPanel').open = true;
-        var ttl = window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), evidence,
-          function (key) { return Homey.__('settings.dual_ct.' + key); });
-        if (ttl) {
-          candidateSnapshot = window.EcoFlowDualCtStatus.candidateExport(evidence);
-          candidateReadAt = Date.now();
-          document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
-          prepareCandidateExport();
-          previewExpiry = setTimeout(function () { clearDualCtPreview('expired'); }, ttl);
-        } else clearDualCtPreview(evidence?.reason);
+        previewSnapshot = { enabled: evidence?.enabled, reason: evidence?.reason, interpretation: evidence?.interpretation,
+          unitsVerified: evidence?.unitsVerified, directionVerified: evidence?.directionVerified,
+          devices: Array.isArray(evidence?.devices) ? evidence.devices : [] };
+        previewReadAt = Date.now();
+        renderLocalPreview();
+        candidateSnapshot = id ? window.EcoFlowDualCtStatus.diagnosticExport(evidence) : null;
+        candidateReadAt = Date.now();
+        document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
+        if (candidateSnapshot) {
+          document.getElementById('dualCtDiagnosticState').textContent = Homey.__('settings.dual_ct.candidate_snapshot_ready');
+          candidateExpiry = setTimeout(function () {
+            clearCandidateExport('candidate_snapshot_expired'); prepareCandidateExport();
+          }, Math.ceil(candidateSnapshot.retentionRemainingSec * 1000));
+        } else clearCandidateExport();
+        prepareCandidateExport();
       }
       document.getElementById('refreshDualCtPreview').addEventListener('click', function () {
         clearDualCtPreview(undefined, true);

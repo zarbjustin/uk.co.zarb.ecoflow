@@ -80,7 +80,7 @@ test('preview renderer exposes field-number candidates only and rejects expired/
   const bad = preview.snapshot(1000);
   bad.devices[0].readings[0].receivedAgeSec = 90;
   assert.equal(renderPreview(element, bad, translate), 0);
-  assert.equal(element.textContent, 'preview_unavailable');
+  assert.equal(element.textContent, 'preview_expired');
 });
 
 test('research numeric retention is off by default, unknown product metadata stays structural, and account change clears', async () => {

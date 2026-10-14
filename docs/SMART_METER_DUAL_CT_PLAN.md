@@ -1,5 +1,39 @@
 # Smart Meter Dual CT — asset and integration assessment
 
+## Historical export and per-field expiry — unpublished, 14 October 2026
+
+The .45 report confirms 41 accepted numeric candidate payloads, but the next
+message identifies an export-workflow failure: live expiry also erased the
+candidate export snapshot. No new decoding, mapping or unit verification follows.
+
+Live preview remains per-field/90-second receipt freshness. The UI now re-renders
+at each individual deadline instead of discarding all fields when the oldest
+one expires. Expired readings are removed, never replaced by zero.
+
+A distinct historical candidate cache retains up to two meters/20 fields each,
+only after numeric capture opt-in. Deadline: 15 minutes from the first accepted
+packet, never renewed by later packets or refreshes. Actual timer cleanup and
+read-time checks enforce expiration. Automatic completion/sample limit freezes
+the latest per-field evidence; Stop/new capture/account change/restart/clock
+rollback erase it. No persistent storage or automatic network/export action.
+Closing settings clears its displayed copy and sharing consent; a later explicit
+refresh may retrieve the still-retained server snapshot within the original limit.
+
+Reviewed, separately consented `dual_ct_candidate_snapshot` schema 3 exports
+mark historical/not-live/non-simultaneous and include fixed retention metadata
+and per-field receipt ages. Age is not a measurement timestamp. Suggested units,
+roles, direction and encoding remain unverified. The existing identity-free,
+7500-character bounded projection and trimming metadata apply. No historical
+reading is reintroduced into preview/capabilities/Energy/Flows/controls or normal
+support reports. Pending/error/late responses and identity changes revoke sharing.
+
+Regressions cover mixed-age expiry, delayed export after live expiry/completion,
+fixed retention without polling, actual cleanup timer, no callback resurrection,
+consent withdrawal/capture identity/Stop/account/navigation/rollback/restart,
+projection privacy and two-meter size limits, with desktop/mobile-sized Chromium
+checks. Local acceptance is recorded in STATUS.md. Uncommitted and unpublished;
+Robert's updated reply is draft-only with no repeat capture requested now.
+
 ## Field-mapping audit and candidate decoder — 13 October 2026
 
 ## Omitted-marker investigation wave — Test .45 / Build 60, 14 October 2026

@@ -2,10 +2,16 @@ import { decodeDualCtCandidates, DualCtDecodeContext } from './dualCtDecoder';
 import { DUAL_CT_EXTRA_SCALARS, dualCtPreviewDiagnostics } from './dualCtDiagnostics';
 
 type Reading = NonNullable<ReturnType<typeof decodeDualCtCandidates>>['readings'][number];
+const DIAGNOSTIC_RETENTION_MS = 15 * 60 * 1000;
 
 /** Private, bounded candidate cache. Never include this object in support exports. */
 export class DualCtPreview {
   private rows = new Map<number, Map<number, { reading: Reading; receivedAt: number }>>();
+  private diagnosticRows = new Map<number, Map<number, { reading: Reading; receivedAt: number }>>();
+  private diagnosticStartedAt: number | null = null;
+  private diagnosticLatestAt = 0;
+  private diagnosticExpired = false;
+  private diagnosticTimer: ReturnType<typeof setTimeout> | null = null;
   private lastNow = 0;
   private captured = false;
   private unavailableReason = 'no_samples';
@@ -24,6 +30,10 @@ export class DualCtPreview {
 
   clear(resetDiagnostics = true): void {
     this.rows.clear();
+    this.clearDiagnostic();
+    this.diagnosticStartedAt = null;
+    this.diagnosticLatestAt = 0;
+    this.diagnosticExpired = false;
     this.captured = false;
     this.unavailableReason = 'no_samples';
     if (resetDiagnostics) {
@@ -31,6 +41,12 @@ export class DualCtPreview {
       this.omittedMarkerAttempts = 0; this.omittedMarkerAccepted = 0;
       this.encodingCounts = {}; this.extraFields.clear();
     }
+  }
+
+  private clearDiagnostic(): void {
+    this.diagnosticRows.clear();
+    if (this.diagnosticTimer !== null) clearTimeout(this.diagnosticTimer);
+    this.diagnosticTimer = null;
   }
 
   recordHeader(encoding: number | undefined, valid: boolean, fields: Array<{ field: number; wire: number }>): void {
@@ -84,6 +100,12 @@ export class DualCtPreview {
 
   observe(deviceIndex: number, payload: Buffer, context: DualCtDecodeContext): void {
     if (!this.enabled || ![0, 1].includes(deviceIndex) || !this.clock(context.now)) return;
+    if (this.diagnosticStartedAt !== null && context.now - this.diagnosticStartedAt >= DIAGNOSTIC_RETENTION_MS) {
+      this.diagnosticExpired = true;
+      this.clearDiagnostic();
+      this.rows.clear();
+    }
+    if (this.diagnosticExpired) return;
     this.attemptedPayloads = Math.min(2048, this.attemptedPayloads + 1);
     if (context.encodingBasis === 'omitted_zero_candidate') this.omittedMarkerAttempts = Math.min(2048, this.omittedMarkerAttempts + 1);
     const decoded = decodeDualCtCandidates(payload, context);
@@ -102,6 +124,29 @@ export class DualCtPreview {
       }
     }
     this.rows.set(deviceIndex, fields);
+    if (this.diagnosticStartedAt === null) {
+      this.diagnosticStartedAt = context.now;
+      // Fixed deadline: observing/refreshing/exporting never renews retention.
+      // eslint-disable-next-line homey-app/global-timers -- clear() cancels on research Stop/account change/app uninit; standalone testable cache.
+      this.diagnosticTimer = setTimeout(() => {
+        this.diagnosticExpired = true;
+        this.clearDiagnostic();
+        // The two-minute capture has ended long before this fixed retention deadline.
+        this.rows.clear();
+      }, DIAGNOSTIC_RETENTION_MS);
+      this.diagnosticTimer.unref?.();
+    }
+    if (!this.diagnosticExpired && context.now - this.diagnosticStartedAt < DIAGNOSTIC_RETENTION_MS) {
+      const retained = this.diagnosticRows.get(deviceIndex) || new Map();
+      for (const reading of decoded.readings) {
+        const previous = retained.get(reading.field);
+        if (!previous || context.receivedAt >= previous.receivedAt) {
+          retained.set(reading.field, { reading: { ...reading }, receivedAt: context.receivedAt });
+        }
+      }
+      this.diagnosticRows.set(deviceIndex, retained);
+      this.diagnosticLatestAt = Math.max(this.diagnosticLatestAt, context.receivedAt);
+    }
   }
 
   snapshot(now: number) {
@@ -110,11 +155,27 @@ export class DualCtPreview {
     for (const [deviceIndex, fields] of this.rows) {
       const readings = [];
       for (const [field, row] of fields) {
-        if (now < row.receivedAt || now - row.receivedAt > 90000) fields.delete(field);
+        if (now < row.receivedAt || now - row.receivedAt >= 90000) fields.delete(field);
         else readings.push({ ...row.reading, receivedAgeSec: (now - row.receivedAt) / 1000 });
       }
       if (readings.length) devices.push({ deviceIndex, readings });
     }
+    if (this.diagnosticStartedAt !== null && now - this.diagnosticStartedAt >= DIAGNOSTIC_RETENTION_MS) {
+      this.diagnosticExpired = true;
+      this.clearDiagnostic();
+    }
+    const retainedDevices = [...this.diagnosticRows].map(([deviceIndex, fields]) => ({
+      deviceIndex,
+      readings: [...fields.values()].map(({ reading, receivedAt }) => ({ ...reading, receivedAgeSec: (now - receivedAt) / 1000 })),
+    }));
+    const diagnosticSnapshot = retainedDevices.length && this.diagnosticStartedAt !== null ? {
+      kind: 'historical_capture',
+      retentionRemainingSec: (DIAGNOSTIC_RETENTION_MS - (now - this.diagnosticStartedAt)) / 1000,
+      retainedForSec: (now - this.diagnosticStartedAt) / 1000,
+      lastPacketAgeSec: (now - this.diagnosticLatestAt) / 1000,
+      simultaneous: false,
+      devices: retainedDevices,
+    } : null;
     let reason = this.unavailableReason;
     if (this.captured) reason = 'expired';
     if (devices.length) reason = 'ready';
@@ -134,6 +195,7 @@ export class DualCtPreview {
       controlsEnabled: false,
       pairingEnabled: false,
       devices,
+      diagnosticSnapshot,
     };
   }
 }

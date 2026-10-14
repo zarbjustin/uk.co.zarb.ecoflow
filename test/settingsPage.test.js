@@ -109,7 +109,7 @@ test('candidate preview opt-in is manual, separate from exports and invalidates 
   assert.match(context.document.getElementById('dualCtPreviewState').textContent, /515: -12345/);
   assert.doesNotMatch(context.document.getElementById('dualCtCompactText').textContent, /12345/);
   const expiry = [...context.timers.values()].find(timer => timer.ms > 80000 && !timer.interval);
-  assert.ok(expiry); expiry.fn();
+  assert.ok(expiry); context.now += 90001; expiry.fn();
   assert.match(context.document.getElementById('dualCtPreviewState').textContent, /expired/);
   context.document.getElementById('refreshDualCtPreview').click();
   context.document.getElementById('stopDualCtResearch').click();
@@ -122,8 +122,10 @@ test('candidate preview opt-in is manual, separate from exports and invalidates 
 test('candidate sharing requires separate consent, shows a manual fallback, and clears on consent removal', async () => {
   const context = loadSettingsScript(); const homey = fakeHomey(); let writes = 0;
   context.navigator = { clipboard: { writeText: async () => { writes++; throw new Error('PRIVATE'); } } };
-  homey.api = (_method, _url, _body, callback) => callback(null, { enabled: true,
+  homey.api = (_method, _url, _body, callback) => callback(null, { enabled: true, captureId,
     interpretation: 'legacy_meter_overlap_unverified', unitsVerified: false, directionVerified: false,
+    diagnosticSnapshot: { kind:'historical_capture',simultaneous:false,retainedForSec:0,retentionRemainingSec:900,lastPacketAgeSec:0,
+      devices:[{deviceIndex:0,readings:[{field:515,value:-500,candidateUnit:'W',receivedAgeSec:0}]}] },
     devices: [{ deviceIndex: 0, sn: 'PRIVATE', readings: [{ field: 515, value: -500, candidateUnit: 'W', receivedAgeSec: 0 }] }] });
   context.onHomeyReady(homey);
   context.document.getElementById('refreshDualCtPreview').click();
@@ -168,6 +170,8 @@ test('reused capture shows effective opt-out, locks checkbox and never silently 
 const captureId = '11111111-1111-4111-8111-111111111111';
 function numericPreview(id = captureId, age = 0) {
   return { captureId: id, enabled: true, reason: 'ready', interpretation: 'legacy_meter_overlap_unverified',
+    diagnosticSnapshot: { kind:'historical_capture',simultaneous:false,retainedForSec:age,retentionRemainingSec:900-age,lastPacketAgeSec:age,
+      devices:[{deviceIndex:0,readings:[{field:515,value:-12345,candidateUnit:'W',receivedAgeSec:age}]}] },
     unitsVerified: false, directionVerified: false, devices: [{ deviceIndex: 0,
       readings: [{ field: 515, value: -12345, candidateUnit: 'W', receivedAgeSec: age }] }] };
 }
@@ -219,7 +223,7 @@ test('late local views after Stop, expiry, failure, timeout or navigation cannot
     } else if (event === 'timeout') [...context.timers.values()].find(timer => timer.ms === 20000 && !timer.interval).fn();
     else if (event === 'pagehide') context.events.pagehide();
     else if (event === 'error') calls[1].callback(new Error('PRIVATE'));
-    else calls[1].callback(null, { research: { status: 'complete' }, preview: numericPreview(captureId, 90) });
+    else calls[1].callback(null, { research: { status: 'complete' }, preview: numericPreview(captureId, 900) });
     calls[1].callback(null, { research: { status: 'listening' }, preview: numericPreview() });
     assert.equal(consent.checked, false, event);
     assert.equal(context.document.getElementById('dualCtCandidateText').textContent, '', event);
@@ -267,6 +271,8 @@ function loadSettingsScript() {
     console, Promise, TextEncoder, TextDecoder, btoa, atob, document: fakeDocument(),
   });
   const timers = new Map(); let next = 0;
+  context.now = Date.now();
+  context.Date = class extends Date { static now() { return context.now; } };
   context.timers = timers;
   context.setTimeout = (fn, ms) => { timers.set(++next, { fn, ms, interval: false }); return next; };
   context.setInterval = (fn, ms) => { timers.set(++next, { fn, ms, interval: true }); return next; };

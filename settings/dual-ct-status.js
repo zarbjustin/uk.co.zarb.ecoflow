@@ -198,7 +198,7 @@
   // Separate consented export. Fixed fields only; never include identities or raw frames.
   const CANDIDATE_UNITS = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A',
     985: null, 986: null, 987: null, 988: null, 989: null, 990: null, 991: null, 992: null, 993: null, 998: null };
-  function candidateRows(input) {
+  function candidateRows(input, maxAge = 90) {
     const devices = []; const seen = new Set();
     (Array.isArray(input?.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
       if (![0, 1].includes(device?.deviceIndex)) return;
@@ -210,7 +210,7 @@
           || CANDIDATE_UNITS[row.field] !== row.candidateUnit || seen.has(key)
           || !['explicit_zero', 'omitted_zero_candidate', 'not_reported'].includes(basis)
           || !Number.isFinite(row.value) || Math.abs(row.value) > 1000000
-          || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= 90) return;
+          || !Number.isFinite(row.receivedAgeSec) || row.receivedAgeSec < 0 || row.receivedAgeSec >= maxAge) return;
         seen.add(key);
         readings.push({ field: row.field, value: row.value, candidateUnit: row.candidateUnit,
           receivedAgeSec: row.receivedAgeSec, encodingBasis: basis, representation: 'float32_candidate' });
@@ -219,21 +219,23 @@
     });
     return devices;
   }
-  function candidateExport(input) {
+  function buildCandidateExport(input, historical) {
     if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
       || input.unitsVerified !== false || input.directionVerified !== false) return null;
-    const devices = candidateRows(input);
+    const devices = candidateRows(input, historical ? 990 : 90);
     if (!devices.length) return null;
     const included = devices.reduce((sum, device) => sum + device.readings.length, 0);
-    const priorTrimmed = input.reportType === 'dual_ct_candidate_preview' && input.readingsOmitted === true
+    const priorTrimmed = ['dual_ct_candidate_preview', 'dual_ct_candidate_snapshot'].includes(input.reportType) && input.readingsOmitted === true
       && Number.isInteger(input.readingsAvailable) && input.readingsAvailable >= included && input.readingsAvailable <= 40;
-    const report = { reportType: 'dual_ct_candidate_preview', schemaVersion: 2, enabled: true,
+    const report = { reportType: historical ? 'dual_ct_candidate_snapshot' : 'dual_ct_candidate_preview', schemaVersion: historical ? 3 : 2, enabled: true,
       appVersion: typeof input.appVersion === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(input.appVersion) ? input.appVersion : 'unknown',
       interpretation: 'legacy_meter_overlap_unverified', source: 'app_mqtt', cmdFunc: 254, cmdId: 21,
       unitsVerified: false, directionVerified: false, measurementTimestampKnown: false, hardwareValidated: false,
       encodingVerified: false, additionalBankMappingVerified: false,
       readingsAvailable: priorTrimmed ? input.readingsAvailable : included, readingsIncluded: included, readingsOmitted: priorTrimmed,
       channelMapping: 'unverified', pairingEnabled: false, contributesToEnergy: false, controlsEnabled: false, devices };
+    if (historical) Object.assign(report, { historical: true, notLive: true, simultaneous: false,
+      retainedForSec: input.retainedForSec, retentionRemainingSec: input.retentionRemainingSec, lastPacketAgeSec: input.lastPacketAgeSec });
     // Bound the expanded two-meter export. Signal trimming, preserve some evidence from both meters.
     while (JSON.stringify(report, null, 2).length > 7500) {
       const largest = report.devices.reduce((a, b) => a.readings.length >= b.readings.length ? a : b);
@@ -241,6 +243,22 @@
       largest.readings.pop(); report.readingsIncluded--; report.readingsOmitted = true;
     }
     return report;
+  }
+
+  function candidateExport(input) { return buildCandidateExport(input, false); }
+
+  // Separate historical evidence, never admitted back to the fresh preview or normal reports.
+  function diagnosticExport(input) {
+    const snapshot = input?.diagnosticSnapshot;
+    if (snapshot?.kind !== 'historical_capture' || snapshot.simultaneous !== false
+      || !Number.isFinite(snapshot.retainedForSec) || snapshot.retainedForSec < 0 || snapshot.retainedForSec >= 900
+      || !Number.isFinite(snapshot.retentionRemainingSec) || snapshot.retentionRemainingSec <= 0 || snapshot.retentionRemainingSec > 900
+      || Math.abs(snapshot.retainedForSec + snapshot.retentionRemainingSec - 900) > 0.01
+      || !Number.isFinite(snapshot.lastPacketAgeSec) || snapshot.lastPacketAgeSec < 0
+      || snapshot.lastPacketAgeSec > snapshot.retainedForSec + 90) return null;
+    const devices = candidateRows(snapshot, snapshot.retainedForSec + 90 + 0.001).map(device => ({ ...device,
+      readings: device.readings.filter(row => row.receivedAgeSec >= snapshot.lastPacketAgeSec) }));
+    return buildCandidateExport({ ...input, ...snapshot, devices }, true);
   }
 
   // Separate local display only: never pass candidate values to compact().
@@ -261,8 +279,9 @@
       });
     });
     if (rows.length) element.textContent = translate('preview_warning') + '\n' + rows.join('\n');
+    else if (input.reason === 'ready') element.textContent = translate('preview_expired');
     return lifetime;
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport };
-  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport, diagnosticExport };
+  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport, diagnosticExport };
 }(typeof window === 'undefined' ? {} : window));

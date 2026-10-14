@@ -23,6 +23,11 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
           __(key) { return key.split('.').reduce((obj, part) => obj?.[part], translations) || key; },
           api(method, url, body, callback) {
             window.uiCalls.push({ method, url, body });
+            if (window.previewResponse.reason === 'ready' && !window.previewResponse.diagnosticSnapshot) {
+              window.previewResponse.diagnosticSnapshot = { kind: 'historical_capture', retainedForSec: 0,
+                retentionRemainingSec: 900, lastPacketAgeSec: 0, simultaneous: false,
+                devices: structuredClone(window.previewResponse.devices) };
+            }
             if (url === '/dual-ct-preview') callback(null, structuredClone(window.previewResponse));
             else if (url === '/dual-ct-research/view') callback(null, {
               research: { status: 'listening', appVersion: '1.10.43', deviceCount: 1, frames: 49,
@@ -79,12 +84,13 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       await page.locator('#consentDualCtCandidateExport').check();
       const reviewed = JSON.parse(await page.locator('#dualCtCandidateText').innerText());
       assert.equal(reviewed.devices[0].readings[0].value, -123.5);
-      assert.equal(reviewed.schemaVersion, 2);
+      assert.equal(reviewed.schemaVersion, 3);
+      assert.equal(reviewed.historical, true); assert.equal(reviewed.notLive, true);
       assert.equal(reviewed.encodingVerified, false);
       assert.equal(reviewed.devices[0].readings.find(row => row.field === 985).candidateUnit, null);
       assert.doesNotMatch(JSON.stringify(reviewed), /PRIVATE/);
       await page.locator('#copyDualCtCandidates').click();
-      assert.equal(JSON.parse(await page.evaluate(() => window.copiedCandidate)).reportType, 'dual_ct_candidate_preview');
+      assert.equal(JSON.parse(await page.evaluate(() => window.copiedCandidate)).reportType, 'dual_ct_candidate_snapshot');
       const downloadEvent = page.waitForEvent('download');
       await page.locator('#downloadDualCtCandidates').click();
       const download = await downloadEvent;
@@ -108,6 +114,10 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       const calls = await page.evaluate(() => window.uiCalls.length);
       await page.clock.runFor(90001);
       assert.match(await page.locator('#dualCtPreviewState').innerText(), /expired/);
+      assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(), false);
+      await page.locator('#copyDualCtCandidates').click();
+      assert.equal(JSON.parse(await page.locator('#dualCtCandidateText').innerText()).notLive, true);
+      await page.clock.runFor(810000);
       assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(), true);
       assert.equal(await page.locator('#dualCtCandidateText').textContent(), '');
       assert.equal(await page.evaluate(() => window.uiCalls.length), calls, 'expiry causes no network requests');

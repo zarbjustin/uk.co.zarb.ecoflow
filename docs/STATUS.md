@@ -2,6 +2,40 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Unpublished Dual CT export/expiry fix — 14 October 2026
+
+Diagnostic branch only, based on `67ca6bab12f34cd30f49cb08738753efc3eadb56`.
+Robert's .45 compact report confirms 41/41 accepted numeric candidate payloads;
+his following message reports that expiry disabled sharing before export. No
+candidate JSON was supplied in those three messages. The approved .44 follow-up
+was previously posted and reopened at topic 160837/post 3. This turn's .45 reply
+is draft-only; no new tester request was sent.
+
+- Live preview fields still expire individually at 90 seconds, now consistently
+  at the exact boundary. A local timer prunes each expired field and re-renders
+  remaining fields rather than clearing the whole preview at its oldest age.
+- Separate opt-in historical diagnostic retention: latest accepted candidate per
+  field, at most two meters/20 fields each, in memory only. A fixed deadline of
+  15 minutes from the first accepted packet is not renewed by packets, reads or
+  exports. An actual cleanup timer clears numeric memory even without a refresh.
+- Automatic completion/sample limit retains this historical evidence; Stop,
+  new capture, account change, app restart and clock rollback clear it. Leaving
+  settings clears the displayed copy/consent, not the still-bounded server cache.
+- Separate consented schema 3 `dual_ct_candidate_snapshot` export explicitly
+  states historical/not-live/non-simultaneous, preserves per-field receipt ages,
+  encoding provenance and unverified units, and remains capped at 7500 characters
+  with honest trimming counts. No raw frames, device/account identities or
+  automatic sharing. Normal compact/support reports remain numeric-free.
+- Pending/failed/late reads and capture identity changes cannot restore prior
+  sharing consent. Historical evidence is never admitted to live readings,
+  capabilities, Energy, Flows or controls.
+
+Local acceptance: 749 automated tests, lint, zero-vulnerability audit, diff checks
+and Homey 4.5.3 verified validation pass, including Chromium desktop/mobile-sized
+workflow tests. Native Homey webviews/physical acceptance remain unverified.
+Changes are uncommitted; no new CI, version, upload or publication. Mainline refs
+remain unchanged; the last published Test remains .45 / Build 60, not these fixes.
+
 ## Test v1.10.45 / Build 60 — published 14 October 2026
 
 Diagnostic source `ce747ee9b176b6f732c750b63ab4de8727c1f3e5`; exact release/tag
