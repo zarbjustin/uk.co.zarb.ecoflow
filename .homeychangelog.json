@@ -247,5 +247,8 @@
   },
   "1.10.46": {
     "en": "Fix read-only Dual CT export expiry: retain a separately consented historical snapshot for up to 15 minutes while live preview fields still expire individually at 90 seconds. Add explicit historical labels, bounded export coverage and privacy cleanup. Energy accounting and controls are unchanged."
+  },
+  "1.10.47": {
+    "en": "Add read-only Dual CT candidate bank labels, per-payload provenance and signed same-payload power-sum diagnostics. Keep bank roles, units and direction unverified; no Energy accounting or controls changes."
   }
 }
