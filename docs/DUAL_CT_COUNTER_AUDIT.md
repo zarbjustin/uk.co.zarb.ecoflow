@@ -1,5 +1,12 @@
 # Dual CT counters and next validation sprints — 15 October 2026
 
+Publication follow-up: the implementations below are now Test v1.10.48 / Build
+63, tag `7542d4b30bc953419a3a8f5cf3b9e8f2c00d2b5d`. Exact-release CI passed
+812 tests, lint, zero-vulnerability audit and Homey verified validation. Official
+API and public listing readback confirm Test; main/Live and device accounting
+remain unchanged. Earlier "local only" sections are implementation checkpoints.
+See STATUS.md and DUAL_CT_RELEASE_GATES.md; hardware/semantic gates stay open.
+
 Scope: `codex/mixed-generation-reporting-diagnostics` only. Investigation and
 numeric-free bank outcomes, not a release or a counter-accounting migration.
 No customer measurements, screenshots, raw packets, account identifiers or secrets

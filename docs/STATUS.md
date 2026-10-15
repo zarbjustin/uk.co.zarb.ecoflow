@@ -2,6 +2,50 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.48 / Build 63 — published 15 October 2026
+
+Diagnostic source `f4338f73715a315ca2d2ba49d5dcda5655424fc2`; exact release/tag
+`v1.10.48` is `7542d4b30bc953419a3a8f5cf3b9e8f2c00d2b5d`. Later handover commits
+are not the uploaded source. Supersedes the preparation/unpublished checkpoints below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38815499264 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38815662598 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38815830126 — passed: 812 tests, lint, audit (0 vulnerabilities), Homey 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38816065220 — passed; created Build 63 / v1.10.48.
+- Official authenticated Homey Apps API confirmed Draft at 2026-10-15 22:18:25 UTC,
+  then Test-only publication/readback at 22:18:27 UTC: Build 63 / v1.10.48 `test`.
+  Build 18 / v1.10.3 remains `live`. Developer Tools independently says Build 63
+  (v1.10.48) is available for testing. The public Test listing returned HTTP 200
+  and showed the exact v1.10.48 changelog/version; its screenshot was inspected
+  outside Git. No certification/Live action.
+- Read back the published archive without executing it: app ID/version match,
+  all four settings HTML/JS files and four new continuity/counter/readiness/trial
+  JS modules are present and SHA256-match the locally validated assets (8 files).
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. A read-only installed
+  app check found the owner's EcoFlow app enabled on v1.10.3, not this Test;
+  no install/update, capture, setting or control action was performed there.
+  Native Homey Test-host and physical Dual CT acceptance remain open.
+
+This consolidates the numeric-free bank summary and sprints 1–5 foundations:
+neutral Bank A/B comparison cards, optional local user observations, separate
+unscaled 773 candidate opt-in, fixed receipt-continuity metadata and one reviewed
+7500-character combined JSON with honest omissions. Both numeric consent flags
+are immutable during capture; the two-minute capture, 15-minute retention,
+freshness/Stop/account/restart/rollback clearing and privacy boundaries remain.
+997 stays structure-only. Normal support/compact reports remain numeric-free.
+There is no new paired Dual CT driver, verified role/unit/direction/period,
+Homey Energy adoption, Flow/control change or counter-accounting migration.
+The energy-adoption trial is unwired and always refuses migration/accounting.
+
+Robert's .47 private conversation (160897) was re-read: four posts, including
+daylight Grid/Solar screenshots and a question about cumulative versus daily
+totals. No newer numeric candidate export was present in that topic. A reply is
+DRAFT ONLY for owner review: acknowledge the supplied evidence, explain v1.10.48
+and the unresolved counter origin, ask for one convenient daylight comparison
+and one optional combined JSON plus corresponding app views, not repeated
+compact/full/crash bundles or rushed/midnight captures. No message was posted.
+
 ## Test release preparation — 15 October 2026
 
 Owner approved committing/pushing the diagnostic wave, exact-release CI and

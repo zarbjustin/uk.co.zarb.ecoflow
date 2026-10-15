@@ -1,6 +1,9 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
-Diagnostic branch only. Sprints 3–5 foundations are local and unpublished.
+Diagnostic branch only. Sprints 3–5 foundations are published to Test as
+v1.10.48 / Build 63; source tag `7542d4b30bc953419a3a8f5cf3b9e8f2c00d2b5d`.
+Source/version/tag CI and upload passed; official channel and public listing
+readback confirmed Test on 15 October. Main/Live remain unchanged. See STATUS.md.
 This is NOT acceptance of a paired Dual CT device, an accounting migration, a
 production release or a new request for customer evidence. Private raw evidence
 and credentials remain outside Git; regression examples are synthetic.
@@ -102,8 +105,9 @@ user observations. These tests must not be interpreted as physical validation.
 
 ## Next validation, without repeating the reporting loop
 
-No message was sent and no new customer capture was requested. After owner
-approval, batch these local changes into one Test release. If Robert still wants
+No message was sent and no new customer capture was requested. The owner-approved
+consolidated Test release is available; Robert's reply remains draft-only.
+If Robert still wants
 to help, one optional convenient daytime comparison with the combined reviewed
 JSON is the first useful gate; do not request a separate compact/full/crash
 bundle. Establish bank roles/units before asking for a later continuity study.
@@ -113,7 +117,7 @@ The owner's expected late-October hardware can then cover physical restart,
 multi-device/source selection, installation behaviour and upgrade/rollback.
 That expectation is not a verified shipping event or acceptance deadline.
 
-## Local verification
+## Pre-release local verification
 
 812 tests pass, with 20 new tests beyond sprints 1–2, plus lint, audit with zero
 vulnerabilities, diff checks and Homey 4.5.3 verified validation. Synthetic
@@ -131,6 +135,8 @@ characters and can be re-exported without losing coverage counts. Synthetic
 mobile/desktop screenshots were inspected; no horizontal overflow. These are
 browser/synthetic results, not native Homey or electrical/hardware acceptance.
 
-No commit, push, CI dispatch, version bump, Test/Live publication, physical-device
-command or customer message. Current package stays 1.10.47; the installed/Test
-build does not contain these uncommitted changes. Mainline refs unchanged.
+Those local checks preceded the owner-approved commit/push and v1.10.48 / Build
+63 Test-only release described above. Exact release CI repeated all 812 tests,
+lint, audit and Homey validation. No physical-device command, customer message,
+mainline, certification or Live change. The owner's installed v1.10.3 was read
+but not updated; native Test-host/physical acceptance remain unclaimed.

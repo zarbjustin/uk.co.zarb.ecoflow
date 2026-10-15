@@ -1,5 +1,11 @@
 # Smart Meter Dual CT — asset and integration assessment
 
+Current checkpoint: consolidated Test v1.10.48 / Build 63 is published; exact
+release CI passed 812 tests and the official channel/public listing were read
+back. The earlier unpublished sections below are historical implementation
+notes. No Dual CT driver/Energy adoption or physical validation is implied.
+See STATUS.md for release receipts; main/Live remain unchanged.
+
 ## Sprints 3–5 follow-up — local, 15 October 2026
 
 Capture-local counter continuity, fixed release-readiness blockers and a pure
