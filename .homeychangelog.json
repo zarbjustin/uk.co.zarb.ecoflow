@@ -250,5 +250,8 @@
   },
   "1.10.47": {
     "en": "Add read-only Dual CT candidate bank labels, per-payload provenance and signed same-payload power-sum diagnostics. Keep bank roles, units and direction unverified; no Energy accounting or controls changes."
+  },
+  "1.10.48": {
+    "en": "Read-only Dual CT comparison cards, optional unscaled counter candidates and receipt-based continuity diagnostics. Improved compact and combined exports and capture cleanup. No changes to pairing, Homey Energy, Flows or device controls."
   }
 }
