@@ -17,6 +17,9 @@
     .beta-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
     .beta-toggle input { width:auto; margin-top:3px; }
     button:disabled { opacity:0.5; cursor:default; }
+    .dual-ct-card { border:1px solid #ccc; border-radius:8px; padding:10px; margin:12px 0; overflow-wrap:anywhere; }
+    .dual-ct-card table { width:100%; table-layout:fixed; font-size:12px; border-collapse:collapse; }
+    .dual-ct-card th, .dual-ct-card td { padding:5px; border:1px solid #ddd; vertical-align:top; overflow-wrap:anywhere; }
   </style>
 </head>
 <body>
@@ -140,6 +143,7 @@
     </details>
     <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
     <label class="beta-toggle"><input id="enableDualCtPreview" type="checkbox"><span id="dualCtPreviewOptIn"></span></label>
+    <label class="beta-toggle"><input id="enableDualCtCounters" type="checkbox" disabled><span id="dualCtCounterOptIn"></span></label>
     <button id="stopDualCtResearch" type="button">Stop Dual CT discovery</button>
     <button id="refreshDualCtResearch" type="button">Refresh local capture summary</button>
     <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
@@ -153,6 +157,10 @@
       <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
       <p id="dualCtDiagnosticState" class="help" role="status" aria-live="polite"></p>
       <p id="dualCtBankState" class="help" style="white-space:pre-wrap" role="status" aria-live="polite"></p>
+      <details id="dualCtComparisonPanel"><summary id="dualCtComparisonTitle"></summary>
+        <div id="dualCtComparisonState"></div>
+      </details>
+      <label class="beta-toggle"><input id="includeDualCtComparison" type="checkbox"><span id="dualCtComparisonInclude"></span></label>
       <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" disabled><span id="dualCtCandidateConsent"></span></label>
       <p id="dualCtCandidateHelp" class="help"></p>
       <pre id="dualCtCandidateText" hidden></pre>
@@ -199,6 +207,7 @@
   <script src="meter-status.js"></script>
   <script src="reporter-status.js"></script>
   <script src="dual-ct-status.js"></script>
+  <script src="dual-ct-comparison.js"></script>
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
@@ -234,9 +243,31 @@
       var candidateReport = null;
       var candidateReadAt = 0;
       var candidateCaptureId = null;
+      var comparisonSnapshot = null;
+      var comparisonTimer;
+      var comparisonNotes = [];
+      function renderComparisonView() {
+        clearTimeout(comparisonTimer);
+        var elapsed = Date.now() - candidateReadAt;
+        var view = comparisonSnapshot && elapsed >= 0 ? window.EcoFlowDualCtComparison.age(comparisonSnapshot, elapsed / 1000, true) : null;
+        var ttl = window.EcoFlowDualCtComparison.render(document.getElementById('dualCtComparisonState'), view,
+          function (key) { return Homey.__('settings.dual_ct.' + key); }, function (note) {
+            comparisonNotes = comparisonNotes.filter(function (row) { return row.deviceIndex !== note.deviceIndex || row.bank !== note.bank; });
+            comparisonNotes.push(note);
+            comparisonSnapshot = window.EcoFlowDualCtComparison.comparisonView(comparisonSnapshot, comparisonNotes);
+            document.getElementById('consentDualCtCandidateExport').checked = false;
+            prepareCandidateExport();
+          });
+        if (ttl) comparisonTimer = setTimeout(renderComparisonView, Math.max(1, Math.ceil(ttl)));
+      }
       function clearCandidateExport(reason) {
         clearTimeout(candidateExpiry);
         candidateSnapshot = null;
+        comparisonSnapshot = null;
+        comparisonNotes = [];
+        clearTimeout(comparisonTimer);
+        document.getElementById('dualCtComparisonState').textContent = '';
+        document.getElementById('includeDualCtComparison').checked = false;
         document.getElementById('consentDualCtCandidateExport').checked = false;
         document.getElementById('consentDualCtCandidateExport').disabled = true;
         document.getElementById('dualCtBankState').textContent = '';
@@ -249,6 +280,9 @@
         var checkbox = document.getElementById('enableDualCtPreview');
         checkbox.disabled = active;
         if (active && typeof enabled === 'boolean') checkbox.checked = enabled;
+        var counter = document.getElementById('enableDualCtCounters');
+        counter.disabled = active || !checkbox.checked;
+        if (active) counter.checked = enabled === true && evidence?.previewDiagnostics?.counterResearch?.enabled === true;
         var mode = document.getElementById('dualCtCaptureMode');
         mode.textContent = evidence ? Homey.__('settings.dual_ct.' + (enabled === true ? 'capture_mode_numeric'
           : enabled === false ? 'capture_mode_structure' : 'capture_mode_unknown')) : '';
@@ -272,6 +306,10 @@
           ageBankChecks(aged.bankChecks, elapsed / 1000);
           candidateReport = window.EcoFlowDualCtStatus.diagnosticExport({ ...aged,
             diagnosticSnapshot: { ...aged, kind: 'historical_capture' } });
+          if (document.getElementById('includeDualCtComparison').checked) {
+            var comparison = comparisonSnapshot && window.EcoFlowDualCtComparison.age(comparisonSnapshot, elapsed / 1000, true);
+            candidateReport = comparison ? window.EcoFlowDualCtComparison.comparisonExport(comparison, comparisonNotes) : null;
+          }
         }
         var text = document.getElementById('dualCtCandidateText');
         text.textContent = candidateReport ? JSON.stringify(candidateReport, null, 2) : '';
@@ -303,11 +341,16 @@
         clearTimeout(previewDeadline);
         clearTimeout(previewExpiry);
         clearTimeout(candidateExpiry);
+        clearTimeout(comparisonTimer);
+        comparisonSnapshot = null;
+        document.getElementById('dualCtComparisonState').textContent = '';
         previewSnapshot = null;
         candidateSnapshot = null;
         if (!preserveConsent) {
           document.getElementById('consentDualCtCandidateExport').checked = false;
           candidateCaptureId = null;
+          comparisonNotes = [];
+          document.getElementById('includeDualCtComparison').checked = false;
         }
         document.getElementById('consentDualCtCandidateExport').disabled = true;
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
@@ -351,6 +394,20 @@
       document.getElementById('dualCtPreviewTitle').textContent = Homey.__('settings.dual_ct.preview_title');
       document.getElementById('dualCtPreviewOptIn').textContent = Homey.__('settings.dual_ct.preview_opt_in');
       document.getElementById('enableDualCtPreview').checked = false;
+      document.getElementById('enableDualCtCounters').checked = false;
+      document.getElementById('includeDualCtComparison').checked = false;
+      document.getElementById('dualCtCounterOptIn').textContent = Homey.__('settings.dual_ct.counter_opt_in');
+      document.getElementById('dualCtComparisonTitle').textContent = Homey.__('settings.dual_ct.comparison_title');
+      document.getElementById('dualCtComparisonInclude').textContent = Homey.__('settings.dual_ct.comparison_include');
+      document.getElementById('enableDualCtPreview').addEventListener('change', function () {
+        var counter = document.getElementById('enableDualCtCounters');
+        counter.disabled = !this.checked;
+        if (!this.checked) counter.checked = false;
+      });
+      document.getElementById('includeDualCtComparison').addEventListener('change', function () {
+        document.getElementById('consentDualCtCandidateExport').checked = false;
+        prepareCandidateExport();
+      });
       document.getElementById('refreshDualCtPreview').textContent = Homey.__('settings.dual_ct.preview_refresh');
       document.getElementById('dualCtCandidateConsent').textContent = Homey.__('settings.dual_ct.candidate_consent');
       document.getElementById('dualCtCandidateHelp').textContent = Homey.__('settings.dual_ct.candidate_help');
@@ -399,7 +456,11 @@
         var elapsed = Date.now() - requestedAt;
         if (elapsed < 0 || elapsed >= 20000) { clearDualCtPreview('request_failed'); return; }
         var id = typeof evidence?.captureId === 'string' && /^[0-9a-f-]{36}$/.test(evidence.captureId) ? evidence.captureId : null;
-        if (!id || id !== candidateCaptureId) document.getElementById('consentDualCtCandidateExport').checked = false;
+        if (!id || id !== candidateCaptureId) {
+          document.getElementById('consentDualCtCandidateExport').checked = false;
+          comparisonNotes = [];
+          document.getElementById('includeDualCtComparison').checked = false;
+        }
         candidateCaptureId = id;
         // Account for request transit time; receipt age is not measurement age.
         if (Array.isArray(evidence?.devices)) evidence.devices.forEach(function (device) {
@@ -410,6 +471,8 @@
           evidence.diagnosticSnapshot.retentionRemainingSec -= elapsed / 1000;
           evidence.diagnosticSnapshot.lastPacketAgeSec += elapsed / 1000;
           ageBankChecks(evidence.diagnosticSnapshot.bankChecks, elapsed / 1000);
+          evidence.diagnosticSnapshot.counterRecords?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+          evidence.diagnosticSnapshot.counterContinuity?.records?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
           evidence.diagnosticSnapshot.devices?.forEach(function (device) {
             device.readings?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
           });
@@ -421,6 +484,7 @@
         previewReadAt = Date.now();
         renderLocalPreview();
         candidateSnapshot = id ? window.EcoFlowDualCtStatus.diagnosticExport(evidence) : null;
+        comparisonSnapshot = id ? window.EcoFlowDualCtComparison.comparisonView(evidence, comparisonNotes) : null;
         candidateReadAt = Date.now();
         document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
         if (candidateSnapshot) {
@@ -430,6 +494,7 @@
           }, Math.ceil(candidateSnapshot.retentionRemainingSec * 1000));
         } else clearCandidateExport();
         renderBankChecks();
+        renderComparisonView();
         prepareCandidateExport();
       }
       document.getElementById('refreshDualCtPreview').addEventListener('click', function () {
@@ -477,6 +542,7 @@
         var start = document.getElementById('startDualCtResearch');
         start.disabled = true;
         document.getElementById('enableDualCtPreview').disabled = true;
+        document.getElementById('enableDualCtCounters').disabled = true;
         result.textContent = Homey.__('settings.dual_ct.' + (action === 'start' ? 'discovering' : action === 'refresh' ? 'refreshing' : 'stopping'));
         dualCtDeadline = setTimeout(function () {
           if (operation !== dualCtOperation) return;
@@ -498,7 +564,8 @@
         }
         Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/dual-ct-research/view' : '/dual-ct-research/' + action,
           action === 'refresh' ? null : action === 'start'
-            ? { previewEnabled: document.getElementById('enableDualCtPreview').checked === true } : {}, function (err, evidence) {
+            ? { previewEnabled: document.getElementById('enableDualCtPreview').checked === true,
+              counterPreviewEnabled: document.getElementById('enableDualCtPreview').checked === true && document.getElementById('enableDualCtCounters').checked === true } : {}, function (err, evidence) {
           if (operation !== dualCtOperation) return;
           if (err || action !== 'start') { finish(err, evidence); return; }
           if (startAcknowledged) return;
@@ -515,6 +582,7 @@
         clearTimeout(dualCtDeadline);
         document.getElementById('startDualCtResearch').disabled = false;
         document.getElementById('enableDualCtPreview').checked = false;
+        document.getElementById('enableDualCtCounters').checked = false;
         renderDualCt(null);
       }
 

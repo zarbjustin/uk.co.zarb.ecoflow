@@ -97,6 +97,7 @@
     try {
       anchor.href = url;
       anchor.download = report?.reportType === 'dual_ct_compact' ? 'ecoflow-dual-ct-compact.json'
+        : report?.reportType === 'dual_ct_comparison' ? 'ecoflow-dual-ct-comparison.json'
         : ['dual_ct_candidate_preview', 'dual_ct_candidate_snapshot'].includes(report?.reportType) ? 'ecoflow-dual-ct-candidates.json' : `ecoflow-integration-${stamp}.json`;
       doc.body.appendChild(anchor);
       anchor.click();

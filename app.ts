@@ -205,7 +205,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   /** Explicit settings action only: no automatic discovery, pairing or Energy source. */
-  async startDualCtResearch(previewEnabled = false): Promise<Record<string, unknown>> {
+  async startDualCtResearch(previewEnabled = false, counterPreviewEnabled = false): Promise<Record<string, unknown>> {
     if (this.stopping) return { status: 'stopped' };
     const reused = !!this.dualCtResearch && ['discovering', 'listening'].includes(this.dualCtResearch.snapshot().status as string);
     if (!reused) {
@@ -219,6 +219,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       let inventorySummary: unknown = [];
       this.dualCtResearch = new DualCtResearch({
         previewEnabled: previewEnabled === true,
+        counterPreviewEnabled: previewEnabled === true && counterPreviewEnabled === true,
         inventory: () => inventorySummary,
         list: async () => {
           const credentials = this.getCredentials();
@@ -255,6 +256,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     await capture.start();
     const research = this.getDualCtResearchSnapshot();
     const effective = (research.previewDiagnostics as { enabled?: boolean } | undefined)?.enabled === true;
+    const effectiveCounter = (research.previewDiagnostics as any)?.counterResearch?.enabled === true;
     return {
       ...research,
       captureStart: {
@@ -262,7 +264,10 @@ module.exports = class EcoFlowApp extends Homey.App {
         superseded: capture !== this.dualCtResearch,
         requestedPreviewEnabled: previewEnabled === true,
         effectivePreviewEnabled: effective,
-        requiresRestart: ['discovering', 'listening'].includes(research.status as string) && effective !== (previewEnabled === true),
+        requestedCounterPreviewEnabled: previewEnabled === true && counterPreviewEnabled === true,
+        effectiveCounterPreviewEnabled: effectiveCounter,
+        requiresRestart: ['discovering', 'listening'].includes(research.status as string) && (effective !== (previewEnabled === true)
+          || effectiveCounter !== (previewEnabled === true && counterPreviewEnabled === true)),
       },
     };
   }

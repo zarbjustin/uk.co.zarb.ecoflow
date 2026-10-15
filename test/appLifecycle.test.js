@@ -287,6 +287,37 @@ test('active Dual CT Start keeps its original consent and reports both requested
   } finally { pairing.appAuthClientFromSettings = original; }
 });
 
+test('Dual CT counter consent cannot be enabled or disabled by reusing a running capture', async () => {
+  const pairing = require('../.homeybuild/lib/appAuthPairing');
+  const original = pairing.appAuthClientFromSettings;
+  try {
+    const { app } = harness(); await app.onInit(); let lists = 0;
+    pairing.appAuthClientFromSettings = () => ({ getDeviceList: async () => {
+      lists++; return [{ sn: 'ZZ99SYNTHETIC0001', productName: '421', shared: false,
+        modelCodes: [{ field: 'productType', code: 421 }] }];
+    } });
+    app.subscribeAppRealtime = async () => true; app.unsubscribeAppRealtime = () => {};
+    const first = await app.startDualCtResearch(true, false);
+    assert.equal(first.captureStart.effectiveCounterPreviewEnabled, false);
+    const reused = await app.startDualCtResearch(true, true);
+    assert.equal(reused.captureStart.requestedCounterPreviewEnabled, true);
+    assert.equal(reused.captureStart.effectiveCounterPreviewEnabled, false);
+    assert.equal(reused.captureStart.requiresRestart, true); assert.equal(lists, 1);
+    app.stopDualCtResearch();
+    const enabled = await app.startDualCtResearch(true, true);
+    assert.equal(enabled.captureStart.effectiveCounterPreviewEnabled, true);
+    assert.equal(enabled.captureStart.requiresRestart, false);
+    const downgrade = await app.startDualCtResearch(true, false);
+    assert.equal(downgrade.captureStart.effectiveCounterPreviewEnabled, true);
+    assert.equal(downgrade.captureStart.requiresRestart, true);
+    app.stopDualCtResearch();
+    const off = await app.startDualCtResearch(false, true);
+    assert.equal(off.captureStart.requestedCounterPreviewEnabled, false);
+    assert.equal(off.captureStart.effectiveCounterPreviewEnabled, false);
+    await app.onUninit();
+  } finally { pairing.appAuthClientFromSettings = original; }
+});
+
 test('local Dual CT view never discovers, subscribes or uses supplied request identities/clocks', async () => {
   const { app } = harness(); await app.onInit();
   const api = require('../.homeybuild/api');

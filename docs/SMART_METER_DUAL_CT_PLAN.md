@@ -1,5 +1,64 @@
 # Smart Meter Dual CT — asset and integration assessment
 
+## Sprints 3–5 follow-up — local, 15 October 2026
+
+Capture-local counter continuity, fixed release-readiness blockers and a pure
+unwired energy-adoption trial are implemented on the diagnostic branch. These
+are not a validated driver or Energy migration. The full evidence/activation
+matrix is in [DUAL_CT_RELEASE_GATES.md](DUAL_CT_RELEASE_GATES.md). Existing
+pairing/accounting and main/Live are unchanged; publication remains on hold.
+
+## Comparison workspace and counter research sprints 1–2 — unpublished, 15 October 2026
+
+Implemented locally on the diagnostic branch, including the previous unpublished
+summary wave. `settings/dual-ct-comparison.js` groups scalar candidates into
+Bank A/B phase cards with missing/stale/zero distinctions and optional local
+Grid/Solar/no-match observations. An optional combined, consented schema-1
+comparison export carries the bounded historical evidence and truthful omission
+counts; changing notes revokes consent. Neither annotations nor sums verify roles.
+
+Separate counter capture opt-in is immutable while a capture runs. Only after
+the existing strict scalar admission, `dualCtCounters.ts` inspects one nested
+level of 773/997. Numeric research is limited to finite unscaled float32
+candidates at 773.1/2/3/4/6/7; units remain null, period unknown. 997 has structure
+only. No recursive probing, default zeros, sign changes or Wh/kWh conversion.
+Whole-record replacement and same-record arithmetic avoid merged-partial evidence.
+Existing privacy retention and Stop/account/restart/rollback cleanup apply.
+
+Normal support/compact remains numeric-free; old scalar-only exports stay schema
+4. Counter records enter only the explicitly selected comparison export. The
+local full bounded view and 7500-character sharing budget are separate.
+See [the audit](DUAL_CT_COUNTER_AUDIT.md) for limitations, tests and future
+continuity/read-only-device/Energy adoption gates. No publication or main/Live
+change, and no message sent to Robert.
+
+Local acceptance for sprints 1–2: 792 tests, lint, audit (0 vulnerabilities), diff
+checks and Homey verified validation pass. Desktop/mobile browser checks include
+opt-in locking, annotations, comparison copy/download, stale/retention timers,
+same-capture refresh versus changed-capture invalidation, failed/late responses
+and navigation. Synthetic Bank A/B and counter screenshots were inspected.
+
+## Numeric-free bank outcomes and counter investigation — unpublished, 15 October 2026
+
+Compact schema 6 adds fixed `previewDiagnostics.bankCheckSummary` metadata:
+at most two devices x two neutral banks, separate latest and last-complete
+outcomes/receipt ages, staleness at 90 seconds and all verification flags false.
+No arithmetic values/residuals/payload indices enter normal reports. Existing
+fixed historical retention/cleanup applies; an old report cannot invent checks.
+EN/DE/NL settings show the summary with ages explicitly at the last refresh.
+Historical candidate export remains separately consented schema 4.
+
+The [counter audit and next-sprint plan](DUAL_CT_COUNTER_AUDIT.md) records the live
+official documentation and upstream BK21 comparison, the unproven 773/997 child
+contracts and a staged route from comparison UX through counter research,
+continuity, read-only devices and gated Energy adoption. Counter bodies remain
+opaque; regression tests prevent accidental mapping, zero fill or accounting.
+
+Local acceptance: 774 tests, lint, audit (0 vulnerabilities), diff checks and
+Homey verified validation pass, including desktop/mobile-sized summary workflows.
+Changes are uncommitted/unpublished; no version bump, CI, mainline, Live or
+installed-device changes. No new reply/request sent to Robert.
+
 ## Candidate banks and coherent decoded payloads — Test .47 / Build 62, 14 October 2026
 
 Published from exact tag `v1.10.47`

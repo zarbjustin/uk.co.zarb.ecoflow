@@ -2,6 +2,152 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test release preparation — 15 October 2026
+
+Owner approved committing/pushing the diagnostic wave, exact-release CI and
+Test-only publication, followed by a Robert reply DRAFT for review. No message,
+mainline merge, installation, certification or Live action is authorised.
+
+Preparing the local sprints 1–5 foundations below for the next patch version
+(expected 1.10.48; confirm the version workflow output). Local acceptance is
+812 tests, lint, zero-vulnerability audit and Homey verified validation. Exact
+source CI, version/tag CI, upload and Test readback are pending at this checkpoint.
+Portal baseline observed 15 October: Test 1.10.47 / Build 62; Live 1.10.3 / Build 18.
+Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`, remote master
+`66b1cb5f828a53333739798281fce86125f61c28`; diagnostic origin/HEAD
+`effb8deae72f6ece3cef2708aee0c8507cc04235` before this source commit.
+
+Release scope is read-only comparison, separate unscaled-counter opt-in,
+numeric-free bank/continuity outcomes, bounded historical sharing and lifecycle
+regressions. No new paired Dual CT driver, verified bank-role/unit/direction
+contract, Homey Energy adoption, Flow/control path or accounting migration.
+997 remains structure-only. Native Homey and physical acceptance remain open.
+Supersedes the unpublished-state notes below once the release is verified.
+
+## Unpublished Dual CT sprints 3–5 foundations — 15 October 2026
+
+Diagnostic branch only, based on `effb8deae72f6ece3cef2708aee0c8507cc04235`,
+including the preceding uncommitted sprints 1–2. No commit/push, version bump,
+CI dispatch, publication, installed-device change or tester message. Mainline
+and Live untouched. Full release/driver/Energy activation is NOT complete.
+
+- Capture-local counter continuity under existing explicit counter consent:
+  signed increase/decrease/unchanged/missing, invalid records, out-of-order and
+  equal-receipt ambiguity, admission-source changes and >=90s gaps. Whole-record
+  baselines only; two-meter isolation, no inferred resets or zeros. Same fixed
+  two-minute capture / 15-minute retention and Stop/account/restart/rollback
+  cleanup, no extra background collection or persistent baseline.
+- Comparison UI shows numeric-free continuity statuses and release blockers in
+  EN/DE/NL, with daily unavailable and cumulative origin unknown. Optional
+  consented comparison sharing retains the 7500-character budget and honest
+  continuity/counter-record omission counts. Normal compact/support and scalar
+  candidate exports are unchanged. Calendar helper covers local midnight and
+  23/25-hour DST days but computes no daily totals.
+- Developer-owned readiness remains blocked: no registered verified contract,
+  no new paired driver/phase capabilities or Energy contributor. User bank
+  observations cannot unlock it. 997 is still structure-only.
+- Pure unwired Wh-counter adoption trial tests anchoring existing totals,
+  single-source/no-power-fallback, conservative decrease/gap/source/restart
+  handling, versioned restore/rollback rejection and monotonic totals. It always
+  returns migration/energy false, is not imported by production drivers/app,
+  and is not a live Dual CT counter mapping or migration.
+- Release fences preserve original-meter identity/pairing/accounting paths.
+  Physical/native-client, bank-role/unit/direction/counter-period and real
+  upgrade/rollback gates remain open. See
+  [DUAL_CT_RELEASE_GATES.md](DUAL_CT_RELEASE_GATES.md) for the acceptance matrix
+  and one-session validation plan. Do not ask for repeated exports meanwhile.
+
+Local acceptance: 812 tests pass (20 added after sprints 1–2), lint, audit
+(0 vulnerabilities), diff checks and Homey 4.5.3 verified validation pass.
+Chromium desktop/mobile workflows cover continuity, explicit unavailable/blocked
+states, freshness, sharing/expiry and the 7500-character budget. Synthetic
+390px/1280px screenshots were inspected; no horizontal overflow. No native
+Homey/physical acceptance claimed. Changes remain local and uncommitted.
+
+## Unpublished Dual CT sprints 1–2 — comparison and counter research, 15 October 2026
+
+Diagnostic branch only, still based on `effb8deae72f6ece3cef2708aee0c8507cc04235`.
+Includes the prior uncommitted numeric-free bank-summary wave. No version bump,
+commit/push, CI, upload, publication or tester message. Mainline and Live unchanged.
+
+- New local Bank A/B cards group the bounded scalar candidates by phase with
+  W/V/A hypothesis headings, genuine zero, missing-not-zero, receipt ages and
+  stale indicators. No physical measurement-time or simultaneous-sampling claim.
+- Optional fixed Grid/Solar/no-match observations are ephemeral user assertions,
+  never global mappings. They clear on capture/account/navigation/expiry changes;
+  changing an observation or export mode revokes sharing consent until reviewed.
+- One optional `dual_ct_comparison` schema-1 JSON includes the historical scalar
+  projection, fixed observations and counter research. The local view retains
+  all 2 x 20 allowed scalar fields; sharing reapplies a 7500-character budget,
+  per-device evidence and honest omission counts. Distinct comparison filename,
+  copy/download/manual-text fallback; no automatic sending. Existing scalar-only
+  historical export remains schema 4 and compact remains numeric-free schema 6.
+- Counter numbers require BOTH explicit numeric-preview and separate counter
+  opt-ins before capture; active capture reuse cannot change either mode. Strict
+  owned-model/live-topic/message/header/encoding/scalar-signature gates remain.
+- Counter inspector walks exactly one level of 773/997, bounded to 2048 bytes
+  and 32 children per parent. Only 773 children 1/2/3/4/6/7, wire 5, can become
+  finite unscaled candidates with null units; 5 and deeper/unknown children do not.
+  997 stays structure-only: no independent numeric contract was found. No Wh/kWh,
+  direction, phase, daily/lifetime or commissioning-origin assumptions.
+- Counter checks are hypothetical `4-6=7` and `1+2+3=7` arithmetic within ONE
+  complete 773 record, never cached-child completion. Whole records replace
+  partials, with independent device isolation/provenance/ages. Existing fixed
+  15-minute retention/Stop/account/restart/rollback/timer cleanup also clears
+  counter data. Normal reports contain only bounded structure/status metadata.
+- Regression exposed and fixed a binary classification edge: protobuf field-1
+  newline plus length byte 123 looked like JSON after trimming whitespace. A
+  failed JSON parse now falls through only for the protobuf field-1 prefix to
+  the existing strict header/encoding path; genuine whitespace JSON still works.
+
+No Energy accounting, driver, capability, pairing, Flow or control changes.
+Local acceptance: 792 tests, lint, audit (0 vulnerabilities), diff checks and
+Homey 4.5.3 verified validation pass. Eighteen regression tests were added since
+the prior 774-test unpublished wave, including real Chromium desktop/mobile
+comparison/export workflows. The inspected synthetic mobile view has no
+horizontal overflow. Native Homey webviews and hardware acceptance are not claimed.
+Regression, desktop/mobile and privacy/export checks are recorded in
+[DUAL_CT_COUNTER_AUDIT.md](DUAL_CT_COUNTER_AUDIT.md). Native Homey/physical
+mapping, counter units/period and hardware acceptance remain open. No new request
+to Robert has been sent; next release/validation remains owner-authorized only.
+
+## Unpublished numeric-free bank outcomes and counter audit — 15 October 2026
+
+Diagnostic branch only, based on `effb8deae72f6ece3cef2708aee0c8507cc04235`.
+Local changes only: no commit/push, CI dispatch, version bump, upload, publication
+or message sent. Mainline refs unchanged; no Live or installed-device actions.
+The last publication remains Test .47 / Build 62, not this implementation.
+
+- `previewDiagnostics.bankCheckSummary` projects only bounded anonymous Bank A/B
+  outcomes and receipt ages into support/compact reports. Latest partial/invalid
+  and independently aged last-complete consistent/mismatch remain separate.
+  At 90 seconds evidence is marked stale; fixed historical retention and all
+  existing Stop/account/new-capture/restart/rollback cleanup apply unchanged.
+- Backend and browser fixed allowlists strip values, operands, residuals,
+  tolerances, payload indices and identities. Older evidence is not reported,
+  never inferred successful. Compact schema 6 stays within 7500 characters;
+  optional numeric historical export stays schema 4 with separate consent.
+- Settings show the numeric-free summary in EN/DE/NL, with receipt ages explicitly
+  at last refresh and no Grid/Solar/CT role or unit/direction verification claim.
+- Nested 773/997 remain opaque. Counter investigation and the five next sprints
+  are in [DUAL_CT_COUNTER_AUDIT.md](DUAL_CT_COUNTER_AUDIT.md). The live official
+  STREAM page documents separate historical buckets, not a Dual CT nested-record
+  contract. Upstream BK21 lifetime-counter semantics cannot be promoted to 421.
+- No Energy accounting, capability, driver, pairing, Flow or control change.
+  New tests protect the nested-record boundary as well as summary freshness,
+  isolation, privacy, projection compatibility and workflow behaviour.
+
+Local acceptance: 774 tests, lint, audit (0 vulnerabilities), diff checks and
+Homey 4.5.3 verified validation pass. Chromium desktop/mobile-sized tests pass;
+both synthetic summary screenshots were visually inspected. Native Homey and
+physical acceptance remain open. No private customer values/frames in Git.
+
+Robert's .46 approved reply was posted and reopened at 160876/post 3. The .47
+topic 160897 has four messages: compact structure, explanation, two daylight
+screenshots and a cumulative-kWh question. No new numeric candidate export or
+crash/support identifier in those posts. Do not ask for another compact report
+to infer numeric bank checks absent from schema 5; do not request repeats now.
+
 ## Test v1.10.47 / Build 62 — published 14 October 2026
 
 Diagnostic source `57f962f1b0647f80460607d3f3b3d65d429c6797`; exact release/tag

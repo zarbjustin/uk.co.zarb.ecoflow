@@ -100,6 +100,7 @@ function fields(data: Buffer): Array<{ field: number; wire: number }> {
 
 interface ResearchHooks {
   previewEnabled?: boolean;
+  counterPreviewEnabled?: boolean;
   inventory?: () => unknown;
   list: () => Promise<Array<AppDevice & { appListed?: boolean; developerListed?: boolean }>>;
   subscribe: (sn: string, handler: (data: Buffer, topic: string) => void, active?: () => boolean) => Promise<boolean>;
@@ -136,7 +137,7 @@ export class DualCtResearch {
 
   constructor(hooks: ResearchHooks) {
     this.hooks = hooks;
-    this.preview = new DualCtPreview(hooks.previewEnabled === true);
+    this.preview = new DualCtPreview(hooks.previewEnabled === true, hooks.counterPreviewEnabled === true);
   }
 
   private now(): number {
@@ -256,7 +257,17 @@ export class DualCtResearch {
           try {
             const text = data.toString('utf8').trimStart();
             if (text.startsWith('{')) {
-              recordJson(JSON.parse(text), 'app_json', false); return;
+              // A protobuf field-1 tag is a newline byte; its length can be 123
+              // ("{"). Do not misclassify that valid binary frame as JSON.
+              let json: unknown;
+              try {
+                json = JSON.parse(text);
+              } catch {
+                if (data[0] !== 10) throw new Error('invalid');
+              }
+              if (json !== undefined) {
+                recordJson(json, 'app_json', false); return;
+              }
             }
             const headers = decodeFrameHeaders(data);
             if (!headers.length || headers.length > 16) throw new Error('invalid');

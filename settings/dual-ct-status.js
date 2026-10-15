@@ -18,6 +18,51 @@
       receivedPackets: Math.min(128, events.reduce((sum, event) => sum + event.samples, 0)),
       lastReceiptAgeSec: events.length ? Math.min(...events.map(event => event.lastAgeSec)) : null };
   }
+  // Keep this fixed metadata projection aligned with lib/dualCtDiagnostics.ts.
+  function bankCheckSummary(input, enabled) {
+    const banks = []; const seen = new Set();
+    const reported = enabled && input?.reported === true && input?.scope === 'retained_capture_history'
+      && input?.arithmeticScope === 'single_decoded_payload';
+    if (reported && Array.isArray(input.banks)) {
+      for (const row of input.banks.slice(0, 4)) {
+        const key = `${row?.deviceIndex}:${row?.bank}`;
+        if (![0, 1].includes(row?.deviceIndex) || !['A', 'B'].includes(row?.bank) || seen.has(key)) continue;
+        const project = (check, complete) => {
+          if (!(complete ? ['consistent', 'mismatch'] : ['partial', 'consistent', 'mismatch', 'invalid']).includes(check?.status)
+            || !Number.isFinite(check?.receivedAgeSec) || check.receivedAgeSec < 0 || check.receivedAgeSec >= 990) return null;
+          return { status: check.status, receivedAgeSec: check.receivedAgeSec, stale: check.receivedAgeSec >= 90 };
+        };
+        const latest = project(row.latest, false); const lastComplete = project(row.lastComplete, true);
+        if (!latest || (row.lastComplete != null && !lastComplete)
+          || (lastComplete && lastComplete.receivedAgeSec < latest.receivedAgeSec)
+          || (['consistent', 'mismatch'].includes(latest.status) && (!lastComplete
+            || latest.status !== lastComplete.status || latest.receivedAgeSec !== lastComplete.receivedAgeSec))) continue;
+        seen.add(key); banks.push({ deviceIndex: row.deviceIndex, bank: row.bank, latest, lastComplete });
+      }
+    }
+    return { reported, scope: 'retained_capture_history', arithmeticScope: 'single_decoded_payload', banks,
+      mappingVerified: false, unitsVerified: false, directionVerified: false,
+      measurementSimultaneityVerified: false, valuesIncluded: false };
+  }
+  function counterMetadata(input) {
+    const records=[]; const seen=new Set();
+    if(Array.isArray(input?.records)) for(const row of input.records.slice(0,4)) {
+      const key=`${row?.deviceIndex}:${row?.parent}`;
+      if(![0,1].includes(row?.deviceIndex)||![773,997].includes(row?.parent)||seen.has(key)
+        ||!['observed','invalid','oversized'].includes(row?.status)||!Number.isFinite(row.receivedAgeSec)||row.receivedAgeSec<0||row.receivedAgeSec>=990) continue;
+      seen.add(key);
+      const fields=Array.isArray(row.fields)?row.fields.slice(0,32).filter(field=>Number.isInteger(field?.field)
+        &&field.field>=1&&field.field<=64&&[0,1,2,5].includes(field?.wire)).map(field=>({field:field.field,wire:field.wire})):[];
+      const checks=input.enabled===true&&row.parent===773&&row.status==='observed'&&Array.isArray(row.checks)
+        ?row.checks.slice(0,2).filter(check=>['4-6=7','1+2+3=7'].includes(check?.expression)
+          &&['partial','consistent','mismatch','invalid'].includes(check?.status)&&check.scope==='single_nested_record')
+          .map(check=>({expression:check.expression,status:check.status,scope:'single_nested_record',verified:false})):[];
+      records.push({deviceIndex:row.deviceIndex,parent:row.parent,status:row.status,fields,checks,receivedAgeSec:row.receivedAgeSec,stale:row.receivedAgeSec>=90,
+        fieldsAvailable:row.fieldsOmitted===true&&Number.isInteger(row.fieldsAvailable)&&row.fieldsAvailable>=fields.length&&row.fieldsAvailable<=32?row.fieldsAvailable:fields.length,
+        fieldsIncluded:fields.length,fieldsOmitted:row.fieldsOmitted===true});
+    }
+    return {enabled:input?.enabled===true,records,unitsVerified:false,period:'unknown',valuesIncluded:false};
+  }
   function previewDiagnostics(input) {
     const count = n => Number.isInteger(n) && n >= 0 && n <= 2048 ? n : 0;
     const reasons = ['disabled', 'ready', 'no_samples', 'no_eligible_meter', 'missing_encoding', 'unsupported_encoding',
@@ -33,7 +78,8 @@
         .map(key => [key, count(input?.encodingCounts?.[key])])),
       additionalScalarFieldsSeen: Array.isArray(input?.additionalScalarFieldsSeen)
         ? [...new Set(input.additionalScalarFieldsSeen.slice(0, 128).filter(field => [985,986,987,988,989,990,991,992,993,998].includes(field)))].sort((a,b) => a-b) : [],
-      additionalBankMappingVerified: false, valuesIncluded: false };
+      additionalBankMappingVerified: false, bankCheckSummary: bankCheckSummary(input?.bankCheckSummary, enabled === true),
+      counterResearch: counterMetadata(enabled === true ? input?.counterResearch : null), valuesIncluded: false };
   }
   function describe(input) {
     const count = (value, max) => (Number.isInteger(value) && value >= 0 && value <= max ? value : 0);
@@ -83,6 +129,15 @@
     });
     const preview = previewDiagnostics(evidence?.previewDiagnostics);
     if (preview.enabled !== null) append(translate('preview_' + preview.reason));
+    const banks = preview.bankCheckSummary;
+    if (banks.banks.length) {
+      append(translate('bank_summary_help'));
+      banks.banks.forEach(row => {
+        const text = check => `${translate('bank_' + check.status)} · ${Math.floor(check.receivedAgeSec)} s · ${translate(check.stale ? 'bank_stale' : 'bank_recent')}`;
+        append(`${translate('meter')} ${row.deviceIndex + 1} · ${translate('bank_candidate')} ${row.bank} · ${translate('bank_latest')}: ${text(row.latest)}`);
+        if (row.lastComplete) append(`${translate('bank_last_complete')}: ${text(row.lastComplete)}`);
+      });
+    }
     if (status.observed) append(translate('observed_help'));
     else if (status.state !== 'not_started' && status.state !== 'discovering') append(translate('no_data_help'));
     append(translate('snapshot_help'));
@@ -156,7 +211,7 @@
         retainedSamples: Math.min(128, (previous?.retainedSamples || 0) + event.samples),
         lastAgeSec: Math.min(previous?.lastAgeSec ?? Infinity, Math.floor(event.lastAgeSec)) });
     });
-    const report = { reportType: 'dual_ct_compact', schemaVersion: 5,
+    const report = { reportType: 'dual_ct_compact', schemaVersion: 6,
       appVersion: typeof version === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(version) ? version : 'unknown',
       summary: describe(evidence), inventory, jsonShapes: [], shapes: [], structureOmitted: false, metadataOmitted: false,
       previewDiagnostics: previewDiagnostics(evidence?.previewDiagnostics),
@@ -167,6 +222,10 @@
       valuesIncluded: false, pairingEnabled: false,
       contributesToEnergy: false, controlsEnabled: false };
     const size = () => JSON.stringify(report, null, 2).length;
+    while(size()>6500&&report.previewDiagnostics.counterResearch.records.some(row=>row.fields.length)) {
+      const largest=report.previewDiagnostics.counterResearch.records.reduce((a,b)=>a.fields.length>=b.fields.length?a:b);
+      largest.fields.pop();largest.fieldsIncluded=largest.fields.length;largest.fieldsOmitted=true;
+    }
     // Reserve room for useful structure rather than spending it on unrelated candidates.
     while ((size() > 3000 && available.length || size() > 7500) && report.inventory.some((row) => row.candidates.length)) {
       const largest = report.inventory.reduce((a, b) => (a.candidates.length >= b.candidates.length ? a : b));
@@ -235,7 +294,7 @@
     });
     return devices;
   }
-  function buildCandidateExport(input, historical) {
+  function buildCandidateExport(input, historical, budget = 7500) {
     if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
       || input.unitsVerified !== false || input.directionVerified !== false) return null;
     const devices = candidateRows(input, historical ? 990 : 90);
@@ -263,7 +322,7 @@
       report.bankChecksIncluded = report.bankChecks.length; report.bankChecksOmitted = prior;
     }
     // Bound the expanded two-meter export. Signal trimming, preserve some evidence from both meters.
-    while (JSON.stringify(report, null, 2).length > 7500) {
+    while (JSON.stringify(report, null, 2).length > budget) {
       const largest = report.devices.reduce((a, b) => a.readings.length >= b.readings.length ? a : b);
       if (largest.readings.length > 1) { largest.readings.pop(); report.readingsIncluded--; report.readingsOmitted = true; }
       else if (report.bankChecks?.length) { report.bankChecks.pop(); report.bankChecksIncluded--; report.bankChecksOmitted = true; }
@@ -312,7 +371,7 @@
   }
 
   // Separate historical evidence, never admitted back to the fresh preview or normal reports.
-  function diagnosticExport(input) {
+  function diagnosticExport(input, comparisonView = false) {
     const snapshot = input?.diagnosticSnapshot;
     if (snapshot?.kind !== 'historical_capture' || snapshot.simultaneous !== false
       || !Number.isFinite(snapshot.retainedForSec) || snapshot.retainedForSec < 0 || snapshot.retainedForSec >= 900
@@ -322,7 +381,9 @@
       || snapshot.lastPacketAgeSec > snapshot.retainedForSec + 90) return null;
     const devices = candidateRows(snapshot, snapshot.retainedForSec + 90 + 0.001).map(device => ({ ...device,
       readings: device.readings.filter(row => row.receivedAgeSec >= snapshot.lastPacketAgeSec) }));
-    return buildCandidateExport({ ...input, ...snapshot, devices }, true);
+    // The local comparison view may hold the full bounded 2 x 20 field projection;
+    // its separate combined exporter reapplies the 7500-character sharing budget.
+    return buildCandidateExport({ ...input, ...snapshot, devices }, true, comparisonView === true ? 20000 : 7500);
   }
 
   // Separate local display only: never pass candidate values to compact().

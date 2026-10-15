@@ -6,7 +6,7 @@ import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
   async startDualCtResearch({ homey, body }: { homey: any; body?: any }): Promise<Record<string, unknown>> {
-    return homey.app.startDualCtResearch(body?.previewEnabled === true);
+    return homey.app.startDualCtResearch(body?.previewEnabled === true, body?.previewEnabled === true && body?.counterPreviewEnabled === true);
   },
   async dualCtPreview({ homey }: { homey: any }): Promise<Record<string, unknown>> {
     return homey.app.getDualCtPreviewSnapshot();

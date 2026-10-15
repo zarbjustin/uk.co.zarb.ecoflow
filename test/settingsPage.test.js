@@ -283,6 +283,7 @@ function loadSettingsScript() {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'meter-status.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'reporter-status.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'dual-ct-status.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'dual-ct-comparison.js'), 'utf8'), context);
   vm.runInContext(source, context);
   return context;
 }
@@ -292,7 +293,8 @@ function fakeDocument() {
   const elements = new Map();
   return {
     elements,
-    createElement() { return { textContent: '' }; },
+    createElement() { return { textContent: '', value: '', ownerDocument: this, children: [], dataset: {},
+      appendChild(child) { this.children.push(child); }, setAttribute() {}, addEventListener() {} }; },
     getElementById(id) {
       if (!elements.has(id)) {
         elements.set(id, {

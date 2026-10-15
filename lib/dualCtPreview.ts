@@ -1,6 +1,9 @@
 import { decodeDualCtCandidates, DualCtDecodeContext } from './dualCtDecoder';
 import { DUAL_CT_EXTRA_SCALARS, dualCtPreviewDiagnostics } from './dualCtDiagnostics';
 import { DualCtBankCheck } from './dualCtBanks';
+import { inspectDualCtCounterRecords, DualCtCounterRecord } from './dualCtCounters';
+import { DualCtContinuity } from './dualCtContinuity';
+import { dualCtReleaseReadiness } from './dualCtReadiness';
 
 type Reading = NonNullable<ReturnType<typeof decodeDualCtCandidates>>['readings'][number];
 type RetainedReading = Reading & { packetIndex: number };
@@ -12,6 +15,7 @@ export class DualCtPreview {
   private rows = new Map<number, Map<number, { reading: RetainedReading; receivedAt: number }>>();
   private diagnosticRows = new Map<number, Map<number, { reading: RetainedReading; receivedAt: number }>>();
   private bankChecks = new Map<number, Map<string, { latest: PacketCheck; lastComplete?: PacketCheck }>>();
+  private counterRecords = new Map<number, Map<number, { record: DualCtCounterRecord; receivedAt: number; packetIndex: number; encodingBasis: string }>>();
   private diagnosticStartedAt: number | null = null;
   private diagnosticLatestAt = 0;
   private diagnosticExpired = false;
@@ -28,8 +32,14 @@ export class DualCtPreview {
 
   private readonly enabled: boolean;
 
-  constructor(enabled: boolean) {
+  private readonly counterEnabled: boolean;
+
+  private readonly continuity: DualCtContinuity;
+
+  constructor(enabled: boolean, counterEnabled = false) {
     this.enabled = enabled === true;
+    this.counterEnabled = this.enabled && counterEnabled === true;
+    this.continuity = new DualCtContinuity(this.counterEnabled);
   }
 
   clear(resetDiagnostics = true): void {
@@ -50,6 +60,8 @@ export class DualCtPreview {
   private clearDiagnostic(): void {
     this.diagnosticRows.clear();
     this.bankChecks.clear();
+    this.counterRecords.clear();
+    this.continuity.clear();
     if (this.diagnosticTimer !== null) clearTimeout(this.diagnosticTimer);
     this.diagnosticTimer = null;
   }
@@ -71,6 +83,10 @@ export class DualCtPreview {
   }
 
   diagnostics(reason: string) {
+    // snapshot() advances this clock and expires the fixed historical cache first.
+    const project = (packet: PacketCheck) => ({
+      status: packet.check.status, receivedAgeSec: (this.lastNow - packet.receivedAt) / 1000,
+    });
     return dualCtPreviewDiagnostics({
       enabled: this.enabled,
       reason,
@@ -80,6 +96,18 @@ export class DualCtPreview {
       omittedMarkerAccepted: this.omittedMarkerAccepted,
       encodingCounts: this.encodingCounts,
       additionalScalarFieldsSeen: [...this.extraFields],
+      counterResearch: {
+        enabled: this.counterEnabled,
+        records: this.projectCounters(this.lastNow).map(({ candidates, ...record }) => record),
+      },
+      bankCheckSummary: {
+        reported: this.enabled,
+        scope: 'retained_capture_history',
+        arithmeticScope: 'single_decoded_payload',
+        banks: [...this.bankChecks].flatMap(([deviceIndex, checks]) => [...checks.values()].map(({ latest, lastComplete }) => ({
+          deviceIndex, bank: latest.check.bank, latest: project(latest), lastComplete: lastComplete ? project(lastComplete) : null,
+        }))),
+      },
     });
   }
 
@@ -167,7 +195,36 @@ export class DualCtPreview {
         });
       }
       this.bankChecks.set(deviceIndex, checks);
+      const counters = this.counterRecords.get(deviceIndex) || new Map();
+      const counterRecords = inspectDualCtCounterRecords(payload, context, this.counterEnabled);
+      this.continuity.observe(deviceIndex, counterRecords, context.receivedAt, context.now, context.encodingBasis || 'explicit_zero');
+      for (const record of counterRecords) {
+        const previous = counters.get(record.parent);
+        if (!previous || context.receivedAt >= previous.receivedAt) {
+          // Replace WHOLE records; no merging partial child fields across packets.
+          counters.set(record.parent, {
+            record,
+            receivedAt: context.receivedAt,
+            packetIndex: this.acceptedPayloads,
+            encodingBasis: context.encodingBasis || 'explicit_zero',
+          });
+        }
+      }
+      this.counterRecords.set(deviceIndex, counters);
     }
+  }
+
+  private projectCounters(now: number) {
+    return [...this.counterRecords].flatMap(([deviceIndex, records]) => [...records.values()].map((row) => ({
+      ...row.record,
+      fields: row.record.fields.map((field) => ({ ...field })),
+      candidates: row.record.candidates.map((candidate) => ({ ...candidate })),
+      checks: row.record.checks.map((check) => ({ ...check })),
+      deviceIndex,
+      receivedAgeSec: (now - row.receivedAt) / 1000,
+      packetIndex: row.packetIndex,
+      encodingBasis: row.encodingBasis,
+    })));
   }
 
   snapshot(now: number) {
@@ -196,6 +253,9 @@ export class DualCtPreview {
       lastPacketAgeSec: (now - this.diagnosticLatestAt) / 1000,
       simultaneous: false,
       devices: retainedDevices,
+      counterResearchEnabled: this.counterEnabled,
+      counterRecords: this.projectCounters(now),
+      counterContinuity: this.continuity.snapshot(now),
       bankChecks: [...this.bankChecks].flatMap(([deviceIndex, checks]) => [...checks.values()].map(({ latest, lastComplete }) => {
         const project = (packet: PacketCheck) => ({
           ...packet.check,
@@ -228,7 +288,9 @@ export class DualCtPreview {
       contributesToEnergy: false,
       controlsEnabled: false,
       pairingEnabled: false,
+      releaseReadiness: dualCtReleaseReadiness(),
       devices,
+      counterResearch: { enabled: this.counterEnabled, records: this.projectCounters(now).filter((row) => row.receivedAgeSec >= 0 && row.receivedAgeSec < 90) },
       diagnosticSnapshot,
     };
   }

@@ -42,7 +42,11 @@ async function setup(browser, viewport, expired = false) {
         else if(url==='/dual-ct-research/view') callback(null,{research:{status:'complete',appVersion:'1.10.45',deviceCount:1,frames:41,
           valuesCaptured:true,selected:[{deviceIndex:0,basis:'observed_app_product_type_421',appListed:true}],
           history:[{deviceIndex:0,source:'app_mqtt',status:'protobuf',samples:41,lastAgeSec:preview.diagnosticSnapshot?.lastPacketAgeSec}],
-          previewDiagnostics:{enabled:true,reason:preview.reason,attemptedPayloads:41,acceptedPayloads:41}},preview});
+          previewDiagnostics:{enabled:true,reason:preview.reason,attemptedPayloads:41,acceptedPayloads:41,
+            bankCheckSummary:{reported:true,scope:'retained_capture_history',arithmeticScope:'single_decoded_payload',
+              banks:preview.diagnosticSnapshot?preview.diagnosticSnapshot.bankChecks.map(row=>({deviceIndex:row.deviceIndex,bank:row.bank,
+                latest:{status:row.latest.status,receivedAgeSec:row.latest.receivedAgeSec},
+                lastComplete:{status:row.lastComplete.status,receivedAgeSec:row.lastComplete.receivedAgeSec}})):[]}}},preview});
         else callback(null,{status:'stopped'});
       }});
   },{translations:require('../locales/en.json'),expired});
@@ -56,7 +60,20 @@ test('desktop/mobile per-field expiry preserves newer live fields and consented 
   try {
     for(const viewport of [{width:1280,height:900},{width:390,height:844}]) {
       const page=await setup(browser,viewport);
-      await page.locator('#refreshDualCtPreview').click();
+      await page.locator('#refreshDualCtResearch').click();
+      const summary=await page.locator('#dualCtResearchResult').innerText();
+      assert.match(summary,/Numeric-free capture summary/);assert.match(summary,/Ages are at the last refresh/);
+      assert.match(summary,/Candidate bank A.*latest payload: incomplete/);
+      assert.match(summary,/last complete power payload: arithmetic consistent only/);
+      assert.doesNotMatch(summary,/reportedTotal|phaseValues|515: -7/);
+      const compact=JSON.parse(await page.locator('#dualCtCompactText').innerText());
+      assert.equal(compact.schemaVersion,6);assert.equal(compact.valuesIncluded,false);
+      assert.equal(compact.previewDiagnostics.bankCheckSummary.banks[0].latest.status,'partial');
+      assert.equal(compact.previewDiagnostics.bankCheckSummary.banks[0].lastComplete.status,'consistent');
+      assert.doesNotMatch(JSON.stringify(compact),/reportedTotal|phaseValues|packetIndex|candidateUnit|-7/);
+      assert.ok(JSON.stringify(compact,null,2).length<=7500);
+      await page.locator('#dualCtResearchResult').scrollIntoViewIfNeeded();
+      await page.screenshot({path:`/tmp/ecoflow-dualct-bank-summary-${viewport.width}.png`});
       assert.match(await page.locator('#dualCtPreviewState').innerText(),/515: -7/);
       assert.match(await page.locator('#dualCtPreviewState').innerText(),/956: 230/);
       assert.equal(await page.locator('#consentDualCtCandidateExport').isChecked(),false);

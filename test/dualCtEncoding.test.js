@@ -140,7 +140,7 @@ test('metadata trimming and retained structure coverage never claim numeric or s
       codes:[{field:'productType',code:421},{field:'productId',code:65535},{field:'modelId',code:65535}]}))}],
     shapes:[{deviceIndex:0,cmdFunc:254,cmdId:21,fields:Array.from({length:32},(_,i)=>({field:i+1,wire:5}))}]};
   const report=compact(input,'1.10.44');
-  assert.equal(report.schemaVersion,5); assert.equal(report.structureCoverage.scope,'retained_capture_structure');
+  assert.equal(report.schemaVersion,6); assert.equal(report.structureCoverage.scope,'retained_capture_structure');
   assert.equal(report.metadataOmitted,true); assert.equal(report.previewDiagnostics.encodingVerified,false);
   assert.ok(JSON.stringify(report,null,2).length<=7500);
 });
