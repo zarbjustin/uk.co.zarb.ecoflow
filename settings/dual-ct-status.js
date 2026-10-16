@@ -392,6 +392,9 @@
     if (['stopped', 'account_changed', 'capture_unavailable'].includes(input.reason)) return input.reason;
     if (input.enabled === false || input.reason === 'disabled') return 'numeric_disabled';
     const snapshot = input.diagnosticSnapshot;
+    // The server removes the historical object at its fixed deadline. Live-only
+    // expiry still permits export above when a validated retained snapshot exists.
+    if (input.reason === 'expired' && snapshot == null) return 'expired';
     if ((Number.isFinite(snapshot?.retentionRemainingSec) && snapshot.retentionRemainingSec <= 0)
       || (Number.isFinite(snapshot?.retainedForSec) && snapshot.retainedForSec >= contract.retentionMs / 1000)) return 'expired';
     if (input.reason === 'no_eligible_meter' || input.reason === 'model_unverified') return 'no_eligible_meter';

@@ -212,6 +212,7 @@ test('desktop/mobile export controls explain missing data and prerequisites with
       [{...ready,diagnosticSnapshot:null},/No exportable historical numeric snapshot/],
       [{...ready,diagnosticSnapshot:{kind:'invalid'}},/could not be validated/],
       [{...ready,diagnosticSnapshot:{retainedForSec:900,retentionRemainingSec:0}},/15-minute retention window has ended/],
+      [{...ready,reason:'expired',diagnosticSnapshot:null},/15-minute retention window has ended/],
       [{enabled:true,reason:'unsupported_encoding',captureId:ready.captureId,devices:[]},/candidate checks did not accept/],
     ];
     for(const [response,expected] of cases){

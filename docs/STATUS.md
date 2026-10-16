@@ -4,6 +4,14 @@
 
 ## Consolidated diagnostic Test preparation — 16 October 2026
 
+Release review addendum: source CI `38956863056` passed and the first patch-version
+workflow `38957065913` created v1.10.50 (`68e1818`). It has NOT been uploaded to
+Homey. A later-refresh expiry-message edge case was found before upload: the server
+removes the historical object entirely at its deadline, so `reason: expired` with
+no snapshot must not be described as a generic missing snapshot. A real-backend
+regression and desktop/mobile case cover it. Release will use a further patch
+version after this fix passes exact CI; never rewrite the v1.10.50 tag.
+
 Owner explicitly approved committing/pushing this diagnostic continuation, checking
 CI and publishing one consolidated Test build. Mainline, Live and installed devices
 must stay unchanged; Robert's reply is draft-only. This supersedes the earlier
@@ -20,7 +28,7 @@ failures. It never includes raw exception details or identifiers and never start
 a capture or opts into sharing. Same-capture refresh retains consent only after
 validating the returned identity; failure/expiry/account change clears it.
 
-Fresh checks: 844 tests pass (21 above released v1.10.49), lint, full dependency
+Fresh checks before the addendum: 844 tests pass (21 above released v1.10.49), lint, full dependency
 audit (0 vulnerabilities), diff checks and Homey 4.5.3 verified validation. Desktop
 and mobile browser cases cover disabled states, valid recovery, slow request,
 timeout/late response, exact retention expiry, copy/download and no automatic
