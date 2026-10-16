@@ -2,6 +2,52 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.51 / Build 65 — published 16 October 2026
+
+Supersedes the preparation/local-only checkpoints below. The four release sprints
+and export-availability fixes are now committed/pushed on the diagnostic branch,
+uploaded and published to **Test only**. Robert's `.49?` reply is DRAFT ONLY for
+owner review; no new customer message was sent.
+
+- Consolidated source: `842eb66931630e868e73a443a67ee1f552fb94f9`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38956863056 passed.
+- Later-refresh expiry edge fix: `8b07f8dd7e86c52537ad1ab1012c554c610107d9`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38957406110 passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38957619745 passed;
+  tag `v1.10.51` / `6a8d93a2050f6d2c2b6cca0b29016a6a183b5b4c`.
+- Exact-tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38957741069 passed:
+  **845 tests**, lint, full audit (0 vulnerabilities), Homey 4.5.3 verified validation.
+  Counts and individual successful steps were read from the actual run/logs.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38958031638 passed,
+  producing Build 65 / v1.10.51. Developer Tools showed Draft before publication.
+- Test publication and reopened-page readback confirmed at
+  **2026-10-16T19:53:51.011Z**. The public Test listing independently displays
+  v1.10.51 and the exact new changelog. Build 64 / v1.10.49 is Superseded.
+- Build 18 / v1.10.3 remains Live, with unchanged timestamp
+  `2026-07-26T22:49:51.597Z`, checked alongside Build 65 after publication.
+  Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain untouched. No certification,
+  installation, hardware command, physical acceptance or mainline merge occurred.
+- Read the uploaded archive without running the app. App ID/version verified;
+  SHA256 matches for settings HTML/status/comparison/shared-contract assets,
+  EN/DE/NL translations and compiled contract/decoder/preview modules. Verified
+  the package contains no active paired Dual CT driver. New shared browser/backend
+  profile is present in the package, not merely the checkout. Publication screenshot
+  inspected outside Git; no credentials, raw reports or private screenshots added.
+
+Visible changes: both export choices reflect validated retained data and explain
+disabled states. Missing samples, numeric capture off, stale/cleared historical
+data, missing identity, invalid snapshot, blocked decoding, pending refresh and
+request failures are distinct. Later refresh after server-side retention expiry
+now says expired; live-only 90-second expiry does not block still-retained history.
+Numeric consent stays explicit. No new capture, polling or sharing is automatic.
+
+The v1.10.50 tag was created and validated but NEVER uploaded to Homey: release
+review found the later-refresh expiry explanation first. Do not rewrite that tag
+or ask testers to install it. The consolidated available version is v1.10.51.
+Native Homey hosting/upgrade/rollback and hardware role/sign/unit/counter acceptance
+remain open. Dormant adapter, pairing, Energy adoption and controls remain gated.
+
 ## Consolidated diagnostic Test preparation — 16 October 2026
 
 Release review addendum: source CI `38956863056` passed and the first patch-version

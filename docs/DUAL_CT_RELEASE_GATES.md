@@ -1,5 +1,28 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## Published Test checkpoint — 16 October 2026
+
+The consolidated continuation is now **v1.10.51 / Build 65, Test only**; prior
+pending/local statements below are historical. Final source fix `8b07f8d`, version
+tag `6a8d93a`. Source CI `38957406110`, version workflow `38957619745`, exact-tag
+CI `38957741069` and upload `38958031638` passed. Exact CI reports 845 passing
+tests, lint, zero-vulnerability audit and Homey verified validation. Uploaded
+settings, translations and compiled freshness modules were read back and hashed.
+
+Developer Tools publication timestamp: 2026-10-16T19:53:51.011Z. Reopened build page
+and public Test listing confirm availability/version/changelog. Live remains
+Build 18 / v1.10.3 at unchanged 2026-07-26T22:49:51.597Z; mainline and installed
+devices untouched. No certification or hardware commands. v1.10.50 was never
+uploaded; do not rewrite its tag or direct testers to it. Details/links: STATUS.md.
+
+Export controls share snapshot-availability gating and accessible EN/DE/NL
+explanations, with explicit consent and no automatic capture/transmission. A
+real-backend expiry regression covers later refresh after the historical object
+is removed; retained history remains exportable after live-only expiry. Native
+Homey hosting and hardware acceptance are NOT established by these checks.
+No paired Dual CT driver, Energy adoption, verified bank/phase/sign/unit/counter
+contract or control capability is enabled. Robert's `.49?` reply is draft-only.
+
 ## Consolidated Test authorisation — 16 October 2026
 
 Owner authorised commit/push, exact CI checks and a consolidated Test release of
