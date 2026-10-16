@@ -2,6 +2,44 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.49 / Build 64 — published 16 October 2026
+
+Supersedes the preparation/local-only checkpoints below. Source commit
+`f11c690ac42447cda447022ed12c16f205c95af3` is pushed on
+`codex/mixed-generation-reporting-diagnostics`; the version/tag commit is
+`e3113a741a9287c31bf2c4622486faa530385dd9` (`v1.10.49`).
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38949012595 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38949189198 — passed; diagnostic branch patch only.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38949303098 — passed: 823 tests, lint, audit (0 vulnerabilities), Homey 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38950559602 — passed; created Build 64 / v1.10.49.
+- Official authenticated Homey Apps API confirmed Draft at 18:52:25 UTC, then
+  Test-only publication and readback at 18:53:34 UTC on 16 October 2026.
+  Build 18 / v1.10.3 remains Live with its original state-change timestamp.
+  Developer Tools independently says Build 64 (v1.10.49) is available for testing;
+  the public Test listing displays version 1.10.49 and the exact new changelog.
+  Publication screenshot was inspected outside Git.
+- Read the uploaded archive without executing it: app ID/version verified and
+  SHA256 matches for `settings/index.html`, `settings/dual-ct-comparison.js`,
+  `settings/dual-ct-status.js`, `settings/reporter-status.js` and the compiled
+  `lib/dualCtContinuity.js`. These are the packaged visible/export/freshness changes,
+  not merely source files that were absent from the archive.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and origin/master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No mainline merge,
+  certification, Live, installed-device, physical command or customer-message action.
+
+Visible changes: working Grid and Solar/inverter labels, possible battery-discharge
+scope, raw-sign-preserving candidate kWh alongside unscaled counters, per-counter
+receipt age versus latest packet age, explicit conflicting observations and more
+complete schema-2 comparison sharing. All assumptions remain provisional/read-only.
+There is no new paired Dual CT driver, Energy adoption, Flow or control change.
+997 remains structure-only. Native Homey and physical acceptance remain open.
+
+Robert reply is DRAFT ONLY for owner review: thank him for the existing evidence,
+explain the visible preview improvements and new Test version, and do not request
+another export/report bundle. Optional normal two-minute preview uses the existing
+numeric and counter opt-ins; no rushed/timed capture, reset or mode change.
+
 ## Test-only release preparation — 16 October 2026
 
 Owner authorised committing/pushing the evidence-to-preview changes on

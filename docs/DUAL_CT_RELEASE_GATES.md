@@ -1,5 +1,18 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## Release checkpoint — 16 October 2026
+
+The diagnostic continuation below is now published to Test as v1.10.49 / Build 64,
+not merely local/unpublished. Source `f11c690ac42447cda447022ed12c16f205c95af3`,
+tag `e3113a741a9287c31bf2c4622486faa530385dd9`; source/version/exact-tag CI and
+upload passed. Exact CI passed 823 tests, lint, zero-vulnerability audit and Homey
+verified validation. Authenticated Homey Apps API readback confirmed Test at
+2026-10-16 18:53:34 UTC and unchanged Live v1.10.3 / Build 18. Packaged settings
+and compiled freshness assets were read back and SHA256-checked against source.
+Mainline/Live/installed devices and physical acceptance are untouched. The tester
+reply remains DRAFT ONLY; no new export request or message publication.
+See STATUS.md for exact workflow links and acceptance boundaries.
+
 ## Diagnostic continuation — 16 October 2026, unpublished
 
 This section supersedes the old missing-record and sharing-priority descriptions
