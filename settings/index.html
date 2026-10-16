@@ -257,6 +257,7 @@
             comparisonSnapshot = window.EcoFlowDualCtComparison.comparisonView(comparisonSnapshot, comparisonNotes);
             document.getElementById('consentDualCtCandidateExport').checked = false;
             prepareCandidateExport();
+            renderComparisonView();
           });
         if (ttl) comparisonTimer = setTimeout(renderComparisonView, Math.max(1, Math.ceil(ttl)));
       }
@@ -312,7 +313,8 @@
           }
         }
         var text = document.getElementById('dualCtCandidateText');
-        text.textContent = candidateReport ? JSON.stringify(candidateReport, null, 2) : '';
+        text.textContent = candidateReport ? (candidateReport.reportType === 'dual_ct_comparison'
+          ? window.EcoFlowDualCtComparison.serialize(candidateReport) : JSON.stringify(candidateReport, null, 2)) : '';
         text.hidden = !candidateReport;
         document.getElementById('copyDualCtCandidates').disabled = !candidateReport;
         document.getElementById('downloadDualCtCandidates').disabled = !candidateReport;
@@ -419,7 +421,8 @@
         if (!candidateReport) return;
         var report = candidateReport;
         try {
-          await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+          await navigator.clipboard.writeText(report.reportType === 'dual_ct_comparison'
+            ? window.EcoFlowDualCtComparison.serialize(report) : JSON.stringify(report, null, 2));
           if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copied');
         } catch {
           if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback');
@@ -429,7 +432,9 @@
         prepareCandidateExport();
         if (!candidateReport) return;
         try {
-          window.EcoFlowReporterStatus.download(candidateReport, document, URL, Blob);
+          var downloadable = candidateReport.reportType === 'dual_ct_comparison'
+            ? JSON.parse(window.EcoFlowDualCtComparison.serialize(candidateReport)) : candidateReport;
+          window.EcoFlowReporterStatus.download(downloadable, document, URL, Blob);
           document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_download_requested');
         } catch { document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback'); }
       });
@@ -472,7 +477,10 @@
           evidence.diagnosticSnapshot.lastPacketAgeSec += elapsed / 1000;
           ageBankChecks(evidence.diagnosticSnapshot.bankChecks, elapsed / 1000);
           evidence.diagnosticSnapshot.counterRecords?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
-          evidence.diagnosticSnapshot.counterContinuity?.records?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+          evidence.diagnosticSnapshot.counterContinuity?.records?.forEach(function (row) {
+            row.receivedAgeSec += elapsed / 1000;
+            if (Number.isFinite(row.lastPacketAgeSec)) row.lastPacketAgeSec += elapsed / 1000;
+          });
           evidence.diagnosticSnapshot.devices?.forEach(function (device) {
             device.readings?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
           });

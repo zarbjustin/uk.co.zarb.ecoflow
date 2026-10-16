@@ -1,5 +1,69 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## Diagnostic continuation — 16 October 2026, unpublished
+
+This section supersedes the old missing-record and sharing-priority descriptions
+below for the LOCAL diagnostic continuation only. The released v1.10.48 archive
+is unchanged. No commit/push, remote CI, publication, mainline or Live action.
+
+### Working assumptions that permit implementation without claiming verification
+
+| Hypothesis | Where implemented | Still needs validation |
+| --- | --- | --- |
+| A = Grid | Read-only settings comparison label | Installation/firmware role, phase ordering, useful nonzero direction evidence; not a physical CT-port assignment |
+| B = EcoFlow Solar / inverter circuit | Read-only label and battery-discharge scope explanation | Raw sign versus app display and meaningful inverter output; do not globally negate candidate values |
+| 773.1/.2/.3 = phase net, .4 = import, .6 = export, .7 = net | Optional local raw/1000 candidate kWh display | Wh scale and exact counter/reset/period semantics; signed net decreases are not resets |
+| Overview counters are not today's totals | Explicit unknown-period / no-daily wording | Reset origin and period contract; a weekly view equalling the overview does not establish lifetime origin |
+
+The working display never changes raw numbers, registers a verified contract,
+enables Energy/Flows/controls/pairing, or interprets 997 numerically. A conflicting
+local user observation is shown explicitly, not silently overridden or promoted.
+Candidate energy uses the same independent record age and stale/historical
+wording as its raw source. Private screenshots and telemetry are not fixtures;
+tests use synthetic arithmetic, mixed signs, zero and deliberately different ages.
+
+### Engineering changes before asking for more evidence
+
+Sparse omission means `not_updated`: the last whole record baseline retains its
+own age, while `lastPacketAgeSec` describes unrelated packet traffic. Never-seen
+records remain explicitly unavailable. >=90 seconds since the actual counter
+receipt breaks the next comparison even with intervening scalar traffic. Invalid,
+equal-time, source-change and partial-child boundaries remain protected; no
+cross-record child completion or durable/overnight baseline is introduced.
+
+Comparison JSON schema 2 shares repeated scalar receipt metadata once per device
+and uses `receiptIndex` references. Each reference preserves age, encoding basis,
+representation and packet index; it is NOT evidence of simultaneous physical
+measurement. Identical latest/last-complete checks use `sameAsLatest`; duplicated
+bank metadata and arithmetic results are reconstructed and revalidated. Schema 1
+remains the canonical local projection and is accepted as an older input. Unknown
+schemas, invalid reference bounds and unsupported representations fail closed.
+Copy, manual text and download use the SAME compact schema-2 serialization.
+Normal compact reports remain numeric-free, and the scalar-only schema is unchanged.
+
+Within the existing 7500-character limit, complete power groups, bank checks and
+counter candidates are prioritised before secondary scalar detail. Trimming
+continuity field details, secondary fields or whole records is honestly marked;
+last-resort power omission removes a whole bank, never selected phases. Neither
+sharing nor rendering polls the cloud, modifies devices or renews retention.
+
+### Next steps toward release
+
+1. Finish local regressions and desktop/mobile preview/copy/download/expiry checks.
+2. After separate owner approval, publish a consolidated Test with visible preview
+   improvements. Explain what changed; no repeat discovery/report bundle needed.
+3. When convenient, validate a meaningful daytime Grid/inverter comparison. Reuse
+   existing evidence; request a further export only if a specific unresolved
+   contract cannot be settled otherwise. No rushed capture, reset or mode change.
+4. Promote role/sign/scale contracts only after evidence supports them. A read-only
+   paired driver and later single-authoritative-source Energy adoption are separate
+   implementation/review gates, not enabled by provisional preview labels.
+5. Use owner hardware for reconnect, restart, reset, multi-space/source, upgrade /
+   rollback and native Homey acceptance. No shipping date is hardware acceptance.
+
+The following sections describe the preceding released foundations, not new
+publication or completed physical validation.
+
 Diagnostic branch only. Sprints 3–5 foundations are published to Test as
 v1.10.48 / Build 63; source tag `7542d4b30bc953419a3a8f5cf3b9e8f2c00d2b5d`.
 Source/version/tag CI and upload passed; official channel and public listing

@@ -5,7 +5,7 @@ const {DualCtPreview}=require('../.homeybuild/lib/dualCtPreview');
 const {DualCtResearch,dualCtResearchSnapshot}=require('../.homeybuild/lib/dualCtResearch');
 const {dualCtPreviewDiagnostics}=require('../.homeybuild/lib/dualCtDiagnostics');
 const {compact,diagnosticExport}=require('../settings/dual-ct-status');
-const {comparisonExport,comparisonView,age,arithmetic}=require('../settings/dual-ct-comparison');
+const {comparisonExport,comparisonView,age,arithmetic,serialize}=require('../settings/dual-ct-comparison');
 const api=require('../.homeybuild/api');
 const ctx={productType:421,cmdFunc:254,cmdId:21,source:'app_mqtt',encoding:'plain',now:1000,receivedAt:1000};
 function vi(n){const a=[];do{a.push((n&127)|(n>127?128:0));n=Math.floor(n/128);}while(n);return Buffer.from(a);}
@@ -124,7 +124,7 @@ test('one comparison export is historical, role-unverified, privacy projected an
   assert.deepEqual(comparisonExport(report),report);
   const later=age(report,100);assert.equal(later.counterRecords[0].receivedAgeSec,101);
   assert.equal(later.candidateSnapshot.retentionRemainingSec,799);assert.equal(age(report,-1),null);assert.equal(age(report,900),null);
-  assert.ok(JSON.stringify(report,null,2).length<=7500);preview.clear();
+  assert.ok(serialize(report).length<=7500);preview.clear();
 });
 
 test('untrimmed local comparison retains all bounded scalar rows, while combined sharing reports honest omissions',()=>{
@@ -132,7 +132,7 @@ test('untrimmed local comparison retains all bounded scalar rows, while combined
   const all=Buffer.concat([515,962,963,772,956,957,771,958,959,784,985,986,987,988,989,990,991,992,993,998].map(field=>f(field,field%10)));
   for(const index of [0,1])preview.observe(index,Buffer.concat([all,m(773,inner),m(997,Buffer.concat(Array.from({length:32},(_,i)=>int(i+1,0))))]),ctx);
   const local=comparisonView(view(preview));assert.ok(local);assert.equal(local.candidateSnapshot.devices.reduce((n,d)=>n+d.readings.length,0),40);
-  const report=comparisonExport(local);assert.ok(report);assert.ok(JSON.stringify(report,null,2).length<=7500);
+  const report=comparisonExport(local);assert.ok(report);assert.ok(serialize(report).length<=7500);
   assert.equal(report.candidateSnapshot.readingsAvailable,40);assert.equal(report.counterReadingsAvailable,12);
   assert.equal(report.counterReadingsIncluded,12);assert.ok(report.counterRecords.some(row=>row.fieldsOmitted)||report.candidateSnapshot.readingsOmitted);
   const again=comparisonExport(report);assert.ok(again);assert.equal(again.candidateSnapshot.readingsAvailable,40);

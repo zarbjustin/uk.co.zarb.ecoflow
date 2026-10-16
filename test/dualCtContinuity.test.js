@@ -2,7 +2,7 @@
 const test=require('node:test');const assert=require('node:assert/strict');
 const {DualCtContinuity,dualCtPeriodEvidence}=require('../.homeybuild/lib/dualCtContinuity');
 const {DualCtPreview}=require('../.homeybuild/lib/dualCtPreview');
-const {comparisonView,comparisonExport,age}=require('../settings/dual-ct-comparison');
+const {comparisonView,comparisonExport,age,serialize}=require('../settings/dual-ct-comparison');
 const {compact,diagnosticExport}=require('../settings/dual-ct-status');
 const ctx={productType:421,cmdFunc:254,cmdId:21,source:'app_mqtt',encoding:'plain',now:1000,receivedAt:1000};
 function vi(n){const a=[];do{a.push((n&127)|(n>127?128:0));n=Math.floor(n/128);}while(n);return Buffer.from(a);}
@@ -30,11 +30,12 @@ test('receipt continuity classifies signed increases, decreases and zero without
   assert.doesNotMatch(JSON.stringify(r),/"value"|"delta"|importedWh|exportedWh/);p.clear();
 });
 
-test('partial, absent and invalid records break the baseline and never borrow other children',()=>{
+test('partial and invalid records break baselines; absent packets retain the last whole record without child borrowing',()=>{
   const p=new DualCtPreview(true,true);observe(p,packet(),1000);
   observe(p,packet([[4,12346]]),2000);assert.equal(statuses(row(p,2000))[7],'missing');
   observe(p,packet([[7,-10]]),3000);assert.equal(statuses(row(p,3000))[7],'baseline');
-  observe(p,f(515,1),4000);assert.equal(row(p,4000).status,'missing');
+  observe(p,f(515,1),4000);assert.equal(row(p,4000).status,'not_updated');
+  assert.equal(row(p,4000).receivedAgeSec,1);assert.equal(row(p,4000).lastPacketAgeSec,0);
   observe(p,packet(),5000);assert.equal(statuses(row(p,5000))[4],'baseline');
   observe(p,packet([[4,NaN]]),6000);assert.equal(row(p,6000).status,'invalid');
   observe(p,packet(),7000);assert.equal(statuses(row(p,7000))[4],'baseline');p.clear();
@@ -63,7 +64,7 @@ test('two meters and both records are isolated; 997 has no invented numeric cont
   observe(p,packet([[4,1]]),2000,1);assert.equal(statuses(row(p,2000,773,1))[4],'baseline');
   observe(p,packet([[4,9999]],997),3000);
   assert.equal(row(p,3000,997).status,'structure_only');assert.deepEqual(row(p,3000,997).fields,[]);
-  assert.equal(row(p,3000,773).status,'missing');assert.equal(row(p,3000,773,1).observations,1);p.clear();
+  assert.equal(row(p,3000,773).status,'not_updated');assert.equal(row(p,3000,773,1).observations,1);p.clear();
 });
 
 test('freshness and fixed cleanup clear continuity without an export, refresh or new frame',t=>{
@@ -112,7 +113,7 @@ test('combined continuity export is fixed, numeric-free, bounded, aged and omitt
   v.diagnosticSnapshot.counterContinuity.records[0].secret='PRIVATE';
   v.diagnosticSnapshot.counterContinuity.records[0].events.secret=12345;
   v.diagnosticSnapshot.counterContinuity.records[0].fields[0].value=12345;
-  const report=comparisonExport(v);assert.ok(report);assert.ok(JSON.stringify(report,null,2).length<=7500);
+  const report=comparisonExport(v);assert.ok(report);assert.ok(serialize(report).length<=7500);
   const continuity=report.counterContinuity;assert.equal(continuity.valuesIncluded,false);assert.equal(continuity.dailyAvailable,false);
   assert.doesNotMatch(JSON.stringify(continuity),/PRIVATE|12345|value"|measuredAt|source"/);
   assert.deepEqual(comparisonExport(report),report);
@@ -129,7 +130,7 @@ test('maximal two-meter comparison keeps the 7500 budget and truthful continuity
   const all=Buffer.concat([515,962,963,772,956,957,771,958,959,784,985,986,987,988,989,990,991,992,993,998].map(n=>f(n,1)));
   for(const i of [0,1])observe(p,Buffer.concat([all,m(773,Buffer.concat([1,2,3,4,6,7].map(n=>f(n,1)))),m(997,f(4,1))]),1000,i);
   const report=comparisonExport(snapshot(p,1000));assert.ok(report);
-  assert.ok(JSON.stringify(report,null,2).length<=7500);assert.equal(report.counterContinuity.recordsAvailable,4);
+  assert.ok(serialize(report).length<=7500);assert.equal(report.counterContinuity.recordsAvailable,4);
   assert.equal(report.counterContinuity.recordsIncluded,report.counterContinuity.records.length);
   assert.equal(report.counterContinuity.recordsOmitted,report.counterContinuity.records.length<4);
   assert.deepEqual(comparisonExport(report),report);p.clear();

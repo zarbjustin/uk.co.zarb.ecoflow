@@ -90,7 +90,7 @@
   function download(report, doc, urlApi, BlobType, schedule = setTimeout) {
     const date = typeof report?.capturedAt === 'string' ? new Date(report.capturedAt) : null;
     const stamp = date && Number.isFinite(date.getTime()) ? date.toISOString().replace(/[:.]/g, '-') : 'snapshot';
-    const blob = new BlobType([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const blob = new BlobType([JSON.stringify(report, null, report?.reportType === 'dual_ct_comparison' ? undefined : 2)], { type: 'application/json' });
     const url = urlApi.createObjectURL(blob);
     const anchor = doc.createElement('a');
     let scheduled = false;

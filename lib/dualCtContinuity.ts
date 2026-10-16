@@ -2,10 +2,10 @@ import { DualCtCounterRecord } from './dualCtCounters';
 
 const FIELDS = [1, 2, 3, 4, 6, 7];
 const LIMIT_MS = 15 * 60 * 1000;
-export const DUAL_CT_CONTINUITY_STATES = ['baseline', 'compared', 'increased', 'decreased', 'unchanged', 'missing',
+export const DUAL_CT_CONTINUITY_STATES = ['baseline', 'compared', 'increased', 'decreased', 'unchanged', 'missing', 'not_updated',
   'invalid', 'gap', 'source_changed', 'out_of_order', 'same_receipt', 'structure_only'] as const;
 type State = typeof DUAL_CT_CONTINUITY_STATES[number];
-type Row = { receivedAt: number; source: string; samples: number; firstAt: number;
+type Row = { receivedAt: number; recordAt: number | null; recordSamples: number; source: string; samples: number; firstAt: number;
   fields: Map<number, number>; latest: Array<{ field: number; status: State }>;
   status: State; events: Record<string, number> };
 
@@ -60,7 +60,7 @@ export class DualCtContinuity {
     return !this.expired;
   }
 
-  /** Called only after strict model/topic/header/encoding/scalar admission. Missing records break the chain. */
+  /** Sparse packets do not refresh counter receipts or merge partial records. */
   observe(deviceIndex: number, records: DualCtCounterRecord[], receivedAt: number, now: number, source: string): void {
     if (!this.enabled || !this.clock(now) || ![0, 1].includes(deviceIndex)
       || !Number.isFinite(receivedAt) || receivedAt <= 0 || receivedAt > now || now - receivedAt >= 90000
@@ -77,14 +77,32 @@ export class DualCtContinuity {
         event(previous, 'out_of_order'); continue; // Cannot refresh evidence or replace a baseline.
       }
       const row: Row = previous || {
-        receivedAt, source, samples: 0, firstAt: receivedAt, fields: new Map(), latest: [], status: 'baseline', events: {},
+        receivedAt,
+        recordAt: null,
+        recordSamples: 0,
+        source,
+        samples: 0,
+        firstAt: receivedAt,
+        fields: new Map(),
+        latest: [],
+        status: 'baseline',
+        events: {},
       };
       const matches = records.filter((record) => record.parent === parent);
       const record = matches.length === 1 ? matches[0] : null;
+      if (!matches.length) {
+        // Omission is not a zero/reset/failure. Retain the last WHOLE record baseline,
+        // but never renew its age. An admission-source change still breaks continuity.
+        row.status = 'not_updated'; event(row, 'not_updated');
+        if (row.source !== source) {
+          row.fields.clear(); event(row, 'source_changed');
+        }
+        row.samples += 1; row.receivedAt = receivedAt;
+        this.rows.set(key, row); continue;
+      }
       const next = new Map<number, number>();
       let state: State = 'baseline';
-      if (!matches.length) state = 'missing';
-      else if (!record || record.status !== 'observed') state = 'invalid';
+      if (!record || record.status !== 'observed') state = 'invalid';
       else if (parent === 997) state = 'structure_only';
       else {
         for (const candidate of record.candidates) {
@@ -95,9 +113,9 @@ export class DualCtContinuity {
           next.set(candidate.field, candidate.value);
         }
         if (state !== 'invalid' && previous) {
-          if (receivedAt === previous.receivedAt) state = 'same_receipt';
+          if (receivedAt === previous.recordAt) state = 'same_receipt';
           else if (source !== previous.source) state = 'source_changed';
-          else if (receivedAt - previous.receivedAt >= 90000) state = 'gap';
+          else if (previous.recordAt !== null && receivedAt - previous.recordAt >= 90000) state = 'gap';
         }
       }
       row.latest = parent === 773 ? FIELDS.map((field) => {
@@ -117,10 +135,11 @@ export class DualCtContinuity {
       // Preserve evidence of an earlier change even after the latest packet is unchanged.
       // Each outcome is counted at most once per record/receipt, not once per child.
       for (const outcome of ['increased', 'decreased', 'unchanged', 'missing'] as const) {
-        if (outcome !== state && row.latest.some((field) => field.status === outcome)) event(row, outcome);
+        if (row.latest.some((field) => field.status === outcome)) event(row, outcome);
       }
       row.samples += 1; row.receivedAt = receivedAt; row.source = source;
-      // A same-receipt conflict, invalid or absent record cannot establish the next comparison baseline.
+      row.recordAt = receivedAt; row.recordSamples += 1;
+      // Invalid/equal-receipt records break the chain; absent packets are handled above.
       row.fields = ['invalid', 'missing', 'same_receipt'].includes(state) ? new Map() : next;
       this.rows.set(key, row);
     }
@@ -144,8 +163,11 @@ export class DualCtContinuity {
           parent,
           status: row.status,
           observations: row.samples,
-          receivedAgeSec: (now - row.receivedAt) / 1000,
-          stale: now - row.receivedAt >= 90000,
+          receivedAgeSec: (now - (row.recordAt ?? row.receivedAt)) / 1000,
+          recordObserved: row.recordAt !== null,
+          recordObservations: row.recordSamples,
+          lastPacketAgeSec: (now - row.receivedAt) / 1000,
+          stale: row.recordAt === null || now - row.recordAt >= 90000,
           fields: row.latest.map((field) => ({ ...field })),
           events: Object.fromEntries(DUAL_CT_CONTINUITY_STATES.filter((state) => row.events[state]).map((state) => [state, row.events[state]])),
           periodEvidence: dualCtPeriodEvidence(row.firstAt, row.receivedAt),

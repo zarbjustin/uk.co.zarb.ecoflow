@@ -60,7 +60,7 @@
     }
     return result;
   }
-  const continuityStates=['baseline','compared','increased','decreased','unchanged','missing','invalid','gap','source_changed','out_of_order','same_receipt','structure_only'];
+  const continuityStates=['baseline','compared','increased','decreased','unchanged','missing','not_updated','invalid','gap','source_changed','out_of_order','same_receipt','structure_only'];
   // Numeric-free observations only. Sharing never imports counter values or promotes a role/unit contract.
   function continuity(input,base,enabled) {
     const rows=[];const seen=new Set();
@@ -77,8 +77,16 @@
       }
       const events={};for(const state of continuityStates){const count=row.events?.[state];
         if(Number.isInteger(count)&&count>0&&count<=2048)events[state]=count;}
-      rows.push({deviceIndex:row.deviceIndex,parent:row.parent,status:row.status,observations:row.observations,
-        receivedAgeSec:row.receivedAgeSec,fields,events});
+      const projected={deviceIndex:row.deviceIndex,parent:row.parent,status:row.status,observations:row.observations,
+        receivedAgeSec:row.receivedAgeSec,fields,events};
+      if(row.fieldsOmitted===true)projected.fieldsOmitted=true;
+      if(typeof row.recordObserved==='boolean'&&Number.isInteger(row.recordObservations)&&row.recordObservations>=0
+        &&row.recordObservations<=row.observations&&row.recordObserved===(row.recordObservations>0)
+        &&Number.isFinite(row.lastPacketAgeSec)&&row.lastPacketAgeSec>=base.lastPacketAgeSec&&row.lastPacketAgeSec<=row.receivedAgeSec){
+        projected.recordObserved=row.recordObserved;projected.recordObservations=row.recordObservations;
+        projected.lastPacketAgeSec=row.lastPacketAgeSec;
+      }
+      rows.push(projected);
     }
     const available=Number.isInteger(input?.recordsAvailable)&&input.recordsAvailable>=rows.length&&input.recordsAvailable<=4?input.recordsAvailable:rows.length;
     return {enabled:enabled&&input?.enabled===true,scope:'bounded_capture_receipt_observations',records:rows,
@@ -86,6 +94,7 @@
       valuesIncluded:false,period:'unknown',dailyAvailable:false,unitsVerified:false,resetVerified:false,contributesToEnergy:false};
   }
   function buildComparison(input,notes,limit) {
+    input=expand(input);if(!input)return null;
     const prior=input?.reportType==='dual_ct_comparison';
     const original=prior?input.candidateSnapshot:input;
     const base=prior?status.diagnosticExport({...original,diagnosticSnapshot:{...original,kind:'historical_capture'}},true):status.diagnosticExport(original,true);
@@ -104,38 +113,119 @@
     report.counterReadingsIncluded=included;report.counterReadingsOmitted=report.counterReadingsAvailable>included;
     const recordsAvailable=prior&&Number.isInteger(input.counterRecordsAvailable)&&input.counterRecordsAvailable>=counterRecords.length&&input.counterRecordsAvailable<=4?input.counterRecordsAvailable:counterRecords.length;
     report.counterRecordsAvailable=recordsAvailable;report.counterRecordsIncluded=counterRecords.length;report.counterRecordsOmitted=recordsAvailable>counterRecords.length;
-    const size=()=>JSON.stringify(report,null,2).length;
+    // Share repeated receipt metadata once rather than sacrificing whole banks.
+    // Copy/download/manual fallback MUST use serialize(); local shape stays schema 1.
+    const size=()=>serialize(report).length;
     while(limit&&size()>7500) {
-      if(base.bankChecks?.length){base.bankChecks.pop();base.bankChecksIncluded--;base.bankChecksOmitted=true;continue;}
-      const record=counterRecords.find(row=>row.fields.some(field=>!row.candidates.some(candidate=>candidate.field===field.field)));
+      const record=counterRecords.find(row=>row.fields.length>Math.max(4,row.candidates.length)
+        &&row.fields.some(field=>!row.candidates.some(candidate=>candidate.field===field.field)));
       if(record){const index=record.fields.findIndex(field=>!record.candidates.some(candidate=>candidate.field===field.field));
         record.fields.splice(index,1);record.fieldsIncluded--;record.fieldsOmitted=true;continue;}
-      const structureOnly=counterRecords.findIndex(row=>!row.candidates.length);
-      if(structureOnly>=0){counterRecords.splice(structureOnly,1);report.counterRecordsIncluded--;report.counterRecordsOmitted=true;continue;}
-      // Keep both observed bank totals where possible, but don't let verbose scalar
-      // metadata evict all of the new continuity evidence from a combined report.
-      const rich=base.devices.filter(device=>device.readings.length>2).sort((a,b)=>b.readings.length-a.readings.length)[0];
-      if(rich){let index=rich.readings.findIndex(row=>[956,957,771,958,959,784,985,986,987,988,989,990].includes(row.field));
-        if(index<0)index=rich.readings.findIndex(row=>![515,998].includes(row.field));
+      // Whole-record outcomes/counts precede repetitive per-child continuity text.
+      const detail=report.counterContinuity?.records.find(row=>row.fields.length);
+      if(detail){detail.fields=[];detail.fieldsOmitted=true;continue;}
+      const secondary=[956,957,771,958,959,784,985,986,987,988,989,990];
+      const rich=base.devices.filter(device=>device.readings.some(row=>secondary.includes(row.field)))
+        .sort((a,b)=>b.readings.length-a.readings.length)[0];
+      if(rich){const index=rich.readings.findIndex(row=>secondary.includes(row.field));
         if(index>=0){rich.readings.splice(index,1);base.readingsIncluded--;base.readingsOmitted=true;continue;}}
       if(report.counterContinuity?.records.length){report.counterContinuity.records.pop();report.counterContinuity.recordsIncluded--;report.counterContinuity.recordsOmitted=true;continue;}
-      const device=base.devices.reduce((a,b)=>a.readings.length>=b.readings.length?a:b);
-      if(device.readings.length>1){device.readings.pop();base.readingsIncluded--;base.readingsOmitted=true;continue;}
+      const structureOnly=counterRecords.findIndex(row=>!row.candidates.length);
+      if(structureOnly>=0){counterRecords.splice(structureOnly,1);report.counterRecordsIncluded--;report.counterRecordsOmitted=true;continue;}
+      // Last resort: omit a whole power bank, never misleadingly keep one phase.
+      const device=base.devices.find(row=>row.readings.length>4);
+      if(device){const bank=hypotheses[1];const ids=[bank.total,...bank.power];
+        const remaining=device.readings.filter(row=>!ids.includes(row.field));
+        if(remaining.length<device.readings.length){base.readingsIncluded-=device.readings.length-remaining.length;
+          device.readings=remaining;base.readingsOmitted=true;continue;}}
+      if(base.bankChecks?.length){base.bankChecks.pop();base.bankChecksIncluded--;base.bankChecksOmitted=true;continue;}
       return null;
     }
     return report;
   }
   function comparisonExport(input,notes) {return buildComparison(input,notes,true);}
   function comparisonView(input,notes) {return buildComparison(input,notes,false);}
+  // Schema 2 sharing factors repeated receipt metadata out of scalar rows. The
+  // canonical local view remains schema 1; all imported sharing is revalidated.
+  function serialize(report) {
+    report=expand(report);
+    if(report?.reportType!=='dual_ct_comparison')throw new Error('Invalid comparison report');
+    const packed=JSON.parse(JSON.stringify(report));packed.schemaVersion=2;
+    for(const device of packed.candidateSnapshot.devices){
+      const receipts=[];const keys=[];
+      device.readings=device.readings.map(row=>{
+        const receipt={receivedAgeSec:row.receivedAgeSec,encodingBasis:row.encodingBasis,
+          representation:row.representation,...(row.packetIndex!==undefined?{packetIndex:row.packetIndex}:{})};
+        const key=JSON.stringify(receipt);let index=keys.indexOf(key);
+        if(index<0){index=keys.length;keys.push(key);receipts.push(receipt);}
+        return {field:row.field,value:row.value,candidateUnit:row.candidateUnit,receiptIndex:index};
+      });
+      device.readingReceipts=receipts;
+    }
+    for(const row of packed.candidateSnapshot.bankChecks||[]){
+      const project=check=>check&&Object.fromEntries(['status','packetIndex','receivedAgeSec','encodingBasis',
+        'presentPowerFields','reportedTotal','phaseValues'].filter(key=>check[key]!==undefined).map(key=>[key,check[key]]));
+      const same=row.lastComplete&&JSON.stringify(row.lastComplete)===JSON.stringify(row.latest);
+      row.latest=project(row.latest);row.lastComplete=same?{sameAsLatest:true}:project(row.lastComplete);
+    }
+    return JSON.stringify(packed);
+  }
+  function expand(input) {
+    if(input?.reportType!=='dual_ct_comparison'||input.schemaVersion===1)return input;
+    if(input.schemaVersion!==2||!Array.isArray(input.candidateSnapshot?.devices)
+      ||input.candidateSnapshot.devices.length>2)return null;
+    const base={...input.candidateSnapshot,devices:[]};
+    for(const device of input.candidateSnapshot.devices){
+      if(!Array.isArray(device?.readingReceipts)||device.readingReceipts.length>20
+        ||!Array.isArray(device.readings)||device.readings.length>20)return null;
+      const readings=[];
+      for(const row of device.readings){
+        if(!Number.isInteger(row?.receiptIndex)||row.receiptIndex<0||row.receiptIndex>=device.readingReceipts.length)return null;
+        const receipt=device.readingReceipts[row.receiptIndex];
+        if(!receipt||receipt.representation!=='float32_candidate')return null;
+        readings.push({field:row.field,value:row.value,candidateUnit:row.candidateUnit,
+          receivedAgeSec:receipt.receivedAgeSec,encodingBasis:receipt.encodingBasis,
+          representation:receipt.representation,...(receipt.packetIndex!==undefined?{packetIndex:receipt.packetIndex}:{})});
+      }
+      base.devices.push({deviceIndex:device.deviceIndex,readings});
+    }
+    if(base.bankChecks!==undefined&&(!Array.isArray(base.bankChecks)||base.bankChecks.length>4
+      ||base.bankChecks.some(row=>!row||typeof row!=='object')))return null;
+    base.bankChecks=(base.bankChecks||[]).map(row=>{
+      const project=check=>check?{...check,bank:row.bank,scope:'single_decoded_payload',
+        mappingVerified:false,roleVerified:false,measurementSimultaneityVerified:false}:null;
+      return {...row,latest:project(row.latest),lastComplete:project(row.lastComplete?.sameAsLatest===true?row.latest:row.lastComplete)};
+    });
+    return {...input,schemaVersion:1,candidateSnapshot:base};
+  }
+  // Display assumptions only. Never changes raw values, annotations, verification,
+  // counter accounting, CT-port selection or any production capability.
+  function workingPreview(report) {
+    const counters=[];
+    const names={1:'phase_1_net',2:'phase_2_net',3:'phase_3_net',4:'import',6:'export',7:'net'};
+    if(report?.counterResearchEnabled===true)for(const row of report.counterRecords||[]){
+      if(row.parent!==773||row.status!=='observed')continue;
+      for(const candidate of row.candidates||[])if(names[candidate.field]&&candidate.candidateUnit===null
+        &&Number.isFinite(candidate.value)&&Math.abs(candidate.value)<=1e12)counters.push({
+        deviceIndex:row.deviceIndex,field:candidate.field,role:names[candidate.field],
+        raw:candidate.value,kWhCandidate:candidate.value/1000,receivedAgeSec:row.receivedAgeSec,
+        verified:false});
+    }
+    return {basis:'provisional_read_only',bankRoles:{A:'grid',B:'solar_inverter_circuit'},
+      signConvention:'raw_unchanged',solarIncludesPossibleBatteryDischarge:true,counters,
+      unitsVerified:false,directionVerified:false,period:'unknown',resetVerified:false,contributesToEnergy:false};
+  }
   function age(report,seconds,view=false) {
     if(!Number.isFinite(seconds)||seconds<0)return null;
+    report=expand(report);if(!report)return null;
     const result=JSON.parse(JSON.stringify(report));
     const base=result.candidateSnapshot;
     base.retainedForSec+=seconds;base.retentionRemainingSec-=seconds;base.lastPacketAgeSec+=seconds;
     base.devices.forEach(device=>device.readings.forEach(row=>{row.receivedAgeSec+=seconds;}));
     base.bankChecks?.forEach(row=>[row.latest,row.lastComplete].forEach(check=>{if(check)check.receivedAgeSec+=seconds;}));
     result.counterRecords.forEach(row=>{row.receivedAgeSec+=seconds;});
-    result.counterContinuity?.records.forEach(row=>{row.receivedAgeSec+=seconds;});
+    result.counterContinuity?.records.forEach(row=>{row.receivedAgeSec+=seconds;
+      if(Number.isFinite(row.lastPacketAgeSec))row.lastPacketAgeSec+=seconds;});
     return buildComparison(result,undefined,!view);
   }
   function render(element,report,translate,onAnnotation) {
@@ -143,6 +233,7 @@
     let ttl=0;const doc=element.ownerDocument;
     const append=(parent,tag,text)=>{const el=doc.createElement(tag);el.textContent=text;parent.appendChild(el);return el;};
     append(element,'p',translate('comparison_warning'));
+    append(element,'p',translate('working_assumptions'));
     append(element,'h4',translate('readiness_title'));
     append(element,'p',translate('readiness_device_blocked'));
     append(element,'p',translate('readiness_energy_blocked'));
@@ -151,6 +242,13 @@
     for(const device of report.candidateSnapshot.devices) for(const bank of hypotheses) {
       const card=append(element,'section','');card.className='dual-ct-card';
       append(card,'h4',`${translate('meter')} ${device.deviceIndex+1} · ${translate('bank_candidate')} ${bank.bank}`);
+      append(card,'p',translate(bank.bank==='A'?'working_grid':'working_solar'));
+      const observation=report.annotations.find(row=>row.deviceIndex===device.deviceIndex&&row.bank===bank.bank)?.observation;
+      if(observation==='does_not_match'||observation===(bank.bank==='A'?'looks_like_solar':'looks_like_grid'))append(card,'p',translate('working_conflict'));
+      const checks=report.candidateSnapshot.bankChecks?.find(row=>row.deviceIndex===device.deviceIndex&&row.bank===bank.bank);
+      if(checks){append(card,'p',`${translate('bank_latest')}: ${translate('bank_'+checks.latest.status)} · ${ageText(checks.latest)}`);
+        if(checks.lastComplete&&checks.lastComplete.packetIndex!==checks.latest.packetIndex)append(card,'p',
+          `${translate('bank_last_complete')}: ${translate('bank_'+checks.lastComplete.status)} · ${ageText(checks.lastComplete)}`);}
       const label=append(card,'label',translate('comparison_observation'));
       const select=append(label,'select','');select.setAttribute('aria-label',`${translate('comparison_observation')} ${device.deviceIndex+1} ${bank.bank}`);
       select.dataset.deviceIndex=device.deviceIndex;select.dataset.bank=bank.bank;
@@ -177,6 +275,12 @@
       append(card,'p',`${translate('counter_'+row.status)} · ${row.fields.map(field=>`${field.field}/${field.wire}`).join(', ')}`);
       if(row.parent===997)append(card,'p',translate('counter_997_structure'));
       for(const candidate of row.candidates)append(card,'p',`${row.parent}.${candidate.field}: ${candidate.value} · ${translate('counter_unscaled')}`);
+      if(row.parent===773&&report.counterResearchEnabled){
+        append(card,'p',translate('working_counter_warning'));
+        for(const candidate of workingPreview(report).counters.filter(item=>item.deviceIndex===row.deviceIndex)){
+          append(card,'p',`${translate('working_'+candidate.role)} (kWh?): ${candidate.kWhCandidate} · ${ageText(candidate)}`);
+        }
+      }
       for(const check of row.checks)append(card,'p',`${check.expression}: ${translate('bank_'+check.status)}`);
     }
     append(element,'h4',translate('continuity_title'));
@@ -185,13 +289,16 @@
     if(!report.counterContinuity?.records.length)append(element,'p',translate('continuity_not_reported'));
     for(const row of report.counterContinuity?.records||[]){
       const card=append(element,'section','');card.className='dual-ct-card';
-      append(card,'h4',`${translate('meter')} ${row.deviceIndex+1} · ${translate('counter_record')} ${row.parent} · ${ageText(row)}`);
+      append(card,'h4',`${translate('meter')} ${row.deviceIndex+1} · ${translate('counter_record')} ${row.parent} · ${row.recordObserved===false?translate('continuity_no_record'):ageText(row)}`);
       append(card,'p',`${translate('continuity_'+row.status)} · ${translate('continuity_observations')}: ${row.observations}`);
+      if(typeof row.recordObserved==='boolean')append(card,'p',row.recordObserved
+        ?`${translate('continuity_record_receipts')}: ${row.recordObservations} · ${translate('continuity_packet_age')}: ${Math.floor(row.lastPacketAgeSec)} s`
+        :translate('continuity_no_record'));
       for(const field of row.fields)append(card,'p',`${row.parent}.${field.field}: ${translate('continuity_'+field.status)}`);
       for(const [state,count] of Object.entries(row.events))append(card,'p',`${translate('continuity_'+state)}: ${count}`);
     }
     return ttl;
   }
-  const api={comparisonExport,comparisonView,age,render,arithmetic,continuity};
+  const api={comparisonExport,comparisonView,serialize,expand,workingPreview,age,render,arithmetic,continuity};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.EcoFlowDualCtComparison=api;
 }(typeof window==='undefined'?{}:window));

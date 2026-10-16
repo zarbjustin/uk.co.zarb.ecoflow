@@ -2,6 +2,74 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test-only release preparation — 16 October 2026
+
+Owner authorised committing/pushing the evidence-to-preview changes on
+`codex/mixed-generation-reporting-diagnostics`, checking exact CI, and publishing
+a new Test build, then preparing a short Robert reply for review only. No mainline,
+Live, certification, installed-device change or message publication is authorised.
+This supersedes the no-release-authority statement in the implementation checkpoint
+below; the source scope and provisional/read-only gates remain unchanged.
+
+Fresh pre-commit checks: 823 tests and lint pass; diff checks pass. Source CI,
+version/tag CI, upload and Test channel readback are pending at this checkpoint.
+Baseline source is `247a7fcb6538e1d5ea7cf2c1a397ce9ca13f93e9`, package v1.10.48.
+Use the repository patch-version workflow after source CI passes; confirm its
+actual output rather than treating an expected version as already published.
+
+## Local Dual CT evidence-to-preview improvements — 16 October 2026
+
+Diagnostic branch only, based on `247a7fcb6538e1d5ea7cf2c1a397ce9ca13f93e9`.
+Owner requested implementation and regression tests, not publication. Mainline,
+Live, installed devices and the published Test build are unchanged. No version
+bump, commit/push, remote CI dispatch or customer message in this wave.
+
+- Combined comparison sharing uses schema 2 with shared scalar receipt tables
+  (age, encoding basis, float representation and packet index) and references
+  to identical latest/last-complete checks. The canonical local view and older
+  schema-1 imports remain supported. Check arithmetic is revalidated on readback.
+  The actual copy/download/manual text uses compact JSON within 7500 characters;
+  ordinary reports and scalar-only export schemas are unchanged. Power groups,
+  bank checks and counter candidates take priority over secondary voltage/current
+  detail. All omissions remain explicit. A one-meter synthetic comparison retains
+  all 20 scalars, both bank checks, both nested record structures and six numeric
+  counter candidates; two-meter and sparse-receipt pressure have regression tests.
+- Missing counter records in scalar packets are now `not_updated`, not a missing
+  measurement/reset. Last counter receipt age and latest packet age are separate;
+  scalar traffic cannot freshen a counter. Whole-record baselines survive absent
+  packets only; actual partial/invalid/equal-time ambiguity, source changes and
+  >=90-second counter gaps remain conservative. No merging partial child records,
+  inferred resets, persistent baselines, extra capture or background collection.
+- Settings comparison cards now show explicitly provisional assumptions: A is
+  Grid, B is EcoFlow Solar / inverter circuit, which can include battery discharge.
+  Raw signs remain unchanged; bank letters are not physical CT-port identifiers.
+  Under the existing separate counter consent, 773 fields 1/2/3/4/6/7 also show
+  candidate phase-net/import/export/net values divided by 1000 (Wh-to-kWh
+  hypothesis). Raw numbers remain alongside them. Scale, roles, direction, period
+  and reset origin are NOT verified; there is no daily-total or lifetime claim.
+  A conflicting user observation is visibly flagged, not used to activate a map.
+  EN/DE/NL wording and desktop/mobile workflows are covered by regression tests.
+
+No new pairing driver, Homey capabilities, Energy accounting, Flow, control or
+original-meter changes. Record 997 remains structure-only. Work from the existing
+evidence first; do not ask the tester for repeat compact/full/crash bundles.
+The next physical check should validate useful visible behaviour, especially
+inverter direction under meaningful output, not repeat decoder discovery.
+See [DUAL_CT_RELEASE_GATES.md](DUAL_CT_RELEASE_GATES.md) for current assumptions
+and remaining promotion gates.
+
+Local acceptance: 823 tests pass (11 added), lint passes, current dependency audit
+reports zero vulnerabilities, diff checks pass and Homey 4.5.3 verified validation
+passes. Desktop 1280px / mobile 390px workflows cover provisional labels and
+conflicts, candidate energy, sparse receipt ages, schema-2 copy/manual/download
+equivalence, expiry and Stop without cloud polling/device writes. Synthetic
+screenshots were visually inspected; no horizontal overflow. These are local
+browser/automated checks, NOT native Homey, physical or electrical acceptance.
+Mainline refs remain local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`
+and origin/master `66b1cb5f828a53333739798281fce86125f61c28`; diagnostic HEAD and
+origin remain `247a7fcb6538e1d5ea7cf2c1a397ce9ca13f93e9`. Changes are uncommitted,
+unpushed and unpublished. No Live/installed app or customer-message action.
+
 ## Test v1.10.48 / Build 63 — published 15 October 2026
 
 Diagnostic source `f4338f73715a315ca2d2ba49d5dcda5655424fc2`; exact release/tag
