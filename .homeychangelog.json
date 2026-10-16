@@ -259,5 +259,8 @@
   },
   "1.10.50": {
     "en": "Made read-only Dual CT export availability clearer, with specific reasons for disabled options and matching combined-report availability. Improved freshness consistency and duplicate-packet handling, with additional replay and upgrade regression checks. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.51": {
+    "en": "Made read-only Dual CT export availability clearer, with specific reasons for disabled options and matching combined-report availability, including expired snapshots after a later refresh. Improved freshness consistency and duplicate-packet handling, with additional replay and upgrade regression checks. No changes to pairing, Homey Energy, Flows or device controls."
   }
 }
