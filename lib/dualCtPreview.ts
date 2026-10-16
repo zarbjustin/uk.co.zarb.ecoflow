@@ -4,6 +4,7 @@ import { DualCtBankCheck } from './dualCtBanks';
 import { inspectDualCtCounterRecords, DualCtCounterRecord } from './dualCtCounters';
 import { DualCtContinuity } from './dualCtContinuity';
 import { dualCtReleaseReadiness } from './dualCtReadiness';
+import { dualCtFreshAge } from './dualCtContract';
 
 type Reading = NonNullable<ReturnType<typeof decodeDualCtCandidates>>['readings'][number];
 type RetainedReading = Reading & { packetIndex: number };
@@ -152,7 +153,7 @@ export class DualCtPreview {
     const fields = this.rows.get(deviceIndex) || new Map();
     for (const reading of decoded.readings) {
       const previous = fields.get(reading.field);
-      if (!previous || context.receivedAt >= previous.receivedAt) {
+      if (!previous || context.receivedAt > previous.receivedAt) {
         fields.set(reading.field, { reading: { ...reading, packetIndex: this.acceptedPayloads }, receivedAt: context.receivedAt });
       }
     }
@@ -173,7 +174,7 @@ export class DualCtPreview {
       const retained = this.diagnosticRows.get(deviceIndex) || new Map();
       for (const reading of decoded.readings) {
         const previous = retained.get(reading.field);
-        if (!previous || context.receivedAt >= previous.receivedAt) {
+        if (!previous || context.receivedAt > previous.receivedAt) {
           retained.set(reading.field, { reading: { ...reading, packetIndex: this.acceptedPayloads }, receivedAt: context.receivedAt });
         }
       }
@@ -233,7 +234,7 @@ export class DualCtPreview {
     for (const [deviceIndex, fields] of this.rows) {
       const readings = [];
       for (const [field, row] of fields) {
-        if (now < row.receivedAt || now - row.receivedAt >= 90000) fields.delete(field);
+        if (!dualCtFreshAge(now - row.receivedAt)) fields.delete(field);
         else readings.push({ ...row.reading, receivedAgeSec: (now - row.receivedAt) / 1000 });
       }
       if (readings.length) devices.push({ deviceIndex, readings });

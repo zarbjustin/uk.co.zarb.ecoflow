@@ -1,12 +1,7 @@
 /** Model-421 research hypotheses only. Banks are NOT CT port or installation roles. */
-export const DUAL_CT_BANKS = [
-  {
-    bank: 'A', total: 515, power: [962, 963, 772], voltage: [956, 957, 771], current: [958, 959, 784],
-  },
-  {
-    bank: 'B', total: 998, power: [991, 992, 993], voltage: [985, 986, 987], current: [988, 989, 990],
-  },
-] as const;
+import { DUAL_CT_BANK_DEFINITIONS } from './dualCtContract';
+
+export const DUAL_CT_BANKS = DUAL_CT_BANK_DEFINITIONS;
 
 export function dualCtBankCandidate(field: number) {
   for (const bank of DUAL_CT_BANKS) {

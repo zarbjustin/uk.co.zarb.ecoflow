@@ -107,8 +107,8 @@ test('zero and negative secondary candidates never assign a role or permanently 
 
 test('payload indices cannot wrap or repeat after the bounded maximum',()=>{
   const preview=new DualCtPreview(true);
-  for(let index=0;index<2050;index++) preview.observe(0,bytes(a),base);
-  const view=preview.snapshot(1000);
+  for(let index=0;index<2050;index++) preview.observe(0,bytes(a),{...base,now:1000+index,receivedAt:1000+index});
+  const view=preview.snapshot(3050);
   assert.ok(view.devices[0].readings.every(row=>row.packetIndex===2048));
   assert.equal(preview.diagnostics(view.reason).acceptedPayloads,2048);
   preview.clear();

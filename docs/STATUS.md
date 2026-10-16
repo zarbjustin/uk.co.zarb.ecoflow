@@ -2,6 +2,85 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Consolidated diagnostic Test preparation — 16 October 2026
+
+Owner explicitly approved committing/pushing this diagnostic continuation, checking
+CI and publishing one consolidated Test build. Mainline, Live and installed devices
+must stay unchanged; Robert's reply is draft-only. This supersedes the earlier
+local-only publication restriction below. No new release exists until upload and
+Test readback are verified; version/tag workflow follows successful source CI.
+
+Includes all four release-preparation sprints below plus the export availability
+fix prompted by Robert's private `.49?` message. Both export choices now follow
+validated retained data, rather than leaving the combined-format option available
+when numeric sharing is blocked. A dedicated accessible EN/DE/NL status explains
+numeric capture off, no accepted samples, missing capture identity/snapshot,
+validation failure, blocked decoding, expiry, pending request and transport/lifecycle
+failures. It never includes raw exception details or identifiers and never starts
+a capture or opts into sharing. Same-capture refresh retains consent only after
+validating the returned identity; failure/expiry/account change clears it.
+
+Fresh checks: 844 tests pass (21 above released v1.10.49), lint, full dependency
+audit (0 vulnerabilities), diff checks and Homey 4.5.3 verified validation. Desktop
+and mobile browser cases cover disabled states, valid recovery, slow request,
+timeout/late response, exact retention expiry, copy/download and no automatic
+capture/transmission. Screenshots inspected outside Git; native Homey hosting and
+physical mapping acceptance remain separate. Portal before release: Build 64 /
+v1.10.49 Test; Build 18 / v1.10.3 Live, last updated 2026-07-26T22:49:51.597Z.
+Source CI, new version/tag CI, upload and Test readback are pending here.
+
+## Four release-preparation sprints — 16 October 2026, LOCAL / UNPUBLISHED
+
+Owner requested implementation, regression tests and local release checks on
+`codex/mixed-generation-reporting-diagnostics`. Based on synced `dd97437197e02d5de50ac1240aa83c68bda03d12`.
+No commit, push, version bump, CI dispatch, Test upload/publication, certification,
+mainline/Live/installed-device change or new customer message in this wave.
+The published v1.10.49 / Build 64 checkpoint below remains historical evidence,
+not a fresh portal check or a release of these working-tree changes.
+
+1. **Reading contract:** one frozen browser/backend field and bank profile in
+   `settings/dual-ct-contract.js`, typed through `lib/dualCtContract.ts`. Exact
+   90-second receipt/measurement expiry is stale throughout the relevant paths.
+   Unknown measurement timestamps stay null/receipt-only; cached snapshots need
+   a genuine measurement timestamp. Invalid clocks clear dormant state. Equal-time
+   scalar updates retain the first existing value rather than inventing order.
+   Complementary fields in separate packets still cannot form packet coherence.
+2. **Pipeline replay:** generated two-meter wire sequences exercise decoding,
+   independent fields, raw sign changes and zeros, sparse counter receipts,
+   continuity/source/gap boundaries, comparison schema sharing, numeric-free
+   reports and the dormant adapter. Stop, account replacement, restart, fixed
+   retention and backward-clock cases erase runtime evidence. Synthetic inputs
+   only; no customer captures or identifying fixtures.
+3. **Disabled adapter:** `lib/dualCtDevicePreview.ts` rehearses independent A/B
+   totals and three candidate phases per bank. Account/device/session scope is
+   private runtime state, not an anonymous capture index. It preserves raw signs
+   and missing/stale/recent-receipt states. It is not imported by app/API/drivers,
+   applies no Homey capabilities, creates no paired device, combines no grid
+   totals and has no Energy/control/activation path. A/B are NOT physical CT ports.
+4. **Upgrade qualification:** public contract fixture pinned to actual Live tag
+   v1.10.3 / `74a3f024c21b4179e0f137303414c541f84cb3fe`, not today's master.
+   Six existing driver identities, capability/settings/Energy contracts and 36
+   Flow card argument/target contracts remain resolvable. Real driver methods in
+   mocked Homey lifecycle tests retain synthetic original-meter/STREAM stores,
+   identity, settings and totals across upgrade/restart without downtime backfill,
+   candidate-counter adoption or concurrent power accounting. Existing 5000 role,
+   mixed-generation rollback, source-selection and 72-hour deterministic-soak
+   regressions also run. This does NOT qualify a native Homey upgrade or downgrade.
+
+Validation: **840 tests pass (17 added)**, including desktop/mobile browser
+settings workflows; lint passes, full dependency audit reports zero vulnerabilities,
+diff checks pass and Homey 4.5.3 verified validation passes. Shared browser asset
+loads before its projectors; compiled backend resolves the same field definitions.
+Desktop/mobile screenshots inspected outside Git. Native Homey hosting and the
+future uploaded archive remain separate checks, not implied by local browser/tsc.
+
+Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+`66b1cb5f828a53333739798281fce86125f61c28` remain unchanged; remote diagnostic
+still points at `dd97437197e02d5de50ac1240aa83c68bda03d12`. Remote CI has not run
+for these uncommitted changes. No new export request to Robert is needed for this
+engineering work. Direction/phase/units, counter period/reset/origin, native
+upgrade/rollback and original/mixed-hardware acceptance remain release gates.
+
 ## Test v1.10.49 / Build 64 — published 16 October 2026
 
 Supersedes the preparation/local-only checkpoints below. Source commit
@@ -35,10 +114,12 @@ complete schema-2 comparison sharing. All assumptions remain provisional/read-on
 There is no new paired Dual CT driver, Energy adoption, Flow or control change.
 997 remains structure-only. Native Homey and physical acceptance remain open.
 
-Robert reply is DRAFT ONLY for owner review: thank him for the existing evidence,
-explain the visible preview improvements and new Test version, and do not request
-another export/report bundle. Optional normal two-minute preview uses the existing
-numeric and counter opt-ins; no rushed/timed capture, reset or mode change.
+The owner-approved reply was posted and verified in the private Tests Dual CT
+conversation: https://community.homey.app/t/tests-dual-ct/160963/4, signed JZ.
+It explains the preview improvements and Test version without requesting another
+export/report bundle. Optional normal two-minute preview uses the existing numeric
+and counter opt-ins; no rushed/timed capture, reset or mode change. No new message
+was sent during the subsequent local-only four-sprint work above.
 
 ## Test-only release preparation — 16 October 2026
 

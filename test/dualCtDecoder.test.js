@@ -60,10 +60,10 @@ test('identity transport and receipt freshness gates fail closed', () => {
   assert.equal(decodeDualCtCandidates(payload, null), null);
   assert.equal(decodeDualCtCandidates(payload, undefined), null);
   for (const changed of [{ productType: 420 }, { cmdFunc: 32 }, { source: 'developer_mqtt' },
-    { encoding: 'masked' }, { now: 999 }, { now: 91001 }, { receivedAt: NaN }, { now: Infinity }]) {
+    { encoding: 'masked' }, { now: 999 }, { now: 91000 }, { now: 91001 }, { receivedAt: NaN }, { now: Infinity }]) {
     assert.equal(decodeDualCtCandidates(payload, { ...context, ...changed }), null);
   }
-  assert.equal(decodeDualCtCandidates(payload, { ...context, now: 91000 }).receivedAgeSec, 90);
+  assert.equal(decodeDualCtCandidates(payload, { ...context, now: 90999 }).receivedAgeSec, 89.999);
 });
 
 test('truncated malicious duplicate and oversized payloads do not return partial data', () => {

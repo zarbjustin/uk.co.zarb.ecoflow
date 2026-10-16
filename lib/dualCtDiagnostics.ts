@@ -1,5 +1,8 @@
 /** Fixed metadata only: never include payload values, identity or encryption keys. */
-export const DUAL_CT_EXTRA_SCALARS = [985, 986, 987, 988, 989, 990, 991, 992, 993, 998];
+import { DUAL_CT_FIELD_DEFINITIONS, dualCtFreshAge } from './dualCtContract';
+
+export const DUAL_CT_EXTRA_SCALARS = DUAL_CT_FIELD_DEFINITIONS.filter((row) => row.bank === 'B')
+  .map((row) => row.field).sort((a, b) => a - b);
 export const DUAL_CT_PREVIEW_REASONS = ['disabled', 'ready', 'no_samples', 'no_eligible_meter', 'missing_encoding',
   'unsupported_encoding', 'invalid_header', 'model_unverified', 'no_supported_candidates', 'expired', 'stopped',
   'account_changed', 'capture_unavailable', 'not_reported', 'omitted_encoding_rejected'];
@@ -26,7 +29,7 @@ export function dualCtBankSummary(input: any, enabled: boolean) {
       const project = (check: any, complete: boolean) => {
         if (!(complete ? ['consistent', 'mismatch'] : ['partial', 'consistent', 'mismatch', 'invalid']).includes(check?.status)
           || !Number.isFinite(check?.receivedAgeSec) || check.receivedAgeSec < 0 || check.receivedAgeSec >= 990) return null;
-        return { status: check.status, receivedAgeSec: check.receivedAgeSec, stale: check.receivedAgeSec >= 90 };
+        return { status: check.status, receivedAgeSec: check.receivedAgeSec, stale: !dualCtFreshAge(check.receivedAgeSec * 1000) };
       };
       const latest = project(row.latest, false); const lastComplete = project(row.lastComplete, true);
       if (!latest || (row.lastComplete != null && !lastComplete)
@@ -76,7 +79,7 @@ export function dualCtCounterMetadata(input: any) {
         fields,
         checks,
         receivedAgeSec: row.receivedAgeSec,
-        stale: row.receivedAgeSec >= 90,
+        stale: !dualCtFreshAge(row.receivedAgeSec * 1000),
         fieldsAvailable: row.fieldsOmitted === true && Number.isInteger(row.fieldsAvailable)
         && row.fieldsAvailable >= fields.length && row.fieldsAvailable <= 32 ? row.fieldsAvailable : fields.length,
         fieldsIncluded: fields.length,

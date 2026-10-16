@@ -1,15 +1,17 @@
 /** Dormant adapter foundation. No vendor field mapping, network, Homey writes or accounting. */
+import { DUAL_CT_STALE_MS, dualCtReadingTime } from './dualCtContract';
+
 export type DualCtChannel = 'ct1' | 'ct2';
 export type DualCtRole = 'unknown' | 'grid' | 'solar' | 'load';
 export type DualCtSource = 'app_live' | 'developer_live' | 'device_snapshot';
 type Metric = 'powerW' | 'voltageV' | 'currentA';
-interface Reading { value: number; receivedAt: number; measuredAt: number; source: DualCtSource }
+interface Reading { value: number; receivedAt: number; measuredAt: number | null; source: DualCtSource }
 interface ChannelConfig { role: DualCtRole; source: DualCtSource | null; importSign: 'positive' | 'negative' | null }
 
 const CHANNELS: DualCtChannel[] = ['ct1', 'ct2'];
 const METRICS: Metric[] = ['powerW', 'voltageV', 'currentA'];
 const SOURCES: DualCtSource[] = ['app_live', 'developer_live', 'device_snapshot'];
-export const DUAL_CT_FIELD_STALE_MS = 90000;
+export const DUAL_CT_FIELD_STALE_MS = DUAL_CT_STALE_MS;
 // Broad input sanity bounds, not product ratings or electrical safety limits.
 const LIMITS: Record<Metric, [number, number, string]> = {
   powerW: [-100000, 100000, 'W'], voltageV: [0, 1000, 'V'], currentA: [-1000, 1000, 'A'],
@@ -31,7 +33,9 @@ export class DualCtChannels {
   private lastNow: number | null = null;
 
   private clock(now: number): boolean {
-    if (!Number.isFinite(now) || now < 0) return false;
+    if (!Number.isFinite(now) || now < 0) {
+      this.clear(); return false;
+    }
     if (this.lastNow !== null && now < this.lastNow) this.readings.clear();
     this.lastNow = now;
     return true;
@@ -57,16 +61,17 @@ export class DualCtChannels {
   }
 
   observe(channel: DualCtChannel, metric: Metric, value: unknown, unit: unknown,
-    source: DualCtSource, receivedAt: number, measuredAt: number, now: number): boolean {
+    source: DualCtSource, receivedAt: number, measuredAt: number | null, now: number): boolean {
     if (!this.clock(now) || !CHANNELS.includes(channel) || !METRICS.includes(metric)
       || !SOURCES.includes(source) || source !== this.config[channel].source) return false;
     const [min, max, expectedUnit] = LIMITS[metric];
     if (unit !== expectedUnit || typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max
-      || !Number.isFinite(receivedAt) || !Number.isFinite(measuredAt) || measuredAt < 0 || receivedAt < 0
-      || receivedAt > now || measuredAt > receivedAt || now - measuredAt > DUAL_CT_FIELD_STALE_MS) return false;
+      || !dualCtReadingTime(receivedAt, measuredAt, now).valid
+      || (source === 'device_snapshot' && measuredAt === null)) return false;
     const key = `${channel}:${metric}`; const previous = this.readings.get(key);
     // A cached value with a recent receipt does not become a fresh measurement.
-    if (previous && (measuredAt <= previous.measuredAt || receivedAt < previous.receivedAt)) return false;
+    if (previous && (receivedAt <= previous.receivedAt
+      || (previous.measuredAt !== null && (measuredAt === null || measuredAt <= previous.measuredAt)))) return false;
     this.readings.set(key, {
       value, source, receivedAt, measuredAt,
     });
@@ -83,21 +88,25 @@ export class DualCtChannels {
       const config = this.config[channel];
       const metrics = Object.fromEntries(METRICS.map((metric) => {
         const reading = this.readings.get(`${channel}:${metric}`);
-        const age = validClock && reading && reading.measuredAt <= now ? now - reading.measuredAt : null;
-        const fresh = age !== null && age <= DUAL_CT_FIELD_STALE_MS;
+        const time = reading && validClock ? dualCtReadingTime(reading.receivedAt, reading.measuredAt, now) : null;
+        const fresh = time?.valid === true;
         let status = 'missing';
-        if (reading) status = fresh ? 'fresh' : 'stale';
+        if (reading) {
+          status = 'stale';
+          if (fresh) status = reading.measuredAt === null ? 'recent_receipt' : 'fresh';
+        }
         return [metric, {
           value: fresh ? reading!.value : null,
           unit: LIMITS[metric][2],
           status,
-          measurementAgeSec: age === null ? null : age / 1000,
-          receiptAgeSec: validClock && reading && reading.receivedAt <= now ? (now - reading.receivedAt) / 1000 : null,
+          timeBasis: time?.timeBasis || null,
+          measurementAgeSec: time?.measurementAgeSec ?? null,
+          receiptAgeSec: time?.receiptAgeSec ?? null,
           source: reading?.source || null,
         }];
       }));
       const power = metrics.powerW.value as number | null;
-      const signedGrid = config.role === 'grid' && config.importSign && power !== null
+      const signedGrid = config.role === 'grid' && config.importSign && power !== null && metrics.powerW.timeBasis === 'measured'
         ? power * (config.importSign === 'positive' ? 1 : -1) : null;
       return {
         channel,

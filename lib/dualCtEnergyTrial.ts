@@ -1,4 +1,6 @@
 /** Pure laboratory preview for FUTURE validated Wh import/export counters. Not wired to a driver. */
+import { dualCtFreshAge } from './dualCtContract';
+
 export type DualCtEnergyTrialState = {
   version: 1;
   source: string | null;
@@ -41,7 +43,7 @@ export function previewDualCtEnergyTransition(state: DualCtEnergyTrialState, sam
     || typeof sample.source !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(sample.source)
     || !Number.isFinite(now) || !Number.isFinite(sample.measuredAt) || !Number.isFinite(sample.receivedAt)
     || sample.measuredAt <= 0 || sample.measuredAt > sample.receivedAt || sample.receivedAt > now
-    || now - sample.measuredAt >= 90000) return result('invalid_sample');
+    || !dualCtFreshAge(now - sample.measuredAt)) return result('invalid_sample');
   const old = state.baseline;
   if (old && (!energy(old.importedWh) || !energy(old.exportedWh) || !Number.isFinite(old.measuredAt)
     || old.measuredAt <= 0 || old.measuredAt > now)) return result('invalid_baseline', retained);
@@ -54,7 +56,7 @@ export function previewDualCtEnergyTransition(state: DualCtEnergyTrialState, sam
   };
   if (old && sample.measuredAt <= old.measuredAt) return result('out_of_order');
   if (!old || state.source !== sample.source) return result(old ? 'source_changed_anchor' : 'anchored', next);
-  if (sample.measuredAt - old.measuredAt >= 90000) return result('gap_anchor', next);
+  if (!dualCtFreshAge(sample.measuredAt - old.measuredAt)) return result('gap_anchor', next);
   if (sample.importedWh < old.importedWh || sample.exportedWh < old.exportedWh) {
     // A reset/wrap/unit/source defect is ambiguous. Never count the new raw value from zero.
     return result('decrease_anchor', next);

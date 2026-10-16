@@ -1,5 +1,50 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## Consolidated Test authorisation — 16 October 2026
+
+Owner authorised commit/push, exact CI checks and a consolidated Test release of
+the four sprints plus the disabled-export UX fix. Prior withheld-publication/local
+statements below are historical. Source/version/tag/upload/Test gates must each
+pass before describing this continuation as published. No mainline/Live/installed
+device action; no Robert message publication is authorised.
+
+Both sharing choices follow validated snapshot availability, with fixed localized
+accessible reasons instead of an unexplained grey checkbox. Selecting a format
+cannot collect data, enable capture or consent to sharing. Numeric-off, absent or
+invalid/mismatched snapshot, no samples, unsupported payload, expiry, pending,
+failure/timeout and late-callback states are covered on desktop/mobile. Fresh
+local checks: 844 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+Direction/scaling/period/physical/upgrade acceptance gates below remain open.
+
+## Four-sprint qualification — 16 October 2026, LOCAL / UNPUBLISHED
+
+Current working tree is on the diagnostic branch, based on `dd97437`; package
+version remains 1.10.49. Owner has withheld publication. Mainline, Live, installed
+devices and the released Test archive are untouched. No commit/push or new exact
+CI result is implied by these local checks. See STATUS.md for implementation and
+ref details. The earlier post-release reply is already posted in the private
+Tests Dual CT conversation (post 4); do not ask for another generic data bundle.
+
+| Sprint / gate | Local evidence | Still required |
+| --- | --- | --- |
+| Single reading contract | Frozen shared bank/field profile; strict <90s freshness; receipt-only versus measured time; desktop/mobile script order | Real Homey hosting / packaged-asset readback after a separately authorised build |
+| Pipeline replay | Generated 120-packet two-meter replay plus sparse/duplicate/reorder/source/gap/expiry/lifecycle sequences; compact round trips and privacy fences | Physical direction, phase order, scaling and firmware-specific validation |
+| Read-only device foundation | Unwired adapter, private account/device/session scope, separate bank/phase candidates, null unknowns, no applied capabilities or activation switch | Verified model/unit/role contract, reviewed driver integration and native Homey acceptance |
+| Live upgrade contract | Actual v1.10.3 manifest: 6 drivers / 36 Flow cards; mocked real meter/STREAM restore methods preserve identifiers, settings and totals | Native installed upgrade/rollback, actual Flow and Insights continuity, original/mixed-hardware regression |
+
+840 tests (17 added), lint, full audit (0 vulnerabilities), diff checks and Homey
+verified validation pass locally. The full suite includes existing 5000 system vs
+unit accounting, mixed-generation monitoring/source and deterministic 72-hour soak
+regressions. Synthetic Flow resolution is a schema check, not a claim that Homey
+has executed or migrated someone's Flows. No native backup/restore or downgrade
+was performed. No new production store schema or accounting path was introduced.
+
+The new device preview is deliberately disconnected from app, API and drivers.
+All pairing, capability application, Energy contribution and control gates remain
+closed. A/B are candidate banks, not CT1/CT2; unknown measurement timestamps cannot
+be filled from response arrival. Preview observations do not establish a vendor
+contract. Counter 997 stays structure-only and 773 raw/1000 remains provisional.
+
 ## Release checkpoint — 16 October 2026
 
 The diagnostic continuation below is now published to Test as v1.10.49 / Build 64,
@@ -9,8 +54,9 @@ upload passed. Exact CI passed 823 tests, lint, zero-vulnerability audit and Hom
 verified validation. Authenticated Homey Apps API readback confirmed Test at
 2026-10-16 18:53:34 UTC and unchanged Live v1.10.3 / Build 18. Packaged settings
 and compiled freshness assets were read back and SHA256-checked against source.
-Mainline/Live/installed devices and physical acceptance are untouched. The tester
-reply remains DRAFT ONLY; no new export request or message publication.
+Mainline/Live/installed devices and physical acceptance are untouched. The approved
+tester reply was subsequently posted to private Tests Dual CT post 4; no new export
+request or message publication in the current local-only wave above.
 See STATUS.md for exact workflow links and acceptance boundaries.
 
 ## Diagnostic continuation — 16 October 2026, unpublished

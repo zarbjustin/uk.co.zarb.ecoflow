@@ -1,8 +1,8 @@
 'use strict';
 (function expose(root) {
   const status=typeof module!=='undefined'&&module.exports?require('./dual-ct-status'):root.EcoFlowDualCtStatus;
-  const hypotheses=[{bank:'A',total:515,power:[962,963,772],voltage:[956,957,771],current:[958,959,784]},
-    {bank:'B',total:998,power:[991,992,993],voltage:[985,986,987],current:[988,989,990]}];
+  const contract=typeof module!=='undefined'&&module.exports?require('./dual-ct-contract'):root.EcoFlowDualCtContract;
+  const hypotheses=contract.banks;
   function arithmetic(parent,rows) {
     if(parent!==773)return [];
     const fields=new Map(rows.map(row=>[row.field,row.value]));
@@ -124,7 +124,7 @@
       // Whole-record outcomes/counts precede repetitive per-child continuity text.
       const detail=report.counterContinuity?.records.find(row=>row.fields.length);
       if(detail){detail.fields=[];detail.fieldsOmitted=true;continue;}
-      const secondary=[956,957,771,958,959,784,985,986,987,988,989,990];
+      const secondary=contract.fields.filter(row=>['voltage','current'].includes(row.quantity)).map(row=>row.field);
       const rich=base.devices.filter(device=>device.readings.some(row=>secondary.includes(row.field)))
         .sort((a,b)=>b.readings.length-a.readings.length)[0];
       if(rich){const index=rich.readings.findIndex(row=>secondary.includes(row.field));
@@ -208,10 +208,10 @@
       for(const candidate of row.candidates||[])if(names[candidate.field]&&candidate.candidateUnit===null
         &&Number.isFinite(candidate.value)&&Math.abs(candidate.value)<=1e12)counters.push({
         deviceIndex:row.deviceIndex,field:candidate.field,role:names[candidate.field],
-        raw:candidate.value,kWhCandidate:candidate.value/1000,receivedAgeSec:row.receivedAgeSec,
+        raw:candidate.value,kWhCandidate:candidate.value/contract.candidateKWhDivisor,receivedAgeSec:row.receivedAgeSec,
         verified:false});
     }
-    return {basis:'provisional_read_only',bankRoles:{A:'grid',B:'solar_inverter_circuit'},
+    return {basis:'provisional_read_only',bankRoles:{...contract.workingRoles},
       signConvention:'raw_unchanged',solarIncludesPossibleBatteryDischarge:true,counters,
       unitsVerified:false,directionVerified:false,period:'unknown',resetVerified:false,contributesToEnergy:false};
   }
@@ -237,8 +237,8 @@
     append(element,'h4',translate('readiness_title'));
     append(element,'p',translate('readiness_device_blocked'));
     append(element,'p',translate('readiness_energy_blocked'));
-    const ageText=row=>{if(row.receivedAgeSec<90){const ms=(90-row.receivedAgeSec)*1000;ttl=ttl?Math.min(ttl,ms):ms;}
-      return `${Math.floor(row.receivedAgeSec)} s · ${translate(row.receivedAgeSec>=90?'comparison_stale':'comparison_recent')}`;};
+    const ageText=row=>{if(contract.isFreshAge(row.receivedAgeSec*1000)){const ms=contract.staleMs-row.receivedAgeSec*1000;ttl=ttl?Math.min(ttl,ms):ms;}
+      return `${Math.floor(row.receivedAgeSec)} s · ${translate(contract.isFreshAge(row.receivedAgeSec*1000)?'comparison_recent':'comparison_stale')}`;};
     for(const device of report.candidateSnapshot.devices) for(const bank of hypotheses) {
       const card=append(element,'section','');card.className='dual-ct-card';
       append(card,'h4',`${translate('meter')} ${device.deviceIndex+1} · ${translate('bank_candidate')} ${bank.bank}`);
@@ -260,7 +260,7 @@
       const value=field=>{const row=device.readings.find(reading=>reading.field===field);
         if(!row)return translate('comparison_missing');
         ageText(row);
-        return `${row.value} · ${Math.floor(row.receivedAgeSec)} s · ${translate(row.receivedAgeSec>=90?'comparison_stale_short':'comparison_recent_short')}`;};
+        return `${row.value} · ${Math.floor(row.receivedAgeSec)} s · ${translate(contract.isFreshAge(row.receivedAgeSec*1000)?'comparison_recent_short':'comparison_stale_short')}`;};
       append(card,'p',`${translate('bank_total_power')} (W?): ${value(bank.total)}`);
       const table=append(card,'table','');const head=append(table,'tr','');
       for(const text of [translate('bank_phase'),'W?','V?','A?'])append(head,'th',text);

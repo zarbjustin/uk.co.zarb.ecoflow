@@ -16,10 +16,13 @@ function fixture(changed=false,sparse=false){const preview=new DualCtPreview(tru
   const diagnostics=preview.diagnostics(view.reason);preview.clear();return {view,diagnostics};}
 async function setup(browser,viewport){const page=await browser.newPage({viewport});
   await page.goto(pathToFileURL(path.join(__dirname,'..','settings','index.html')).href);
+  assert.equal(await page.evaluate(()=>Object.isFrozen(window.EcoFlowDualCtContract?.banks[0].power)),true,
+    'shared profile must load before the settings projectors in the actual HTML workflow');
   await page.clock.install({time:new Date('2026-10-15T20:00:00Z')});
   await page.evaluate(({translations,fixture})=>{
     window.calls=[];window.copied=null;window.originTime=Date.now();window.fixture=fixture;window.running=false;
-    window.view=()=>{const v=structuredClone(window.fixture.view);const seconds=(Date.now()-window.originTime)/1000;
+    window.view=()=>{if(window.overridePreview)return structuredClone(window.overridePreview);
+      const v=structuredClone(window.fixture.view);const seconds=(Date.now()-window.originTime)/1000;
       v.captureId=window.changedId||v.captureId;
       v.devices.forEach(d=>{d.readings.forEach(r=>{r.receivedAgeSec+=seconds;});d.readings=d.readings.filter(r=>r.receivedAgeSec<90);});
       v.devices=v.devices.filter(d=>d.readings.length);if(!v.devices.length)v.reason='expired';
@@ -189,4 +192,58 @@ test('mobile continuity preview explains signed decreases, missing records, stal
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
     await page.locator('#stopDualCtResearch').click();assert.equal(await page.locator('#dualCtComparisonState').textContent(),'');
   }finally{await browser.close();}
+});
+
+test('desktop/mobile export controls explain missing data and prerequisites without silently capturing, consenting or sharing',async()=>{
+  const browser=await chromium.launch();try{for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
+    const page=await setup(browser,viewport);
+    await page.locator('#dualCtPreviewPanel').evaluate(el=>{el.open=true;});
+    const combined=page.locator('#includeDualCtComparison');const consent=page.locator('#consentDualCtCandidateExport');
+    const message=page.locator('#dualCtExportAvailability');
+    assert.equal(await combined.isDisabled(),true);assert.equal(await consent.isDisabled(),true);
+    assert.match(await message.innerText(),/until a retained snapshot has loaded/);
+    assert.equal(await combined.getAttribute('aria-describedby'),'dualCtExportAvailability');
+    assert.equal(await consent.getAttribute('aria-describedby'),'dualCtExportAvailability');
+    const ready=await page.evaluate(()=>window.view());
+    const cases=[
+      [{enabled:false,reason:'disabled',devices:[]},/numeric preview turned off/],
+      [{enabled:true,reason:'no_samples',devices:[]},/No accepted numeric samples/],
+      [{...ready,captureId:null},/valid capture ID/],
+      [{...ready,diagnosticSnapshot:null},/No exportable historical numeric snapshot/],
+      [{...ready,diagnosticSnapshot:{kind:'invalid'}},/could not be validated/],
+      [{...ready,diagnosticSnapshot:{retainedForSec:900,retentionRemainingSec:0}},/15-minute retention window has ended/],
+      [{enabled:true,reason:'unsupported_encoding',captureId:ready.captureId,devices:[]},/candidate checks did not accept/],
+    ];
+    for(const [response,expected] of cases){
+      await page.evaluate(value=>{window.overridePreview=value;},response);
+      await page.locator('#refreshDualCtResearch').click();
+      assert.equal(await combined.isDisabled(),true);assert.equal(await consent.isDisabled(),true);
+      assert.equal(await consent.isChecked(),false);assert.match(await message.innerText(),expected);
+      assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(),true);
+      assert.equal(await page.locator('#dualCtCandidateText').textContent(),'');
+    }
+    assert.equal(await page.evaluate(()=>window.calls.some(call=>call.method!=='GET')),false);
+    assert.equal(await page.evaluate(()=>window.copied),null);
+    await page.locator('#dualCtPreviewPanel').evaluate(el=>{el.open=true;});
+    await message.scrollIntoViewIfNeeded();await page.screenshot({path:`/tmp/ecoflow-dualct-export-unavailable-${viewport.width}.png`});
+    await page.evaluate(()=>{delete window.overridePreview;});await page.locator('#refreshDualCtResearch').click();
+    assert.equal(await combined.isDisabled(),false);assert.equal(await consent.isDisabled(),false);
+    assert.equal(await consent.isChecked(),false);assert.match(await message.innerText(),/snapshot available/);
+    await combined.check();await consent.check();assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(),false);
+    await page.evaluate(()=>{window.pending=true;});await page.locator('#refreshDualCtResearch').click();
+    assert.equal(await combined.isDisabled(),true);assert.equal(await consent.isDisabled(),true);
+    assert.match(await message.innerText(),/temporarily unavailable/);
+    await page.clock.runFor(20001);assert.match(await message.innerText(),/failed or timed out/);
+    await page.evaluate(()=>{window.pending=false;window.late(null,{research:{status:'complete'},preview:window.view()});});
+    assert.equal(await combined.isDisabled(),true);assert.equal(await consent.isDisabled(),true);
+    await page.locator('#refreshDualCtResearch').click();await combined.check();await consent.check();
+    await message.scrollIntoViewIfNeeded();await page.screenshot({path:`/tmp/ecoflow-dualct-export-ready-${viewport.width}.png`});
+    const calls=await page.evaluate(()=>window.calls.length);await page.clock.runFor(900000);
+    assert.equal(await combined.isDisabled(),true);assert.equal(await consent.isDisabled(),true);
+    assert.equal(await consent.isChecked(),false);assert.equal(await page.locator('#dualCtCandidateText').textContent(),'');
+    assert.match(await message.innerText(),/retention window has ended/);
+    assert.equal(await page.evaluate(()=>window.calls.length),calls,'expiry does not poll or restart capture');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+    assert.equal(await page.evaluate(()=>window.copied),null);await page.close();
+  }}finally{await browser.close();}
 });

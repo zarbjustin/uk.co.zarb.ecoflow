@@ -1,4 +1,5 @@
 import { DualCtCounterRecord } from './dualCtCounters';
+import { dualCtFreshAge } from './dualCtContract';
 
 const FIELDS = [1, 2, 3, 4, 6, 7];
 const LIMIT_MS = 15 * 60 * 1000;
@@ -63,7 +64,7 @@ export class DualCtContinuity {
   /** Sparse packets do not refresh counter receipts or merge partial records. */
   observe(deviceIndex: number, records: DualCtCounterRecord[], receivedAt: number, now: number, source: string): void {
     if (!this.enabled || !this.clock(now) || ![0, 1].includes(deviceIndex)
-      || !Number.isFinite(receivedAt) || receivedAt <= 0 || receivedAt > now || now - receivedAt >= 90000
+      || !Number.isFinite(receivedAt) || receivedAt <= 0 || !dualCtFreshAge(now - receivedAt)
       || !['explicit_zero', 'omitted_zero_candidate'].includes(source)) return;
     if (this.startedAt === null) this.startedAt = now;
     for (const parent of [773, 997]) {
@@ -115,7 +116,7 @@ export class DualCtContinuity {
         if (state !== 'invalid' && previous) {
           if (receivedAt === previous.recordAt) state = 'same_receipt';
           else if (source !== previous.source) state = 'source_changed';
-          else if (previous.recordAt !== null && receivedAt - previous.recordAt >= 90000) state = 'gap';
+          else if (previous.recordAt !== null && !dualCtFreshAge(receivedAt - previous.recordAt)) state = 'gap';
         }
       }
       row.latest = parent === 773 ? FIELDS.map((field) => {
@@ -167,7 +168,7 @@ export class DualCtContinuity {
           recordObserved: row.recordAt !== null,
           recordObservations: row.recordSamples,
           lastPacketAgeSec: (now - row.receivedAt) / 1000,
-          stale: row.recordAt === null || now - row.recordAt >= 90000,
+          stale: row.recordAt === null || !dualCtFreshAge(now - row.recordAt),
           fields: row.latest.map((field) => ({ ...field })),
           events: Object.fromEntries(DUAL_CT_CONTINUITY_STATES.filter((state) => row.events[state]).map((state) => [state, row.events[state]])),
           periodEvidence: dualCtPeriodEvidence(row.firstAt, row.receivedAt),

@@ -47,17 +47,48 @@ try {
   StreamDevice = require('../.homeybuild/drivers/stream/device');
 } finally { Module._load = originalLoad; }
 
-async function harness(store = {}) {
+async function harness(store = {}, configure) {
   const device = new StreamDevice();
   Object.assign(device.store, store);
   device.homey = {
     setTimeout: (fn) => { device.timers.set(++device.nextTimer, fn); return device.nextTimer; },
     clearTimeout: (id) => device.timers.delete(id),
+    setInterval: (fn) => { device.timers.set(++device.nextTimer, fn); return device.nextTimer; },
+    clearInterval: (id) => device.timers.delete(id),
     flow: { getDeviceTriggerCard: () => ({ trigger: async () => {} }) },
   };
+  if (configure) configure(device);
   await device.onReady();
   return device;
 }
+
+test('Live STREAM counter-store upgrade/restart preserves totals, identity and unrelated settings with no power fallback', async t => {
+  let now=100000; t.mock.method(Date,'now',()=>now);
+  const identity=Object.freeze({sn:'BK61SYNTHETICUPGRADE'});
+  const settings=Object.freeze({enable_history:false,solar_forecast:false,poll_interval:45,history_prefix:'Keep'});
+  const baseline=require('./fixtures/live-v1.10.3-contract.json').drivers.find(d=>d.id==='stream');
+  const configure=d=>{d.getData=()=>identity;d.getSetting=key=>settings[key];
+    d.hasCapability=cap=>baseline.capabilities.includes(cap);};
+  const saved={chargedWh:150000,dischargedWh:250000,chargedRawWh:10000,dischargedRawWh:20000,
+    countersAvailable:true,mainSn:identity.sn,ownerMarker:'preserve'};
+  const first=await harness(saved,configure);
+  assert.equal(first.values['meter_power.charged'],150);assert.equal(first.values['meter_power.discharged'],250);
+  await first.applyQuota({accuChgEnergy:10002,accuDsgEnergy:20003,powGetBpCms:900},{source:'mqtt',receivedAt:now});
+  assert.equal(first.values['meter_power.charged'],150.002);assert.equal(first.values['meter_power.discharged'],250.003);
+  now+=60000;await first.applyQuota({powGetBpCms:900},{source:'mqtt',receivedAt:now});
+  assert.equal(first.values['meter_power.charged'],150.002,'counter source forbids concurrent power integration');
+  await first.onTeardown();assert.equal(first.store.ownerMarker,'preserve');assert.equal(first.getData(),identity);
+  now+=3600000;const restarted=await harness(structuredClone(first.store),configure);
+  await restarted.applyQuota({powGetBpCms:-900,productType:421,773:{4:1e12}},{source:'mqtt',receivedAt:now});
+  assert.equal(restarted.getEnergyDiagnostics().source,'device_counters');
+  assert.equal(restarted.values['meter_power.charged'],150.002);assert.equal(restarted.values['meter_power.discharged'],250.003);
+  now++;
+  await restarted.applyQuota({accuChgEnergy:10005,accuDsgEnergy:20007},{source:'mqtt',receivedAt:now});
+  assert.equal(restarted.values['meter_power.charged'],150.005);assert.equal(restarted.values['meter_power.discharged'],250.007);
+  assert.equal(restarted.getReadSn(),identity.sn);assert.equal(restarted.getSetting('poll_interval'),45);
+  await restarted.onTeardown();
+  for(const key of ['chargedWh','dischargedWh','chargedRawWh','dischargedRawWh','countersAvailable','mainSn','ownerMarker'])assert.ok(Object.hasOwn(restarted.store,key));
+});
 
 test('read-only reporter resolution is throttled and leaves identity, address and energy stores untouched', async (t) => {
   t.mock.method(Date, 'now', () => 1000000);

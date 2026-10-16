@@ -6,19 +6,10 @@
 import { DUAL_CT_EXTRA_SCALARS } from './dualCtDiagnostics';
 import { DualCtEncodingBasis } from './dualCtEncoding';
 import { checkDualCtBanks, dualCtBankCandidate } from './dualCtBanks';
+import { DUAL_CT_FIELD_DEFINITIONS, dualCtFreshAge } from './dualCtContract';
 
-const CANDIDATES: Record<number, { key: string; unit: string }> = {
-  515: { key: 'aggregatePower', unit: 'W' },
-  962: { key: 'phase1Power', unit: 'W' },
-  963: { key: 'phase2Power', unit: 'W' },
-  772: { key: 'phase3Power', unit: 'W' },
-  956: { key: 'phase1Voltage', unit: 'V' },
-  957: { key: 'phase2Voltage', unit: 'V' },
-  771: { key: 'phase3Voltage', unit: 'V' },
-  958: { key: 'phase1Current', unit: 'A' },
-  959: { key: 'phase2Current', unit: 'A' },
-  784: { key: 'phase3Current', unit: 'A' },
-};
+const CANDIDATES = Object.fromEntries(DUAL_CT_FIELD_DEFINITIONS.filter((row) => row.bank === 'A')
+  .map((row) => [row.field, { key: row.candidate, unit: row.candidateUnit! }]));
 
 export interface DualCtDecodeContext {
   productType: number;
@@ -38,7 +29,7 @@ export function decodeDualCtCandidates(payload: Buffer, context: DualCtDecodeCon
     || context.source !== 'app_mqtt' || context.encoding !== 'plain'
     || (context.encodingBasis !== undefined && !['explicit_zero', 'omitted_zero_candidate'].includes(context.encodingBasis))
     || !Number.isFinite(context.now) || !Number.isFinite(context.receivedAt)
-    || context.receivedAt <= 0 || context.receivedAt > context.now || context.now - context.receivedAt > 90000) return null;
+    || context.receivedAt <= 0 || !dualCtFreshAge(context.now - context.receivedAt)) return null;
   let pos = 0; let count = 0;
   const encodingBasis = context.encodingBasis || 'explicit_zero';
   const readings: Array<{ field: number; candidate: string; value: number; candidateUnit: string | null;

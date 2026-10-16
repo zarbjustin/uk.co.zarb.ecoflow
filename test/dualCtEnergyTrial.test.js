@@ -91,7 +91,7 @@ test('release fence preserves original meter identity, pairing manifest and rese
   assert.deepEqual(driver.capabilities,['measure_power','smartmeter_power_grid','smartmeter_power_import','smartmeter_power_export','meter_power.imported','meter_power.exported']);
   const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);
   for(const file of walk(path.join(root,'drivers')).filter(f=>f.endsWith('.ts'))){
-    assert.doesNotMatch(fs.readFileSync(file,'utf8'),/dualCt(?:Preview|Continuity|Counters|EnergyTrial)|previewDualCtEnergyTransition/);
+    assert.doesNotMatch(fs.readFileSync(file,'utf8'),/dualCt(?:Preview|DevicePreview|Continuity|Counters|EnergyTrial)|previewDualCtEnergyTransition/);
   }
-  assert.doesNotMatch(fs.readFileSync(path.join(root,'app.ts'),'utf8'),/dualCtEnergyTrial|previewDualCtEnergyTransition/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root,'app.ts'),'utf8'),/dualCtDevicePreview|dualCtEnergyTrial|previewDualCtEnergyTransition/);
 });

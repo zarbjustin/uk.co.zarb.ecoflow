@@ -1,0 +1,667 @@
+{
+  "sourceTag": "v1.10.3",
+  "sourceCommit": "74a3f024c21b4179e0f137303414c541f84cb3fe",
+  "appId": "uk.co.zarb.ecoflow",
+  "drivers": [
+    {
+      "id": "smartmeter",
+      "class": "sensor",
+      "capabilities": [
+        "measure_power",
+        "smartmeter_power_grid",
+        "smartmeter_power_import",
+        "smartmeter_power_export",
+        "meter_power.imported",
+        "meter_power.exported"
+      ],
+      "energy": {
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power.imported",
+        "cumulativeExportedCapability": "meter_power.exported"
+      },
+      "settings": [
+        "meter_source",
+        "poll_interval"
+      ]
+    },
+    {
+      "id": "stream",
+      "class": "battery",
+      "capabilities": [
+        "measure_battery",
+        "battery_charging_state",
+        "operating_mode",
+        "backup_reserve_soc",
+        "charge_limit",
+        "discharge_limit",
+        "feed_in_control",
+        "measure_power.load",
+        "measure_power.pv",
+        "measure_power.grid",
+        "measure_power",
+        "charge_remaining",
+        "discharge_remaining",
+        "meter_power.charged",
+        "meter_power.discharged",
+        "measure_power.pv1",
+        "measure_power.pv2",
+        "measure_power.pv3",
+        "measure_power.pv4",
+        "measure_power.schuko1",
+        "measure_power.schuko2",
+        "measure_power.from_pv",
+        "measure_power.from_battery",
+        "measure_power.from_grid",
+        "measure_temperature",
+        "measure_voltage",
+        "battery_soh",
+        "battery_cycles",
+        "alarm_generic"
+      ],
+      "energy": {
+        "homeBattery": true,
+        "meterPowerImportedCapability": "meter_power.charged",
+        "meterPowerExportedCapability": "meter_power.discharged"
+      },
+      "settings": [
+        "poll_interval",
+        "enable_history",
+        "history_prefix",
+        "solar_forecast",
+        "solar_factor",
+        "price_unit"
+      ]
+    },
+    {
+      "id": "stream_micro",
+      "class": "solarpanel",
+      "capabilities": [
+        "measure_power",
+        "stream_micro_power_solar",
+        "meter_power",
+        "measure_power.pv1",
+        "stream_micro_power_pv1",
+        "measure_power.pv2",
+        "stream_micro_power_pv2",
+        "measure_power.grid",
+        "stream_micro_power_grid_feed"
+      ],
+      "energy": {
+        "meterPowerExportedCapability": "meter_power"
+      },
+      "settings": [
+        "poll_interval"
+      ]
+    },
+    {
+      "id": "stream_socket",
+      "class": "socket",
+      "capabilities": [
+        "onoff",
+        "measure_power"
+      ],
+      "energy": null,
+      "settings": [
+        "poll_interval"
+      ]
+    },
+    {
+      "id": "stream_solar",
+      "class": "solarpanel",
+      "capabilities": [
+        "measure_power",
+        "meter_power"
+      ],
+      "energy": {
+        "meterPowerExportedCapability": "meter_power"
+      },
+      "settings": [
+        "poll_interval",
+        "aggregation_source",
+        "pv_attribution"
+      ]
+    },
+    {
+      "id": "stream_unit",
+      "class": "battery",
+      "capabilities": [
+        "measure_battery",
+        "battery_charging_state",
+        "operating_mode",
+        "stream_unit_power_battery_flow",
+        "measure_power.load",
+        "stream_unit_power_grid",
+        "stream_unit_power_solar",
+        "stream_unit_power_from_solar",
+        "stream_unit_power_from_battery",
+        "stream_unit_power_from_grid",
+        "onoff.ac1",
+        "onoff.ac2",
+        "stream_unit_power_ac1",
+        "stream_unit_power_ac2",
+        "backup_reserve_soc",
+        "charge_limit",
+        "discharge_limit",
+        "feed_in_control",
+        "charge_remaining",
+        "discharge_remaining",
+        "stream_unit_power_pv1",
+        "stream_unit_power_pv2",
+        "stream_unit_power_pv3",
+        "stream_unit_power_pv4",
+        "measure_temperature",
+        "battery_soh",
+        "battery_cycles"
+      ],
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
+      "settings": [
+        "model",
+        "serial_number",
+        "system_role",
+        "power_source",
+        "ac_output",
+        "poll_interval"
+      ]
+    }
+  ],
+  "flow": {
+    "triggers": [
+      {
+        "id": "battery_level_crossed",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "values": [
+              "above",
+              "below"
+            ]
+          },
+          {
+            "name": "level",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "charging_started",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "device_came_online",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "device_went_offline",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "discharging_started",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "fault_cleared",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "fault_raised",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "grid_export_above",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "watts",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "grid_export_started",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "grid_import_above",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "watts",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "grid_import_started",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "grid_power_changed",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "operating_mode_changed",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "solar_power_changed",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "battery_soc",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "values": [
+              "above",
+              "below"
+            ]
+          },
+          {
+            "name": "level",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "charging_from_solar",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "electricity_price",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "values": [
+              "above",
+              "below"
+            ]
+          },
+          {
+            "name": "price",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "electricity_price_negative",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "feed_in_enabled",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "is_charging",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "is_exporting",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "operating_mode_is",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              "self_powered",
+              "ai",
+              "scheduled",
+              "tou"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "solar_forecast_today",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "values": [
+              "above",
+              "below"
+            ]
+          },
+          {
+            "name": "kwh",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "solar_forecast_tomorrow",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "values": [
+              "above",
+              "below"
+            ]
+          },
+          {
+            "name": "kwh",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "solar_power_above",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "watts",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "solar_power_below",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "watts",
+            "type": "number"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "prepare_for_cheap_import",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "reserve",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "prepare_for_peak_export",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "reserve",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "refresh_now",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "release_for_export",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "set_backup_reserve",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "level",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "set_charge_limit",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "level",
+            "type": "range"
+          }
+        ]
+      },
+      {
+        "id": "set_discharge_limit",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "level",
+            "type": "range"
+          }
+        ]
+      },
+      {
+        "id": "set_electricity_price",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "price",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "set_feed_in",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "state",
+            "type": "dropdown",
+            "values": [
+              "on",
+              "off"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "set_operating_mode",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              "self_powered",
+              "ai",
+              "scheduled",
+              "tou"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

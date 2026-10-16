@@ -8,6 +8,7 @@
     body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; max-width: 520px; margin: 0 auto; }
     h1 { font-size: 20px; }
     .help { color: #888; font-size: 13px; }
+    #dualCtExportAvailability { color: #333; font-size: 14px; line-height: 1.45; border-left: 3px solid #1AA3E8; padding-left: 10px; }
     pre { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #f4f4f4; }
     label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: 13px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
@@ -160,8 +161,9 @@
       <details id="dualCtComparisonPanel"><summary id="dualCtComparisonTitle"></summary>
         <div id="dualCtComparisonState"></div>
       </details>
-      <label class="beta-toggle"><input id="includeDualCtComparison" type="checkbox"><span id="dualCtComparisonInclude"></span></label>
-      <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" disabled><span id="dualCtCandidateConsent"></span></label>
+      <label class="beta-toggle"><input id="includeDualCtComparison" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtComparisonInclude"></span></label>
+      <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtCandidateConsent"></span></label>
+      <p id="dualCtExportAvailability" class="help" role="status" aria-live="polite"></p>
       <p id="dualCtCandidateHelp" class="help"></p>
       <pre id="dualCtCandidateText" hidden></pre>
       <button id="copyDualCtCandidates" type="button" disabled></button>
@@ -206,6 +208,7 @@
 
   <script src="meter-status.js"></script>
   <script src="reporter-status.js"></script>
+  <script src="dual-ct-contract.js"></script>
   <script src="dual-ct-status.js"></script>
   <script src="dual-ct-comparison.js"></script>
   <script type="text/javascript">
@@ -246,6 +249,12 @@
       var comparisonSnapshot = null;
       var comparisonTimer;
       var comparisonNotes = [];
+      var candidateAvailability = 'not_loaded';
+      function renderCandidateAvailability() {
+        document.getElementById('includeDualCtComparison').disabled = !candidateSnapshot || !comparisonSnapshot;
+        document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
+        document.getElementById('dualCtExportAvailability').textContent = Homey.__('settings.dual_ct.export_' + candidateAvailability);
+      }
       function renderComparisonView() {
         clearTimeout(comparisonTimer);
         var elapsed = Date.now() - candidateReadAt;
@@ -261,7 +270,7 @@
           });
         if (ttl) comparisonTimer = setTimeout(renderComparisonView, Math.max(1, Math.ceil(ttl)));
       }
-      function clearCandidateExport(reason) {
+      function clearCandidateExport(reason, availability) {
         clearTimeout(candidateExpiry);
         candidateSnapshot = null;
         comparisonSnapshot = null;
@@ -274,6 +283,8 @@
         document.getElementById('dualCtBankState').textContent = '';
         document.getElementById('dualCtDiagnosticState').textContent = reason
           ? Homey.__('settings.dual_ct.' + reason) : '';
+        candidateAvailability = availability || (reason === 'candidate_snapshot_expired' ? 'expired' : 'no_snapshot');
+        renderCandidateAvailability();
       }
       function renderCaptureMode(evidence) {
         var active = ['discovering', 'listening'].includes(evidence?.status);
@@ -296,8 +307,9 @@
         var consent = document.getElementById('consentDualCtCandidateExport');
         var elapsed = Date.now() - candidateReadAt;
         if (candidateSnapshot && (elapsed < 0 || elapsed >= candidateSnapshot.retentionRemainingSec * 1000)) {
-          clearCandidateExport('candidate_snapshot_expired');
+          clearCandidateExport('candidate_snapshot_expired', elapsed < 0 ? 'clock_changed' : 'expired');
         }
+        renderCandidateAvailability();
         if (consent.checked === true && candidateSnapshot && elapsed >= 0) {
           var aged = JSON.parse(JSON.stringify(candidateSnapshot));
           aged.devices.forEach(function (device) { device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; }); });
@@ -358,6 +370,9 @@
         document.getElementById('dualCtCandidateShareStatus').textContent = '';
         document.getElementById('dualCtDiagnosticState').textContent = '';
         document.getElementById('dualCtBankState').textContent = '';
+        candidateAvailability = ({ request_failed: 'request_failed', stopped: 'stopped', account_changed: 'account_changed',
+          transport_unavailable: 'capture_unavailable', discovery_unavailable: 'capture_unavailable', refreshing: 'refreshing',
+          starting: 'starting' })[reason] || 'not_loaded';
         prepareCandidateExport();
         window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), { reason: reason },
           function (key) { return Homey.__('settings.dual_ct.' + key); });
@@ -494,19 +509,20 @@
         candidateSnapshot = id ? window.EcoFlowDualCtStatus.diagnosticExport(evidence) : null;
         comparisonSnapshot = id ? window.EcoFlowDualCtComparison.comparisonView(evidence, comparisonNotes) : null;
         candidateReadAt = Date.now();
-        document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
+        candidateAvailability = window.EcoFlowDualCtStatus.candidateExportAvailability(evidence, !!candidateSnapshot, !!comparisonSnapshot);
+        if (!comparisonSnapshot) document.getElementById('includeDualCtComparison').checked = false;
         if (candidateSnapshot) {
           document.getElementById('dualCtDiagnosticState').textContent = Homey.__('settings.dual_ct.candidate_snapshot_ready');
           candidateExpiry = setTimeout(function () {
             clearCandidateExport('candidate_snapshot_expired'); prepareCandidateExport();
           }, Math.ceil(candidateSnapshot.retentionRemainingSec * 1000));
-        } else clearCandidateExport();
+        } else clearCandidateExport(undefined, candidateAvailability);
         renderBankChecks();
         renderComparisonView();
         prepareCandidateExport();
       }
       document.getElementById('refreshDualCtPreview').addEventListener('click', function () {
-        clearDualCtPreview(undefined, true);
+        clearDualCtPreview('refreshing', true);
         var operation = previewOperation;
         var requestedAt = Date.now();
         previewDeadline = setTimeout(function () { clearDualCtPreview('request_failed'); }, 20000);
@@ -536,7 +552,7 @@
         } catch { document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
       });
       function dualCtAction(action) {
-        clearDualCtPreview(undefined, action === 'refresh');
+        clearDualCtPreview(action === 'refresh' ? 'refreshing' : action === 'start' ? 'starting' : 'stopped', action === 'refresh');
         dualCtCompact = null;
         document.getElementById('dualCtCompactText').textContent = '';
         document.getElementById('copyDualCtCompact').disabled = true;
@@ -592,6 +608,8 @@
         document.getElementById('enableDualCtPreview').checked = false;
         document.getElementById('enableDualCtCounters').checked = false;
         renderDualCt(null);
+        candidateAvailability = 'account_changed';
+        renderCandidateAvailability();
       }
 
       var reportText = '';

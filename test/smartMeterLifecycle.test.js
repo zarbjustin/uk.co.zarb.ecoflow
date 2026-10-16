@@ -46,6 +46,39 @@ class TestMeter extends Meter {
   async onReady() { await super.onReady(); this.client = { getQuotaAll: async () => ({ powGetSysGrid: 10 }) }; }
 }
 
+test('Live v1.10.3 meter upgrade/restart retains device identity, settings and totals without adopting Dual CT candidates', async t => {
+  let now=100000; t.mock.method(Date,'now',()=>now);
+  const baseline=require('./fixtures/live-v1.10.3-contract.json').drivers.find(d=>d.id==='smartmeter');
+  const identity=Object.freeze({sn:'BK21SYNTHETICUPGRADE'});
+  const first=new TestMeter('load');first.getData=()=>identity;
+  for(const cap of baseline.capabilities)first.values.set(cap,null);
+  Object.assign(first.store,{importWh:123456,exportWh:654321,sourceSn:'BK61SYNTHETICHOST',ownerMarker:'preserve'});
+  const settings=()=>({meter_source:first.source,poll_interval:15});const savedSettings=settings();
+  await first.onInit();
+  assert.equal(first.getData(),identity);assert.deepEqual(first.subscriptions,[identity.sn]);
+  assert.equal(first.values.get('meter_power.imported'),123.456);assert.equal(first.values.get('meter_power.exported'),654.321);
+  await first.applyQuota({powGetSysGrid:3600,powGetSysLoad:9999},{source:'mqtt',receivedAt:now});
+  now+=1000;
+  await first.applyQuota({powGetSysGrid:3600},{source:'mqtt',receivedAt:now});
+  assert.equal(first.values.get('meter_power.imported'),123.457);
+  const before=first.values.get('meter_power.imported');
+  await first.applyQuota({productType:421,515:1e6,773:{4:1e12}},{source:'mqtt',receivedAt:now});
+  assert.equal(first.values.get('meter_power.imported'),before,'candidate record must never enter original accounting');
+  assert.equal(first.getData(),identity);assert.deepEqual(settings(),savedSettings);
+  await first.onUninit();assert.equal(first.timers.size,0);
+  assert.equal(first.store.ownerMarker,'preserve');assert.equal(first.store.importWh,123457);
+  now+=3600000;
+  const restarted=new TestMeter('load');restarted.getData=()=>identity;restarted.store=structuredClone(first.store);
+  for(const cap of baseline.capabilities)restarted.values.set(cap,first.values.get(cap));
+  await restarted.onInit();
+  await restarted.applyQuota({powGetSysGrid:7200},{source:'mqtt',receivedAt:now});
+  assert.equal(restarted.values.get('meter_power.imported'),before,'no integration across app downtime');
+  assert.equal(restarted.values.get('meter_power.exported'),654.321);
+  assert.equal(restarted.getData(),identity);assert.equal(restarted.getReadSn(),'BK61SYNTHETICHOST');
+  for(const cap of baseline.capabilities)assert.equal(restarted.hasCapability(cap),true,cap);
+  await restarted.onUninit();assert.equal(restarted.timers.size,0);
+});
+
 test('meter subscribes to its own MQTT identity, keeps host REST, and releases timers/handler', async () => {
   const d = new TestMeter(); await d.onInit();
   assert.deepEqual(d.subscriptions, ['BK21METER']);

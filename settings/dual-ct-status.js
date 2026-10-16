@@ -1,6 +1,7 @@
 'use strict';
 
 (function expose(root) {
+  const contract = typeof module !== 'undefined' && module.exports ? require('./dual-ct-contract') : root.EcoFlowDualCtContract;
   const SOURCES = ['app_mqtt', 'developer_mqtt', 'developer_rest', 'linked_host_rest'];
   const STATES = ['not_started', 'discovering', 'listening', 'stopped', 'complete', 'sample_limit',
     'account_changed', 'no_explicit_model', 'transport_unavailable', 'discovery_unavailable'];
@@ -30,7 +31,7 @@
         const project = (check, complete) => {
           if (!(complete ? ['consistent', 'mismatch'] : ['partial', 'consistent', 'mismatch', 'invalid']).includes(check?.status)
             || !Number.isFinite(check?.receivedAgeSec) || check.receivedAgeSec < 0 || check.receivedAgeSec >= 990) return null;
-          return { status: check.status, receivedAgeSec: check.receivedAgeSec, stale: check.receivedAgeSec >= 90 };
+          return { status: check.status, receivedAgeSec: check.receivedAgeSec, stale: !contract.isFreshAge(check.receivedAgeSec * 1000) };
         };
         const latest = project(row.latest, false); const lastComplete = project(row.lastComplete, true);
         if (!latest || (row.lastComplete != null && !lastComplete)
@@ -57,7 +58,7 @@
         ?row.checks.slice(0,2).filter(check=>['4-6=7','1+2+3=7'].includes(check?.expression)
           &&['partial','consistent','mismatch','invalid'].includes(check?.status)&&check.scope==='single_nested_record')
           .map(check=>({expression:check.expression,status:check.status,scope:'single_nested_record',verified:false})):[];
-      records.push({deviceIndex:row.deviceIndex,parent:row.parent,status:row.status,fields,checks,receivedAgeSec:row.receivedAgeSec,stale:row.receivedAgeSec>=90,
+      records.push({deviceIndex:row.deviceIndex,parent:row.parent,status:row.status,fields,checks,receivedAgeSec:row.receivedAgeSec,stale:!contract.isFreshAge(row.receivedAgeSec*1000),
         fieldsAvailable:row.fieldsOmitted===true&&Number.isInteger(row.fieldsAvailable)&&row.fieldsAvailable>=fields.length&&row.fieldsAvailable<=32?row.fieldsAvailable:fields.length,
         fieldsIncluded:fields.length,fieldsOmitted:row.fieldsOmitted===true});
     }
@@ -77,7 +78,7 @@
       encodingCounts: Object.fromEntries(['explicit_plain', 'missing', 'masked', 'unsupported', 'invalid_header']
         .map(key => [key, count(input?.encodingCounts?.[key])])),
       additionalScalarFieldsSeen: Array.isArray(input?.additionalScalarFieldsSeen)
-        ? [...new Set(input.additionalScalarFieldsSeen.slice(0, 128).filter(field => [985,986,987,988,989,990,991,992,993,998].includes(field)))].sort((a,b) => a-b) : [],
+        ? [...new Set(input.additionalScalarFieldsSeen.slice(0, 128).filter(field => contract.fields.some(row => row.bank === 'B' && row.field === field)))].sort((a,b) => a-b) : [],
       additionalBankMappingVerified: false, bankCheckSummary: bankCheckSummary(input?.bankCheckSummary, enabled === true),
       counterResearch: counterMetadata(enabled === true ? input?.counterResearch : null), valuesIncluded: false };
   }
@@ -255,12 +256,8 @@
     return report;
   }
   // Separate consented export. Fixed fields only; never include identities or raw frames.
-  const CANDIDATE_UNITS = { 515: 'W', 962: 'W', 963: 'W', 772: 'W', 956: 'V', 957: 'V', 771: 'V', 958: 'A', 959: 'A', 784: 'A',
-    985: null, 986: null, 987: null, 988: null, 989: null, 990: null, 991: null, 992: null, 993: null, 998: null };
-  const BANK_HYPOTHESES = [
-    { bank: 'A', total: 515, power: [962, 963, 772], voltage: [956, 957, 771], current: [958, 959, 784] },
-    { bank: 'B', total: 998, power: [991, 992, 993], voltage: [985, 986, 987], current: [988, 989, 990] },
-  ];
+  const CANDIDATE_UNITS = Object.fromEntries(contract.fields.map(row => [row.field, row.candidateUnit]));
+  const BANK_HYPOTHESES = contract.banks;
   function bankCandidate(field) {
     for (const bank of BANK_HYPOTHESES) {
       if (field === bank.total) return { bank: bank.bank, phase: null, quantity: 'total_power', suggestedUnit: 'W' };
@@ -271,7 +268,7 @@
     }
     return null;
   }
-  function candidateRows(input, maxAge = 90) {
+  function candidateRows(input, maxAge = contract.staleMs / 1000) {
     const devices = []; const seen = new Set();
     (Array.isArray(input?.devices) ? input.devices.slice(0, 2) : []).forEach((device) => {
       if (![0, 1].includes(device?.deviceIndex)) return;
@@ -297,7 +294,7 @@
   function buildCandidateExport(input, historical, budget = 7500) {
     if (input?.enabled !== true || input?.interpretation !== 'legacy_meter_overlap_unverified'
       || input.unitsVerified !== false || input.directionVerified !== false) return null;
-    const devices = candidateRows(input, historical ? 990 : 90);
+    const devices = candidateRows(input, historical ? 990 : contract.staleMs / 1000);
     if (!devices.length) return null;
     const included = devices.reduce((sum, device) => sum + device.readings.length, 0);
     const priorTrimmed = ['dual_ct_candidate_preview', 'dual_ct_candidate_snapshot'].includes(input.reportType) && input.readingsOmitted === true
@@ -386,6 +383,24 @@
     return buildCandidateExport({ ...input, ...snapshot, devices }, true, comparisonView === true ? 20000 : 7500);
   }
 
+  // Fixed, non-numeric explanations. A format checkbox is not proof that captured data exists.
+  function candidateExportAvailability(input, snapshotAvailable, comparisonAvailable) {
+    const identified = typeof input?.captureId === 'string' && /^[0-9a-f-]{36}$/.test(input.captureId);
+    if (identified && snapshotAvailable === true) return comparisonAvailable === true ? 'ready' : 'scalar_only';
+    if (!input) return 'not_loaded';
+    if (input.reason === 'request_failed') return 'request_failed';
+    if (['stopped', 'account_changed', 'capture_unavailable'].includes(input.reason)) return input.reason;
+    if (input.enabled === false || input.reason === 'disabled') return 'numeric_disabled';
+    const snapshot = input.diagnosticSnapshot;
+    if ((Number.isFinite(snapshot?.retentionRemainingSec) && snapshot.retentionRemainingSec <= 0)
+      || (Number.isFinite(snapshot?.retainedForSec) && snapshot.retainedForSec >= contract.retentionMs / 1000)) return 'expired';
+    if (input.reason === 'no_eligible_meter' || input.reason === 'model_unverified') return 'no_eligible_meter';
+    if (['missing_encoding', 'unsupported_encoding', 'invalid_header', 'no_supported_candidates', 'omitted_encoding_rejected'].includes(input.reason)) return 'decode_blocked';
+    if (input.reason === 'no_samples') return 'no_samples';
+    if (!identified) return 'capture_missing';
+    return snapshot ? 'snapshot_invalid' : 'no_snapshot';
+  }
+
   // Separate local display only: never pass candidate values to compact().
   function renderPreview(element, input, translate) {
     element.textContent = translate('preview_unavailable');
@@ -398,7 +413,7 @@
     const rows = [];
     candidateRows(input).forEach((device) => {
       device.readings.forEach((row) => {
-        const ttl = (90 - row.receivedAgeSec) * 1000;
+        const ttl = contract.staleMs - row.receivedAgeSec * 1000;
         lifetime = lifetime ? Math.min(lifetime, ttl) : ttl;
         const mapping = bankCandidate(row.field);
         const hint = mapping ? ` · ${translate('bank_candidate')} ${mapping.bank} / ${mapping.phase === null ? translate('bank_total_power')
@@ -410,6 +425,6 @@
     else if (input.reason === 'ready') element.textContent = translate('preview_expired');
     return lifetime;
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport, diagnosticExport, bankCandidate };
-  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport, diagnosticExport, bankCandidate };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, render, compact, renderPreview, candidateExport, diagnosticExport, bankCandidate, candidateExportAvailability };
+  else root.EcoFlowDualCtStatus = { describe, render, compact, renderPreview, candidateExport, diagnosticExport, bankCandidate, candidateExportAvailability };
 }(typeof window === 'undefined' ? {} : window));

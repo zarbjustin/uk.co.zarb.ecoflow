@@ -114,7 +114,7 @@ test('candidate preview opt-in is manual, separate from exports and invalidates 
   context.document.getElementById('refreshDualCtPreview').click();
   context.document.getElementById('stopDualCtResearch').click();
   calls[3].callback(null, { enabled: true, devices: [] });
-  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /Not available/);
+  assert.match(context.document.getElementById('dualCtPreviewState').textContent, /Capture stopped/);
   context.events.pagehide();
   assert.equal(context.document.getElementById('enableDualCtPreview').checked, false);
 });
@@ -282,6 +282,7 @@ function loadSettingsScript() {
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'meter-status.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'reporter-status.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'dual-ct-contract.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'dual-ct-status.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'settings', 'dual-ct-comparison.js'), 'utf8'), context);
   vm.runInContext(source, context);
