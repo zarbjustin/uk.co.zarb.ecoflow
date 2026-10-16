@@ -256,5 +256,8 @@
   },
   "1.10.49": {
     "en": "Improved read-only Dual CT preview with provisional Grid and Solar/inverter labels and candidate energy values. Fixed counter freshness between sparse updates and preserved more evidence in compact comparison exports. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.50": {
+    "en": "Made read-only Dual CT export availability clearer, with specific reasons for disabled options and matching combined-report availability. Improved freshness consistency and duplicate-packet handling, with additional replay and upgrade regression checks. No changes to pairing, Homey Energy, Flows or device controls."
   }
 }
