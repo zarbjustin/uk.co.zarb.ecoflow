@@ -1,5 +1,26 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## 17 October: phase preview and disabled Energy preparation — Test v1.10.54 / Build 68
+
+Supersedes the local/publication holds below. Source `89c5729`, version/tag
+`3c39087`; source CI `39064070729`, version `39064152571`, exact-tag CI
+`39064226030` and upload `39064352983` passed. Exact CI passed 925 tests, lint,
+zero-vulnerability audit and Homey verified validation. Fourteen packaged
+runtime/locale files matched local exact-tag output, including the required
+preview driver JSON; manifest matched semantically except author privacy filtering.
+Portal and public listing confirm Test at `2026-10-17T19:57:13.873Z`.
+Live remains Build 18 / v1.10.3 at `2026-07-26T22:49:51.597Z`; mainline untouched.
+
+Individual phase cards, independently expiring same-packet candidate sums and
+optional circuit descriptions are now Test-visible. The preview still has no
+Energy declaration or standard meter capabilities. Source/timing/accounting /
+adoption modules are unwired, runtime false and contract registry empty. No
+existing device conversion or Energy activation, certification, manual host
+installation or physical/native acceptance. Other drivers and their Energy
+configuration remain unchanged. Robert reply stays draft-only; no new captures.
+Full release evidence and remaining activation gates are in STATUS.md and
+DUAL_CT_GRID_ENERGY_PREPARATION.md.
+
 ## 17 October: grid Energy preparation sprints 1–3, LOCAL / UNPUBLISHED
 
 CT1 source/timing adapter, persistent power accounting and new-device adoption /

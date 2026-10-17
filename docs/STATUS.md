@@ -2,6 +2,39 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.54 / Build 68 — published 17 October 2026
+
+Supersedes the authorised/local checkpoints below. Diagnostic-only source
+`89c5729230895ae8c9c1eb4568bee1fcdd03451c`, version/tag
+`3c39087355f7f2c5e2cce6ec93c7343f5752fcd1`. Source CI
+[39064070729](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064070729),
+version [39064152571](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064152571),
+exact-tag CI [39064226030](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064226030)
+and upload [39064352983](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064352983)
+passed. Local and exact-tag CI: **925 tests**, lint, dependency audit (0
+vulnerabilities), Homey CLI 4.5.3 verified validation. Checks ran sequentially.
+
+Build 68 archive readback matched 14 targeted compiled/runtime/locale files,
+including the preview's required `driver.compose.json`. Manifest is semantically
+identical apart from Homey's author-email privacy filtering. Archive SHA256:
+`28e35466df418bce9b96298000d9bd3c27360a1c66b80e4901fb1221cafa1777`.
+The archive confirms 34 custom-only preview capabilities, class `other`, no
+Energy declaration, runtime activation false and empty grid-contract resolver.
+
+Reopened portal and public listing confirm **Test v1.10.54 / Build 68** at
+`2026-10-17T19:57:13.873Z`:
+[portal](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/68),
+[Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live remains **Build 18 / v1.10.3**, timestamp `2026-07-26T22:49:51.597Z`.
+Local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote
+`master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+
+Visible phase/circuit improvements are available in Test; grid Energy modules
+are preparatory only and remain unwired. Existing devices gain no Dual CT Energy
+participation; other driver Energy/Flow/permission definitions stay unchanged.
+No certification, manual installed-host update, controls or physical/native
+acceptance claim. No new Robert capture/export requested; reply is draft-only.
+
 ## Consolidated phase/Grid Energy preparation — 17 October 2026, Test release AUTHORISED
 
 Owner now authorises committing/pushing the diagnostic branch, checking source
