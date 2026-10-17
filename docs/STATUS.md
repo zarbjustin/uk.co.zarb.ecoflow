@@ -2,6 +2,42 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.56 / Build 70 — published 17 October 2026
+
+Supersedes the authorised/local checkpoints below. Diagnostic source commit
+`a3ab79186bbffa086903bbf82b2c1914d424251c`; version/tag commit
+`62838e235748b5ebdc986b529dc2ffd620b5f566`. Source CI
+[39074643490](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39074643490),
+version workflow [39074789623](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39074789623),
+exact-tag CI [39074866974](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39074866974)
+and upload [39075018472](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39075018472)
+all passed. Both validation runs passed **1012/1012 tests**, lint, release-boundary
+checks, zero-vulnerability dependency audit and Homey CLI 4.5.3 verified validation.
+Fresh local checks and versioned package validation also passed. The existing
+broader-API extended-review warning remains; no permission was added this wave.
+
+Build 70 archive readback matched **24 exact runtime/settings/locale/store-copy
+files**. The complete packaged manifest matches except Homey's author-email
+privacy filtering. Dual CT remains a custom-only read-only preview, without an
+Energy declaration; no new controls or public API routes were added. Archive
+SHA256: `a7fc8142e68908fecc066603c5321c07ca9d01f76116277d547cc85969adff5f`.
+
+Portal permanent-record reload and public listing confirm **Test v1.10.56 /
+Build 70**, observed by **2026-10-17 22:28 UTC**:
+[portal](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/70),
+[Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live remains **v1.10.3 / Build 18**. Local `master` remains
+`8bb4e468e9bcc510c28049ec4e89736ac2733879`; remote `master` remains
+`66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge or certification
+submission was made. No manual installed-host update, Flow activation, physical
+command or owner-hardware acceptance is claimed. No new Robert capture requested.
+
+The recovery fix, clearer source/access UX, endurance regressions and scope/API
+audits are included in this Test archive. Native upgrade/recovery and per-model
+hardware acceptance remain open; see RELEASE_CANDIDATE_CHECKLIST.md. New charging
+controls and Dual CT Energy activation remain disabled. Existing Flow identities
+and argument contracts, driver identities and energy accounting are preserved.
+
 ## Four release-hardening sprints — 17 October 2026, Test release AUTHORISED
 
 Owner now authorises committing/pushing this diagnostic wave, checking exact
