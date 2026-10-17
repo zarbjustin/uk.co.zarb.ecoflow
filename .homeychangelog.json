@@ -274,5 +274,8 @@
   },
   "1.10.55": {
     "en": "Add opt-in read-only battery coordination previews and observation Flow cards. Clarify circuit scopes and existing battery-limit wording. Reject stale or missing STREAM and dated solar-forecast readings while preserving existing Flow identities. No new charging controls or Dual CT Energy activation."
+  },
+  "1.10.56": {
+    "en": "Fix recovery after timed-out coordination reads, clarify source freshness and permission lifetimes, and strengthen lifecycle and release checks. Existing Flows are preserved; no new controls or Dual CT Energy activation."
   }
 }
