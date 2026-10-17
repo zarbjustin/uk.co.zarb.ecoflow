@@ -33,5 +33,10 @@
         "nl": "W"
       }
     }
-  ]
+  ],
+  "hint": {
+    "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+    "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+    "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+  }
 }

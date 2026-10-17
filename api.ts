@@ -5,6 +5,12 @@ import { createSupportSnapshot } from './lib/supportSnapshot';
 import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
+  async coordinationFlowMonitor({ homey, body }: { homey: any; body: any }): Promise<Record<string, any>> {
+    return homey.app.requestCoordinationFlowMonitor(body);
+  },
+  async coordinationWorkspace({ homey, body }: { homey: any; body: any }): Promise<Record<string, any>> {
+    return homey.app.requestCoordinationWorkspace(body);
+  },
   async startDualCtResearch({ homey, body }: { homey: any; body?: any }): Promise<Record<string, unknown>> {
     return homey.app.startDualCtResearch(body?.previewEnabled === true, body?.previewEnabled === true && body?.counterPreviewEnabled === true);
   },
@@ -25,6 +31,11 @@ module.exports = {
       now: Date.now(),
       manualOverride: input?.manualOverride,
       controllerConflict: input?.controllerConflict,
+      schemaVersion: input?.schemaVersion,
+      circuits: input?.circuits,
+      externalBattery: input?.externalBattery,
+      streamBattery: input?.streamBattery,
+      otherSourcesReviewed: input?.otherSourcesReviewed,
       bydSoc: input?.bydSoc,
       bydBatteryW: input?.bydBatteryW,
       streamBatteryW: input?.streamBatteryW,

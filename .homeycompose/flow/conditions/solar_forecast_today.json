@@ -58,5 +58,10 @@
         "nl": "Drempel voor zonne-energie"
       }
     }
-  ]
+  ],
+  "hint": {
+    "en": "Planning estimate, not measured generation. Requires a forecast less than six hours old for the correct Homey-local calendar date and current location/calibration. Missing or expired data stops evaluation, including inversion.",
+    "de": "Planungsprognose, keine gemessene Erzeugung. Erfordert eine weniger als sechs Stunden alte Prognose für das richtige lokale Homey-Datum und den aktuellen Standort/Kalibrierfaktor. Fehlende oder veraltete Daten stoppen auch die umgekehrte Bedingung.",
+    "nl": "Planningsschatting, geen gemeten opwek. Vereist een prognose jonger dan zes uur voor de juiste lokale Homey-datum en huidige locatie/kalibratie. Ontbrekende of verlopen gegevens stoppen ook de omgekeerde voorwaarde."
+  }
 }

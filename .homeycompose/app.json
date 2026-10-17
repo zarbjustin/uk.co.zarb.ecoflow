@@ -79,9 +79,18 @@
   },
   "brandColor": "#000000",
   "permissions": [
+    "homey:manager:api",
     "homey:manager:geolocation"
   ],
   "api": {
+    "coordinationFlowMonitor": {
+      "method": "POST",
+      "path": "/coordination-flow-monitor"
+    },
+    "coordinationWorkspace": {
+      "method": "POST",
+      "path": "/coordination-workspace"
+    },
     "dualCtResearchView": {
       "method": "GET",
       "path": "/dual-ct-research/view"

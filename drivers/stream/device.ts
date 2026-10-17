@@ -23,6 +23,8 @@ import { REPORTING_CAPABILITIES, ReportingObservation } from '../../lib/streamRe
 import { ReporterTimeline } from '../../lib/reporterTimeline';
 import { StreamCounterContinuity } from '../../lib/streamDiagnosticChecks';
 import { StreamLimitObservations } from '../../lib/streamLimitDiagnostics';
+import { LegacyFlowReadings, assertLegacyThreshold, legacyFlowValueValid } from '../../lib/legacyFlowReadings';
+import { ForecastFlowReadings, localForecastDay, sameForecastZone } from '../../lib/forecastFlowReadings';
 import {
   MONITORING_TRIAL_SETTING, MONITORING_TRIAL_STORE, MONITORING_TICK_MS, MONITORING_RESOLVE_MS,
   MONITORING_STATE_STORE, MONITORING_LOOKUP_DEADLINE_MS, readMonitoringState,
@@ -38,6 +40,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
   private reportingObservations: Record<string, ReportingObservation> = {};
   private limitObservations = new StreamLimitObservations();
+  private legacyFlowReadings = new LegacyFlowReadings();
+  private forecastFlowReadings = new ForecastFlowReadings();
+  private forecastGeneration = 0;
+  private forecastPending: Promise<void> | null = null;
+  private forecastSettingsTimer: NodeJS.Timeout | null = null;
 
   getLimitDiagnostics(): Record<string, unknown> {
     return this.limitObservations.snapshot();
@@ -101,6 +108,44 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
   }
 
+  private legacyFlowError(kind: 'readings' | 'arguments' | 'forecast'): Error {
+    const key = `legacy_flow.${kind}`;
+    const fallback = {
+      readings: 'Current, matching STREAM readings are unavailable or not time-coherent. Flow evaluation stopped, including when inverted.',
+      arguments: 'Use a supported comparison direction and a finite threshold in the card range.',
+      forecast: 'A recent forecast for the correct Homey-local date and current location/settings is unavailable. Flow evaluation stopped.',
+    };
+    const translated = this.homey.__?.(key);
+    return new Error(translated && translated !== key ? translated : fallback[kind]);
+  }
+
+  /** A cache value alone is not a receipt; unknown must reject, never become invertible false. */
+  assertFlowReadings(scope: 'core' | 'installation', caps: string[], coherent = false): void {
+    this.assertMonitoringCondition(scope);
+    if (this.isShuttingDown() || this.controlStopped) throw this.legacyFlowError('readings');
+    if (this.monitoringEnabled) {
+      if (!caps.every((cap) => legacyFlowValueValid(cap, this.getCapabilityValue(cap)))) throw this.legacyFlowError('readings');
+      return; // Existing selected-donor identity, freshness and application checks above remain authoritative.
+    }
+    if (typeof this.getAvailable === 'function' && !this.getAvailable()) throw this.legacyFlowError('readings');
+    try {
+      this.legacyFlowReadings.assert(caps, (cap) => this.getCapabilityValue(cap), coherent);
+    } catch {
+      throw this.legacyFlowError('readings');
+    }
+  }
+
+  reportedOperatingModeIs(mode: string): boolean {
+    this.assertFlowReadings('installation', ['operating_mode']);
+    if (!legacyFlowValueValid('operating_mode', mode)) throw this.legacyFlowError('arguments');
+    return this.getCapabilityValue('operating_mode') === mode;
+  }
+
+  reportedFeedInEnabled(): boolean {
+    this.assertFlowReadings('installation', ['feed_in_control']);
+    return this.getCapabilityValue('feed_in_control') === true;
+  }
+
   /** Widgets must not use failed capability writes or old installation flow tiles. */
   getRemainingTimeDiagnostics(): Record<string, unknown> {
     return this.monitoringEnabled || this.monitoringRollbackPending ? {} : super.getRemainingTimeDiagnostics();
@@ -152,6 +197,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private resetMonitoringTriggers(): void {
+    this.prevMode = undefined;
     this.prevSoc = undefined;
     this.prevBatteryDirection = undefined;
     this.prevPv = undefined;
@@ -420,6 +466,9 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onReady(): Promise<void> {
+    this.legacyFlowReadings = new LegacyFlowReadings();
+    this.forecastFlowReadings = new ForecastFlowReadings();
+    this.forecastGeneration += 1;
     this.limitObservations = new StreamLimitObservations();
     this.counterContinuity = new StreamCounterContinuity();
     await this.startLiveReadings('system');
@@ -509,38 +558,108 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Fetch a solar-yield forecast from Open-Meteo for Homey's location. */
   private startSolarForecast(): void {
+    this.forecastGeneration += 1;
+    this.forecastFlowReadings = new ForecastFlowReadings();
+    const generation = this.forecastGeneration;
     if (this.solarForecastTimer) this.homey.clearInterval(this.solarForecastTimer);
-    this.refreshSolarForecast().catch((e) => this.error('solar forecast', e));
+    const refresh = () => {
+      if (generation === this.forecastGeneration && !this.isShuttingDown()) this.refreshSolarForecast().catch(() => {});
+    };
+    if (this.forecastPending) this.forecastPending.catch(() => {}).then(refresh).catch(() => {});
+    else refresh();
     this.solarForecastTimer = this.homey.setInterval(() => {
-      this.refreshSolarForecast().catch((e) => this.error('solar forecast', e));
+      refresh();
     }, SOLAR_FORECAST_INTERVAL_MS);
   }
 
   private async refreshSolarForecast(): Promise<void> {
-    let lat: number;
-    let lon: number;
-    try {
-      lat = this.homey.geolocation.getLatitude();
-      lon = this.homey.geolocation.getLongitude();
-    } catch {
-      return; // geolocation unavailable
+    if (this.forecastPending) {
+      await this.forecastPending; return;
     }
-    if (typeof lat !== 'number' || typeof lon !== 'number') return;
-    const radiation = await fetchSolarRadiation(lat, lon);
-    const factor = Number(this.getSetting('solar_factor')) || 0.67;
-    const fc = toForecast(radiation, factor);
-    await this.applyForecastCapability('solar_forecast_today', fc.todayKwh);
-    await this.applyForecastCapability('solar_forecast_tomorrow', fc.tomorrowKwh);
+    const run = this.fetchAndApplySolarForecast();
+    this.forecastPending = run;
+    try {
+      await run;
+    } finally {
+      if (this.forecastPending === run) this.forecastPending = null;
+    }
   }
 
-  /** Add the forecast capability on demand (only when a value exists) and set it. */
-  private async applyForecastCapability(cap: string, value: number | null): Promise<void> {
-    if (value == null) return;
-    if (!this.hasCapability(cap)) await this.addCapability(cap).catch((e) => this.error(`add ${cap}`, e));
-    if (this.hasCapability(cap)) await this.setCapabilityValue(cap, value).catch(() => {});
+  private forecastContext(): { timeZone: string; factor: number; latitude: number; longitude: number; key: string } {
+    const timeZone = this.homey.clock.getTimezone();
+    const latitude = this.homey.geolocation.getLatitude();
+    const longitude = this.homey.geolocation.getLongitude();
+    const setting = this.getSetting('solar_factor');
+    const factor = setting == null ? 0.67 : Number(setting);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180
+      || !Number.isFinite(factor) || factor < 0.05 || factor > 5 || !sameForecastZone(timeZone, timeZone)) throw this.legacyFlowError('forecast');
+    return {
+      timeZone, factor, latitude, longitude, key: JSON.stringify([latitude, longitude, factor, timeZone]),
+    };
+  }
+
+  private async fetchAndApplySolarForecast(): Promise<void> {
+    const generation = this.forecastGeneration;
+    const receipts = this.forecastFlowReadings;
+    let context: { timeZone: string; factor: number; latitude: number; longitude: number; key: string };
+    // No host timezone fallback: dates must refer to Homey's configured installation.
+    try {
+      context = this.forecastContext();
+    } catch {
+      return;
+    }
+    const requestedAt = Date.now();
+    const requestDay = localForecastDay(requestedAt, context.timeZone);
+    const radiation = await fetchSolarRadiation(context.latitude, context.longitude, undefined, context.timeZone);
+    const active = () => !this.isShuttingDown() && generation === this.forecastGeneration && receipts === this.forecastFlowReadings;
+    if (!active() || this.forecastContext().key !== context.key || requestDay !== localForecastDay(Date.now(), context.timeZone)) return;
+    const { dates } = radiation;
+    const dated = sameForecastZone(radiation.timeZone, context.timeZone) && dates?.[0] === requestDay
+      && dates?.[1] === localForecastDay(requestedAt, context.timeZone, 1);
+    const fc = toForecast(radiation, context.factor);
+    for (const [cap, value, day, raw] of [
+      ['solar_forecast_today', fc.todayKwh, dates?.[0], radiation.today],
+      ['solar_forecast_tomorrow', fc.tomorrowKwh, dates?.[1], radiation.tomorrow],
+    ] as const) {
+      if (!active()) return;
+      receipts.invalidate(cap);
+      const valid = dated && typeof raw === 'number' && raw >= 0 && typeof value === 'number' && Number.isFinite(value) && value >= 0;
+      if (!this.hasCapability(cap) && valid) await this.addCapability(cap).catch(() => {});
+      if (!active()) return;
+      if (!this.hasCapability(cap)) continue;
+      try {
+        await this.setCapabilityValue(cap, valid ? value : null);
+        if (!active() || this.forecastContext().key !== context.key) return;
+        if (valid) receipts.observe(cap, value, this.getCapabilityValue(cap), requestedAt, day, context.timeZone, context.key);
+      } catch {
+        receipts.invalidate(cap); /* Failed writes never bless cached values. */
+      }
+    }
+  }
+
+  solarForecastIs(day: 'today' | 'tomorrow', direction: 'above' | 'below', kwh: number): boolean {
+    if (!['today', 'tomorrow'].includes(day) || this.isShuttingDown() || this.controlStopped
+      || this.getSetting('solar_forecast') === false) throw this.legacyFlowError('forecast');
+    try {
+      assertLegacyThreshold(direction, kwh, 200);
+    } catch {
+      throw this.legacyFlowError('arguments');
+    }
+    const cap = `solar_forecast_${day}`;
+    try {
+      const context = this.forecastContext();
+      this.forecastFlowReadings.assert(cap, this.getCapabilityValue(cap), context.timeZone, context.key);
+    } catch {
+      throw this.legacyFlowError('forecast');
+    }
+    return aboveBelow(this.getCapabilityValue(cap), direction, kwh);
   }
 
   private stopSolarForecast(remove: boolean): void {
+    this.forecastGeneration += 1;
+    this.forecastFlowReadings = new ForecastFlowReadings();
+    if (this.forecastSettingsTimer) this.homey.clearTimeout(this.forecastSettingsTimer);
+    this.forecastSettingsTimer = null;
     if (this.solarForecastTimer) {
       this.homey.clearInterval(this.solarForecastTimer);
       this.solarForecastTimer = null;
@@ -637,9 +756,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         write: (payload) => this.writeQuota(payload),
         wait: () => this.waitForControlReadback(),
         observed: async (state) => {
+          const receipts = this.legacyFlowReadings;
           for (const [key, value] of Object.entries(state)) {
             if (!active()) return;
-            if (this.hasCapability(key)) await this.setCapabilityValue(key, value);
+            if (this.hasCapability(key)) {
+              await this.setCapabilityValue(key, value);
+              if (active() && receipts === this.legacyFlowReadings) receipts.observe(key, value, this.getCapabilityValue(key), Date.now());
+            }
           }
         },
       });
@@ -684,6 +807,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (online) {
       if (!this.getAvailable()) await this.setAvailable().catch(() => {});
     } else {
+      this.legacyFlowReadings = new LegacyFlowReadings();
+      this.resetMonitoringTriggers();
       await this.setUnavailable(message || 'Device offline').catch(() => {});
     }
     if (this.prevOnline !== undefined && online !== this.prevOnline) {
@@ -694,11 +819,20 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    const flowReceipts = this.legacyFlowReadings;
     this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
     if (!this.monitoringEnabled && !this.monitoringRollbackPending) await this.applyRemainingTime(quota, context);
     const receivedAt = context?.receivedAt ?? Date.now();
     this.counterContinuity.observe(quota, receivedAt);
     const values = mapStreamQuota(quota);
+    if (!this.monitoringEnabled && flowReceipts === this.legacyFlowReadings) {
+      if (Object.keys(quota).some((key) => key.startsWith('energyStrategyOperateMode.')) && values.operating_mode === undefined) {
+        flowReceipts.observe('operating_mode', undefined, undefined, receivedAt);
+      }
+      if (Object.prototype.hasOwnProperty.call(quota, 'feedGridMode') && values.feed_in_control === undefined) {
+        flowReceipts.observe('feed_in_control', undefined, undefined, receivedAt);
+      }
+    }
     delete values.charge_remaining;
     delete values.discharge_remaining;
     for (const key of REPORTING_CAPABILITIES) {
@@ -728,20 +862,31 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       delete values.battery_charging_state;
     }
     let coreWriteFailed = false;
+    const recordFlow = (cap: string, value: unknown) => {
+      if (flowReceipts === this.legacyFlowReadings && !this.isShuttingDown() && !this.monitoringEnabled) {
+        flowReceipts.observe(cap, value, this.getCapabilityValue(cap), receivedAt);
+      }
+    };
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
       if (this.isLiveReading(cap)) {
         const applied = await this.applyLiveReading(cap, value, receivedAt);
         if (!applied) {
+          flowReceipts.invalidate(cap);
           delete values[cap];
           if (cap === 'measure_power') coreWriteFailed = true;
         }
+        if (applied) recordFlow(cap, value);
         continue;
       }
-      if (this.getCapabilityValue(cap) === value) continue;
+      if (this.getCapabilityValue(cap) === value) {
+        recordFlow(cap, value); continue;
+      }
       try {
         await this.setCapabilityValue(cap, value);
+        recordFlow(cap, value);
       } catch (e) {
+        flowReceipts.invalidate(cap);
         if (cap === 'measure_battery' || cap === 'measure_power') coreWriteFailed = true;
         this.error(`setCapabilityValue ${cap}`, e);
       }
@@ -981,18 +1126,23 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   solarPowerIs(direction: 'above' | 'below', watts: number): boolean {
+    try {
+      assertLegacyThreshold(direction, watts, 10000);
+    } catch {
+      throw this.legacyFlowError('arguments');
+    }
     if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) return false;
     return aboveBelow(this.getCapabilityValue('measure_power.pv'), direction, watts);
   }
 
-  /** True when the battery is charging from surplus solar (PV exceeds home load). */
+  /** Observed charging with PV above reported load; never proves the energy's origin. */
   isChargingFromSolar(): boolean {
     if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) return false;
     const batt = this.getCapabilityValue('measure_power');
     const pv = this.getCapabilityValue('measure_power.pv');
     const load = this.getCapabilityValue('measure_power.load');
-    if (typeof batt !== 'number' || typeof pv !== 'number') return false;
-    const surplus = pv - (typeof load === 'number' ? load : 0);
+    if (![batt, pv, load].every((value) => typeof value === 'number' && Number.isFinite(value))) return false;
+    const surplus = pv - load;
     return batt > 5 && surplus > 5;
   }
 
@@ -1088,6 +1238,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Battery SoC condition helper. */
   batterySocIs(direction: 'above' | 'below', level: number): boolean {
+    try {
+      assertLegacyThreshold(direction, level, 100);
+    } catch {
+      throw this.legacyFlowError('arguments');
+    }
     if (!this.monitoringConditionReady()) return false;
     const soc = this.getCapabilityValue('measure_battery') as number;
     if (typeof soc !== 'number') return false;
@@ -1108,8 +1263,20 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       if (newSettings.enable_history !== false) this.startHistory();
     }
     if (changedKeys.includes('solar_forecast') || changedKeys.includes('solar_factor')) {
-      if (newSettings.solar_forecast !== false) this.startSolarForecast();
-      else this.stopSolarForecast(true);
+      this.stopSolarForecast(newSettings.solar_forecast === false);
+      if (newSettings.solar_forecast !== false) {
+        // onSettings runs before the SDK commits new settings. Never stamp old calibration as new.
+        const generation = this.forecastGeneration;
+        let attempts = 0;
+        const afterCommit = () => {
+          this.forecastSettingsTimer = null;
+          if (this.isShuttingDown() || generation !== this.forecastGeneration) return;
+          const ready = ['solar_forecast', 'solar_factor'].every((key) => newSettings[key] === undefined || this.getSetting(key) === newSettings[key]);
+          if (ready) this.startSolarForecast();
+          else if (++attempts < 8) this.forecastSettingsTimer = this.homey.setTimeout(afterCommit, 250);
+        };
+        this.forecastSettingsTimer = this.homey.setTimeout(afterCommit, 0);
+      }
     }
   }
 
@@ -1117,6 +1284,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (this.monitoringSettingsCount >= 4) throw new Error('Too many pending monitoring changes; wait before retrying.');
     this.monitoringSettingsCount += 1;
     this.controlGeneration += 1; // Block/cancel commands before awaiting validation or persistence.
+    this.legacyFlowReadings = new LegacyFlowReadings();
     const session = this.monitoringSession;
     const checkSession = () => {
       if (this.isShuttingDown() || session !== this.monitoringSession) throw new Error('Monitoring change cancelled.');
@@ -1181,6 +1349,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.legacyFlowReadings = new LegacyFlowReadings();
+    this.forecastGeneration += 1;
+    this.forecastFlowReadings = new ForecastFlowReadings();
+    if (this.forecastSettingsTimer) this.homey.clearTimeout(this.forecastSettingsTimer);
+    this.forecastSettingsTimer = null;
     this.limitObservations = new StreamLimitObservations();
     this.stopLiveReadings();
     this.stopRemainingTime();

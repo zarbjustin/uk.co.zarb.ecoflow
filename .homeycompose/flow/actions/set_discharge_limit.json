@@ -1,14 +1,14 @@
 {
   "id": "set_discharge_limit",
   "title": {
-    "en": "Set discharge limit",
-    "de": "Entladegrenze festlegen",
-    "nl": "Ontlaadlimiet instellen"
+    "en": "Set minimum discharge level (%)",
+    "de": "Minimalen Entladestand festlegen (%)",
+    "nl": "Minimaal ontlaadniveau instellen (%)"
   },
   "titleFormatted": {
-    "en": "Set discharge limit to [[level]]%",
-    "de": "Entladegrenze auf [[level]]% setzen",
-    "nl": "Ontlaadlimiet instellen op [[level]]%"
+    "en": "Set minimum discharge level to [[level]]%",
+    "de": "Minimalen Entladestand auf [[level]]% setzen",
+    "nl": "Minimaal ontlaadniveau instellen op [[level]]%"
   },
   "args": [
     {
@@ -30,5 +30,10 @@
       "label": "%",
       "labelDecimals": 0
     }
-  ]
+  ],
+  "hint": {
+    "en": "Lower battery SOC limit, not discharge watts and not a command to force discharge. Existing reserve constraints and EcoFlow operating rules still apply.",
+    "de": "Untere SOC-Grenze der Batterie, keine Entladeleistung und kein erzwungenes Entladen. Bestehende Reservegrenzen und EcoFlow-Betriebsregeln gelten weiterhin.",
+    "nl": "Ondergrens van batterij-SOC, geen ontlaadvermogen of opdracht om ontladen te forceren. Bestaande reservegrenzen en EcoFlow-bedrijfsregels blijven gelden."
+  }
 }

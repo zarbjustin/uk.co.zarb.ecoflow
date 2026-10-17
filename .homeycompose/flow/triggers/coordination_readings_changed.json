@@ -1,0 +1,33 @@
+{
+  "id": "coordination_readings_changed",
+  "title": {
+    "en": "Selected coordination readings availability changed",
+    "de": "Verfügbarkeit gewählter Koordinationswerte geändert",
+    "nl": "Beschikbaarheid van geselecteerde coördinatiewaarden gewijzigd"
+  },
+  "hint": {
+    "en": "Available means current capability timestamps, not verified hardware freshness. This is not an instruction to charge.",
+    "de": "Verfügbar bedeutet aktuelle Zeitstempel der Messwerte, keine bestätigte Hardware-Aktualität. Dies ist keine Ladeanweisung.",
+    "nl": "Beschikbaar betekent actuele tijdstempels van waarden, niet bewezen actuele hardwaremetingen. Dit is geen opdracht om te laden."
+  },
+  "tokens": [
+    {
+      "name": "availability",
+      "type": "string",
+      "title": {
+        "en": "Availability code",
+        "de": "Verfügbarkeitscode",
+        "nl": "Beschikbaarheidscode"
+      }
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "title": {
+        "en": "Reason code",
+        "de": "Begründungscode",
+        "nl": "Redencode"
+      }
+    }
+  ]
+}

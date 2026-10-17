@@ -1,0 +1,13 @@
+{
+  "id": "coordination_external_priority",
+  "title": {
+    "en": "External battery priority is satisfied",
+    "de": "Vorrang der externen Batterie ist erfüllt",
+    "nl": "Prioriteit van de externe batterij is voldaan"
+  },
+  "hint": {
+    "en": "Uses the observation session's SOC start/stop thresholds and a ±20 W battery-power deadband. It requires the external battery to be neither actively charging nor discharging. Unavailable readings stop evaluation.",
+    "de": "Verwendet die SOC-Start-/Stoppschwellen der Sitzung und ±20 W Leistungstoleranz. Die externe Batterie darf weder aktiv laden noch entladen. Nicht verfügbare Werte stoppen die Auswertung.",
+    "nl": "Gebruikt de SOC-start-/stopdrempels van de sessie en een vermogensmarge van ±20 W. De externe batterij mag niet actief laden of ontladen. Niet-beschikbare waarden stoppen de evaluatie."
+  }
+}

@@ -2,6 +2,155 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Consolidated coordination / legacy reliability — 17 October 2026, Test release AUTHORISED
+
+Owner authorises committing and pushing the accumulated diagnostic changes,
+checking exact CI, and publishing a consolidated Test build. Mainline and Live
+must remain unchanged. The four local checkpoints below describe implementation
+history, not the final publication state. All 993 local tests, lint, dependency
+audit (zero vulnerabilities), diff checks and sequential Homey CLI 4.5.3 verified
+validation passed. Current source still requires remote CI and portal readback.
+
+This adds explicit circuit scopes, an opt-in selected-source advisory workspace,
+six observation-only WHEN/AND cards with separate temporary monitoring consent,
+and original-STREAM/forecast Flow reliability and wording fixes. Existing Flow
+identities and argument contracts are preserved. The prepared broader Homey API
+permission requires additional store review; implementation reads are fenced and
+default-off. No new THEN actions, control activation, Dual CT Energy adoption,
+installed-host update or hardware acceptance is authorised or claimed. Known
+Dual CT candidate-preview capabilities cannot feed the new observation monitor.
+No further Robert captures are requested.
+
+## Legacy card reliability / wording — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised diagnostic-only implementation, preserving the earlier local
+coordination changes below. Existing original-STREAM Flow listeners now reject
+unknown/stale/mismatched inputs, including inversions, using per-field applied
+receipt checks. Solar/load inference requires all three coherent observations;
+missing load is no longer zero and its wording no longer promises solar origin.
+Reported mode/feed-in and percentage-limit/export-permission wording is clearer.
+Existing card IDs, argument contracts, dropdown values, tokens and driver targets
+are preserved; no user Flow was changed. Invalid inputs now stop deliberately.
+
+Forecast cards require the correct provider-labelled Homey-local date/timezone,
+matching location/calibration, successful application and receipt age under six
+hours. Midnight/DST, restart, changed settings, malformed/missing data, failed
+writes and late responses cannot qualify a cached forecast. Pending requests
+coalesce; settings changes wait for actual SDK commit before weather refetch.
+Original receipt and reconnect baselines reset without changing energy accounting
+or broadening control commands. See LEGACY_FLOW_RELIABILITY.md for limits.
+
+No new cards/commands/permissions/Energy paths in these sprints. No installed
+device access, Robert capture request, commit/push, CI, version bump or Test
+publication. Mainline/Live remain untouched; earlier local work is retained.
+Final local checks: **993/993 tests** (17 new legacy/forecast regressions), lint
+clean, dependency audit 0 vulnerabilities and clean diff checks. Homey CLI 4.5.3
+verified validation passes with the pre-existing broader-API review warning;
+validation is run sequentially after the final tests. A pinned, public-metadata
+v1.10.54 Flow-contract fixture avoids reliance on mutable HEAD or Git history
+in CI. Existing arguments and identities are exact, not merely resolvable.
+No installed Flow/hardware acceptance, CI run or publication is claimed.
+
+## Coordination Flow observation sprints 1/2 — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised local implementation on the diagnostic branch, preserving the
+uncommitted source-workspace/advisory changes below. Six new app-level WHEN/AND
+cards cover advisory state/availability transitions, current coherent readings,
+external-battery priority, sustained grid export and explicit-role branch power.
+No THEN action, charging control, new device/capability or Energy adoption.
+
+The separate opt-in settings controls start a RAM-only 30-minute observation
+lease. Polls read only selected devices, about every 15 seconds, with ten-second
+deadlines. No automatic start/restore/renewal; closing the page does not stop
+this explicitly separate session. Stop, saved-source/account changes, restart
+or expiry revoke it. Server revisions prevent delayed Starts undoing Stop.
+Timestamp/contract/coherence checks, bounded advancing-observation histories,
+internal advisory state, stale expiry and reconnect resets prevent cached or
+caller-forged dwell. Unknown conditions reject even when inverted. Known Dual CT
+candidate-preview sources remain blocked; selecting them does not enable their
+Flow automation. Hardware freshness/solar origin are never claimed verified.
+
+See COORDINATION_FLOW_OBSERVATIONS.md for card IDs, consent warnings (events may
+run existing user THEN actions), exact limits and acceptance gates. No captures
+requested, no installed Homey/API activation, CI, commit/push, version bump or
+publication. Mainline/Live and published Test v1.10.54 / Build 68 are unchanged
+by this work. Final local verification: **976/976 tests** (17 new Flow/lifecycle
+and settings regressions), lint clean, dependency audit 0 vulnerabilities and
+diff checks clean. Homey CLI 4.5.3 verified validation passes with the expected
+broad-API-permission review warning; checks run sequentially after tests.
+Semantic manifest comparison confirms exactly six new WHEN/AND cards and the
+private monitor route, alongside the earlier workspace route/permission only.
+Version, existing actions/Flow cards, drivers, capabilities and Energy declarations
+are unchanged. Browser tests cover desktop/mobile with synthetic sources; no
+installed-host, real Flow scheduling or vendor hardware acceptance is claimed.
+
+## Coordination sprints 1/2 — 17 October 2026, LOCAL / UNPUBLISHED
+
+Supersedes the local advisory-only checkpoint below. On the diagnostic branch,
+the visible EN/DE/NL settings workspace and explicit selected-source bindings
+are implemented locally. Cross-app `homey:manager:api` permission preparation
+was explicitly approved, but nothing was installed or activated. Permission is
+broad; the implementation uses only fixed local GET routes, no new dependency,
+no automatic polling and no controls/Flow actions/Energy activation.
+
+Owner consent and individual reads are explicit. The local picker projects
+metadata; saved configuration contains bindings only. Selected capabilities are
+checked for numeric type, W/kW/% units, signs, source identity and availability.
+Capability `lastUpdated`, not read time, determines conservative 60-second
+expiry; it is not a verified hardware heartbeat. Source edits reset all review
+confirmations, data gaps/source/session changes reset advice, and opt-out/hidden
+page/shutdown/session expiry revoke access and discard late results. See
+COORDINATION_SOURCE_WORKSPACE.md for the precise permission, scope and timing
+limits. Synthetic browser/HTTP tests are not multivendor hardware acceptance.
+
+No commit/push, CI, version bump, Test upload or publication was undertaken.
+Mainline and Live remain unchanged; published Test baseline remains the recorded
+v1.10.54 / Build 68. Existing driver capabilities, Flow and Energy declarations
+are unchanged. Final local verification: **959/959 tests** (14 new workspace
+regressions in addition to the 20 advisory cases below), lint clean, dependency
+audit 0 vulnerabilities and diff checks clean. Homey CLI 4.5.3 verified validation
+passed after the tests, sequentially. Manifest comparison confirms only the
+approved permission and private workspace route changed; package dependencies,
+version, drivers, capabilities, Flow and Energy declarations are unchanged.
+Desktop/mobile and local HTTP checks use synthetic fixtures, not installed-host
+or owner-hardware acceptance. Refreshed remote diagnostic/mainline refs are
+unchanged from the starting checkpoint.
+
+## Circuit roles / external-battery advisory — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised local diagnostic-branch implementation and regression tests.
+Mainline/Live remain unchanged. No commit/push/version/publication or hardware
+control; the published Test baseline remains v1.10.54 / Build 68 below.
+
+Shared circuit-role semantics now distinguish whole-installation grid exchange,
+solar-only branch, hybrid solar+battery exchange and load branch. Existing Dual
+CT settings/IDs/labels remain compatible and display-only. No role auto-verifies
+telemetry, adopts an Energy source, or infers external-battery SOC/power.
+
+The stateless authenticated `/coordination-preview` adds a v2 caller-input path
+for generic external batteries (including Fronius/BYD or Solis), explicit grid
+scope/direction and optional secondary circuit. P1-only grid observation remains
+supported. Separate battery power/SOC is mandatory; branch/battery power is never
+added to grid export to manufacture surplus. External-battery priority, flow
+conflicts, individually fresh/coherent readings, source/site/session bindings,
+advancing power observations, sustained export, hysteresis and cooldown are
+evaluated for advice only. Role/source/policy changes and data gaps reset advice.
+Legacy SOC-only callers explicitly remain `surplusAssessed: false`.
+
+All command/Energy/solar-origin flags stay false. Existing driver does not call
+the new advisory. Caller assertions/state are not independently trusted command
+authority. No device data is fetched, persisted, exported or sent; no Robert
+message or new capture request. See STREAM_COORDINATION_PREVIEW.md for schema
+and conservative limitations; STREAM_EXTERNAL_BATTERY_ROADMAP.md defines the
+visible rehearsal, source-binding, control-contract research, owner-hardware
+commissioning and separately approved Flow/parallel Energy sprints.
+
+Final local test/lint/audit checks: **945/945 tests** (20 new regression cases),
+lint clean, dependency audit 0 vulnerabilities and diff checks clean. Version,
+all driver/capability/Flow/permission manifests and Energy declarations unchanged.
+Homey CLI 4.5.3 verified validation passed after the final tests, run sequentially.
+No CI run, commit/push, publication, installed-host or physical validation claim.
+
 ## Test v1.10.54 / Build 68 — published 17 October 2026
 
 Supersedes the authorised/local checkpoints below. Diagnostic-only source

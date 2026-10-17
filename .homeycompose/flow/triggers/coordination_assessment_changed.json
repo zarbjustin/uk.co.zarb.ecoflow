@@ -1,0 +1,33 @@
+{
+  "id": "coordination_assessment_changed",
+  "title": {
+    "en": "Read-only coordination assessment changed",
+    "de": "Schreibgeschützte Koordinationsbewertung geändert",
+    "nl": "Alleen-lezen coördinatiebeoordeling gewijzigd"
+  },
+  "hint": {
+    "en": "Requires separate Flow-monitoring opt-in. Tokens describe observations, not permission to charge. A trigger may run your existing THEN actions.",
+    "de": "Erfordert eine separate Zustimmung zur Flow-Beobachtung. Tokens beschreiben Beobachtungen, keine Ladefreigabe. Der Auslöser kann vorhandene DANN-Aktionen starten.",
+    "nl": "Vereist aparte toestemming voor Flow-monitoring. Tokens beschrijven waarnemingen, geen toestemming om te laden. Deze trigger kan bestaande DAN-acties starten."
+  },
+  "tokens": [
+    {
+      "name": "state",
+      "type": "string",
+      "title": {
+        "en": "Assessment state",
+        "de": "Bewertungsstatus",
+        "nl": "Beoordelingsstatus"
+      }
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "title": {
+        "en": "Reason code",
+        "de": "Begründungscode",
+        "nl": "Redencode"
+      }
+    }
+  ]
+}

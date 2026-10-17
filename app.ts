@@ -10,6 +10,8 @@ import { DualCtResearch } from './lib/dualCtResearch';
 import { mergeDualCtInventory, probeDualCtDeveloper, dualCtInventorySummary } from './lib/dualCtSources';
 import { EcoFlowClient } from './lib/EcoFlowClient';
 import { EcoFlowDevice } from './lib/types';
+import { CoordinationWorkspace, createHomeyCoordinationReader } from './lib/coordinationWorkspace';
+import { CoordinationFlowMonitor } from './lib/coordinationFlowMonitor';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -31,7 +33,25 @@ module.exports = class EcoFlowApp extends Homey.App {
   private readonly streamDiscovery = new StreamDiscoveryInventory();
   private dualCtResearch: DualCtResearch | null = null;
   private dualCtCaptureId: string | null = null;
+  private coordinationWorkspace: CoordinationWorkspace | null = null;
+  private coordinationFlowMonitor: CoordinationFlowMonitor | null = null;
+  private coordinationFlowRevision = 0;
   private readonly settingsHandler = (key: string) => this.onSettingChanged(key);
+
+  async requestCoordinationWorkspace(body: any): Promise<Record<string, any>> {
+    if (this.stopping) {
+      return {
+        state: 'blocked',
+        reason: 'session_expired',
+        advisoryOnly: true,
+        controlsEnabled: false,
+        contributesToEnergy: false,
+        commandWrites: 0,
+      };
+    }
+    if (!this.coordinationWorkspace) this.coordinationWorkspace = new CoordinationWorkspace(() => createHomeyCoordinationReader(this.homey));
+    return this.coordinationWorkspace.request(body);
+  }
 
   async onInit(): Promise<void> {
     this.stopping = false;
@@ -46,6 +66,22 @@ module.exports = class EcoFlowApp extends Homey.App {
       this.homey.flow.getConditionCard('stream_5000_reserve_enabled').registerRunListener(
         (args: any) => args.device.configurationReserveEnabled(),
       );
+      for (const [id, kind] of Object.entries({
+        coordination_readings_current: 'current',
+        coordination_external_priority: 'priority',
+        coordination_grid_export_sustained: 'export',
+        coordination_circuit_power_sustained: 'circuit',
+      })) {
+        this.homey.flow.getConditionCard(id).registerRunListener(async (args: any) => {
+          try {
+            if (!this.coordinationFlowMonitor) throw new Error('unavailable');
+            return this.coordinationFlowMonitor.condition(kind, args);
+          } catch {
+            // Reject, do not resolve false: inverted conditions must not turn missing data into permission.
+            throw new Error(this.homey.__('coordination.flow_condition_error'));
+          }
+        });
+      }
     }
     this.homey.settings.on('set', this.settingsHandler);
     // Removing the app-connected STREAM account is an 'unset', not a 'set' — the
@@ -56,6 +92,10 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   private onSettingChanged(key: string): void {
     if (this.stopping) return;
+    if (['streamCoordinationBindingsV1', ...APP_AUTH_SETTINGS, 'accessKey', 'secretKey', 'host'].includes(key)) {
+      this.coordinationFlowRevision += 1;
+      this.coordinationFlowMonitor?.stop('monitor_sources_changed');
+    }
     if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
       this.dualCtResearch?.stop('account_changed', true);
       if (this.settingsTimer) this.homey.clearTimeout(this.settingsTimer);
@@ -96,6 +136,9 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onUninit(): Promise<void> {
     this.stopping = true;
+    this.coordinationFlowRevision += 1;
+    this.coordinationFlowMonitor?.shutdown();
+    this.coordinationWorkspace?.stop();
     this.dualCtResearch?.stop('stopped', true);
     this.streamDiscovery.clear();
     this.homey.settings.removeListener('set', this.settingsHandler);
@@ -111,6 +154,36 @@ module.exports = class EcoFlowApp extends Homey.App {
     await this.appMqtt?.end().catch(() => {});
     this.appMqtt = null;
     this.appMqttCredsKey = '';
+  }
+
+  requestCoordinationFlowMonitor(body: any): Record<string, any> {
+    if (body?.action === 'stop') {
+      this.coordinationFlowRevision += 1; this.coordinationFlowMonitor?.stop();
+    } else if (body?.action === 'start') {
+      if (this.stopping) throw new Error('coordination_flow_stopped');
+      if (body.expectedRevision !== this.coordinationFlowRevision) throw new Error('coordination_flow_setup_changed');
+      this.coordinationFlowRevision += 1;
+      if (!this.coordinationFlowMonitor) {
+        this.coordinationFlowMonitor = new CoordinationFlowMonitor(() => createHomeyCoordinationReader(this.homey), (event, tokens) => {
+          try {
+            this.homey.flow.getTriggerCard(event).trigger(tokens).catch(() => {});
+          } catch { /* No telemetry/provider error logging. */ }
+        }, { now: () => Date.now(), set: (fn, ms) => this.homey.setTimeout(fn, ms), clear: (timer) => this.homey.clearTimeout(timer) });
+      }
+      return { ...this.coordinationFlowMonitor.start(body), revision: this.coordinationFlowRevision };
+    } else if (body?.action !== 'status') throw new Error('coordination_flow_unsupported_action');
+    return {
+      ...(this.coordinationFlowMonitor?.status() || {
+        active: false,
+        state: 'disabled',
+        reason: 'monitor_disabled',
+        advisoryOnly: true,
+        controlsEnabled: false,
+        contributesToEnergy: false,
+        commandWrites: 0,
+      }),
+      revision: this.coordinationFlowRevision,
+    };
   }
 
   private getCredentials(): { accessKey?: string; secretKey?: string; host?: string } {

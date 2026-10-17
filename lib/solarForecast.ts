@@ -7,6 +7,9 @@ export interface SolarRadiation {
   today: number | null;
   /** shortwave_radiation_sum for tomorrow (MJ/m²), or null. */
   tomorrow: number | null;
+  /** Provider-labelled calendar days and IANA zone, when supplied. Required by Flow freshness guards. */
+  dates?: string[];
+  timeZone?: string;
 }
 
 export interface SolarForecast {
@@ -30,7 +33,14 @@ export function parseRadiation(json: any): SolarRadiation {
   const arr = json?.daily?.shortwave_radiation_sum;
   const num = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
   if (!Array.isArray(arr)) return { today: null, tomorrow: null };
-  return { today: num(arr[0]), tomorrow: num(arr[1]) };
+  const result: SolarRadiation = { today: num(arr[0]), tomorrow: num(arr[1]) };
+  const dates = json?.daily?.time;
+  if (Array.isArray(dates) && dates.length >= 2 && dates.slice(0, 2).every((value: unknown) => typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value)) {
+    result.dates = dates.slice(0, 2);
+  }
+  if (typeof json?.timezone === 'string') result.timeZone = json.timezone;
+  return result;
 }
 
 /** Build a forecast (kWh) from radiation + calibration factor. */
@@ -67,12 +77,13 @@ export async function fetchSolarRadiation(
   latitude: number,
   longitude: number,
   getJson: (url: string) => Promise<any> = defaultGetJson,
+  timeZone = 'auto',
 ): Promise<SolarRadiation> {
   const lat = Number(latitude);
   const lon = Number(longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { today: null, tomorrow: null };
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}`
-    + `&longitude=${lon.toFixed(4)}&daily=shortwave_radiation_sum&timezone=auto&forecast_days=2`;
+    + `&longitude=${lon.toFixed(4)}&daily=shortwave_radiation_sum&timezone=${encodeURIComponent(timeZone)}&forecast_days=2`;
   const json = await getJson(url);
   return parseRadiation(json);
 }

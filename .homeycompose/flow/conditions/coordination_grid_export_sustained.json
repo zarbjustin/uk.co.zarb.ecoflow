@@ -1,0 +1,44 @@
+{
+  "id": "coordination_grid_export_sustained",
+  "title": {
+    "en": "Observed grid export is sustained above a threshold",
+    "de": "Beobachtete Netzeinspeisung liegt anhaltend über einer Schwelle",
+    "nl": "Waargenomen netexport blijft boven een drempel"
+  },
+  "titleFormatted": {
+    "en": "Observed grid export exceeds [[watts]] W for [[seconds]] seconds",
+    "de": "Beobachtete Netzeinspeisung übersteigt [[watts]] W für [[seconds]] Sekunden",
+    "nl": "Waargenomen netexport is hoger dan [[watts]] W gedurende [[seconds]] seconden"
+  },
+  "hint": {
+    "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+    "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+    "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+  },
+  "args": [
+    {
+      "name": "watts",
+      "type": "number",
+      "title": {
+        "en": "Power threshold (W)",
+        "de": "Leistungsschwelle (W)",
+        "nl": "Vermogensdrempel (W)"
+      },
+      "min": 21,
+      "max": 100000,
+      "step": 1
+    },
+    {
+      "name": "seconds",
+      "type": "number",
+      "title": {
+        "en": "Observed duration (seconds)",
+        "de": "Beobachtete Dauer (Sekunden)",
+        "nl": "Waargenomen duur (seconden)"
+      },
+      "min": 1,
+      "max": 1800,
+      "step": 1
+    }
+  ]
+}

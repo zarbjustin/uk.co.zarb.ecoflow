@@ -80,9 +80,18 @@
   },
   "brandColor": "#000000",
   "permissions": [
+    "homey:manager:api",
     "homey:manager:geolocation"
   ],
   "api": {
+    "coordinationFlowMonitor": {
+      "method": "POST",
+      "path": "/coordination-flow-monitor"
+    },
+    "coordinationWorkspace": {
+      "method": "POST",
+      "path": "/coordination-workspace"
+    },
     "dualCtResearchView": {
       "method": "GET",
       "path": "/dual-ct-research/view"
@@ -240,6 +249,72 @@
               "nl": "Batterijvermogen"
             },
             "example": 800
+          }
+        ]
+      },
+      {
+        "id": "coordination_assessment_changed",
+        "title": {
+          "en": "Read-only coordination assessment changed",
+          "de": "Schreibgeschützte Koordinationsbewertung geändert",
+          "nl": "Alleen-lezen coördinatiebeoordeling gewijzigd"
+        },
+        "hint": {
+          "en": "Requires separate Flow-monitoring opt-in. Tokens describe observations, not permission to charge. A trigger may run your existing THEN actions.",
+          "de": "Erfordert eine separate Zustimmung zur Flow-Beobachtung. Tokens beschreiben Beobachtungen, keine Ladefreigabe. Der Auslöser kann vorhandene DANN-Aktionen starten.",
+          "nl": "Vereist aparte toestemming voor Flow-monitoring. Tokens beschrijven waarnemingen, geen toestemming om te laden. Deze trigger kan bestaande DAN-acties starten."
+        },
+        "tokens": [
+          {
+            "name": "state",
+            "type": "string",
+            "title": {
+              "en": "Assessment state",
+              "de": "Bewertungsstatus",
+              "nl": "Beoordelingsstatus"
+            }
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason code",
+              "de": "Begründungscode",
+              "nl": "Redencode"
+            }
+          }
+        ]
+      },
+      {
+        "id": "coordination_readings_changed",
+        "title": {
+          "en": "Selected coordination readings availability changed",
+          "de": "Verfügbarkeit gewählter Koordinationswerte geändert",
+          "nl": "Beschikbaarheid van geselecteerde coördinatiewaarden gewijzigd"
+        },
+        "hint": {
+          "en": "Available means current capability timestamps, not verified hardware freshness. This is not an instruction to charge.",
+          "de": "Verfügbar bedeutet aktuelle Zeitstempel der Messwerte, keine bestätigte Hardware-Aktualität. Dies ist keine Ladeanweisung.",
+          "nl": "Beschikbaar betekent actuele tijdstempels van waarden, niet bewezen actuele hardwaremetingen. Dit is geen opdracht om te laden."
+        },
+        "tokens": [
+          {
+            "name": "availability",
+            "type": "string",
+            "title": {
+              "en": "Availability code",
+              "de": "Verfügbarkeitscode",
+              "nl": "Beschikbaarheidscode"
+            }
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason code",
+              "de": "Begründungscode",
+              "nl": "Redencode"
+            }
           }
         ]
       },
@@ -659,24 +734,29 @@
               "nl": "%"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "charging_from_solar",
         "title": {
-          "en": "Battery !{{is|is not}} charging from solar",
-          "de": "Batterie !{{is|is not}} per Solar am Laden",
-          "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+          "en": "Charging with PV above home load !{{is|is not}} observed",
+          "de": "Laden bei PV über Hausverbrauch !{{wird|wird nicht}} beobachtet",
+          "nl": "Laden met PV boven huisverbruik !{{wordt|wordt niet}} waargenomen"
         },
         "titleFormatted": {
-          "en": "Battery !{{is|is not}} charging from solar",
-          "de": "Batterie !{{is|is not}} per Solar am Laden",
-          "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+          "en": "Charging with PV above home load !{{is|is not}} observed",
+          "de": "Laden bei PV über Hausverbrauch !{{wird|wird nicht}} beobachtet",
+          "nl": "Laden met PV boven huisverbruik !{{wordt|wordt niet}} waargenomen"
         },
         "hint": {
-          "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid).",
-          "de": "Wahr, wenn die Batterie lädt und die Solarerzeugung die aktuelle Hauslast übersteigt (die Ladung kommt aus Solarüberschuss, nicht aus dem Netz).",
-          "nl": "Waar wanneer de batterij oplaadt en de zonne-opwek hoger is dan de huidige huisbelasting (de lading komt uit zonnestroomoverschot, niet uit het net)."
+          "en": "Requires recent, coherent battery/PV/home-load readings. Missing load is not zero. This observation does not prove exclusively solar charging or rule out another battery supplying energy. Unavailable readings stop evaluation, including inversion.",
+          "de": "Erfordert aktuelle, zeitlich stimmige Batterie-/PV-/Hausverbrauchswerte. Fehlender Verbrauch ist nicht null. Keine Bestätigung ausschließlicher Solarladung oder Ausschluss einer anderen liefernden Batterie. Nicht verfügbare Werte stoppen auch die umgekehrte Bedingung.",
+          "nl": "Vereist recente, gelijktijdige batterij-/PV-/huisverbruikswaarden. Ontbrekend verbruik is niet nul. Bewijst geen uitsluitend laden op zon en sluit levering door een andere batterij niet uit. Niet-beschikbare waarden stoppen ook de omgekeerde voorwaarde."
         },
         "args": [
           {
@@ -685,6 +765,182 @@
             "filter": "driver_id=stream"
           }
         ]
+      },
+      {
+        "id": "coordination_circuit_power_sustained",
+        "title": {
+          "en": "Selected branch power is sustained above a threshold",
+          "de": "Gewählte Zweigleistung liegt anhaltend über einer Schwelle",
+          "nl": "Geselecteerd circuitvermogen blijft boven een drempel"
+        },
+        "titleFormatted": {
+          "en": "Observed [[role]] power [[direction]] exceeds [[watts]] W for [[seconds]] seconds",
+          "de": "Beobachtete [[role]]-Leistung [[direction]] übersteigt [[watts]] W für [[seconds]] Sekunden",
+          "nl": "Waargenomen [[role]]-vermogen [[direction]] is hoger dan [[watts]] W gedurende [[seconds]] seconden"
+        },
+        "hint": {
+          "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+          "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+          "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+        },
+        "args": [
+          {
+            "name": "role",
+            "type": "dropdown",
+            "title": {
+              "en": "Configured branch role",
+              "de": "Konfigurierte Zweigfunktion",
+              "nl": "Ingestelde circuitrol"
+            },
+            "values": [
+              {
+                "id": "solar_inverter",
+                "title": {
+                  "en": "Solar-only inverter",
+                  "de": "Reiner Solarwechselrichter",
+                  "nl": "Alleen-zonne-omvormer"
+                }
+              },
+              {
+                "id": "hybrid_inverter",
+                "title": {
+                  "en": "Hybrid solar and battery inverter",
+                  "de": "Hybridwechselrichter für Solar und Batterie",
+                  "nl": "Hybride zonne- en batterijomvormer"
+                }
+              },
+              {
+                "id": "load",
+                "title": {
+                  "en": "Load branch",
+                  "de": "Verbrauchszweig",
+                  "nl": "Verbruikscircuit"
+                }
+              }
+            ]
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "title": {
+              "en": "Flow direction",
+              "de": "Flussrichtung",
+              "nl": "Stroomrichting"
+            },
+            "values": [
+              {
+                "id": "to_house",
+                "title": {
+                  "en": "towards the house",
+                  "de": "zum Haus",
+                  "nl": "naar het huis"
+                }
+              },
+              {
+                "id": "from_house",
+                "title": {
+                  "en": "away from the house",
+                  "de": "vom Haus weg",
+                  "nl": "van het huis af"
+                }
+              }
+            ]
+          },
+          {
+            "name": "watts",
+            "type": "number",
+            "title": {
+              "en": "Power threshold (W)",
+              "de": "Leistungsschwelle (W)",
+              "nl": "Vermogensdrempel (W)"
+            },
+            "min": 21,
+            "max": 100000,
+            "step": 1
+          },
+          {
+            "name": "seconds",
+            "type": "number",
+            "title": {
+              "en": "Observed duration (seconds)",
+              "de": "Beobachtete Dauer (Sekunden)",
+              "nl": "Waargenomen duur (seconden)"
+            },
+            "min": 1,
+            "max": 1800,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "coordination_external_priority",
+        "title": {
+          "en": "External battery priority is satisfied",
+          "de": "Vorrang der externen Batterie ist erfüllt",
+          "nl": "Prioriteit van de externe batterij is voldaan"
+        },
+        "hint": {
+          "en": "Uses the observation session's SOC start/stop thresholds and a ±20 W battery-power deadband. It requires the external battery to be neither actively charging nor discharging. Unavailable readings stop evaluation.",
+          "de": "Verwendet die SOC-Start-/Stoppschwellen der Sitzung und ±20 W Leistungstoleranz. Die externe Batterie darf weder aktiv laden noch entladen. Nicht verfügbare Werte stoppen die Auswertung.",
+          "nl": "Gebruikt de SOC-start-/stopdrempels van de sessie en een vermogensmarge van ±20 W. De externe batterij mag niet actief laden of ontladen. Niet-beschikbare waarden stoppen de evaluatie."
+        }
+      },
+      {
+        "id": "coordination_grid_export_sustained",
+        "title": {
+          "en": "Observed grid export is sustained above a threshold",
+          "de": "Beobachtete Netzeinspeisung liegt anhaltend über einer Schwelle",
+          "nl": "Waargenomen netexport blijft boven een drempel"
+        },
+        "titleFormatted": {
+          "en": "Observed grid export exceeds [[watts]] W for [[seconds]] seconds",
+          "de": "Beobachtete Netzeinspeisung übersteigt [[watts]] W für [[seconds]] Sekunden",
+          "nl": "Waargenomen netexport is hoger dan [[watts]] W gedurende [[seconds]] seconden"
+        },
+        "hint": {
+          "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+          "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+          "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+        },
+        "args": [
+          {
+            "name": "watts",
+            "type": "number",
+            "title": {
+              "en": "Power threshold (W)",
+              "de": "Leistungsschwelle (W)",
+              "nl": "Vermogensdrempel (W)"
+            },
+            "min": 21,
+            "max": 100000,
+            "step": 1
+          },
+          {
+            "name": "seconds",
+            "type": "number",
+            "title": {
+              "en": "Observed duration (seconds)",
+              "de": "Beobachtete Dauer (Sekunden)",
+              "nl": "Waargenomen duur (seconden)"
+            },
+            "min": 1,
+            "max": 1800,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "coordination_readings_current",
+        "title": {
+          "en": "Selected coordination readings are current and coherent",
+          "de": "Gewählte Koordinationswerte sind aktuell und zeitlich stimmig",
+          "nl": "Geselecteerde coördinatiewaarden zijn actueel en gelijktijdig"
+        },
+        "hint": {
+          "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+          "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+          "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+        }
       },
       {
         "id": "electricity_price",
@@ -781,9 +1037,9 @@
       {
         "id": "feed_in_enabled",
         "title": {
-          "en": "Grid feed-in !{{is|is not}} enabled",
-          "de": "Netzeinspeisung !{{is|is not}} aktiviert",
-          "nl": "Teruglevering aan net !{{is|is not}} ingeschakeld"
+          "en": "Reported grid feed-in permission !{{is|is not}} enabled",
+          "de": "Gemeldete Netzeinspeisefreigabe !{{ist|ist nicht}} aktiviert",
+          "nl": "Gemelde toestemming voor netexport !{{is|is niet}} ingeschakeld"
         },
         "args": [
           {
@@ -791,7 +1047,12 @@
             "name": "device",
             "filter": "driver_id=stream"
           }
-        ]
+        ],
+        "hint": {
+          "en": "Reported permission only; use grid-power readings to check actual export. Unknown or expired settings stop evaluation, including inversion.",
+          "de": "Nur gemeldete Freigabe; tatsächliche Einspeisung anhand der Netzleistung prüfen. Unbekannte oder veraltete Einstellungen stoppen auch die umgekehrte Bedingung.",
+          "nl": "Alleen gemelde toestemming; controleer werkelijke export met netvermogen. Onbekende of verlopen instellingen stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "is_charging",
@@ -806,7 +1067,12 @@
             "name": "device",
             "filter": "driver_id=stream"
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "is_exporting",
@@ -821,19 +1087,24 @@
             "name": "device",
             "filter": "driver_id=stream"
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "operating_mode_is",
         "title": {
-          "en": "Operating mode !{{is|is not}}",
-          "de": "Betriebsmodus !{{is|is not}}",
-          "nl": "Bedrijfsmodus !{{is|is not}}"
+          "en": "Reported operating mode !{{is|is not}}",
+          "de": "Gemeldeter Betriebsmodus !{{ist|ist nicht}}",
+          "nl": "Gemelde bedrijfsmodus !{{is|is niet}}"
         },
         "titleFormatted": {
-          "en": "Operating mode !{{is|is not}} [[mode]]",
-          "de": "Betriebsmodus !{{is|is not}} [[mode]]",
-          "nl": "Bedrijfsmodus !{{is|is not}} [[mode]]"
+          "en": "Reported operating mode !{{is|is not}} [[mode]]",
+          "de": "Gemeldeter Betriebsmodus !{{ist|ist nicht}} [[mode]]",
+          "nl": "Gemelde bedrijfsmodus !{{is|is niet}} [[mode]]"
         },
         "args": [
           {
@@ -884,7 +1155,12 @@
               }
             ]
           }
-        ]
+        ],
+        "hint": {
+          "en": "Checks a recently reported setting, not actual charging or export. Unknown or expired settings stop evaluation, including inversion.",
+          "de": "Prüft eine kürzlich gemeldete Einstellung, nicht tatsächliches Laden oder Einspeisen. Unbekannte oder veraltete Einstellungen stoppen auch die umgekehrte Bedingung.",
+          "nl": "Controleert een recent gemelde instelling, niet werkelijk laden of terugleveren. Onbekende of verlopen instellingen stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "smartmeter_grid_power_above",
@@ -1008,7 +1284,12 @@
               "nl": "Drempel voor zonne-energie"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Planning estimate, not measured generation. Requires a forecast less than six hours old for the correct Homey-local calendar date and current location/calibration. Missing or expired data stops evaluation, including inversion.",
+          "de": "Planungsprognose, keine gemessene Erzeugung. Erfordert eine weniger als sechs Stunden alte Prognose für das richtige lokale Homey-Datum und den aktuellen Standort/Kalibrierfaktor. Fehlende oder veraltete Daten stoppen auch die umgekehrte Bedingung.",
+          "nl": "Planningsschatting, geen gemeten opwek. Vereist een prognose jonger dan zes uur voor de juiste lokale Homey-datum en huidige locatie/kalibratie. Ontbrekende of verlopen gegevens stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "solar_forecast_tomorrow",
@@ -1070,7 +1351,12 @@
               "nl": "Drempel voor zonne-energie"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Planning estimate, not measured generation. Requires a forecast less than six hours old for the correct Homey-local calendar date and current location/calibration. Missing or expired data stops evaluation, including inversion.",
+          "de": "Planungsprognose, keine gemessene Erzeugung. Erfordert eine weniger als sechs Stunden alte Prognose für das richtige lokale Homey-Datum und den aktuellen Standort/Kalibrierfaktor. Fehlende oder veraltete Daten stoppen auch die umgekehrte Bedingung.",
+          "nl": "Planningsschatting, geen gemeten opwek. Vereist een prognose jonger dan zes uur voor de juiste lokale Homey-datum en huidige locatie/kalibratie. Ontbrekende of verlopen gegevens stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "solar_power_above",
@@ -1107,7 +1393,12 @@
               "nl": "W"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "solar_power_below",
@@ -1144,7 +1435,12 @@
               "nl": "Drempel voor zonnevermogen"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "stream_5000_mode_is",
@@ -1306,14 +1602,14 @@
       {
         "id": "release_for_export",
         "title": {
-          "en": "Release battery for export now",
-          "de": "Batterie jetzt für Einspeisung freigeben",
-          "nl": "Batterij nu vrijgeven voor teruglevering"
+          "en": "Allow battery export (minimum reserve)",
+          "de": "Batterieeinspeisung erlauben (minimale Reserve)",
+          "nl": "Batterijexport toestaan (minimale reserve)"
         },
         "titleFormatted": {
-          "en": "Release battery for export now",
-          "de": "Batterie jetzt für Einspeisung freigeben",
-          "nl": "Batterij nu vrijgeven voor teruglevering"
+          "en": "Allow battery export (minimum reserve)",
+          "de": "Batterieeinspeisung erlauben (minimale Reserve)",
+          "nl": "Batterijexport toestaan (minimale reserve)"
         },
         "hint": {
           "en": "Sets reserve to 3%, lowers the discharge limit first when required, and permits grid feed-in. Each setting is read back; physical export is not guaranteed. Review previous settings before restoring them.",
@@ -1368,9 +1664,9 @@
       {
         "id": "set_charge_limit",
         "title": {
-          "en": "Set charge limit",
-          "de": "Ladegrenze festlegen",
-          "nl": "Laadlimiet instellen"
+          "en": "Set charge limit (%)",
+          "de": "Ladegrenze festlegen (%)",
+          "nl": "Laadlimiet instellen (%)"
         },
         "titleFormatted": {
           "en": "Set charge limit to [[level]]%",
@@ -1397,19 +1693,24 @@
             "label": "%",
             "labelDecimals": 0
           }
-        ]
+        ],
+        "hint": {
+          "en": "Upper battery charge level, not a wattage limit or a start-charging command. Settings are read back; actual charging still depends on EcoFlow modes, schedules and limits.",
+          "de": "Oberer Batterieladestand, keine Wattgrenze oder Anweisung zum Ladestart. Einstellungen werden zurückgelesen; tatsächliches Laden hängt weiter von EcoFlow-Modi, Zeitplänen und Grenzen ab.",
+          "nl": "Bovenste batterijlading, geen wattlimiet of opdracht om te laden. Instellingen worden teruggelezen; werkelijk laden blijft afhankelijk van EcoFlow-modi, schema's en limieten."
+        }
       },
       {
         "id": "set_discharge_limit",
         "title": {
-          "en": "Set discharge limit",
-          "de": "Entladegrenze festlegen",
-          "nl": "Ontlaadlimiet instellen"
+          "en": "Set minimum discharge level (%)",
+          "de": "Minimalen Entladestand festlegen (%)",
+          "nl": "Minimaal ontlaadniveau instellen (%)"
         },
         "titleFormatted": {
-          "en": "Set discharge limit to [[level]]%",
-          "de": "Entladegrenze auf [[level]]% setzen",
-          "nl": "Ontlaadlimiet instellen op [[level]]%"
+          "en": "Set minimum discharge level to [[level]]%",
+          "de": "Minimalen Entladestand auf [[level]]% setzen",
+          "nl": "Minimaal ontlaadniveau instellen op [[level]]%"
         },
         "args": [
           {
@@ -1431,7 +1732,12 @@
             "label": "%",
             "labelDecimals": 0
           }
-        ]
+        ],
+        "hint": {
+          "en": "Lower battery SOC limit, not discharge watts and not a command to force discharge. Existing reserve constraints and EcoFlow operating rules still apply.",
+          "de": "Untere SOC-Grenze der Batterie, keine Entladeleistung und kein erzwungenes Entladen. Bestehende Reservegrenzen und EcoFlow-Betriebsregeln gelten weiterhin.",
+          "nl": "Ondergrens van batterij-SOC, geen ontlaadvermogen of opdracht om ontladen te forceren. Bestaande reservegrenzen en EcoFlow-bedrijfsregels blijven gelden."
+        }
       },
       {
         "id": "set_electricity_price",
@@ -1476,14 +1782,14 @@
       {
         "id": "set_feed_in",
         "title": {
-          "en": "Set grid feed-in",
-          "de": "Netzeinspeisung einstellen",
-          "nl": "Teruglevering aan net instellen"
+          "en": "Set grid feed-in permission",
+          "de": "Freigabe der Netzeinspeisung einstellen",
+          "nl": "Toestemming voor netexport instellen"
         },
         "titleFormatted": {
-          "en": "Turn grid feed-in [[state]]",
-          "de": "Netzeinspeisung [[state]] schalten",
-          "nl": "Teruglevering aan net [[state]] zetten"
+          "en": "Set grid feed-in permission [[state]]",
+          "de": "Freigabe der Netzeinspeisung [[state]] setzen",
+          "nl": "Toestemming voor netexport [[state]] zetten"
         },
         "args": [
           {
@@ -1518,7 +1824,12 @@
               }
             ]
           }
-        ]
+        ],
+        "hint": {
+          "en": "Changes the reported feed-in setting, not a wattage target. Native modes, schedules and limits determine actual power flow; check grid readings separately.",
+          "de": "Ändert die gemeldete Einspeiseeinstellung, keinen Watt-Sollwert. Native Modi, Zeitpläne und Grenzen bestimmen den tatsächlichen Leistungsfluss; Netzwerte separat prüfen.",
+          "nl": "Wijzigt de gemelde terugleverinstelling, geen wattdoel. Eigen modi, schema's en limieten bepalen de werkelijke energiestroom; controleer netmetingen apart."
+        }
       },
       {
         "id": "set_operating_mode",

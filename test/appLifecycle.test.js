@@ -126,7 +126,8 @@ test('5000 read-only conditions route to fresh device observations, not a contro
   const listeners = new Map();
   app.homey.flow = { getConditionCard: (id) => ({ registerRunListener: (fn) => listeners.set(id, fn) }) };
   await app.onInit();
-  assert.deepEqual([...listeners.keys()], ['smartmeter_grid_power_above', 'stream_5000_mode_is', 'stream_5000_reserve_enabled']);
+  assert.deepEqual([...listeners.keys()], ['smartmeter_grid_power_above', 'stream_5000_mode_is', 'stream_5000_reserve_enabled',
+    'coordination_readings_current', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_circuit_power_sustained']);
   const device = {
     configurationModeIs: async (mode) => mode === 'custom',
     configurationReserveEnabled: async () => { throw new Error('Fresh state unavailable'); },
@@ -134,6 +135,26 @@ test('5000 read-only conditions route to fresh device observations, not a contro
   assert.equal(await listeners.get('stream_5000_mode_is')({ device, mode: 'custom' }), true);
   await assert.rejects(listeners.get('stream_5000_reserve_enabled')({ device }), /Fresh state unavailable/);
   await app.onUninit();
+});
+
+test('Flow observation routes never start on init, reject unavailable/inverted checks and cancel stale setup revisions', async () => {
+  const { app, settings, timers } = harness(); const listeners = new Map();
+  app.homey.__ = () => 'Current coordination readings unavailable';
+  app.homey.flow = { getConditionCard: id => ({ registerRunListener: fn => listeners.set(id, fn) }),
+    getTriggerCard: () => ({ trigger: async () => assert.fail('no active observation') }) };
+  await app.onInit(); assert.equal(app.coordinationFlowMonitor, null);
+  const initial = app.requestCoordinationFlowMonitor({ action: 'status' });
+  assert.equal(initial.active, false); assert.equal(initial.revision, 0); assert.equal(timers.size, 0);
+  for (const id of ['coordination_readings_current', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_circuit_power_sustained']) {
+    await assert.rejects(listeners.get(id)({}), /unavailable/);
+  }
+  app.requestCoordinationFlowMonitor({ action: 'stop' });
+  assert.throws(() => app.requestCoordinationFlowMonitor({ action: 'start', expectedRevision: initial.revision }), /setup_changed/);
+  let stops = 0; app.coordinationFlowMonitor = { stop() { stops++; }, shutdown() { stops++; }, status() { return { active: false }; } };
+  for (const key of ['streamCoordinationBindingsV1', 'appAuthPassword', 'accessKey']) settings.emit('set', key);
+  assert.equal(stops, 3); assert.equal(app.requestCoordinationFlowMonitor({ action: 'status' }).revision, 4);
+  await app.onUninit(); assert.equal(stops, 4);
+  assert.throws(() => app.requestCoordinationFlowMonitor({ action: 'start', expectedRevision: 5 }), /stopped/);
 });
 
 test('app teardown detaches settings listeners and cancels pending reconnect callbacks', async () => {

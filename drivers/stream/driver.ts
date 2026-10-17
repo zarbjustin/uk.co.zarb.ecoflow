@@ -3,7 +3,6 @@
 import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
-import { aboveBelow } from '../../lib/thresholds';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -17,47 +16,45 @@ module.exports = class StreamDriver extends Homey.Driver {
     // Conditions
     flow.getConditionCard('operating_mode_is').registerRunListener(
       (args: any) => {
-        args.device.assertMonitoringCondition('installation');
-        return args.device.getCapabilityValue('operating_mode') === args.mode;
+        return args.device.reportedOperatingModeIs(args.mode);
       },
     );
     flow.getConditionCard('feed_in_enabled').registerRunListener(
       (args: any) => {
-        args.device.assertMonitoringCondition('installation');
-        return args.device.getCapabilityValue('feed_in_control') === true;
+        return args.device.reportedFeedInEnabled();
       },
     );
     flow.getConditionCard('is_charging').registerRunListener((args: any) => {
-      args.device.assertMonitoringCondition('core');
+      args.device.assertFlowReadings('core', ['measure_power']);
       return args.device.isCharging();
     });
     flow.getConditionCard('is_exporting').registerRunListener((args: any) => {
-      args.device.assertMonitoringCondition('installation');
+      args.device.assertFlowReadings('installation', ['measure_power.grid']);
       return args.device.isExporting();
     });
     flow.getConditionCard('solar_power_above').registerRunListener(
       (args: any) => {
-        args.device.assertMonitoringCondition('installation');
+        args.device.assertFlowReadings('installation', ['measure_power.pv']);
         return args.device.solarPowerIs('above', args.watts);
       },
     );
     flow.getConditionCard('solar_power_below').registerRunListener(
       (args: any) => {
-        args.device.assertMonitoringCondition('installation');
+        args.device.assertFlowReadings('installation', ['measure_power.pv']);
         return args.device.solarPowerIs('below', args.watts);
       },
     );
     flow.getConditionCard('charging_from_solar').registerRunListener(
       (args: any) => {
-        args.device.assertMonitoringCondition('installation');
+        args.device.assertFlowReadings('installation', ['measure_power', 'measure_power.pv', 'measure_power.load'], true);
         return args.device.isChargingFromSolar();
       },
     );
     flow.getConditionCard('solar_forecast_today').registerRunListener(
-      (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_today'), args.direction, args.kwh),
+      (args: any) => args.device.solarForecastIs('today', args.direction, args.kwh),
     );
     flow.getConditionCard('solar_forecast_tomorrow').registerRunListener(
-      (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_tomorrow'), args.direction, args.kwh),
+      (args: any) => args.device.solarForecastIs('tomorrow', args.direction, args.kwh),
     );
     flow.getConditionCard('electricity_price').registerRunListener(
       (args: any) => args.device.priceIs(args.direction, args.price),
@@ -67,7 +64,7 @@ module.exports = class StreamDriver extends Homey.Driver {
     );
     flow.getConditionCard('battery_soc').registerRunListener(
       (args: any) => {
-        args.device.assertMonitoringCondition('core');
+        args.device.assertFlowReadings('core', ['measure_battery']);
         return args.device.batterySocIs(args.direction, args.level);
       },
     );

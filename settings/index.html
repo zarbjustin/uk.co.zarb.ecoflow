@@ -218,6 +218,11 @@
   </details>
 
   <script src="meter-status.js"></script>
+  <details id="coordinationPanel">
+    <summary id="coordinationTitle">Read-only battery coordination preview</summary>
+    <div id="coordinationWorkspace"></div>
+  </details>
+  <script src="coordination-settings.js"></script>
   <script src="reporter-status.js"></script>
   <script src="dual-ct-contract.js"></script>
   <script src="dual-ct-status.js"></script>
@@ -225,6 +230,7 @@
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
+      if (window.EcoFlowCoordinationSettings) window.EcoFlowCoordinationSettings.mount(document.getElementById('coordinationWorkspace'), Homey);
       Homey.get('accessKey', function (err, v) { if (!err && v) document.getElementById('accessKey').value = v; });
       Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });

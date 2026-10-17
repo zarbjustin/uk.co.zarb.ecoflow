@@ -75,10 +75,13 @@ test('registered solar conditions reject missing values and trial-suppressed ins
   await driver.onInit();
   const h = await harness();
   h.device.values['measure_power.pv'] = null;
-  assert.equal(listeners.solar_power_below({ device: h.device, watts: 100 }), false);
+  assert.throws(() => listeners.solar_power_below({ device: h.device, watts: 100 }), /readings/i);
+  assert.throws(() => !listeners.solar_power_below({ device: h.device, watts: 100 }), /readings/i);
   h.device.values['measure_power.pv'] = 0;
+  h.device.legacyFlowReadings.observe('measure_power.pv', 0, 0, Date.now());
   assert.equal(listeners.solar_power_below({ device: h.device, watts: 100 }), true);
   h.device.values['measure_power.pv'] = 500;
+  h.device.legacyFlowReadings.observe('measure_power.pv', 500, 500, Date.now());
   assert.equal(listeners.solar_power_above({ device: h.device, watts: 100 }), true);
   h.device.monitoringEnabled = true;
   assert.throws(() => listeners.solar_power_above({ device: h.device, watts: 100 }), /conditions are unavailable/);
@@ -95,6 +98,8 @@ test('registered battery conditions stop both normal and inverted Flows during u
   const h = await harness();
   h.device.values.measure_battery = 53;
   h.device.values.measure_power = -291;
+  h.device.legacyFlowReadings.observe('measure_battery', 53, 53, Date.now());
+  h.device.legacyFlowReadings.observe('measure_power', -291, -291, Date.now());
   assert.equal(listeners.is_charging({ device: h.device }), false);
   assert.equal(listeners.battery_soc({ device: h.device, direction: 'above', level: 50 }), true);
   const args = { device: h.device, direction: 'above', level: 50, watts: 100, mode: 'self_powered' };
