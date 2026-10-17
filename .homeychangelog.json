@@ -268,5 +268,8 @@
   },
   "1.10.53": {
     "en": "Clarified the read-only Dual CT preview with CT1/CT2 labels, localized V/A/W values and readable precision. Raw counters now warn that units, period and circuit are unconfirmed, with individual receipt ages. Existing device identities are preserved; Dual CT Energy and controls remain disabled."
+  },
+  "1.10.54": {
+    "en": "Dual CT preview: separate per-phase power, voltage and current readings, guarded circuit phase sums, and optional circuit descriptions. Existing previews upgrade without re-pairing. Includes disabled grid Energy preparation; no Dual CT Energy activation or controls."
   }
 }
