@@ -271,5 +271,8 @@
   },
   "1.10.54": {
     "en": "Dual CT preview: separate per-phase power, voltage and current readings, guarded circuit phase sums, and optional circuit descriptions. Existing previews upgrade without re-pairing. Includes disabled grid Energy preparation; no Dual CT Energy activation or controls."
+  },
+  "1.10.55": {
+    "en": "Add opt-in read-only battery coordination previews and observation Flow cards. Clarify circuit scopes and existing battery-limit wording. Reject stale or missing STREAM and dated solar-forecast readings while preserving existing Flow identities. No new charging controls or Dual CT Energy activation."
   }
 }
