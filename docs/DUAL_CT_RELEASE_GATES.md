@@ -1,5 +1,20 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## 17 October: CT labels/counter clarity published to Test v1.10.53 / Build 67
+
+Source `2d4c943`, tag `c248eee`; source CI `39055239853`, version `39055356626`,
+exact-tag CI `39055424697` and upload `39055590336` passed. Exact CI: 882 tests,
+lint, zero-vulnerability audit and verified Homey validation. Archive code/assets
+read back against source. Reopened portal/public listing confirm Test publication
+at `2026-10-17T17:53:40.044Z`; unchanged Live Build 18 / v1.10.3. Main untouched.
+
+Six phase cards use community-observed CT1/CT2 and V/A/W presentation, not an
+official contract. Raw counter units/period/circuit warning and individual receipt
+ages are visible. No counter scale/role assumption, Energy activation or controls.
+Existing IDs and all other drivers/Flow/Energy definitions remain unchanged.
+Native installed-host/hardware acceptance remains pending. Robert reply is draft
+only; no new captures/exports requested. See STATUS.md for full links and boundaries.
+
 ## 17 October: community-observed CT display mapping, LOCAL / UNPUBLISHED
 
 The diagnostic continuation uses CT1/CT2 headings and V/A/W on the six phase-group

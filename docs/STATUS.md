@@ -2,6 +2,46 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.53 / Build 67 — published 17 October 2026
+
+Supersedes the preparation/local checkpoints below. CT1/CT2 presentation and raw
+counter clarity changes are committed/pushed on the diagnostic branch and now
+available on **Test only**. Robert's updated reply remains DRAFT ONLY for owner
+review. No new capture/export requests, Community message or device command sent.
+
+- Source `2d4c94315805dec5d06ac27983c99a10a05498c6`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055239853 passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055356626 passed;
+  tag `v1.10.53` / `c248eee567e110a755e9cc8367351a17b86b40aa`.
+- Exact-tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055424697 passed:
+  **882 tests**, lint, audit (0 vulnerabilities), Homey CLI 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055590336 passed,
+  producing Build 67 / v1.10.53. Portal showed Draft before publication. Read-back
+  archive manifest/drivers match source; compiled formatter/monitor/gates/device,
+  EN/DE/NL, consent HTML and settings were SHA256/byte-compared to local output.
+- Test publication **2026-10-17T17:53:40.044Z**, verified after reopening Developer
+  Tools. Public Test listing independently shows v1.10.53 and exact new changelog:
+  https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/.
+- Live remains Build 18 / v1.10.3 at unchanged `2026-07-26T22:49:51.597Z`, checked
+  beside the new Test row. Main refs unchanged: local master `8bb4e468` and remote
+  master `66b1cb5`. No mainline merge, certification submission or manual install.
+  Installed-host and physical acceptance remain unverified, not inferred from CI.
+
+Visible changes: CT1/CT2 phase-group labels, EN/DE/NL decimal formatting, V/W at one
+decimal and A at three, with signed tiny nonzero values preserved. Same driver /
+capability IDs, no re-pairing path. Counter card warns that units, period and circuit
+are unconfirmed; each raw field/trend has its own age since receipt. Partial packets
+cannot refresh older counters; expiry stays independent of scalar traffic. Totals
+remain raw/unscaled and no sign flip or mixed-age aggregate is introduced.
+
+Official contract, physical phase order, source roles, direction, counter scale /
+period and runtime Energy adoption remain unverified/gated. No standard power /
+meter capabilities, controls, app Flow cards, tags or Insights added to the preview.
+Other driver definitions, permissions, Energy mappings and Flow cards are identical
+to v1.10.52 (manifest comparison verified). The question for Robert is a plain
+description of his CT circuits, existing Homey grid meter and expected Energy
+roles, not another diagnostic bundle. No raw customer data added to Git.
+
 ## CT labels and counter clarity — 17 October 2026, release authorised
 
 Owner now authorises consolidating the local CT1/CT2 display work below with a
