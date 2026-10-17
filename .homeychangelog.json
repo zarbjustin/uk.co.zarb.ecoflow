@@ -262,5 +262,8 @@
   },
   "1.10.51": {
     "en": "Made read-only Dual CT export availability clearer, with specific reasons for disabled options and matching combined-report availability, including expired snapshots after a later refresh. Improved freshness consistency and duplicate-packet handling, with additional replay and upgrade regression checks. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.52": {
+    "en": "Added an optional read-only Dual CT preview device with separate raw bank readings and freshness status. Simplified capture and combined JSON export. Prepared and tested a power-based Energy path; Dual CT Energy adoption and controls remain disabled pending validation."
   }
 }
