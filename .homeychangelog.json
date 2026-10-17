@@ -265,5 +265,8 @@
   },
   "1.10.52": {
     "en": "Added an optional read-only Dual CT preview device with separate raw bank readings and freshness status. Simplified capture and combined JSON export. Prepared and tested a power-based Energy path; Dual CT Energy adoption and controls remain disabled pending validation."
+  },
+  "1.10.53": {
+    "en": "Clarified the read-only Dual CT preview with CT1/CT2 labels, localized V/A/W values and readable precision. Raw counters now warn that units, period and circuit are unconfirmed, with individual receipt ages. Existing device identities are preserved; Dual CT Energy and controls remain disabled."
   }
 }
