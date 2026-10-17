@@ -2,6 +2,75 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## CT labels and counter clarity — 17 October 2026, release authorised
+
+Owner now authorises consolidating the local CT1/CT2 display work below with a
+counter caveat and individual receipt ages, running checks, committing/pushing
+the diagnostic branch, checking exact CI and publishing Test only. Mainline,
+Live, Energy activation and hardware controls remain unchanged. Robert reply
+must remain draft-only for owner review. This supersedes prior publication hold.
+
+Private `.52 assignments` post 8 adds a counter screenshot and tentative circuit
+interpretation. Its fields satisfy `1+2+3=7` and `4-6=7`, already hypotheses in the
+single-record arithmetic checker. This does not establish CT2 production, Wh/kWh
+scale, daily/lifetime period, counter origin or a grid source. No private readings
+or screenshots are stored in Git; tests use generated, unrelated values.
+
+Counter card now explicitly warns in EN/DE/NL that units, period and circuit are
+unconfirmed. Each raw field and trend shows its own age since receipt. Partial
+counter/scalar packets cannot refresh older fields, and exact expiry still removes
+their numbers. No inferred totals, converted units, role relabels, packet-coherence
+claim, source adoption, new collection or numeric support export is introduced.
+Native Homey/hardware acceptance remains pending; verify each release gate before
+claiming the consolidated continuation is available to testers.
+
+Local consolidated checks passed: **882/882 tests**, lint, audit (0 vulnerabilities),
+diff checks and Homey CLI 4.5.3 verified validation. Display/preview targeted suite:
+23/23. Exact source CI, version-tag CI, upload and actual Test channel still need
+independent verification; local success is not a publication or hardware claim.
+
+## CT1/CT2 display refinement — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised presentation improvements and regression tests on the diagnostic
+branch only. No commit/push, version bump or new Test publication is authorised.
+Mainline, Live and Energy adoption remain unchanged. Robert reply is draft-only.
+
+Reviewed all seven posts/images in private `.52 assignments` (topic 161001).
+Community comparisons support A as CT1 and B as CT2 for the displayed voltage,
+current and power groups on that installation. These are observed mappings, not
+an official model/firmware contract or universal phase/grid/direction verification.
+The newer CT2 power screenshot is a second observed operating point, not evidence
+that negative always means export. No new JSON/support attachment in these posts.
+Private screenshots and actual readings are not added to Git or test fixtures.
+
+- Existing six `dual_ct_preview_fields.*` cards now use CT1/CT2 names (EN/DE/NL),
+  with unchanged device/capability IDs; no re-pairing/migration path is introduced.
+- Presentation-only formatter: V/W at one decimal, A at three decimals, localized
+  decimal separators, field IDs and independent receipt ages retained. Very small
+  nonzero values use signed scientific notation rather than becoming apparent
+  zero. Raw decoder/cache precision and signs remain unchanged.
+- No speculative phase labels or combined totals are created from asynchronous
+  fields. Missing/stale stays explicit and exact <90-second expiry is unchanged.
+  Totals 515/998 and counter candidates retain raw/unscaled displays without units.
+- Pairing, persistent warning and settings hint explain community evidence versus
+  verified contract, receipt-only time, uncertain circuit roles/direction/phase
+  order, and no Energy/control/Flow/tag/Insights activation. No new data collection.
+- Pure contract/decoder, default bank-role assumptions, source selection, standard
+  meter/accounting, power/counter trials and numeric-free support schema untouched.
+
+Tester follow-up asks only for a plain description of the CT1/CT2 circuits, existing
+Homey grid meter and desired Homey Energy roles. No new captures, screenshots,
+exports, rewiring or mode changes are requested. Native Homey display/upgrade and
+hardware acceptance remain pending; this local change is not available in Test.
+
+Local checks passed: **880/880 tests** (six new display regressions), lint, audit
+(0 vulnerabilities), diff checks and Homey CLI 4.5.3 verified validation. Targeted
+display/preview suite: 21/21. EN/DE/NL formatting, all 18 phase fields, zero/tiny
+signed values, missing/stale per-field ages, unchanged raw precision, identifiers
+and Energy/Flow fences covered. Desktop/mobile consent regression passed and the
+mobile screenshot was inspected outside Git. These are synthetic/local checks,
+not native Homey display or hardware acceptance. Changes uncommitted/unpushed.
+
 ## Test v1.10.52 / Build 66 — published 17 October 2026
 
 Supersedes the local/preparation checkpoints below. The optional raw Dual CT

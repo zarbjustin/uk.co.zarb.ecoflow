@@ -3,6 +3,7 @@ import { decodeFrameHeaders } from './streamAc5000Protocol';
 import { dualCtEncodingPolicy } from './dualCtEncoding';
 import { inspectDualCtCounterRecords } from './dualCtCounters';
 import { dualCtFreshAge } from './dualCtContract';
+import { dualCtDisplayValue } from './dualCtDisplay';
 
 type Scope = { account: string; device: string; session: string };
 type Counter = { field: number; value: number; receivedAt: number; trend: string };
@@ -89,8 +90,12 @@ export class DualCtMonitor {
     const values: Record<string, string | number | null> = {
       dual_ct_preview_status: translate(status),
       dual_ct_preview_age: this.lastAt === null ? null : Math.max(0, (now - this.lastAt) / 1000),
-      dual_ct_preview_counters: counters.length ? counters.map((row) => `773.${row.field}: ${row.value}`).join(' / ') : translate('missing_stale'),
-      dual_ct_preview_trends: counters.length ? counters.map((row) => `${row.field}: ${translate(row.trend)}`).join(' / ') : translate('missing_stale'),
+      dual_ct_preview_counters: counters.length
+        ? `${translate('counter_warning')} — ${counters.map((row) => `773.${row.field}: ${row.value} (${Math.floor((now - row.receivedAt) / 1000)}s)`).join(' / ')}`
+        : translate('missing_stale'),
+      dual_ct_preview_trends: counters.length
+        ? counters.map((row) => `${row.field}: ${translate(row.trend)} (${Math.floor((now - row.receivedAt) / 1000)}s)`).join(' / ')
+        : translate('missing_stale'),
     };
     for (const bank of view.banks) {
       const suffix = bank.bank.toLowerCase();
@@ -98,7 +103,8 @@ export class DualCtMonitor {
       for (const quantity of ['power', 'voltage', 'current']) {
         values[`dual_ct_preview_fields.${suffix}_${quantity}`] = bank.readings.filter((row) => row.phase !== null && row.quantity === quantity)
           .map((row) => {
-            const value = row.value === null ? translate(row.status === 'stale' ? 'stale_field' : 'missing') : row.value;
+            const value = row.value === null ? translate(row.status === 'stale' ? 'stale_field' : 'missing')
+              : dualCtDisplayValue(row.field, row.value, translate('number_locale')) ?? translate('missing');
             const age = row.receiptAgeSec === null ? '' : ` (${Math.floor(row.receiptAgeSec)}s)`;
             return `${row.field}: ${value}${age}`;
           }).join(' / ');

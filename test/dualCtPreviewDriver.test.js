@@ -26,13 +26,16 @@ function frame(bytes = packet(1, [[1, -40], [2, 20], [3, 70], [4, 150], [6, 100]
 const topic = `/app/device/property/${sn}`;
 const scope = { account: 'synthetic-account', device: sn, session: 'synthetic-session' };
 
-test('continuous preview exposes raw separate banks, signed/zero values and counters without assigning units or accounting', () => {
+test('continuous preview displays community-observed phase units but keeps totals/counters raw and accounting isolated', () => {
   const monitor = new DualCtMonitor(scope);
   assert.equal(monitor.observe(frame(), topic, 1000), true);
   let view = monitor.snapshot(1000, text);
   assert.equal(view.recent, true); assert.equal(view.values['dual_ct_preview_total.a'], 2);
   assert.equal(view.values['dual_ct_preview_total.b'], 22);
   assert.match(view.values['dual_ct_preview_fields.a_power'], /772: -1/);
+  assert.match(view.values['dual_ct_preview_fields.a_power'], /772: -1\.0 W/);
+  assert.match(view.values['dual_ct_preview_fields.b_voltage'], /985: 230\.0 V/);
+  assert.match(view.values['dual_ct_preview_fields.b_current'], /988: 0\.500 A/);
   assert.match(view.values.dual_ct_preview_counters, /773.1: -40/);
   assert.doesNotMatch(JSON.stringify(view), /kWh|"measure_power"|"meter_power"|CT1|SYNTHETIC/);
   assert.equal(monitor.observe(frame(packet(2, [[1, -41], [4, 150]]), { omitted: true }), topic, 2000), true);

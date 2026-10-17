@@ -1766,54 +1766,54 @@
         },
         "dual_ct_preview_fields.a_power": {
           "title": {
-            "en": "A power candidates",
-            "de": "A Leistungskandidaten",
-            "nl": "A vermogenskandidaten"
+            "en": "CT1 power",
+            "de": "CT1 Leistung",
+            "nl": "CT1 vermogen"
           },
           "preventTag": true,
           "preventInsights": true
         },
         "dual_ct_preview_fields.a_voltage": {
           "title": {
-            "en": "A voltage candidates",
-            "de": "A Spannungskandidaten",
-            "nl": "A spanningskandidaten"
+            "en": "CT1 voltage",
+            "de": "CT1 Spannung",
+            "nl": "CT1 spanning"
           },
           "preventTag": true,
           "preventInsights": true
         },
         "dual_ct_preview_fields.a_current": {
           "title": {
-            "en": "A current candidates",
-            "de": "A Stromkandidaten",
-            "nl": "A stroomkandidaten"
+            "en": "CT1 current",
+            "de": "CT1 Strom",
+            "nl": "CT1 stroom"
           },
           "preventTag": true,
           "preventInsights": true
         },
         "dual_ct_preview_fields.b_power": {
           "title": {
-            "en": "B power candidates",
-            "de": "B Leistungskandidaten",
-            "nl": "B vermogenskandidaten"
+            "en": "CT2 power",
+            "de": "CT2 Leistung",
+            "nl": "CT2 vermogen"
           },
           "preventTag": true,
           "preventInsights": true
         },
         "dual_ct_preview_fields.b_voltage": {
           "title": {
-            "en": "B voltage candidates",
-            "de": "B Spannungskandidaten",
-            "nl": "B spanningskandidaten"
+            "en": "CT2 voltage",
+            "de": "CT2 Spannung",
+            "nl": "CT2 spanning"
           },
           "preventTag": true,
           "preventInsights": true
         },
         "dual_ct_preview_fields.b_current": {
           "title": {
-            "en": "B current candidates",
-            "de": "B Stromkandidaten",
-            "nl": "B stroomkandidaten"
+            "en": "CT2 current",
+            "de": "CT2 Strom",
+            "nl": "CT2 stroom"
           },
           "preventTag": true,
           "preventInsights": true
@@ -1843,9 +1843,9 @@
             "nl": "Continue alleen-lezenpreview inschakelen"
           },
           "hint": {
-            "en": "Unverified raw candidates only. No Energy, Flows, tags or Insights. Disabling clears displayed readings and detaches this listener. After an account change, disable and re-enable to recheck the original account; a different account requires re-pairing this preview only.",
-            "de": "Nur unbestätigte Rohkandidaten. Keine Energie, Flows, Tags oder Insights. Deaktivieren löscht die Anzeige und diesen Listener. Nach Kontowechsel deaktivieren/aktivieren, um das ursprüngliche Konto zu prüfen; ein anderes Konto erfordert erneute Kopplung nur dieser Vorschau.",
-            "nl": "Alleen ongeverifieerde ruwe kandidaten. Geen Energy, Flows, tags of Insights. Uitschakelen wist de weergave en verwijdert deze listener. Na accountwijziging uit- en inschakelen om het oorspronkelijke account te controleren; een ander account vereist opnieuw koppelen van alleen deze preview."
+            "en": "CT1/CT2 and V/A/W use community comparisons, not a verified contract. Ages are since receipt; fields need not be simultaneous. Totals/counters remain raw. No Energy, Flows, tags or Insights. Disabling clears readings and detaches this listener. After an account change, disable and re-enable to recheck the original account; a different account requires re-pairing this preview only.",
+            "de": "CT1/CT2 und V/A/W beruhen auf Community-Vergleichen, keinem verifizierten Vertrag. Alter seit Empfang; Felder nicht zwingend gleichzeitig. Summen/Zähler bleiben roh. Keine Energie, Flows, Tags oder Insights. Deaktivieren löscht Werte und Listener. Nach Kontowechsel aus-/einschalten, um das ursprüngliche Konto zu prüfen; ein anderes Konto erfordert erneute Kopplung nur dieser Vorschau.",
+            "nl": "CT1/CT2 en V/A/W volgen communityvergelijkingen, geen geverifieerd contract. Leeftijd sinds ontvangst; velden niet noodzakelijk gelijktijdig. Totalen/tellers blijven ruw. Geen Energy, Flows, tags of Insights. Uitschakelen wist waarden en deze listener. Na accountwijziging uit- en inschakelen om het oorspronkelijke account te controleren; een ander account vereist opnieuw koppelen van alleen deze preview."
           }
         }
       ],
@@ -3902,9 +3902,9 @@
     "dual_ct_preview_counters": {
       "type": "string",
       "title": {
-        "en": "773 raw candidates",
-        "de": "773 Rohkandidaten",
-        "nl": "773 ruwe kandidaten"
+        "en": "773 raw counters (unmapped)",
+        "de": "773 Rohzähler (nicht zugeordnet)",
+        "nl": "773 ruwe tellers (niet toegewezen)"
       },
       "getable": true,
       "setable": false,

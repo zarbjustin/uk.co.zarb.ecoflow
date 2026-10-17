@@ -1,1 +1,1 @@
-{"type":"string","title":{"en":"773 raw candidates","de":"773 Rohkandidaten","nl":"773 ruwe kandidaten"},"getable":true,"setable":false,"uiComponent":"sensor","insights":false,"icon":"/assets/capabilities/solar-meter.svg"}
+{"type":"string","title":{"en":"773 raw counters (unmapped)","de":"773 Rohzähler (nicht zugeordnet)","nl":"773 ruwe tellers (niet toegewezen)"},"getable":true,"setable":false,"uiComponent":"sensor","insights":false,"icon":"/assets/capabilities/solar-meter.svg"}

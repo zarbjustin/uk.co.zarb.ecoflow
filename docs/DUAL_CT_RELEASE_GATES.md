@@ -1,5 +1,17 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## 17 October: community-observed CT display mapping, LOCAL / UNPUBLISHED
+
+The diagnostic continuation uses CT1/CT2 headings and V/A/W on the six phase-group
+cards, based on community comparisons with EcoFlow. This supersedes earlier
+blanket no-unit/no-CT-label statements only for these read-only displays. Raw bank
+total/counter units, official contract, phase order, Grid/Solar roles, normalized
+import/export direction and Energy adoption remain unverified/gated. Display
+rounding/localization does not alter decoder/cache values or freshness. Device
+and capability IDs, opt-in, get-only/Insights/tag fences and support privacy stay
+unchanged. Owner withheld publication; main/Live untouched. No new capture request.
+See current STATUS.md for scope and local validation results.
+
 ## 17 October: Test v1.10.52 / Build 66 published
 
 Consolidated release is now Test, not merely local or authorised. Source `1666605`,
