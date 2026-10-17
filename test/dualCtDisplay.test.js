@@ -72,9 +72,10 @@ test('translated monitor readouts keep signed units, individual ages and genuine
 });
 
 test('CT labels update presentation only, preserve paired identifiers and keep verified/Energy/Flow gates closed', () => {
-  assert.deepEqual(manifest.capabilities,['dual_ct_preview_status','dual_ct_preview_age','dual_ct_preview_total.a','dual_ct_preview_total.b',
+  const previous=['dual_ct_preview_status','dual_ct_preview_age','dual_ct_preview_total.a','dual_ct_preview_total.b',
     'dual_ct_preview_fields.a_power','dual_ct_preview_fields.a_voltage','dual_ct_preview_fields.a_current',
-    'dual_ct_preview_fields.b_power','dual_ct_preview_fields.b_voltage','dual_ct_preview_fields.b_current','dual_ct_preview_counters','dual_ct_preview_trends']);
+    'dual_ct_preview_fields.b_power','dual_ct_preview_fields.b_voltage','dual_ct_preview_fields.b_current','dual_ct_preview_counters','dual_ct_preview_trends'];
+  assert.deepEqual(manifest.capabilities.filter(id=>previous.includes(id)),previous);
   for(const language of ['en','de','nl']) {
     const locale=require(`../locales/${language}.json`).dual_ct_preview;
     for(const [bank,port] of [['a','CT1'],['b','CT2']])for(const quantity of ['power','voltage','current']) {

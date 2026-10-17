@@ -1,24 +1,493 @@
 {
-  "name":{"en":"Smart Meter Dual CT (read-only preview)","de":"Smart Meter Dual CT (Nur-Lese-Vorschau)","nl":"Smart Meter Dual CT (alleen-lezenpreview)"},
-  "class":"other","platforms":["local"],"connectivity":["cloud"],
-  "capabilities":["dual_ct_preview_status","dual_ct_preview_age","dual_ct_preview_total.a","dual_ct_preview_total.b","dual_ct_preview_fields.a_power","dual_ct_preview_fields.a_voltage","dual_ct_preview_fields.a_current","dual_ct_preview_fields.b_power","dual_ct_preview_fields.b_voltage","dual_ct_preview_fields.b_current","dual_ct_preview_counters","dual_ct_preview_trends"],
-  "capabilitiesOptions":{
-    "dual_ct_preview_status":{"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_age":{"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_total.a":{"title":{"en":"A raw total","de":"A Rohsumme","nl":"A ruw totaal"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_total.b":{"title":{"en":"B raw total","de":"B Rohsumme","nl":"B ruw totaal"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_fields.a_power":{"title":{"en":"CT1 power","de":"CT1 Leistung","nl":"CT1 vermogen"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_fields.a_voltage":{"title":{"en":"CT1 voltage","de":"CT1 Spannung","nl":"CT1 spanning"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_fields.a_current":{"title":{"en":"CT1 current","de":"CT1 Strom","nl":"CT1 stroom"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_fields.b_power":{"title":{"en":"CT2 power","de":"CT2 Leistung","nl":"CT2 vermogen"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_fields.b_voltage":{"title":{"en":"CT2 voltage","de":"CT2 Spannung","nl":"CT2 spanning"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_fields.b_current":{"title":{"en":"CT2 current","de":"CT2 Strom","nl":"CT2 stroom"},"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_counters":{"preventTag":true,"preventInsights":true},
-    "dual_ct_preview_trends":{"preventTag":true,"preventInsights":true}
+  "name": {
+    "en": "Smart Meter Dual CT (read-only preview)",
+    "de": "Smart Meter Dual CT (Nur-Lese-Vorschau)",
+    "nl": "Smart Meter Dual CT (alleen-lezenpreview)"
   },
-  "images":{"small":"/drivers/smartmeter_dual_ct_preview/assets/images/small.png","large":"/drivers/smartmeter_dual_ct_preview/assets/images/large.png","xlarge":"/drivers/smartmeter_dual_ct_preview/assets/images/xlarge.png"},
-  "settings":[
-    {"id":"preview_enabled","type":"checkbox","value":false,"label":{"en":"Enable continuous read-only preview","de":"Kontinuierliche Nur-Lese-Vorschau aktivieren","nl":"Continue alleen-lezenpreview inschakelen"},"hint":{"en":"CT1/CT2 and V/A/W use community comparisons, not a verified contract. Ages are since receipt; fields need not be simultaneous. Totals/counters remain raw. No Energy, Flows, tags or Insights. Disabling clears readings and detaches this listener. After an account change, disable and re-enable to recheck the original account; a different account requires re-pairing this preview only.","de":"CT1/CT2 und V/A/W beruhen auf Community-Vergleichen, keinem verifizierten Vertrag. Alter seit Empfang; Felder nicht zwingend gleichzeitig. Summen/Zähler bleiben roh. Keine Energie, Flows, Tags oder Insights. Deaktivieren löscht Werte und Listener. Nach Kontowechsel aus-/einschalten, um das ursprüngliche Konto zu prüfen; ein anderes Konto erfordert erneute Kopplung nur dieser Vorschau.","nl":"CT1/CT2 en V/A/W volgen communityvergelijkingen, geen geverifieerd contract. Leeftijd sinds ontvangst; velden niet noodzakelijk gelijktijdig. Totalen/tellers blijven ruw. Geen Energy, Flows, tags of Insights. Uitschakelen wist waarden en deze listener. Na accountwijziging uit- en inschakelen om het oorspronkelijke account te controleren; een ander account vereist opnieuw koppelen van alleen deze preview."}}
+  "class": "other",
+  "platforms": [
+    "local"
   ],
-  "pair":[{"id":"preview_consent"},{"id":"app_credentials"},{"id":"list_devices","template":"list_devices","navigation":{"next":"add_devices"}},{"id":"add_devices","template":"add_devices"}]
+  "connectivity": [
+    "cloud"
+  ],
+  "capabilities": [
+    "dual_ct_preview_status",
+    "dual_ct_preview_age",
+    "dual_ct_preview_net.a",
+    "dual_ct_preview_net_status.a",
+    "dual_ct_preview_net.b",
+    "dual_ct_preview_net_status.b",
+    "dual_ct_preview_power.a_p1",
+    "dual_ct_preview_voltage.a_p1",
+    "dual_ct_preview_current.a_p1",
+    "dual_ct_preview_power.a_p2",
+    "dual_ct_preview_voltage.a_p2",
+    "dual_ct_preview_current.a_p2",
+    "dual_ct_preview_power.a_p3",
+    "dual_ct_preview_voltage.a_p3",
+    "dual_ct_preview_current.a_p3",
+    "dual_ct_preview_power.b_p1",
+    "dual_ct_preview_voltage.b_p1",
+    "dual_ct_preview_current.b_p1",
+    "dual_ct_preview_power.b_p2",
+    "dual_ct_preview_voltage.b_p2",
+    "dual_ct_preview_current.b_p2",
+    "dual_ct_preview_power.b_p3",
+    "dual_ct_preview_voltage.b_p3",
+    "dual_ct_preview_current.b_p3",
+    "dual_ct_preview_total.a",
+    "dual_ct_preview_total.b",
+    "dual_ct_preview_fields.a_power",
+    "dual_ct_preview_fields.a_voltage",
+    "dual_ct_preview_fields.a_current",
+    "dual_ct_preview_fields.b_power",
+    "dual_ct_preview_fields.b_voltage",
+    "dual_ct_preview_fields.b_current",
+    "dual_ct_preview_counters",
+    "dual_ct_preview_trends"
+  ],
+  "capabilitiesOptions": {
+    "dual_ct_preview_status": {
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_age": {
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_total.a": {
+      "title": {
+        "en": "A raw total",
+        "de": "A Rohsumme",
+        "nl": "A ruw totaal"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_total.b": {
+      "title": {
+        "en": "B raw total",
+        "de": "B Rohsumme",
+        "nl": "B ruw totaal"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_fields.a_power": {
+      "title": {
+        "en": "CT1 power",
+        "de": "CT1 Leistung",
+        "nl": "CT1 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_fields.a_voltage": {
+      "title": {
+        "en": "CT1 voltage",
+        "de": "CT1 Spannung",
+        "nl": "CT1 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_fields.a_current": {
+      "title": {
+        "en": "CT1 current",
+        "de": "CT1 Strom",
+        "nl": "CT1 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_fields.b_power": {
+      "title": {
+        "en": "CT2 power",
+        "de": "CT2 Leistung",
+        "nl": "CT2 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_fields.b_voltage": {
+      "title": {
+        "en": "CT2 voltage",
+        "de": "CT2 Spannung",
+        "nl": "CT2 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_fields.b_current": {
+      "title": {
+        "en": "CT2 current",
+        "de": "CT2 Strom",
+        "nl": "CT2 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_counters": {
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_trends": {
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_net.a": {
+      "title": {
+        "en": "CT1 phase sum (candidate)",
+        "de": "CT1 Phasensumme (Kandidat)",
+        "nl": "CT1 fasesom (kandidaat)"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_net_status.a": {
+      "title": {
+        "en": "CT1 circuit / sum status",
+        "de": "CT1 Stromkreis / Summenstatus",
+        "nl": "CT1 circuit / somstatus"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.a_p1": {
+      "title": {
+        "en": "CT1 phase 1 power",
+        "de": "CT1 Phase 1 Leistung",
+        "nl": "CT1 fase 1 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.a_p1": {
+      "title": {
+        "en": "CT1 phase 1 voltage",
+        "de": "CT1 Phase 1 Spannung",
+        "nl": "CT1 fase 1 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.a_p1": {
+      "title": {
+        "en": "CT1 phase 1 current",
+        "de": "CT1 Phase 1 Strom",
+        "nl": "CT1 fase 1 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.a_p2": {
+      "title": {
+        "en": "CT1 phase 2 power",
+        "de": "CT1 Phase 2 Leistung",
+        "nl": "CT1 fase 2 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.a_p2": {
+      "title": {
+        "en": "CT1 phase 2 voltage",
+        "de": "CT1 Phase 2 Spannung",
+        "nl": "CT1 fase 2 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.a_p2": {
+      "title": {
+        "en": "CT1 phase 2 current",
+        "de": "CT1 Phase 2 Strom",
+        "nl": "CT1 fase 2 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.a_p3": {
+      "title": {
+        "en": "CT1 phase 3 power",
+        "de": "CT1 Phase 3 Leistung",
+        "nl": "CT1 fase 3 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.a_p3": {
+      "title": {
+        "en": "CT1 phase 3 voltage",
+        "de": "CT1 Phase 3 Spannung",
+        "nl": "CT1 fase 3 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.a_p3": {
+      "title": {
+        "en": "CT1 phase 3 current",
+        "de": "CT1 Phase 3 Strom",
+        "nl": "CT1 fase 3 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_net.b": {
+      "title": {
+        "en": "CT2 phase sum (candidate)",
+        "de": "CT2 Phasensumme (Kandidat)",
+        "nl": "CT2 fasesom (kandidaat)"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_net_status.b": {
+      "title": {
+        "en": "CT2 circuit / sum status",
+        "de": "CT2 Stromkreis / Summenstatus",
+        "nl": "CT2 circuit / somstatus"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.b_p1": {
+      "title": {
+        "en": "CT2 phase 1 power",
+        "de": "CT2 Phase 1 Leistung",
+        "nl": "CT2 fase 1 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.b_p1": {
+      "title": {
+        "en": "CT2 phase 1 voltage",
+        "de": "CT2 Phase 1 Spannung",
+        "nl": "CT2 fase 1 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.b_p1": {
+      "title": {
+        "en": "CT2 phase 1 current",
+        "de": "CT2 Phase 1 Strom",
+        "nl": "CT2 fase 1 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.b_p2": {
+      "title": {
+        "en": "CT2 phase 2 power",
+        "de": "CT2 Phase 2 Leistung",
+        "nl": "CT2 fase 2 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.b_p2": {
+      "title": {
+        "en": "CT2 phase 2 voltage",
+        "de": "CT2 Phase 2 Spannung",
+        "nl": "CT2 fase 2 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.b_p2": {
+      "title": {
+        "en": "CT2 phase 2 current",
+        "de": "CT2 Phase 2 Strom",
+        "nl": "CT2 fase 2 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.b_p3": {
+      "title": {
+        "en": "CT2 phase 3 power",
+        "de": "CT2 Phase 3 Leistung",
+        "nl": "CT2 fase 3 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.b_p3": {
+      "title": {
+        "en": "CT2 phase 3 voltage",
+        "de": "CT2 Phase 3 Spannung",
+        "nl": "CT2 fase 3 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.b_p3": {
+      "title": {
+        "en": "CT2 phase 3 current",
+        "de": "CT2 Phase 3 Strom",
+        "nl": "CT2 fase 3 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    }
+  },
+  "images": {
+    "small": "/drivers/smartmeter_dual_ct_preview/assets/images/small.png",
+    "large": "/drivers/smartmeter_dual_ct_preview/assets/images/large.png",
+    "xlarge": "/drivers/smartmeter_dual_ct_preview/assets/images/xlarge.png"
+  },
+  "settings": [
+    {
+      "id": "preview_enabled",
+      "type": "checkbox",
+      "value": false,
+      "label": {
+        "en": "Enable continuous read-only preview",
+        "de": "Kontinuierliche Nur-Lese-Vorschau aktivieren",
+        "nl": "Continue alleen-lezenpreview inschakelen"
+      },
+      "hint": {
+        "en": "CT1/CT2 and V/A/W use community comparisons, not a verified contract. Ages are since receipt; fields need not be simultaneous. Totals/counters remain raw. No Energy, Flows, tags or Insights. Disabling clears readings and detaches this listener. After an account change, disable and re-enable to recheck the original account; a different account requires re-pairing this preview only.",
+        "de": "CT1/CT2 und V/A/W beruhen auf Community-Vergleichen, keinem verifizierten Vertrag. Alter seit Empfang; Felder nicht zwingend gleichzeitig. Summen/Zähler bleiben roh. Keine Energie, Flows, Tags oder Insights. Deaktivieren löscht Werte und Listener. Nach Kontowechsel aus-/einschalten, um das ursprüngliche Konto zu prüfen; ein anderes Konto erfordert erneute Kopplung nur dieser Vorschau.",
+        "nl": "CT1/CT2 en V/A/W volgen communityvergelijkingen, geen geverifieerd contract. Leeftijd sinds ontvangst; velden niet noodzakelijk gelijktijdig. Totalen/tellers blijven ruw. Geen Energy, Flows, tags of Insights. Uitschakelen wist waarden en deze listener. Na accountwijziging uit- en inschakelen om het oorspronkelijke account te controleren; een ander account vereist opnieuw koppelen van alleen deze preview."
+      }
+    },
+    {
+      "id": "ct1_role",
+      "type": "dropdown",
+      "value": "unknown",
+      "label": {
+        "en": "CT1 circuit description",
+        "de": "CT1 Stromkreisbeschreibung",
+        "nl": "CT1 circuitbeschrijving"
+      },
+      "hint": {
+        "en": "Display only: choose what this port measures in your installation. Does not select an Energy source, invert signs or verify a mapping. A hybrid inverter includes solar and battery exchange; it is not solar-only production.",
+        "de": "Nur Anzeige: Wählen Sie den Stromkreis dieses Anschlusses. Keine Energiequelle, Vorzeichenumkehr oder bestätigte Zuordnung. Ein Hybridwechselrichter umfasst Solar- und Batterieaustausch, nicht nur Solarerzeugung.",
+        "nl": "Alleen weergave: kies wat deze poort meet. Geen selectie van Energy-bron, tekenomkering of geverifieerde koppeling. Een hybride omvormer omvat zon en batterij, niet alleen zonneproductie."
+      },
+      "values": [
+        {
+          "id": "unknown",
+          "label": {
+            "en": "Not specified",
+            "de": "Nicht angegeben",
+            "nl": "Niet opgegeven"
+          }
+        },
+        {
+          "id": "grid",
+          "label": {
+            "en": "Grid connection",
+            "de": "Netzanschluss",
+            "nl": "Netaansluiting"
+          }
+        },
+        {
+          "id": "hybrid_inverter",
+          "label": {
+            "en": "Hybrid inverter (solar + battery)",
+            "de": "Hybridwechselrichter (Solar + Batterie)",
+            "nl": "Hybride omvormer (zon + batterij)"
+          }
+        },
+        {
+          "id": "solar_inverter",
+          "label": {
+            "en": "Solar-only inverter",
+            "de": "Reiner Solarwechselrichter",
+            "nl": "Omvormer voor alleen zon"
+          }
+        },
+        {
+          "id": "load",
+          "label": {
+            "en": "Load circuit",
+            "de": "Laststromkreis",
+            "nl": "Verbruikscircuit"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ct2_role",
+      "type": "dropdown",
+      "value": "unknown",
+      "label": {
+        "en": "CT2 circuit description",
+        "de": "CT2 Stromkreisbeschreibung",
+        "nl": "CT2 circuitbeschrijving"
+      },
+      "hint": {
+        "en": "Display only: choose what this port measures in your installation. Does not select an Energy source, invert signs or verify a mapping. A hybrid inverter includes solar and battery exchange; it is not solar-only production.",
+        "de": "Nur Anzeige: Wählen Sie den Stromkreis dieses Anschlusses. Keine Energiequelle, Vorzeichenumkehr oder bestätigte Zuordnung. Ein Hybridwechselrichter umfasst Solar- und Batterieaustausch, nicht nur Solarerzeugung.",
+        "nl": "Alleen weergave: kies wat deze poort meet. Geen selectie van Energy-bron, tekenomkering of geverifieerde koppeling. Een hybride omvormer omvat zon en batterij, niet alleen zonneproductie."
+      },
+      "values": [
+        {
+          "id": "unknown",
+          "label": {
+            "en": "Not specified",
+            "de": "Nicht angegeben",
+            "nl": "Niet opgegeven"
+          }
+        },
+        {
+          "id": "grid",
+          "label": {
+            "en": "Grid connection",
+            "de": "Netzanschluss",
+            "nl": "Netaansluiting"
+          }
+        },
+        {
+          "id": "hybrid_inverter",
+          "label": {
+            "en": "Hybrid inverter (solar + battery)",
+            "de": "Hybridwechselrichter (Solar + Batterie)",
+            "nl": "Hybride omvormer (zon + batterij)"
+          }
+        },
+        {
+          "id": "solar_inverter",
+          "label": {
+            "en": "Solar-only inverter",
+            "de": "Reiner Solarwechselrichter",
+            "nl": "Omvormer voor alleen zon"
+          }
+        },
+        {
+          "id": "load",
+          "label": {
+            "en": "Load circuit",
+            "de": "Laststromkreis",
+            "nl": "Verbruikscircuit"
+          }
+        }
+      ]
+    }
+  ],
+  "pair": [
+    {
+      "id": "preview_consent"
+    },
+    {
+      "id": "app_credentials"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
 }

@@ -1,0 +1,1 @@
+{"type":"number","title":{"en":"Dual CT preview voltage","de":"Dual CT Vorschau voltage","nl":"Dual CT preview voltage"},"units":"V","decimals":1,"getable":true,"setable":false,"uiComponent":"sensor","insights":false,"icon":"/assets/capabilities/solar-meter.svg"}

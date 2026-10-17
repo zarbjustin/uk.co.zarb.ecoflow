@@ -1,5 +1,28 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## 17 October: grid Energy preparation sprints 1–3, LOCAL / UNPUBLISHED
+
+CT1 source/timing adapter, persistent power accounting and new-device adoption /
+single-writer safeguards are implemented but not imported or instantiated by
+app/driver code. The registry remains empty and the runtime switch false. No
+existing device gains standard meter capabilities or Energy configuration. No
+publication. Explicit receipt-timed estimates need their own validated freshness
+contract and are not treated as measurements or a strict-path fallback. Native
+source/timing/upgrade/backup/physical acceptance gates remain open. See
+DUAL_CT_GRID_ENERGY_PREPARATION.md and current STATUS.md for exact scope/limits.
+
+## 17 October: circuit-aware phase preview, LOCAL / UNPUBLISHED
+
+Additive native phase V/A/W displays, one-packet candidate sums with partial /
+mismatch / independent expiry suppression, and allowlisted user circuit labels
+are implemented only on the diagnostic branch. No user setting or candidate sum
+unlocks accounting, sign normalisation, a verified mapping, solar attribution,
+source adoption, controls or standard power/meter capabilities. No Test release.
+Every prior capability ID, account binding, consent and lifecycle/privacy fence
+is retained; failed/late capability upgrades cannot subscribe. Native Homey and
+physical acceptance remain pending. See DUAL_CT_CIRCUIT_PRESENTATION.md and the
+latest local checkpoint in STATUS.md. Mainline and Live are unchanged.
+
 ## 17 October: CT labels/counter clarity published to Test v1.10.53 / Build 67
 
 Source `2d4c943`, tag `c248eee`; source CI `39055239853`, version `39055356626`,

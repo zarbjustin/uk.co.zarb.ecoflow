@@ -4,6 +4,8 @@ import { appAuthClientFromSettings, clearSavedAppAuthCreds, hasSavedAppAuthCreds
 import { dualCtAccountBinding, dualCtPreviewDevices, DUAL_CT_PREVIEW_CONSENT } from '../../lib/dualCtPreviewPairing';
 import { hasOtherAppAuthDevices } from '../../lib/appAuthConsumers';
 import { DualCtMonitor } from '../../lib/dualCtMonitor';
+import { dualCtCircuitRole, DualCtDisplayRoles } from '../../lib/dualCtPresentation';
+import manifest from './driver.compose.json';
 
 module.exports = class DualCtPreviewDevice extends Homey.Device {
   private generation = 0;
@@ -19,6 +21,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   private acceptedPackets = 0;
   private lastAcceptedAt: number | null = null;
   private state = 'waiting';
+  private displayRoles: DualCtDisplayRoles = {};
   private readonly accountChanged = (key: string) => {
     if (['appAuthEmail', 'appAuthPassword', 'appAuthHost'].includes(key)) {
       this.stop('account_changed').catch(() => {});
@@ -37,12 +40,47 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     const clear = this.stop(consented ? 'waiting' : 'disabled'); // Clear persisted capability values first.
     const { generation } = this;
     await clear;
+    this.displayRoles = { aRole: dualCtCircuitRole(this.getSetting('ct1_role')), bRole: dualCtCircuitRole(this.getSetting('ct2_role')) };
+    try {
+      await this.ensureDisplays(generation);
+    } catch {
+      if (generation === this.generation) {
+        this.state = 'display_failed';
+        await this.setUnavailable(this.text('display_failed'));
+      }
+      return; // A failed capability upgrade must not start or renew a subscription.
+    }
+    if (generation !== this.generation) return;
     await this.setWarning(this.text('warning'));
     if (generation !== this.generation) return;
     if (consented) {
       this.enabled = true;
       await this.connect(generation);
     }
+  }
+
+  /** Additive, idempotent preview-only upgrade. Existing IDs and consent are preserved. */
+  private async ensureDisplays(generation: number): Promise<void> {
+    this.chain = this.chain.catch(() => {}).then(async () => {
+      for (const capability of manifest.capabilities) {
+        if (generation !== this.generation) return;
+        if (!this.hasCapability(capability)) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.addCapability(capability);
+          if (generation !== this.generation) return;
+          // eslint-disable-next-line no-await-in-loop
+          await this.setCapabilityValue(capability, null);
+        }
+        if (generation !== this.generation) return;
+        const options = manifest.capabilitiesOptions as Record<string, {
+          title?: { en: string; de: string; nl: string }; preventTag: boolean; preventInsights: boolean;
+        }>;
+        // Apply per-instance titles/privacy fences on upgrades as well as fresh pairing.
+        // eslint-disable-next-line no-await-in-loop
+        await this.setCapabilityOptions(capability, options[capability]);
+      }
+    });
+    await this.chain;
   }
 
   private async connect(generation: number): Promise<void> {
@@ -106,7 +144,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     this.chain = this.chain.catch(() => {}).then(async () => {
       if (this.renderQueuedGeneration === generation) this.renderQueuedGeneration = null;
       if (!this.enabled || generation !== this.generation || !this.monitor) return;
-      const view = this.monitor.snapshot(Date.now(), (key) => this.text(key));
+      const view = this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles);
       this.state = view.recent ? 'recent' : 'waiting_stale';
       if (this.expiry) this.homey.clearTimeout(this.expiry);
       this.expiry = view.nextExpiryMs === null ? null : this.homey.setTimeout(() => {
@@ -162,6 +200,12 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.some((key) => ['ct1_role', 'ct2_role'].includes(key))) {
+      this.displayRoles = {
+        aRole: dualCtCircuitRole(newSettings.ct1_role), bRole: dualCtCircuitRole(newSettings.ct2_role),
+      };
+      if (!changedKeys.includes('preview_enabled')) this.render(this.generation);
+    }
     if (!changedKeys.includes('preview_enabled')) return;
     const clear = this.stop('disabled');
     const { generation } = this;
@@ -169,6 +213,16 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     if (generation !== this.generation) return;
     if (newSettings.preview_enabled === true) {
       if (this.getStoreValue('dualCtPreviewConsent') !== DUAL_CT_PREVIEW_CONSENT) throw new Error(this.text('consent_required'));
+      // A prior failed/partial startup upgrade must not be bypassed by toggling preview.
+      try {
+        await this.ensureDisplays(generation);
+      } catch {
+        if (generation !== this.generation) return;
+        this.state = 'display_failed';
+        await this.setUnavailable(this.text('display_failed'));
+        throw new Error(this.text('display_failed'));
+      }
+      if (generation !== this.generation) return;
       this.enabled = true; this.retryDelay = 30000;
       await this.connect(generation);
     }

@@ -152,7 +152,10 @@ function harness(options = {}) {
     drivers: { getDriver: () => ({ getDevices: () => options.other ? [options.other] : [device] }) },
   };
   device.getData = () => ({ sn }); device.getSetting = key => settingValues[key];
-  device.getStoreValue = key => stored[key]; device.getCapabilities = () => manifest.capabilities;
+  device.getStoreValue = key => stored[key]; device.getCapabilities = () => [...values.keys()];
+  device.hasCapability = id => values.has(id);
+  device.addCapability = async id => { values.set(id, null); };
+  device.setCapabilityOptions = async () => {};
   device.getCapabilityValue = id => values.get(id);
   device.setCapabilityValue = async (id, value) => { writes.push([id, value]); values.set(id, value); };
   device.setAvailable = async () => { device.available = true; };
@@ -160,6 +163,74 @@ function harness(options = {}) {
   device.setWarning = async message => { device.warning = message; };
   return { device, values, timers, handlers, writes, settings, settingValues };
 }
+
+test('existing preview upgrades additively without re-pairing, lost identifiers or persisted numeric reuse', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness(); const added = []; const capabilityOptions = new Map();
+  h.device.setCapabilityOptions = async (id, options) => { capabilityOptions.set(id, options); };
+  for (const id of [...h.values.keys()]) if (/dual_ct_preview_(power|voltage|current|net|net_status)\./.test(id)) h.values.delete(id);
+  const oldIds = [...h.values.keys()];
+  h.device.addCapability = async id => { added.push(id); h.values.set(id, 99999); };
+  try {
+    await h.device.onInit(); await h.device.chain;
+    assert.equal(added.length, 22); assert.equal(h.handlers.size, 1);
+    assert.equal(capabilityOptions.size, manifest.capabilities.length);
+    assert.equal(capabilityOptions.get('dual_ct_preview_power.a_p1').title.en, 'CT1 phase 1 power');
+    assert.equal(capabilityOptions.get('dual_ct_preview_net.b').preventTag, true);
+    for (const id of [...oldIds, ...added]) assert.ok(h.values.has(id));
+    for (const id of added) assert.notEqual(h.values.get(id), 99999);
+    const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), 1);
+    await h.device.onUninit();
+    assert.ok(added.every(id => h.values.get(id) === null));
+    await h.device.onInit(); assert.equal(added.length, 22, 'upgrade is idempotent');
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('capability upgrade failure or teardown during a delayed upgrade cannot start monitoring', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => assert.fail('unfinished upgrade must not read account or subscribe');
+  try {
+    const failed = harness(); failed.values.delete('dual_ct_preview_power.a_p1');
+    failed.device.addCapability = async () => { throw new Error('synthetic failure'); };
+    await failed.device.onInit(); assert.equal(failed.handlers.size, 0); assert.equal(failed.timers.size, 0);
+    assert.equal(failed.device.getDualCtPreviewDiagnostics().status, 'display_failed');
+    await assert.rejects(failed.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: true } }), /display update failed/);
+    assert.equal(failed.handlers.size, 0, 'explicit enable cannot bypass a failed upgrade');
+    await failed.device.onUninit();
+    const h = harness(); h.values.delete('dual_ct_preview_power.a_p1'); let release;
+    const pending = new Promise(resolve => { release = resolve; });
+    h.device.addCapability = async id => { await pending; h.values.set(id, 99999); };
+    const init = h.device.onInit(); await new Promise(resolve => setImmediate(resolve));
+    const stop = h.device.onUninit(); release(); await Promise.all([init, stop]);
+    assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+  } finally { auth.appAuthClientFromSettings = original; }
+});
+
+test('circuit description settings change only text, keep existing subscription, and cannot revive disabled readings', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  try {
+    await h.device.onInit(); const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    const power = h.values.get('dual_ct_preview_power.b_p1');
+    const before = h.device.getDualCtPreviewDiagnostics();
+    await h.device.onSettings({ changedKeys: ['ct1_role', 'ct2_role'], newSettings: { ct1_role: 'grid', ct2_role: 'hybrid_inverter' } });
+    await h.device.chain;
+    assert.ok(h.values.get('dual_ct_preview_net_status.b').includes(text('role_hybrid_inverter')));
+    assert.equal(h.values.get('dual_ct_preview_power.b_p1'), power);
+    assert.deepEqual(h.device.getDualCtPreviewDiagnostics(), before);
+    assert.deepEqual([...h.handlers], [handler]);
+    await h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: false } });
+    await h.device.onSettings({ changedKeys: ['ct2_role'], newSettings: { ct1_role: 'grid', ct2_role: 'solar_inverter' } });
+    await h.device.chain;
+    assert.equal(h.handlers.size, 0); assert.equal(h.values.get('dual_ct_preview_net_status.b'), null);
+    assert.equal(h.values.get('dual_ct_preview_power.b_p1'), null);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
 
 test('paired preview clears persisted values, renders telemetry, expires per field and detaches without commands or stores', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: 1000 });
@@ -337,7 +408,10 @@ test('preview manifest has no standard power, energy, control, tags, Insights or
     const definition = JSON.parse(fs.readFileSync(path.join(root, '.homeycompose/capabilities', id.split('.')[0] + '.json')));
     assert.equal(definition.getable, true); assert.equal(definition.setable, false); assert.equal(definition.insights, false);
     assert.equal(manifest.capabilitiesOptions[id].preventTag, true); assert.equal(manifest.capabilitiesOptions[id].preventInsights, true);
-    if (id !== 'dual_ct_preview_age') assert.equal(definition.units, undefined);
+    if (/dual_ct_preview_(power|net)\./.test(id)) assert.equal(definition.units, 'W');
+    else if (/dual_ct_preview_voltage\./.test(id)) assert.equal(definition.units, 'V');
+    else if (/dual_ct_preview_current\./.test(id)) assert.equal(definition.units, 'A');
+    else if (id !== 'dual_ct_preview_age') assert.equal(definition.units, undefined);
   }
   assert.equal(manifest.settings[0].value, false);
   for (const size of ['small', 'large', 'xlarge']) {

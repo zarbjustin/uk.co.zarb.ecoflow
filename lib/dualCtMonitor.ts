@@ -4,6 +4,7 @@ import { dualCtEncodingPolicy } from './dualCtEncoding';
 import { inspectDualCtCounterRecords } from './dualCtCounters';
 import { dualCtFreshAge } from './dualCtContract';
 import { dualCtDisplayValue } from './dualCtDisplay';
+import { DUAL_CT_PHASE_DISPLAYS, dualCtCircuitRole, DualCtDisplayRoles } from './dualCtPresentation';
 
 type Scope = { account: string; device: string; session: string };
 type Counter = { field: number; value: number; receivedAt: number; trend: string };
@@ -77,12 +78,17 @@ export class DualCtMonitor {
     return false;
   }
 
-  snapshot(now: number, translate: (key: string) => string) {
+  snapshot(now: number, translate: (key: string) => string, roles: DualCtDisplayRoles = {}) {
     if (!Number.isFinite(now) || now < 0 || (this.lastNow !== null && now < this.lastNow)) this.clear();
     if (Number.isFinite(now)) this.lastNow = now;
     const view = this.adapter.snapshot(now);
     const rows = view.banks.flatMap((bank) => bank.readings);
     const ages = rows.filter((row) => row.status === 'recent_receipt').map((row) => 90000 - row.receiptAgeSec! * 1000);
+    for (const bank of view.banks) {
+      if (bank.phaseSum.receiptAgeSec !== null && dualCtFreshAge(bank.phaseSum.receiptAgeSec * 1000)) {
+        ages.push(90000 - bank.phaseSum.receiptAgeSec * 1000);
+      }
+    }
     const counters = [...this.counters.values()].filter((row) => dualCtFreshAge(now - row.receivedAt));
     ages.push(...counters.map((row) => 90000 - (now - row.receivedAt)));
     let status = this.lastAt === null ? 'waiting' : 'stale';
@@ -100,14 +106,22 @@ export class DualCtMonitor {
     for (const bank of view.banks) {
       const suffix = bank.bank.toLowerCase();
       values[`dual_ct_preview_total.${suffix}`] = bank.readings.find((row) => row.phase === null)?.value ?? null;
+      values[`dual_ct_preview_net.${suffix}`] = bank.phaseSum.value;
+      const role = dualCtCircuitRole(suffix === 'a' ? roles.aRole : roles.bRole);
+      const age = bank.phaseSum.receiptAgeSec === null ? '' : ` (${Math.floor(bank.phaseSum.receiptAgeSec)}s)`;
+      values[`dual_ct_preview_net_status.${suffix}`] = `${translate('role_description')}: ${translate(`role_${role}`)} — ${translate(`sum_${bank.phaseSum.status}`)}${age}`;
+      for (const row of bank.readings) {
+        const display = DUAL_CT_PHASE_DISPLAYS.find((item) => item.field === row.field);
+        if (display) values[display.capability] = row.value;
+      }
       for (const quantity of ['power', 'voltage', 'current']) {
         values[`dual_ct_preview_fields.${suffix}_${quantity}`] = bank.readings.filter((row) => row.phase !== null && row.quantity === quantity)
           .map((row) => {
             const value = row.value === null ? translate(row.status === 'stale' ? 'stale_field' : 'missing')
               : dualCtDisplayValue(row.field, row.value, translate('number_locale')) ?? translate('missing');
             const age = row.receiptAgeSec === null ? '' : ` (${Math.floor(row.receiptAgeSec)}s)`;
-            return `${row.field}: ${value}${age}`;
-          }).join(' / ');
+            return `${translate('phase')} ${row.phase} · ${row.field}: ${value}${age}`;
+          }).join('\n');
       }
     }
     return {

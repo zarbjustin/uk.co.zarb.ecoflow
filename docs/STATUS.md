@@ -2,6 +2,84 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Consolidated phase/Grid Energy preparation — 17 October 2026, Test release AUTHORISED
+
+Owner now authorises committing/pushing the diagnostic branch, checking source
+and exact-version CI, and publishing one consolidated Test build. This supersedes
+the publication holds in the local checkpoints below. Mainline and Live must stay
+unchanged; existing devices must NOT gain Energy participation. Robert's updated
+reply remains DRAFT ONLY for review, not authorised for sending.
+
+Release includes the visible individual-phase cards, per-circuit candidate sums,
+circuit descriptions and guarded upgrade path, plus UNWIRED grid-source,
+checkpointed accounting and adoption plumbing. Contract resolver stays empty,
+runtime activation stays false, preview has no Energy declaration and no app /
+driver imports the preparatory Energy session. No new capture, hardware command,
+certification, installed-host update or physical-acceptance claim is authorised.
+Fresh source/CI/upload/channel results will be recorded after each gate passes.
+
+## Grid Energy preparation sprints 1–3 — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised the three preparatory sprints after the circuit-display work
+below. Changes stay on `codex/mixed-generation-reporting-diagnostics`. No
+commit/push, publication, mainline merge or Energy activation for existing devices.
+The last published Test remains v1.10.53 / Build 67, not this local code.
+
+- Strict same-packet CT1 grid adapter, developer-owned firmware/sign/encoding /
+  timing contract, source-specific consent and fresh firmware readback. No
+  contract registered; runtime switch remains false.
+- Persistent serialised power-accounting session, single-key scoped checkpoint,
+  readback-before-projection, no downtime fill and explicit recovery after an
+  ambiguous write. Strict measurement time and separately gated receipt-timed
+  estimates remain distinct; no fabricated timestamps or receipt-only fallback.
+- Explicit NEW-device adoption plan and per-grid single-writer authority; fresh
+  overlap inventory and external-meter review, no existing-preview conversion,
+  source takeover or counter/power mixing. Pending saves retain authority until
+  settled, including close/revocation/overload. No app/driver wires this session.
+- Proposed Homey cumulative grid configuration/kWh projection only, not applied.
+  Preview metadata/accounting and all existing devices stay unchanged by these
+  Energy modules. No Homey/physical command, capture or message sent.
+
+Details, technical limits and remaining native/physical activation work:
+[DUAL_CT_GRID_ENERGY_PREPARATION.md](DUAL_CT_GRID_ENERGY_PREPARATION.md).
+Robert's updated reply remains draft-only. Final local checks passed:
+**925/925 tests** (30 new Energy regressions), lint, dependency audit (0
+vulnerabilities), diff checks and Homey CLI 4.5.3 verified validation. Tests and
+CLI validation ran sequentially. Other nine drivers, Flow declarations,
+permissions and version remain unchanged; preview still has no Energy config.
+No native Homey storage/upgrade or physical acceptance is claimed. Work remains
+uncommitted/unpushed, no new CI run or release performed.
+
+## Circuit-aware phase preview — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised implementation and regression tests only on
+`codex/mixed-generation-reporting-diagnostics`. No commit/push, version bump,
+publication, mainline merge, device command or Robert message in this continuation.
+The published Test baseline below remains v1.10.53 / Build 67, not this code.
+
+18 native per-phase V/A/W cards and two per-circuit signed phase sums/statuses
+are additive to the existing preview IDs. Sums require one decoded payload with
+all three power fields, reject conflicting reported totals, clear on partial
+power updates and expire independently at 90 seconds. Native values keep raw
+numeric precision; technical string groups retain individual wire IDs/ages and
+now identify each candidate phase on its own line. User-selected circuit labels
+default to unspecified and cannot adopt an Energy source or alter signs/mapping.
+Hybrid inverter means solar plus possible battery exchange, not pure generation.
+Existing paired previews migrate additively before subscribing; old consent,
+identity and lifecycle/privacy fences remain. All Energy/accounting/Flow/control
+gates, other drivers and mainline/Live stay unchanged. No further captures asked.
+
+See [DUAL_CT_CIRCUIT_PRESENTATION.md](DUAL_CT_CIRCUIT_PRESENTATION.md) for official
+manual/product findings, packet/receipt versus measurement-time limitations,
+counter hypotheses, source-overlap gates and outstanding native acceptance.
+Final local checks passed: **895/895 tests** (13 new regressions), lint,
+dependency audit (0 vulnerabilities), diff checks and Homey CLI 4.5.3 verified
+validation. Tests and CLI validation ran sequentially after an initial parallel
+run exposed their shared compiled-folder interference; the final run is clean.
+Manifest readback confirms all other nine drivers, previous capability definitions,
+permissions, app Flow declarations and app version unchanged. Native Homey tile
+layout and physical/installed-device behaviour are not established by these tests.
+
 ## Test v1.10.53 / Build 67 — published 17 October 2026
 
 Supersedes the preparation/local checkpoints below. CT1/CT2 presentation and raw

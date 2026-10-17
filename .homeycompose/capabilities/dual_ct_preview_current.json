@@ -1,0 +1,1 @@
+{"type":"number","title":{"en":"Dual CT preview current","de":"Dual CT Vorschau current","nl":"Dual CT preview current"},"units":"A","decimals":3,"getable":true,"setable":false,"uiComponent":"sensor","insights":false,"icon":"/assets/capabilities/solar-meter.svg"}

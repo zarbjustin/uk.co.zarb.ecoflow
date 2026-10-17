@@ -1,5 +1,6 @@
 /** Unwired, pure power-accounting rehearsal. Raw preview values MUST NOT enter this adapter. */
 import { dualCtFreshAge, dualCtReadingTime } from './dualCtContract';
+import { dualCtPowerIntervalWh } from './dualCtPowerInterval';
 
 export interface DualCtPowerSample {
   source: string; // Future verified account/device/channel/session identity, not a bank guess.
@@ -89,19 +90,9 @@ export function previewDualCtPowerEnergyTransition(state: DualCtPowerEnergyState
   }
   const elapsed = sample.measuredAt - old.measuredAt;
   if (!dualCtFreshAge(elapsed) || !dualCtFreshAge(sample.receivedAt - old.receivedAt)) return result('gap_anchor', anchored);
-  const p = old.signedImportW; const q = sample.signedImportW;
-  let importWms = 0; let exportWms = 0;
-  if (p >= 0 && q >= 0) importWms = ((p + q) * elapsed) / 2;
-  else if (p <= 0 && q <= 0) exportWms = (-(p + q) * elapsed) / 2;
-  else {
-    // Split the linear interpolation at zero; clipping just the net loses both directions.
-    const firstMs = (elapsed * Math.abs(p)) / (Math.abs(p) + Math.abs(q));
-    const first = (Math.abs(p) * firstMs) / 2; const second = (Math.abs(q) * (elapsed - firstMs)) / 2;
-    importWms = p > 0 ? first : second;
-    exportWms = p < 0 ? first : second;
-  }
-  const importedWh = restored.importedWh + importWms / 3600000;
-  const exportedWh = restored.exportedWh + exportWms / 3600000;
+  const interval = dualCtPowerIntervalWh(old.signedImportW, sample.signedImportW, elapsed)!;
+  const importedWh = restored.importedWh + interval.importedWh;
+  const exportedWh = restored.exportedWh + interval.exportedWh;
   if (!energyValid(importedWh) || !energyValid(exportedWh)) return result('overflow', cleared);
   return result('advanced', { ...anchored, importedWh, exportedWh });
 }

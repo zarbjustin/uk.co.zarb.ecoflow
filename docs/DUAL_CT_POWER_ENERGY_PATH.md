@@ -1,5 +1,18 @@
 # Dual CT power-based Energy preparation — 17 October 2026
 
+## Follow-up: source, persistence and adoption plumbing, LOCAL / UNPUBLISHED
+
+The three preparation sprints now provide a strict CT1 packet adapter, serialised
+checkpointed accounting and explicit per-grid adoption/authority rules. See
+[DUAL_CT_GRID_ENERGY_PREPARATION.md](DUAL_CT_GRID_ENERGY_PREPARATION.md).
+They remain uninstantiated by the app/drivers and cannot activate existing
+devices. The original strict trial still requires measurement timestamps. The
+new session additionally implements an explicitly approximate receipt-timed path
+ONLY behind a distinct developer-validated live-freshness contract, not a fallback
+or a claim of measurement timestamps. The production contract resolver is empty.
+Both trials and the new session retain contributesToEnergy false; the arithmetic
+interval helper is shared without changing strict-trial timing behavior.
+
 The new raw preview driver is useful without Energy adoption. It deliberately
 has no standard meter capabilities, Energy declaration or controls. The original
 meter's accounting remains unchanged. No new testing request to Robert is needed.
