@@ -2,6 +2,43 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.55 / Build 69 — published 17 October 2026
+
+Supersedes the authorised/local checkpoints below. Diagnostic source commit
+`4d0ba6e05782fab6f56027f3acab78ccf6be93cd`; version/tag commit
+`c3690b8d9b3fbef4541e5f02288c84dcf21c8a3d`. Source CI
+[39072576820](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072576820),
+version workflow [39072671453](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072671453),
+exact-tag CI [39072728019](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072728019)
+and upload [39072853123](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072853123)
+all passed. Both CI validation runs passed **993/993 tests**, lint, zero-vulnerability
+dependency audit and Homey CLI 4.5.3 verified validation. Local versioned validation
+also passed. The broader API permission produces the expected extended-review warning.
+
+Build 69 archive readback matched **19 exact compiled/runtime/settings/locale
+files**. Manifest matches the local packaged manifest except Homey's author-email
+privacy filtering; it confirms two new WHEN cards, four AND cards, no new THEN
+card and a custom-only Dual CT preview with no Energy declaration. Archive SHA256:
+`3724bf9c03de4b6e80c2609ae1dcf3154def762356f2a758f459e3c8c11348b1`.
+
+Portal and public listing confirm **Test v1.10.55 / Build 69** at
+`2026-10-17T21:55:41.845Z`:
+[portal](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/69),
+[Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live remains **Build 18 / v1.10.3**, unchanged July release. Local `master`
+remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`; remote `master` remains
+`66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge or certification
+submission was made. No manual installed-host update, Flow activation, physical
+command or owner-hardware acceptance is claimed.
+
+The selected-source workspace and separate temporary Flow monitor stay opt-in.
+The platform API permission is broad, although these implementations use fixed
+GET-only routes; consent does not narrow the platform permission itself. Known
+Dual CT preview candidates remain excluded from the new Flow monitor. Existing
+Flow identities/argument contracts are preserved, but unknown or expired readings
+now deliberately reject condition evaluation. New charging controls and Dual CT
+Energy remain disabled. No further Robert capture/export is requested.
+
 ## Consolidated coordination / legacy reliability — 17 October 2026, Test release AUTHORISED
 
 Owner authorises committing and pushing the accumulated diagnostic changes,
