@@ -91,6 +91,45 @@ test('desktop/mobile selected-source settings remain opt-in, clear stale/hidden 
   } finally { await browser.close(); }
 });
 
+test('desktop/mobile retry recovers a timed-out opening and clearly marks candidate-only sources', async () => {
+  const browser = await chromium.launch();
+  try {
+    for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+      let fireDeadline, entered, opens = 0;
+      const started = new Promise(resolve => { entered = resolve; });
+      const workspace = new CoordinationWorkspace(async () => {
+        if (++opens === 1) { entered(); return new Promise(() => {}); }
+        return { list: async () => ({ preview: { id: 'preview', name: 'Synthetic preview', available: true,
+          driverId: 'homey:app:uk.co.zarb.ecoflow:smartmeter_dual_ct_preview', capabilitiesObj: {
+            'dual_ct_preview_power.a': { title: 'Candidate circuit', type: 'number', getable: true, units: 'W' },
+          } } }), read: async () => null, close() {} };
+      }, () => 100000, { set(fn, ms) { if (ms === 10000) fireDeadline = fn; return { unref() {} }; }, clear() {} });
+      const page = await browser.newPage({ viewport });
+      await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
+      await page.exposeFunction('coordRequest', body => workspace.request(body));
+      await page.evaluate(translations => {
+        window.onHomeyReady({ ready() {}, get(_key, cb) { cb(null, null); }, set(_key, _value, cb) { cb(null); },
+          __(key) { return key.split('.').reduce((value, part) => value?.[part], translations) || key; },
+          api(_method, url, body, cb) { if (url === '/coordination-workspace') window.coordRequest(body).then(value => cb(null, value)); else cb(null, {}); } });
+      }, require('../locales/en.json'));
+      await page.locator('#coordinationTitle').click(); await page.locator('#coord-consent').check();
+      await page.locator('#coord-load').click();
+      await started;
+      assert.equal(typeof fireDeadline, 'function'); fireDeadline();
+      await page.waitForFunction(() => !document.getElementById('coord-load').disabled);
+      assert.match(await page.locator('#coord-status').innerText(), /timed out/);
+      assert.equal(await page.locator('#coord-evaluate').isEnabled(), false);
+      await page.locator('#coord-load').click();
+      await page.waitForFunction(() => document.querySelectorAll('#coord-grid option').length > 1);
+      assert.match(await page.locator('#coord-grid option').last().innerText(), /Display only/);
+      assert.match(await page.locator('#coordinationPanel').innerText(), /does not revoke Homey/);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.locator('#coordinationPanel').screenshot({ path: `/tmp/ecoflow-hardening-${viewport.width === 390 ? 'mobile' : 'desktop'}.png` });
+      workspace.stop(); await page.close();
+    }
+  } finally { await browser.close(); }
+});
+
 test('Flow monitoring has separate opt-in, explicit start/stop and no automatic activation or hidden-page lease extension', async () => {
   const browser = await chromium.launch();
   try {

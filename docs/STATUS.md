@@ -2,6 +2,61 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Four release-hardening sprints — 17 October 2026, Test release AUTHORISED
+
+Owner now authorises committing/pushing this diagnostic wave, checking exact
+source and version/tag CI, and publishing a new Test build only after checks
+pass. Mainline and Live remain unchanged. Publication is pending; the local
+implementation checkpoint below records the earlier restricted scope, not the
+current release authority. No installed-host update or physical command is
+authorised, and controls / Dual CT Energy activation remain gated.
+
+Owner authorises diagnostic-only implementation, regression tests and local
+release checks. No commit/push, version bump, Test upload, mainline merge,
+certification, installed-host update or physical command. Source version remains
+1.10.55. The published Build 69 below does not contain these local changes.
+
+1. Recovery: timed-out/cancelled workspace requests release their operation slot
+   immediately, including uncooperative SDK promises. Generation/operation-owned
+   cleanup prevents late success/rejection or an old timer from affecting a retry.
+   Revocation settles callers, cancels owned timers/HTTP and discards late readers.
+   Account changes also revoke the page reader. No guessed platform-token revoke.
+2. Regression/endurance: 100 page read/revoke cycles, 96 explicitly started
+   observation leases over 48 simulated UTC hours spanning UK DST, resource/dwell
+   checks and original/ES21/ES22/preview transport coexistence. Existing actual
+   driver restore/checkpoint/Flow-compatibility regressions also pass. Synthetic
+   transport subscribers are not model decoding or native Homey acceptance.
+3. Source/access UX: shared display-only candidate classification; explicit source
+   versus reported units and capability-timestamp ages; no invented heartbeat,
+   timing exemption, vendor admission or upstream-zero guarantee. Failed sessions
+   disable further reads until explicit picker retry. SDK permission/token and
+   application-reader lifetimes are distinguished in EN/DE/NL. Public Fronius
+   source and Solis reference evidence reviewed; installed vendor contracts remain
+   unverified. See COORDINATION_SOURCE_AUDIT.md.
+4. Release scope: `npm run release:check` adds manifest/legacy-contract/permission /
+   no-new-actions/no-Energy/no-preview-autostart fences, including negative tests,
+   and is added to the local CI definition. Model matrix and EN/DE/NL store copy
+   now distinguish monitoring/previews from controls/Insights. The rendered
+   official STREAM API and pinned upstream 5000 command source were reviewed;
+   task charge-power readback is not physical enforcement. Original 95% guidance
+   versus legacy 100% helpers remains an explicit control-release review item.
+   See STREAM_CONTROL_CONTRACT_AUDIT.md and RELEASE_CANDIDATE_CHECKLIST.md.
+
+Final local checks: **1012/1012 tests** (19 added), lint clean, release-boundary
+check passed, dependency audit **0 vulnerabilities**, diff checks clean, and
+Homey CLI 4.5.3 verified validation passed sequentially after tests. Expected
+broader-API extended-review warning remains; no additional permission/dependency
+was added. Desktop/mobile browser workflows passed with synthetic Homey bridge.
+Version/manifests, driver capabilities/Energy and existing command/accounting
+modules are unchanged. Core Flow identities/argument contracts are preserved.
+
+Mainline refs remain local `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote
+`66b1cb5f828a53333739798281fce86125f61c28`; diagnostic HEAD remains `894f058`
+with local changes only. No new remote CI or portal/hardware state is claimed.
+No new Robert capture/export is requested. Dual CT Energy and new charging
+controls remain disabled; native settings, backup/upgrade/rollback and per-model
+physical commissioning remain open and need separate approval/equipment.
+
 ## Test v1.10.55 / Build 69 — published 17 October 2026
 
 Supersedes the authorised/local checkpoints below. Diagnostic source commit

@@ -1,6 +1,11 @@
 {
   "legacy_flow": {"readings":"Current, matching STREAM readings are unavailable or not time-coherent. Flow evaluation stopped, including when inverted.","arguments":"Use a supported comparison direction and a finite threshold in the card range.","forecast":"A recent forecast for the correct Homey-local date and current location/settings is unavailable. Flow evaluation stopped."},
   "coordination": {
+    "source_limits": "Choose separate grid, battery SOC and battery-power readings; inverter output is not battery power. W/kW conversion does not verify direction or circuit scope. Upstream apps may estimate values or substitute zero for missing data. A recent capability timestamp is not a verified sensor heartbeat; unchanged values may expire. Never select a different reading just to bypass a blocked source.",
+    "display_only": "Display only — not eligible for Flow monitoring",
+    "timestamp_age": "Capability timestamp age",
+    "source_units": "Selected / reported source unit",
+    "reader_lifetime": "Stopping closes this app's reader and discards its token reference. It does not revoke Homey's broad API permission or the platform API session. Use Homey's permission/app management for platform access; no automatic credential revocation is attempted.",
     "flow_not_checked": "Flow session status has not been checked. Opening this page never starts monitoring. Use Check status or Stop if a session may already be running.",
     "flow_thresholds": "Session priority start/stop (%)",
     "flow_unverified_source": "Dual CT candidate-preview sources remain display-only and cannot be used by these Flow observations yet. Choose a reviewed P1, original meter or another suitable source.",

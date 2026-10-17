@@ -1,6 +1,8 @@
 /** Owner-opted-in observations only. No commands, Energy adoption or persisted telemetry/consent. */
 import { randomUUID } from 'crypto';
-import { boundCoordinationView, CoordinationBindings, normalizeCoordinationBindings } from './coordinationBindings';
+import {
+  boundCoordinationView, CoordinationBindings, normalizeCoordinationBindings, coordinationSourceKind,
+} from './coordinationBindings';
 import { CoordinationReader } from './coordinationWorkspace';
 
 export interface CoordinationFlowClock {
@@ -60,8 +62,7 @@ export class CoordinationFlowMonitor {
       this.stop('monitor_invalid_setup');
       throw new Error('coordination_flow_invalid_setup');
     }
-    if (Object.values(bindings.sources).some((row) => row!.driverId.split(':').pop() === 'smartmeter_dual_ct_preview'
-      || row!.capabilityId.startsWith('dual_ct_preview_'))) {
+    if (Object.values(bindings.sources).some((row) => coordinationSourceKind(row!) === 'candidate_preview')) {
       this.stop('monitor_unverified_preview_source');
       throw new Error('coordination_flow_unverified_preview_source');
     }

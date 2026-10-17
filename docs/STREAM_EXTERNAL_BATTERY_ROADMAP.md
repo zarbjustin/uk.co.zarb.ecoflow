@@ -1,5 +1,15 @@
 # External PV, load and battery coordination roadmap
 
+## Release-hardening follow-up — 17 October 2026
+
+The original source workspace and six observation cards reached Test v1.10.55.
+The current four-sprint local wave covers recovery, combined replay/upgrade
+checks, source/permission UX and release scope/commissioning. It is not published.
+See RELEASE_CANDIDATE_CHECKLIST.md, COORDINATION_SOURCE_AUDIT.md and
+STREAM_CONTROL_CONTRACT_AUDIT.md. No further planned Robert capture, new
+charging writer, Energy activation, mainline merge or publication. Historical
+"local/unpublished" descriptions below refer to the earlier sprint checkpoints.
+
 17 October 2026. Diagnostic-branch plan, not permission to enable controls,
 Energy, publish or alter installed devices. Robert/Ed's requirements are design
 inputs; future hardware gates use owner equipment, not another planned export.

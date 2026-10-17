@@ -49,7 +49,7 @@ module.exports = class EcoFlowApp extends Homey.App {
         commandWrites: 0,
       };
     }
-    if (!this.coordinationWorkspace) this.coordinationWorkspace = new CoordinationWorkspace(() => createHomeyCoordinationReader(this.homey));
+    if (!this.coordinationWorkspace) this.coordinationWorkspace = new CoordinationWorkspace((signal) => createHomeyCoordinationReader(this.homey, signal));
     return this.coordinationWorkspace.request(body);
   }
 
@@ -95,6 +95,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (['streamCoordinationBindingsV1', ...APP_AUTH_SETTINGS, 'accessKey', 'secretKey', 'host'].includes(key)) {
       this.coordinationFlowRevision += 1;
       this.coordinationFlowMonitor?.stop('monitor_sources_changed');
+      if (key !== 'streamCoordinationBindingsV1') this.coordinationWorkspace?.revoke();
     }
     if (['accessKey', 'secretKey', 'host', 'mqtt_enabled'].includes(key)) {
       this.dualCtResearch?.stop('account_changed', true);

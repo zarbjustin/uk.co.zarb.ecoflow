@@ -1,6 +1,11 @@
 {
   "legacy_flow": {"readings":"Aktuelle passende STREAM-Werte sind nicht verfügbar oder zeitlich unstimmig. Die Flow-Auswertung wurde gestoppt, auch bei Umkehrung.","arguments":"Eine unterstützte Vergleichsrichtung und eine endliche Schwelle innerhalb des Kartenbereichs verwenden.","forecast":"Eine aktuelle Prognose für das richtige lokale Homey-Datum und den aktuellen Standort/Einstellungen ist nicht verfügbar. Flow-Auswertung gestoppt."},
   "coordination": {
+    "source_limits": "Netzleistung, Batterie-SOC und Batterieleistung getrennt wählen; Wechselrichterleistung ist nicht Batterieleistung. W/kW-Umrechnung bestätigt weder Richtung noch Stromkreis. Andere Apps können Werte schätzen oder fehlende Daten durch null ersetzen. Ein aktueller Messwert-Zeitstempel ist kein bestätigtes Sensorsignal; unveränderte Werte können ablaufen. Keine andere Messung wählen, nur um eine Sperre zu umgehen.",
+    "display_only": "Nur Anzeige — nicht für Flow-Beobachtung geeignet",
+    "timestamp_age": "Alter des Messwert-Zeitstempels",
+    "source_units": "Gewählte / gemeldete Quelleinheit",
+    "reader_lifetime": "Stoppen schließt den Leser dieser App und verwirft seine Token-Referenz. Es widerruft weder Homeys breite API-Berechtigung noch die Plattform-API-Sitzung. Plattformzugriff über Homeys Berechtigungs-/App-Verwaltung regeln; kein automatischer Zugangsdatenwiderruf.",
     "flow_not_checked": "Flow-Sitzungsstatus noch nicht geprüft. Öffnen der Seite startet keine Beobachtung. Bei einer möglicherweise laufenden Sitzung Status prüfen oder Stopp verwenden.",
     "flow_thresholds": "SOC-Start-/Stoppschwellen der Sitzung (%)",
     "flow_unverified_source": "Dual-CT-Vorschauquellen bleiben reine Anzeige und können hier noch nicht für Flow-Beobachtungen verwendet werden. Geprüften P1-, Originalzähler oder eine andere geeignete Quelle wählen.",

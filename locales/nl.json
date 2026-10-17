@@ -1,6 +1,11 @@
 {
   "legacy_flow": {"readings":"Actuele passende STREAM-waarden zijn niet beschikbaar of niet gelijktijdig. Flow-evaluatie gestopt, ook bij omkering.","arguments":"Gebruik een ondersteunde vergelijkingsrichting en een eindige drempel binnen het kaartbereik.","forecast":"Een recente prognose voor de juiste lokale Homey-datum en huidige locatie/instellingen is niet beschikbaar. Flow-evaluatie gestopt."},
   "coordination": {
+    "source_limits": "Kies afzonderlijke waarden voor netvermogen, batterij-SOC en batterijvermogen; omvormeruitgang is geen batterijvermogen. W/kW-omrekening bewijst richting of circuitomvang niet. Andere apps kunnen waarden schatten of ontbrekende data door nul vervangen. Een recente tijdstempel is geen bewezen sensorhartslag; ongewijzigde waarden kunnen verlopen. Kies geen andere meting alleen om een blokkade te omzeilen.",
+    "display_only": "Alleen weergave — niet geschikt voor Flow-monitoring",
+    "timestamp_age": "Leeftijd van capaciteitstijdstempel",
+    "source_units": "Gekozen / gemelde broneenheid",
+    "reader_lifetime": "Stoppen sluit de lezer van deze app en verwijdert de tokenreferentie. Dit trekt Homey's brede API-toestemming of platformsessie niet in. Beheer platformtoegang via Homey's app-/rechtenbeheer; geen automatische intrekking van inloggegevens.",
     "flow_not_checked": "Status van de Flow-sessie nog niet gecontroleerd. Deze pagina openen start nooit monitoring. Gebruik Status controleren of Stop als er al een sessie kan lopen.",
     "flow_thresholds": "Prioriteitsdrempels start/stop van sessie (%)",
     "flow_unverified_source": "Dual CT-kandidaatbronnen blijven alleen voor weergave en kunnen nog niet voor deze Flow-observaties worden gebruikt. Kies een gecontroleerde P1-, oorspronkelijke meter of andere geschikte bron.",

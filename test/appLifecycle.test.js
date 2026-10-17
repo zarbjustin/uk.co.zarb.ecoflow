@@ -173,6 +173,47 @@ test('app teardown detaches settings listeners and cancels pending reconnect cal
   assert.equal(await app.subscribeAppRealtime('ES22TEST00000001', () => {}), false);
 });
 
+test('account changes revoke a pending page reader without enabling or altering any device or Flow', async () => {
+  const { CoordinationWorkspace } = require('../.homeybuild/lib/coordinationWorkspace');
+  const { app, settings } = harness(); await app.onInit();
+  let signal;
+  app.coordinationWorkspace = new CoordinationWorkspace(abort => { signal = abort; return new Promise(() => {}); });
+  const pending = app.requestCoordinationWorkspace({ action: 'open', consent: true, clientId: 'synthetic-page' });
+  settings.emit('set', 'appAuthPassword');
+  assert.equal((await pending).reason, 'session_expired'); assert.equal(signal.aborted, true);
+  assert.equal(app.coordinationFlowMonitor, null); await app.onUninit();
+});
+
+test('original, ES21/ES22 and Dual CT transport subscribers coexist while research repeatedly detaches', async () => {
+  const { EcoFlowMqtt } = require('../.homeybuild/lib/EcoFlowMqtt');
+  const { EcoFlowAppMqtt } = require('../.homeybuild/lib/EcoFlowAppMqtt');
+  const { app } = harness(); await app.onInit();
+  const mqtt = new EcoFlowMqtt({ accessKey: 'synthetic', secretKey: 'synthetic' });
+  const appMqtt = new EcoFlowAppMqtt({ client: {} }); let ends = 0;
+  mqtt.end = appMqtt.end = async () => { ends++; };
+  app.mqtt = mqtt; app.appMqtt = appMqtt; app.getMqtt = async () => mqtt; app.getAppMqtt = async () => appMqtt;
+  const counts = new Map(); const owned = [];
+  const originalSn = 'BK61SYNTHETIC0001';
+  const original = () => counts.set('original', (counts.get('original') || 0) + 1);
+  await app.subscribeRealtime(originalSn, original);
+  for (const sn of ['ES21SYNTHETIC001', 'ES22SYNTHETIC001', 'ZZ42SYNTHETIC001']) {
+    const fn = () => counts.set(sn, (counts.get(sn) || 0) + 1); owned.push([sn, fn]);
+    await app.subscribeAppRealtime(sn, fn);
+  }
+  for (let cycle = 0; cycle < 50; cycle++) {
+    for (const [sn] of owned) {
+      const research = () => {};
+      await app.subscribeAppRealtime(sn, research); app.unsubscribeAppRealtime(sn, research);
+      appMqtt.onMessage(`/app/device/property/${sn}`, Buffer.from('{}'));
+    }
+    mqtt.onMessage(`/open/synthetic/${originalSn}/quota`, Buffer.from('{"power":0}'));
+  }
+  assert.equal(counts.get('original'), 50); for (const [sn] of owned) assert.equal(counts.get(sn), 50);
+  assert.equal(ends, 0, 'research detach never closes another device connection');
+  app.unsubscribeRealtime(originalSn, original); for (const [sn, fn] of owned) app.unsubscribeAppRealtime(sn, fn);
+  await app.onUninit(); assert.equal(app.homey.settings.listenerCount('set'), 0);
+});
+
 test('late MQTT connection completion after app shutdown cannot attach a subscription', async () => {
   const { app } = harness();
   await app.onInit();

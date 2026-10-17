@@ -1,5 +1,12 @@
 # Selected-source coordination workspace
 
+Current follow-up: the local release-hardening wave adds generation-owned timeout
+recovery, cancellable reader acquisition, account-change revocation and clearer
+source/unit/timestamp explanations. See COORDINATION_SOURCE_AUDIT.md for the
+platform-token versus reader lifetime distinction. The original workspace was
+published in Test v1.10.55; the hardening changes remain unpublished. Historical
+local-only statements below describe the earlier implementation checkpoint.
+
 17 October 2026. Sprints A/B (the requested sprints 1/2), diagnostic branch only.
 Local, uncommitted and unpublished. No physical or installed-host acceptance.
 

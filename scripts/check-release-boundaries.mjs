@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const presentation = new Set(['title', 'titleFormatted', 'hint', 'placeholder']);
+function contract(value) {
+  if (Array.isArray(value)) return value.map(contract);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !presentation.has(key)).map(([key, item]) => [key, contract(item)]));
+  return value;
+}
+export function loadReleaseInputs(root) {
+  const json = name => JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
+  const app = json('app.json');
+  return {
+    app, compose: json('.homeycompose/app.json'), pkg: json('package.json'), lock: json('package-lock.json'),
+    legacy: json('test/fixtures/legacy-flow-v1.10.54-contract.json'), live: json('test/fixtures/live-v1.10.3-contract.json'),
+    definitions: app.capabilities,
+    gridGate: fs.readFileSync(path.join(root, 'lib/dualCtGridEnergySource.ts'), 'utf8'),
+    runtime: ['app.ts', 'api.ts', ...app.drivers.map(driver => `drivers/${driver.id}/device.ts`)]
+      .filter(name => fs.existsSync(path.join(root, name))).map(name => fs.readFileSync(path.join(root, name), 'utf8')).join('\n'),
+  };
+}
+export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, gridGate, runtime }) {
+  assert.equal(app.id, 'uk.co.zarb.ecoflow');
+  for (const version of [compose.version, pkg.version, lock.version, lock.packages[''].version]) assert.equal(version, app.version, 'version mismatch');
+  assert.deepEqual([...app.permissions].sort(), ['homey:manager:api', 'homey:manager:geolocation']);
+  assert.deepEqual([...compose.permissions].sort(), [...app.permissions].sort());
+  assert.deepEqual(app.drivers.map(driver => driver.id).sort(), ['smartmeter', 'smartmeter_dual_ct_preview', 'stream',
+    'stream_5000_system', 'stream_5000_unit', 'stream_ac5000', 'stream_micro', 'stream_socket', 'stream_solar', 'stream_unit']);
+  for (const old of live.drivers) {
+    const current = app.drivers.find(driver => driver.id === old.id);
+    assert.equal(current.class, old.class); assert.deepEqual(current.energy || null, old.energy);
+    for (const capability of old.capabilities) assert(current.capabilities.includes(capability));
+  }
+  const additions = {
+    triggers: ['coordination_assessment_changed', 'coordination_readings_changed'],
+    conditions: ['coordination_circuit_power_sustained', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_readings_current'],
+    actions: [],
+  };
+  for (const [kind, oldCards] of Object.entries(legacy.flow)) {
+    assert.deepEqual(app.flow[kind].map(card => card.id).sort(), [...oldCards.map(card => card.id), ...additions[kind]].sort(), 'unexpected Flow identities');
+    for (const old of oldCards) assert.deepEqual(contract(app.flow[kind].find(card => card.id === old.id).args || []), contract(old.args || []), `legacy arguments: ${old.id}`);
+  }
+  const preview = app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_preview');
+  assert.equal(preview.class, 'other'); assert.equal(preview.energy, undefined);
+  for (const id of preview.capabilities) {
+    assert(id.startsWith('dual_ct_preview_')); const definition = definitions[id.split('.')[0]];
+    assert.equal(definition.getable, true); assert.equal(definition.setable, false); assert.equal(definition.insights, false);
+    assert.equal(preview.capabilitiesOptions[id].preventTag, true); assert.equal(preview.capabilitiesOptions[id].preventInsights, true);
+  }
+  assert.equal(preview.settings.find(setting => setting.id === 'preview_enabled').value, false);
+  assert.match(gridGate, /^export const DUAL_CT_ENERGY_RUNTIME_ENABLED = false;/m);
+  assert.match(gridGate, /^export const resolveDualCtGridEnergyContract: .* = \(\) => null;/m);
+  assert.doesNotMatch(runtime, /(?:from\s*|require\s*\()['"][^'"]*(?:dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption)/);
+  for (const route of Object.values(app.api)) assert.notEqual(route.public, true, 'unexpected public app route');
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  assertReleaseBoundaries(loadReleaseInputs(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')));
+  console.log('Release boundaries passed: identities preserved; no new controls, public API or Dual CT Energy activation.');
+  console.log('Native/hardware acceptance, exact CI and publication remain separate gates.');
+}

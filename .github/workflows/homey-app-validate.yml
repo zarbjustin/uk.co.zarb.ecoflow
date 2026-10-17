@@ -18,6 +18,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm run lint
+      - run: npm run release:check
       - run: npm audit
       # Equivalent to Athom's wrapper, without a Docker Hub image pull.
       - run: npx --yes homey@4.5.3 app validate --level verified

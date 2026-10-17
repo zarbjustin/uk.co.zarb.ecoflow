@@ -18,6 +18,11 @@ const identifier = (value: any) => typeof value === 'string' && /^[A-Za-z0-9][A-
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const unit = (value: any) => (typeof value === 'string' ? value : value?.en);
 const driver = (device: any) => (typeof device?.driverId === 'string' ? device.driverId : '');
+/** A display exception is not an automation contract; vendor names never grant admission. */
+export function coordinationSourceKind(row: { driverId: string; capabilityId: string }): 'candidate_preview' | 'metadata_only' {
+  return row.driverId.split(':').pop() === 'smartmeter_dual_ct_preview' || row.capabilityId.startsWith('dual_ct_preview_')
+    ? 'candidate_preview' : 'metadata_only';
+}
 export function normalizeCoordinationBindings(value: any): CoordinationBindings | null {
   if (!object(value) || value.schemaVersion !== 1 || value.reviewed !== true || !identifier(value.siteKey)
     || !['none', 'solar_inverter', 'hybrid_inverter', 'load'].includes(value.secondaryRole) || !object(value.sources)) return null;
@@ -67,6 +72,7 @@ export function coordinationCatalog(devices: any): { sources: any[]; truncated: 
         driverId: driver(device),
         capabilityId,
         unit: unit(cap.units),
+        sourceKind: coordinationSourceKind({ driverId: driver(device), capabilityId }),
         name: typeof device.name === 'string' ? device.name.slice(0, 80) : '',
         title: typeof cap.title === 'string' ? cap.title.slice(0, 80) : capabilityId,
       });
@@ -132,6 +138,9 @@ export function boundCoordinationView(rawBindings: any, devices: Map<string, any
       value,
       unit: slot === 'externalSoc' ? '%' : 'W',
       status: reason,
+      sourceKind: coordinationSourceKind(binding),
+      expectedUnit: binding.unit,
+      observedUnit: ['W', 'kW', '%'].includes(unit(cap?.units)) ? unit(cap.units) : null,
       ageSec: typeof at === 'number' && Number.isFinite(at) && at <= now && at > 0 ? (now - at) / 1000 : null,
       at: reason === 'recent' ? at : null,
     });

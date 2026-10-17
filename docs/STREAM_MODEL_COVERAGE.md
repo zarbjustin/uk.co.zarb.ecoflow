@@ -1,5 +1,23 @@
 # STREAM model coverage and admission evidence
 
+## Current diagnostic scope — 17 October 2026
+
+This summary supersedes the historical development states below. Original BK
+models retain their existing monitoring/guarded-control paths. ES21 and ES22
+have opt-in monitoring Home Battery and physical-unit drivers; their model and
+linked-installation hardware acceptance remains separate. Mixed-generation
+monitoring can use the explicitly selected reporter trial, not automatic merging
+or control migration. Dual CT productType 421 has a separate opt-in display-only
+preview with per-phase/circuit views, no Energy, tags, Insights or automation.
+Expansion/3000/Gateway model admission and capacity inheritance remain gated.
+
+The selected-source coordination workspace and six observation WHEN/AND cards
+are independent opt-ins. Dual CT candidates cannot feed those Flow cards. They
+do not add a charging writer. Read the [current acceptance checklist](RELEASE_CANDIDATE_CHECKLIST.md),
+[source audit](COORDINATION_SOURCE_AUDIT.md) and [fresh control-contract review](STREAM_CONTROL_CONTRACT_AUDIT.md).
+The local hardening changes are unpublished; STATUS.md identifies the last Test
+archive. Product general availability is not integration hardware verification.
+
 **6 October development follow-up:** the unpublished [ecosystem candidate](STREAM_5000_ECOSYSTEM_WAVE.md)
 adds observed, serial-attributed physical MPPT/socket tiles for the already admitted
 ES21/ES22 adapters, freshness and read-only configuration. The historical offline-PV

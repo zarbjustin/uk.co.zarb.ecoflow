@@ -17,11 +17,13 @@
     }
     const overview = el('p', t('overview')); overview.className = 'help';
     el('p', t('permission')).className = 'help';
+    el('p', t('reader_lifetime')).className = 'help';
     const consent = check('consent');
     const body = el('div'); body.hidden = true;
     const status = el('p', t('disabled'), container, 'coord-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     const load = el('button', t('load'), body, 'coord-load'); load.type = 'button';
     el('p', t('privacy'), body).className = 'help';
+    el('p', t('source_limits'), body).className = 'help';
     const form = el('fieldset', '', body, 'coord-bindings');
     form.style.minWidth = '0';
     el('legend', t('bindings'), form);
@@ -124,7 +126,7 @@
     function update() {
       body.hidden = !consent.checked; slotRows.secondary.hidden = role.value === 'none';
       load.disabled = !consent.checked || pending;
-      evaluate.disabled = save.disabled = !consent.checked || !catalog.length || pending;
+      evaluate.disabled = save.disabled = !consent.checked || !catalog.length || !token || pending;
       flowUpdate();
     }
     function bindings() {
@@ -144,7 +146,8 @@
         const empty = el('option', t('choose'), select); empty.value = '';
         catalog.forEach((row, index) => {
           if ((slot === 'externalSoc') !== (row.unit === '%')) return;
-          const option = el('option', row.name + ' — ' + row.title + ' (' + row.unit + ')', select); option.value = String(index);
+          const option = el('option', row.name + ' — ' + row.title + ' (' + row.unit + ')'
+            + (row.sourceKind === 'candidate_preview' ? ' — ' + t('display_only') : ''), select); option.value = String(index);
         });
         const prior = saved?.sources?.[slot];
         if (prior) { const index = catalog.findIndex(row => row.deviceId === prior.deviceId && row.driverId === prior.driverId
@@ -162,7 +165,9 @@
       function finish(error, response) {
         if (done) return; done = true; clearTimeout(timeout);
         if (epoch !== generation || !consent.checked) return;
-        pending = false; update(); callback(error, response || {});
+        pending = false;
+        if (error || ['session_expired', 'read_failed', 'read_timeout'].includes(response?.reason)) { token = null; previous = null; }
+        update(); callback(error, response || {});
       }
       Homey.api('POST', '/coordination-workspace', { ...data, consent: true, token, clientId }, finish);
     }
@@ -193,7 +198,11 @@
         if (typeof row.value === 'number' && Number.isFinite(row.value) && row.status === 'recent') paragraph.appendChild(document.createTextNode(
           new Intl.NumberFormat(t('number_locale'), { maximumFractionDigits: 2 }).format(row.value) + ' ' + row.unit));
         else paragraph.appendChild(document.createTextNode(t('unknown')));
-        paragraph.appendChild(document.createTextNode(' · ' + reason(row.status) + (typeof row.ageSec === 'number' ? ' · ' + Math.floor(row.ageSec) + ' s' : '')));
+        paragraph.appendChild(document.createTextNode(' · ' + reason(row.status)
+          + (typeof row.ageSec === 'number' ? ' · ' + t('timestamp_age') + ': ' + Math.floor(row.ageSec) + ' s' : '')));
+        if (['W', 'kW', '%'].includes(row.expectedUnit)) paragraph.appendChild(document.createTextNode(
+          ' · ' + t('source_units') + ': ' + row.expectedUnit + ' / ' + (['W', 'kW', '%'].includes(row.observedUnit) ? row.observedUnit : t('unknown'))));
+        if (row.sourceKind === 'candidate_preview') el('p', t('flow_unverified_source'), result);
       });
       el('p', t('disabledActions'), result);
       previous = response.decision || null;

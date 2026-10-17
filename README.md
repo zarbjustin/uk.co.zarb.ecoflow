@@ -1,6 +1,6 @@
 # EcoFlow for Homey Pro
 
-Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **EcoFlow Smart Meter** from Homey Pro, with full Energy-dashboard, Flow and Insights integration.
+Monitor **EcoFlow STREAM** systems and the original **EcoFlow Smart Meter** from Homey Pro. Original STREAM has guarded settings controls and Energy/Flow/Insights support. STREAM 5000 monitoring, mixed-generation trials and the separate Dual CT preview have distinct limits; product availability is not integration hardware acceptance.
 
 > App ID `uk.co.zarb.ecoflow` · Homey SDK v3 · TypeScript
 
@@ -12,7 +12,7 @@ Monitor and control **EcoFlow STREAM** balcony-solar/battery systems and the **E
 - **Per-unit monitors:** each physical inverter/battery (Ultra X Left/Right, AC Pro 1.1–1.4) is available as its own telemetry device without contributing separately to Homey Energy.
 - **AC sockets:** each AC outlet on AC Pro / Ultra X is its own **smart-plug device** (on/off + live power) — clearer than generic toggles.
 - **Control:** settable charge/discharge limits, backup-reserve level (3–100%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
-- Devices are classified by serial prefix (BK11 Ultra, BK12 Pro, BK31 AC Pro, BK41 Max, BK51 AC, BK61 Ultra X), so all current STREAM models are discovered; the Microinverter (BK01) is skipped as it exposes no telemetry.
+- Original battery units use the explicit BK11/BK12/BK31/BK41/BK51/BK61 registry. The BK01 microinverter has its own monitoring driver; it is not a Home Battery. Unknown/new models are not admitted by marketing name.
 
 Pair **STREAM Home Battery** for one aggregate device per main system serial. It is
 the single source used by Homey Energy and the STREAM widgets, including one-unit installations.
@@ -20,7 +20,7 @@ Pair **STREAM Unit** only when you also want separate per-device telemetry; phys
 do not contribute to Homey Energy and do not contain reliable whole-installation totals.
 
 ### STREAM 5000 Series Beta — ES22 and ES21 monitoring
-Test-channel support includes **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** core battery monitoring through EcoFlow's app connection, not a verified official Developer-key API. Hardware acceptance remains open for each model. Enable **STREAM 5000 beta pairing** in this app's settings after acknowledging the warning. Pair **STREAM Home Battery (5000)** once per installation for Homey Energy: system percentage, signed power, cumulative charged/discharged energy and available house/grid/BMS readings. The optional **STREAM 5000 Series Unit** is a physical monitor and does not contribute to Homey Energy. Both require your **EcoFlow account email and password**; no control commands are sent. Direct PV charging enters the battery power calculation, but PV/string tiles, STREAM 3000, expansion and Gateway/Dual CT adapters are not enabled. Roles, capabilities and pairing may change as the API becomes clearer. See [model coverage and evidence](docs/STREAM_MODEL_COVERAGE.md), [connection/security details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
+Test-channel support includes **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** core monitoring through EcoFlow's app connection, not a verified official Developer-key API. Enable **STREAM 5000 beta pairing** after acknowledging the warning. Pair **STREAM Home Battery (5000)** once per installation for battery Energy and widgets; add **STREAM 5000 Series Unit** only for optional physical telemetry, not duplicate Energy. Both use your EcoFlow app-account sign-in. Available direct-PV/socket/configuration views are read-only and depend on received fields. No 5000 command is sent. ES21/ES22 physical acceptance remains open; mixed-generation reporter selection is an explicit monitoring trial, not automatic merging or control migration. Expansion/3000/Gateway pairing remains gated. See [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
 
 The socket/configuration update includes battery-to-backup-socket discharge in
 the installation's power and future energy totals. It adds read-only configuration
@@ -35,13 +35,28 @@ counters are preserved; there is no need to delete or re-pair for this update.
 - Cumulative **imported/exported energy** remains derived from observed grid power. Native counter candidates are diagnostic evidence only, not adopted energy totals; unseen gaps are not filled.
 - App settings provide a local meter-source/freshness summary when the integration report is refreshed. It distinguishes direct readings, installation fallback and missing/stale data. Keep one authoritative grid meter per connection; Home Battery has a separate battery-energy role.
 
+### Dual CT and cross-app coordination previews
+
+**Smart Meter Dual CT (read-only preview)** is a separate optional driver, not the
+original Smart Meter. Its candidate phase/circuit readings expire independently;
+it has no Energy participation, controls, tags or Insights. A hybrid inverter's
+output includes battery exchange and must not be counted as solar-only production.
+
+The settings workspace can explicitly read selected Homey capabilities for a
+grid meter, external battery SOC/power and STREAM power. Broad Homey API permission
+is required; the implementation is GET-only and default-off. Six observation
+WHEN/AND cards have separate consent and a fixed 30-minute monitoring session.
+Existing user THEN actions can run when those triggers fire. Known Dual CT
+candidates cannot feed these cards. No new charging action or Energy adoption is
+enabled. See [source compatibility and access limits](docs/COORDINATION_SOURCE_AUDIT.md).
+
 ### Automation
 - **Triggers:** solar/grid power changed, grid import/export started, grid import/export **rises above** a threshold, charging/discharging started, battery level crossed, operating mode changed, fault raised/cleared, device online/offline.
-- **Conditions:** operating mode is…, grid feed-in enabled, battery level above/below, solar power **above/below**, **battery charging from solar**, **solar forecast today/tomorrow above/below**, **electricity price above/below**, **electricity price is negative**.
-- **Actions:** set operating mode, backup reserve (8524-safe, verified), charge/discharge limit, grid feed-in, per-socket on/off, tariff helpers **Prepare for cheap import** / **Prepare for peak/export** / **Release battery for export now**, and **Set current electricity price**.
+- **Conditions:** reported operating mode/feed-in permission, battery level, charging/export and solar power; charging while PV exceeds reported home load (not proof of exclusively solar charging); dated solar forecasts and current electricity price. Missing/expired inputs stop evaluation, including inversion.
+- **Original STREAM actions:** operating mode, guarded reserve and charge/discharge SOC limits, feed-in permission, supported AC sockets, **Prepare for cheap import**, **Prepare for peak/export**, **Allow battery export (minimum reserve)** and **Set current electricity price**. These change settings, not guaranteed physical wattage; native limits/modes/schedules still apply. Existing IDs/argument contracts remain unchanged.
 - **Solar forecast:** today's and tomorrow's expected yield from the local weather forecast ([Open-Meteo](https://open-meteo.com), keyless) at Homey's location, with a tunable calibration factor.
 - **Tariff automation (provider-agnostic):** feed your current price from **any** tariff app (Octopus, Tibber, aWATTar, …) into the *Set electricity price* action and drive price/negative-price Flows — see [tariff recipes](docs/OCTOPUS_FLOWS.md).
-- **Insights:** all measurements are logged automatically.
+- **Insights:** supported standard driver measurements are logged; Dual CT candidates and temporary coordination telemetry are excluded from new Insights/export paths.
 
 ### Dashboard widgets
 Five distinct widgets (each with its own accurate preview), bound to a chosen STREAM system:
@@ -80,24 +95,28 @@ npm install
 npm run build      # tsc
 npm test           # tsc && node --test (signer golden-vector tests)
 npm run lint
+npm run release:check # identity, preview/permission and disabled Energy boundaries
 homey app validate --level publish
 homey app run --remote   # run on your Homey Pro
 homey app install        # install the current build on the selected Homey Pro
 ```
 
 ## Release & publish
-See [`docs/STATUS.md`](docs/STATUS.md) for the full handoff. In short:
-1. Commit & push to `master`.
-2. Run the **Update Homey App Version** workflow (patch/minor/major + changelog) — it bumps the version, updates `.homeychangelog.json`, tags and releases.
-3. Run the **Publish Homey App** workflow to upload a new App Store build.
-4. Optionally `homey app install` to push the build to your local Homey Pro.
+Read [`docs/STATUS.md`](docs/STATUS.md) and the [acceptance checklist](docs/RELEASE_CANDIDATE_CHECKLIST.md).
+For diagnostic work keep mainline/Live unchanged. Commit/push and publication
+require owner approval. After approval, check source CI, run the version workflow
+on the authorised branch, validate the exact tag, then upload that tag. Verify
+archive contents and the actual Test portal/listing separately. Do not submit
+for certification, promote Live or install on a Homey without separate approval.
+Never use a clean installation as an upgrade shortcut. Passing checks is not
+physical acceptance; [control commissioning remains gated](docs/STREAM_CONTROL_CONTRACT_AUDIT.md).
 
 ## Notes & limitations
 - The public API only reports *instantaneous* grid power for the Smart Meter (no kWh totals), so imported/exported energy is integrated locally into monotonic counters for the Energy dashboard.
 - Per-phase Smart Meter values are only available on standalone meters; a meter integrated into a STREAM system reports a single whole-home grid figure.
 - Per-unit STREAM devices mainly expose their own grid feed and AC-output relays — full battery/solar/load aggregates are only reported on the system (main) device.
 - Power values use EcoFlow's documented public-API units (STREAM reports Watts directly).
-- **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** are opt-in, monitoring-only beta integrations on Test. They use EcoFlow's app connection, which may change or stop working. They need your EcoFlow account password, have no REST fallback (availability follows usable MQTT data age), and expose no controls or Flow cards. Implementation and pairing may change with official API support.
+- **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** remain opt-in monitoring integrations on Test. Their app connection may change or stop working. There is no Developer REST fallback or 5000 control writer; available read-only reported-mode/reserve conditions do not grant control. Hardware and linked-system scope still require commissioning.
 
 ## Credits
 Field/command mappings cross-referenced against the community
