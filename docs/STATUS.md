@@ -2,6 +2,51 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Test v1.10.52 / Build 66 — published 17 October 2026
+
+Supersedes the local/preparation checkpoints below. The optional raw Dual CT
+preview driver, guided export workflow and unwired power-based Energy preparation
+are committed/pushed on `codex/mixed-generation-reporting-diagnostics` and now
+available on **Test only**. Robert's active capture requests remain paused; no new
+Community message has been sent. No automatic device addition or Energy adoption.
+
+- Source `1666605918510144867333a894525690780603f4`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39025906166 passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39026010717 passed;
+  tag `v1.10.52` / `0f76b240913f75e3b761536aaebf42d70c4a5618`.
+- Exact-tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39026090521 passed:
+  **874 tests**, lint, audit (0 vulnerabilities), Homey CLI 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39026183594 passed,
+  producing Build 66 / v1.10.52. Developer Tools independently showed Draft before
+  publication. Uploaded manifest, compiled preview/monitor/pairing/shared-auth and
+  power trial modules, EN/DE/NL, settings, consent screen and product photo were
+  read back and SHA256/byte-compared against the tested source/build output.
+- Test publication timestamp **2026-10-17T10:48:51.944Z**, verified on reopened
+  Developer Tools. Public Test listing independently shows v1.10.52, matching
+  changelog and the new Smart Meter Dual CT (read-only preview) with product photo:
+  https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/.
+  Build 65 / v1.10.51 is Superseded.
+- Live remains **Build 18 / v1.10.3**, unchanged timestamp
+  `2026-07-26T22:49:51.597Z`, checked alongside the new Test row after publication.
+  Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and origin/master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No mainline merge,
+  certification submission, manual installation or hardware command was performed.
+  Installed version and native Homey/hardware acceptance were not checked here.
+
+The preview requires explicit pairing/continuous-monitoring consent and owned
+productType 421 admission. It displays unverified raw A/B readings, receipt ages
+and counter candidates. No W/V/A/kWh contract, physical CT-port/phase/direction
+verification, standard meter/Energy capabilities, app Flow cards, tags, Insights
+or controls are enabled for that driver. Existing meter/battery Energy paths are
+unchanged. Ordinary support reports include only fixed numeric-free preview
+health, not telemetry/account IDs or raw payloads.
+
+Power-based Energy accounting is **prepared and tested, NOT activated**. It is a
+pure unwired alternative to the counter trial; native counters are not required
+for that future route. Verified grid source/unit/sign/freshness, overlap adoption,
+persistence/migration/rollback and physical acceptance still gate runtime wiring.
+Use owner hardware for those remaining gates; no more Robert captures requested.
+
 ## Consolidated preview and power-path release preparation — 17 October 2026
 
 Owner authorised completing the gated Energy preparation and publishing one

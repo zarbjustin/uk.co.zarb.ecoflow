@@ -1,5 +1,20 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## 17 October: Test v1.10.52 / Build 66 published
+
+Consolidated release is now Test, not merely local or authorised. Source `1666605`,
+version tag `0f76b24`; exact CI `39026090521` passed 874 tests, lint, zero-vulnerability
+audit and Homey verified validation. Upload `39026183594` passed. Reopened portal
+and public listing verify Test at `2026-10-17T10:48:51.944Z`; Live remains unchanged
+Build 18 / v1.10.3. Full links and archive readback evidence are in STATUS.md.
+
+The opt-in raw preview driver is available, not a verified meter contract. The
+power/counter Energy rehearsals remain unwired and cannot contribute to Energy;
+native counters are not a prerequisite for the future power route. No controls,
+mainline merge, certification, manual installation or physical acceptance. No
+new tester captures/messages requested. Older local-only statements below are
+historical checkpoints, superseded only for source/Test publication status.
+
 ## 17 October: consolidated Test authorised; Energy remains gated
 
 Owner authorised a consolidated Test release after source/CI/release checks.
