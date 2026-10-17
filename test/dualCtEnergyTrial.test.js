@@ -91,6 +91,7 @@ test('release fence preserves original meter identity, pairing manifest and rese
   assert.deepEqual(driver.capabilities,['measure_power','smartmeter_power_grid','smartmeter_power_import','smartmeter_power_export','meter_power.imported','meter_power.exported']);
   const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);
   for(const file of walk(path.join(root,'drivers')).filter(f=>f.endsWith('.ts'))){
+    if(file.includes(path.join('drivers','smartmeter_dual_ct_preview')))continue; // Isolated opt-in raw preview, asserted separately.
     assert.doesNotMatch(fs.readFileSync(file,'utf8'),/dualCt(?:Preview|DevicePreview|Continuity|Counters|EnergyTrial)|previewDualCtEnergyTransition/);
   }
   assert.doesNotMatch(fs.readFileSync(path.join(root,'app.ts'),'utf8'),/dualCtDevicePreview|dualCtEnergyTrial|previewDualCtEnergyTransition/);

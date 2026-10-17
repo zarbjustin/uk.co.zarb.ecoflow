@@ -60,7 +60,7 @@ test('desktop/mobile comparison cards distinguish missing/stale/zero, lock captu
     assert.match(comparison,/Candidate bank A/);assert.match(comparison,/Candidate bank B/);assert.match(comparison,/Not observed; not zero/);
     assert.match(comparison,/0 · 0 s/);assert.match(comparison,/773.4: 150.*unscaled/);
     assert.match(comparison,/Record 997: structure only/);assert.doesNotMatch(comparison,/997.4: 150/);
-    assert.match(comparison,/Device preview is not available for pairing yet/);
+    assert.match(comparison,/Verified meter capabilities remain blocked/);
     assert.match(comparison,/Homey Energy adoption is blocked/);
     assert.match(comparison,/Counter continuity observations/);assert.match(comparison,/Daily totals unavailable/);
     assert.match(comparison,/Baseline only/);assert.match(comparison,/Restart clears this observation history/);
@@ -73,7 +73,7 @@ test('desktop/mobile comparison cards distinguish missing/stale/zero, lock captu
     assert.equal(report.counterRecords[0].candidates[0].candidateUnit,null);assert.equal(report.counterReadingsIncluded,6);
     assert.equal(report.historical,true);assert.equal(report.notLive,true);assert.equal(report.contributesToEnergy,false);
     assert.ok((await page.locator('#dualCtCandidateText').textContent()).length<=7500);assert.doesNotMatch(JSON.stringify(report),/PRIVATE|captureId/);
-    const compact=JSON.parse(await page.locator('#dualCtCompactText').innerText());
+    const compact=JSON.parse(await page.locator('#dualCtCompactText').textContent());
     assert.doesNotMatch(JSON.stringify(compact),/"value"|candidateUnit|packetIndex/);
     await page.locator('#copyDualCtCandidates').click();assert.equal(JSON.parse(await page.evaluate(()=>window.copied)).reportType,'dual_ct_comparison');
     const requestedDownload=page.waitForEvent('download');await page.locator('#downloadDualCtCandidates').click();
@@ -109,7 +109,7 @@ test('comparison notes and numeric export are invalidated on capture change, fai
     await page.locator('#refreshDualCtResearch').click();assert.equal(await page.locator('#includeDualCtComparison').isChecked(),true);
     assert.equal(await page.getByLabel('My observation (optional) 1 A',{exact:true}).inputValue(),'looks_like_solar');
     await page.evaluate(()=>{window.changedId='22222222-2222-4222-8222-222222222222';});await page.locator('#refreshDualCtResearch').click();
-    assert.equal(await page.locator('#includeDualCtComparison').isChecked(),false);assert.equal(await page.locator('#consentDualCtCandidateExport').isChecked(),false);
+    assert.equal(await page.locator('#includeDualCtComparison').isChecked(),true,'new capture defaults format only');assert.equal(await page.locator('#consentDualCtCandidateExport').isChecked(),false);
     assert.equal(await page.getByLabel('My observation (optional) 1 A',{exact:true}).inputValue(),'unknown');
     await page.evaluate(()=>{window.failure=true;});await page.locator('#refreshDualCtResearch').click();
     assert.equal(await page.locator('#dualCtComparisonState').textContent(),'');

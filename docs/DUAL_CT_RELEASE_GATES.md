@@ -1,5 +1,41 @@
 # Dual CT continuity and adoption gates — 15 October 2026
 
+## 17 October: consolidated Test authorised; Energy remains gated
+
+Owner authorised a consolidated Test release after source/CI/release checks.
+The raw preview driver and simplified workflow below are included. A new pure
+power-based Energy rehearsal is also included, not runtime-wired. Native counters
+are not a prerequisite for a future validated power route; role, W/sign,
+measurement freshness, authoritative-source/overlap, persistence/upgrade/rollback
+and physical comparison remain necessary. No bank guesses, raw readings or user
+annotations unlock Energy. See `DUAL_CT_POWER_ENERGY_PATH.md` and current STATUS.
+Mainline, Live and installed devices remain unchanged; no extra Robert captures.
+
+## 17 October: explicit raw preview exception, local only
+
+The owner now authorises `smartmeter_dual_ct_preview`, an opt-in, continuous,
+read-only display driver. This supersedes historical statements below that no
+Dual CT driver exists; it does NOT open the verified meter or Energy gates.
+The original Smart Meter driver remains untouched. The new preview is class
+`other`, uses only custom get-only raw candidate displays without energy units,
+suppresses tags/Insights, and defines no app Flow cards or control listeners.
+`dualCtReleaseReadiness` still blocks the verified-contract path and separately
+describes the experimental preview opt-in. Customer annotations cannot unlock it.
+
+Pairing requires explicit continuous-monitoring consent, owned productType 421
+metadata and an authenticated account binding. Runtime independently rechecks
+account and inventory, clears persisted displays before listening, rejects late
+old-generation callbacks, clears stale individual fields and detaches its own
+listener on disable or account change. Shared credentials survive while another
+app-auth device remains. Candidate numbers are not archived/exported in ordinary
+integration reports; schema 17 projects only fixed numeric-free health metadata.
+
+Hardware unit/sign/role/phase/counter-period validation is still deferred to the
+owner's equipment. Do not ask the tester for another capture or assume a native
+Homey/hardware acceptance from local synthetic/browser tests. No publication has
+been authorised in this continuation. See `docs/STATUS.md` for the latest checks.
+
+
 ## Published Test checkpoint — 16 October 2026
 
 The consolidated continuation is now **v1.10.51 / Build 65, Test only**; prior

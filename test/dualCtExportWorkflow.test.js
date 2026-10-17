@@ -51,6 +51,7 @@ async function setup(browser, viewport, expired = false) {
       }});
   },{translations:require('../locales/en.json'),expired});
   await page.locator('#dualCtTitle').click();
+  await page.locator('#dualCtCompactTitle').click();
   await page.locator('#dualCtPreviewTitle').click();
   return page;
 }
@@ -90,6 +91,7 @@ test('desktop/mobile per-field expiry preserves newer live fields and consented 
       await page.clock.runFor(70001);
       assert.match(await page.locator('#dualCtPreviewState').innerText(),/Live candidate values have expired/);
       assert.equal(await page.locator('#consentDualCtCandidateExport').isDisabled(),false);
+      await page.locator('#includeDualCtComparison').uncheck();
       await page.locator('#consentDualCtCandidateExport').check();
       const reviewed=JSON.parse(await page.locator('#dualCtCandidateText').innerText());
       assert.equal(reviewed.schemaVersion,4); assert.equal(reviewed.historical,true); assert.equal(reviewed.notLive,true);

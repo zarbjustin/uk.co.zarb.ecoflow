@@ -2,6 +2,137 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Consolidated preview and power-path release preparation — 17 October 2026
+
+Owner authorised completing the gated Energy preparation and publishing one
+consolidated Test build after checks and CI. This supersedes the unpublished-only
+restriction in the local checkpoints below. Mainline and Live remain out of scope;
+no installation, certification, hardware commands or new tester capture request.
+
+Adds `dualCtPowerEnergyTrial.ts`, an unwired alternative to native counters:
+confirmed normalized grid W only, single scoped source, separate import/export
+integration including zero crossings, strict freshness/gap handling, retained
+totals on restart but no downtime baseline. Receipt-only/raw bank candidates are
+not eligible. Separate readiness gates explicitly state native counters are NOT
+required for a future validated power route. Runtime Energy adoption stays closed.
+See `DUAL_CT_POWER_ENERGY_PATH.md` for the contract and remaining activation work.
+
+Release includes the local preview driver and guided workflow below. Source,
+validation, exact CI, version, upload and actual Test availability must each be
+verified before describing this preparation as published.
+
+Local checks passed: **874/874 tests**, lint, audit (0 vulnerabilities), diff
+checks and Homey CLI 4.5.3 verified validation. Desktop/mobile pairing and export
+workflow regressions are synthetic; native Homey/hardware acceptance remains open.
+
+## Opt-in Dual CT preview driver — 17 October 2026, local only, NOT published
+
+Owner explicitly authorised a separate read-only preview driver on the diagnostic
+branch, superseding the older blanket no-Dual-CT-pairing fence for this experimental
+display role only. Verified meter contracts, Energy adoption, controls and existing
+driver identities remain unchanged. Tester capture requests remain paused while
+the owner awaits hardware later in October; this work requests no further evidence.
+
+- New `smartmeter_dual_ct_preview` driver: per-pairing consent to continuous
+  monitoring, distinct from two-minute diagnostic collection/sharing consent.
+  Owned app productType 421 plus corroborating metadata only; no name/prefix
+  guessing, shared devices, generic meter conversion or duplicate preview pairing.
+  Account binding is a local digest of EcoFlow session identity/host, never a
+  normal report field. Pending/declined/cancelled pairing does not save credentials.
+- Latest-value candidate displays: raw bank A/B totals, power/voltage/current field
+  hypotheses with receipt ages, 773 unscaled candidates and raw change labels.
+  997 stays structure-only. No W/V/A/kWh assignment, CT1/CT2 or Grid/Solar claim,
+  phase-order verification, counters integration or automatic source selection.
+- Reuses existing listen-only app MQTT. Exact live device topic/header/encoding
+  checks, per-field <90-second freshness, precise expiry timer, local age ticker,
+  coalesced bounded display work, bounded connection retry, generation guards and
+  clearing on stop/account change/restart/deletion. No raw packets or numeric
+  readings are written to app stores/logs. Homey itself can retain last capability
+  values; pairing explains this and initialization clears those values before use.
+- No standard meter/power capabilities, Energy definition, control listeners or
+  app Flow cards. Custom displays are get-only, preventTag/preventInsights enabled
+  and Insights disabled. Administrator scripts are not a security boundary; the
+  persistent warning says not to use candidates for decisions/automation.
+- Shared app credentials are retained while ANY battery/preview consumer remains
+  (including original physical STREAM monitors using app telemetry for PV3/4),
+  including conservative retention for unreadable existing driver/device state.
+- Integration report schema 17 adds numeric-free preview health only (status,
+  accepted packet count, receipt age). No candidate values, account binding,
+  names, serials, credentials or raw payloads are projected.
+- Reuses the stored Dual CT contour icon and exact product-photo derivatives.
+  Original Smart Meter assets/identity/accounting are untouched.
+
+Local checks: full suite **867/867 pass**, lint, diff checks and Homey CLI 4.5.3
+verified validation. Desktop/mobile consent screenshots inspected outside Git;
+native Homey pairing/hosting, live hardware roles/scales/direction and physical
+acceptance remain pending. New code and the preceding workflow improvements are
+UNCOMMITTED/UNPUSHED. No version bump, CI dispatch, upload, Test publication,
+certification, installed-device change, mainline change or Live change occurred.
+
+## Guided Dual CT capture/export — 17 October 2026, local only, not published
+
+Supersedes the local qualification checkpoint below. Robert's `.51 Report`
+contains three posts: a `dual_ct_compact` metadata report, a description of a
+combined export, then understandable confusion about the flags. No attachment
+or numeric comparison JSON was present. It confirms numeric and counter opt-ins,
+59 accepted MQTT packets, no rejected frames/cleanup failures, consistent bank
+arithmetic, and record 773 arithmetic checks. Compact `valuesIncluded: false`
+is intentional; the posted text does not establish whether a separate numeric
+download succeeded or failed. Do not blame the tester or request another capture.
+The prior one-capture instructions were posted and reopened at
+https://community.homey.app/t/51-check/160974/2. The new reply is DRAFT ONLY.
+
+Settings now present capture choices before Start, a numeric-specific Start label,
+one local completion refresh while this page stays open, a default combined
+format without automatic sharing consent, clear export type/filename, and the
+primary numeric download before long JSON/raw fields. Compact exports and their
+summary live under collapsed technical diagnostics explicitly marked no readings.
+EN/DE/NL explain `valuesCaptured` versus `valuesIncluded` and the encoding safeguard.
+
+The one-shot refresh only follows an explicit numeric Start with valid effective
+mode, capture ID and bounded age. It is a GET of the local view, not cloud
+discovery/polling; no auto retry, capture restart, counter adoption or retention
+renewal. Stop, account removal/change, page teardown, errors and superseded/mismatched
+captures invalidate it. An active response after the one-shot read asks for manual
+refresh rather than looping. Collection/sharing consent, fixed retention, units,
+mapping and all pairing/Energy/Flow/control gates remain unchanged.
+
+Regression coverage includes the actual UI→API→app→research→export path on desktop
+and mobile with synthetic inventory/transport/clock, the wrong technical export,
+explicit numeric consent, combined file contents/name, identity/lifecycle failure
+guards and the one-shot bounds. Local full suite: **852/852 pass**, lint and diff
+checks pass. Synthetic screenshots inspected outside Git. No native Homey/mobile
+host or physical validation claimed. Changes remain uncommitted/unpushed; no new
+version, CI, upload or publication. Mainline and Live are unchanged.
+
+## Capture-to-export qualification — 17 October 2026, local only
+
+Robert's private `.51 check` reports v1.10.51, a local refresh, and both export
+choices disabled with the numeric-preview-off explanation. He did not recapture,
+as requested. This verifies the explanation on his installation, not the export
+download or meter field mappings. The `.49?` reply below was subsequently posted
+and reopened at https://community.homey.app/t/topic/160970/2; it is no longer draft-only.
+
+Added `test/dualCtCaptureToExport.test.js`: desktop/mobile settings exercise the
+production API, app capture lifecycle, research decoder and combined exporter
+together with synthetic inventory, transport and clock only. It reproduces a
+structure-only capture; Stop before changing modes; both numeric/counter opt-ins
+before Start; effective-mode confirmation; automatic completion; local-only
+refresh; retained historical export after live expiry; explicit format/sharing
+consent; and a downloaded `ecoflow-dual-ct-comparison.json` identical to the reviewed
+JSON. It checks bounded/private output, no discovery or recapture from local
+refresh, and no API request from download. No Stop is used after the numeric capture, because
+manual Stop clears retained evidence. Automatic completion preserves it within
+the existing 15-minute window; refresh does not extend retention.
+
+Local checks: **846/846 tests**, lint and diff checks pass. Desktop/mobile synthetic
+screenshots inspected outside Git. No runtime changes were needed. This test and
+handover are uncommitted/unpushed; no new CI, version, upload or publication was
+requested. Mainline and Live remain unchanged. Native Homey/mobile hosting and
+physical readings remain separate acceptance gates. A short reply with one
+deliberate numeric capture (both opt-ins) and one combined export is draft-only
+for owner review; no new customer message sent.
+
 ## Test v1.10.51 / Build 65 — published 16 October 2026
 
 Supersedes the preparation/local-only checkpoints below. The four release sprints

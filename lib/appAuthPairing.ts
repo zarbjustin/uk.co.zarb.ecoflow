@@ -3,7 +3,8 @@
 import { AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
 
 /**
- * App-auth account handling for verified STREAM 5000-family drivers.
+ * App-auth account handling for STREAM 5000-family drivers and the explicit
+ * read-only Dual CT preview. Device admission remains each driver's responsibility.
  *
  * Mirrors `lib/pairing.ts` (the supported Developer-API flow) but keeps its
  * credentials under separate settings keys so the two paths never mix and the
@@ -146,7 +147,7 @@ export function registerAppAuthHandlers(
       driver.homey.settings.set(APP_AUTH_PASSWORD_SETTING, password);
       driver.homey.settings.set(APP_AUTH_HOST_SETTING, host);
       committed = true;
-      log('EcoFlow account stored for the STREAM 5000-family device being added');
+      log('EcoFlow app account stored for the device being added');
     },
 
     dispose() {

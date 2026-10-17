@@ -14,7 +14,8 @@ import {
   Stream5000TopologyTracker,
 } from './stream5000Adapters';
 import { StreamTopologyEvidence } from './streamTopology';
-import { STREAM_5000_DRIVER_IDS, stream5000ModelFromSn } from './stream5000Models';
+import { stream5000ModelFromSn } from './stream5000Models';
+import { hasOtherAppAuthDevices } from './appAuthConsumers';
 import { stream5000PhysicalCapabilityValues } from './stream5000Roles';
 import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } from './energyIntegration';
 import { EnergyCheckpoint } from './EnergyCheckpoint';
@@ -702,20 +703,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private hasOtherFamilyDevices(): boolean {
-    for (const driverId of STREAM_5000_DRIVER_IDS) {
-      try {
-        const driver = (this.homey.drivers as any).getDriver(driverId);
-        const devices = typeof driver?.getDevices === 'function' ? driver.getDevices() : [];
-        if (devices.some((device: any) => {
-          if (device === this) return false;
-          return Boolean(device.getData?.().sn);
-        })) return true;
-      } catch {
-        // A driver may be absent in a development build. Continue with the
-        // remaining family drivers instead of retaining credentials forever.
-      }
-    }
-    return false;
+    return hasOtherAppAuthDevices(this.homey, this);
   }
 }
 

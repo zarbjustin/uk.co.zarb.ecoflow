@@ -1712,6 +1712,166 @@
     },
     {
       "name": {
+        "en": "Smart Meter Dual CT (read-only preview)",
+        "de": "Smart Meter Dual CT (Nur-Lese-Vorschau)",
+        "nl": "Smart Meter Dual CT (alleen-lezenpreview)"
+      },
+      "class": "other",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "dual_ct_preview_status",
+        "dual_ct_preview_age",
+        "dual_ct_preview_total.a",
+        "dual_ct_preview_total.b",
+        "dual_ct_preview_fields.a_power",
+        "dual_ct_preview_fields.a_voltage",
+        "dual_ct_preview_fields.a_current",
+        "dual_ct_preview_fields.b_power",
+        "dual_ct_preview_fields.b_voltage",
+        "dual_ct_preview_fields.b_current",
+        "dual_ct_preview_counters",
+        "dual_ct_preview_trends"
+      ],
+      "capabilitiesOptions": {
+        "dual_ct_preview_status": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_age": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_total.a": {
+          "title": {
+            "en": "A raw total",
+            "de": "A Rohsumme",
+            "nl": "A ruw totaal"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_total.b": {
+          "title": {
+            "en": "B raw total",
+            "de": "B Rohsumme",
+            "nl": "B ruw totaal"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.a_power": {
+          "title": {
+            "en": "A power candidates",
+            "de": "A Leistungskandidaten",
+            "nl": "A vermogenskandidaten"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.a_voltage": {
+          "title": {
+            "en": "A voltage candidates",
+            "de": "A Spannungskandidaten",
+            "nl": "A spanningskandidaten"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.a_current": {
+          "title": {
+            "en": "A current candidates",
+            "de": "A Stromkandidaten",
+            "nl": "A stroomkandidaten"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.b_power": {
+          "title": {
+            "en": "B power candidates",
+            "de": "B Leistungskandidaten",
+            "nl": "B vermogenskandidaten"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.b_voltage": {
+          "title": {
+            "en": "B voltage candidates",
+            "de": "B Spannungskandidaten",
+            "nl": "B spanningskandidaten"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.b_current": {
+          "title": {
+            "en": "B current candidates",
+            "de": "B Stromkandidaten",
+            "nl": "B stroomkandidaten"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_counters": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_trends": {
+          "preventTag": true,
+          "preventInsights": true
+        }
+      },
+      "images": {
+        "small": "/drivers/smartmeter_dual_ct_preview/assets/images/small.png",
+        "large": "/drivers/smartmeter_dual_ct_preview/assets/images/large.png",
+        "xlarge": "/drivers/smartmeter_dual_ct_preview/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "id": "preview_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Enable continuous read-only preview",
+            "de": "Kontinuierliche Nur-Lese-Vorschau aktivieren",
+            "nl": "Continue alleen-lezenpreview inschakelen"
+          },
+          "hint": {
+            "en": "Unverified raw candidates only. No Energy, Flows, tags or Insights. Disabling clears displayed readings and detaches this listener. After an account change, disable and re-enable to recheck the original account; a different account requires re-pairing this preview only.",
+            "de": "Nur unbestätigte Rohkandidaten. Keine Energie, Flows, Tags oder Insights. Deaktivieren löscht die Anzeige und diesen Listener. Nach Kontowechsel deaktivieren/aktivieren, um das ursprüngliche Konto zu prüfen; ein anderes Konto erfordert erneute Kopplung nur dieser Vorschau.",
+            "nl": "Alleen ongeverifieerde ruwe kandidaten. Geen Energy, Flows, tags of Insights. Uitschakelen wist de weergave en verwijdert deze listener. Na accountwijziging uit- en inschakelen om het oorspronkelijke account te controleren; een ander account vereist opnieuw koppelen van alleen deze preview."
+          }
+        }
+      ],
+      "pair": [
+        {
+          "id": "preview_consent"
+        },
+        {
+          "id": "app_credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "smartmeter_dual_ct_preview"
+    },
+    {
+      "name": {
         "en": "STREAM Home Battery",
         "de": "STREAM-Hausbatterie",
         "nl": "STREAM-thuisbatterij"
@@ -3718,6 +3878,92 @@
       "uiComponent": "sensor",
       "icon": "/assets/capabilities/time-empty.svg",
       "insights": true
+    },
+    "dual_ct_preview_age": {
+      "type": "number",
+      "title": {
+        "en": "Packet receipt age",
+        "de": "Paketempfangsalter",
+        "nl": "Pakketontvangstleeftijd"
+      },
+      "units": {
+        "en": "s",
+        "de": "s",
+        "nl": "s"
+      },
+      "decimals": 0,
+      "min": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_counters": {
+      "type": "string",
+      "title": {
+        "en": "773 raw candidates",
+        "de": "773 Rohkandidaten",
+        "nl": "773 ruwe kandidaten"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_fields": {
+      "type": "string",
+      "title": {
+        "en": "Raw field candidates",
+        "de": "Rohe Feldkandidaten",
+        "nl": "Ruwe veldkandidaten"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_status": {
+      "type": "string",
+      "title": {
+        "en": "Preview status",
+        "de": "Vorschaustatus",
+        "nl": "Previewstatus"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_total": {
+      "type": "number",
+      "title": {
+        "en": "Raw total candidate",
+        "de": "Roher Summenkandidat",
+        "nl": "Ruwe totaalkandidaat"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_trends": {
+      "type": "string",
+      "title": {
+        "en": "Raw counter trends",
+        "de": "Rohe Zählertrends",
+        "nl": "Ruwe tellertrends"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
     },
     "energy_consumption_today": {
       "type": "number",

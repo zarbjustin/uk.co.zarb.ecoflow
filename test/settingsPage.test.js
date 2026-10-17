@@ -134,7 +134,7 @@ test('candidate sharing requires separate consent, shows a manual fallback, and 
   const consent = context.document.getElementById('consentDualCtCandidateExport');
   consent.checked = true; consent.change();
   const text = context.document.getElementById('dualCtCandidateText');
-  assert.equal(JSON.parse(text.textContent).devices[0].readings[0].value, -500);
+  assert.equal(JSON.parse(text.textContent).candidateSnapshot.devices[0].readings[0].value, -500);
   assert.doesNotMatch(text.textContent, /PRIVATE/);
   await context.document.getElementById('copyDualCtCandidates').click();
   assert.equal(writes, 1);
@@ -189,7 +189,7 @@ test('one explicit refresh retains same-capture sharing consent through completi
     preview: numericPreview(captureId, 30) });
   assert.equal(consent.checked, true); assert.equal(consent.disabled, false);
   assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, false);
-  assert.equal(JSON.parse(context.document.getElementById('dualCtCandidateText').textContent).devices[0].readings[0].value, -12345);
+  assert.equal(JSON.parse(context.document.getElementById('dualCtCandidateText').textContent).candidateSnapshot.devices[0].readings[0].value, -12345);
   assert.doesNotMatch(context.document.getElementById('dualCtCompactText').textContent, /12345|candidateUnit|captureId/);
   assert.equal(context.document.getElementById('enableDualCtPreview').disabled, false, 'completed capture unlocks next capture option');
   assert.equal(calls.length, 2); assert.equal(calls[1].url, '/dual-ct-research/view');
@@ -259,6 +259,114 @@ test('coherent summary refresh shows the precise unavailable preview reason afte
   assert.match(context.document.getElementById('dualCtPreviewState').textContent, /could not discover or listen/);
   assert.equal(context.document.getElementById('enableDualCtPreview').disabled, false);
   assert.equal(context.document.getElementById('copyDualCtCandidates').disabled, true);
+});
+
+function startNumericWorkflow({ age = 10, id = captureId, enabled = true, requiresRestart = false, superseded = false, requested = true } = {}) {
+  const context = loadSettingsScript(); const homey = fakeHomey(); const calls = [];
+  homey.api = (method, url, body, callback) => calls.push({ method, url, body, callback });
+  context.onHomeyReady(homey);
+  context.document.getElementById('enableDualCtPreview').checked = requested;
+  context.document.getElementById('startDualCtResearch').click();
+  calls[0].callback(null, { captureStart: { requiresRestart, superseded } });
+  calls[1].callback(null, { research: { status: 'listening', captureAgeSec: age, previewDiagnostics: { enabled } },
+    preview: enabled ? numericPreview(id) : { enabled: false, reason: 'disabled', captureId: id, devices: [] } });
+  const completion = [...context.timers].find(([, timer]) => timer.ms === 110250);
+  return { context, homey, calls, completion };
+}
+
+test('numeric workflow reads the local result once after capture, defaults only the format and never consents or captures again', () => {
+  const { context, calls, completion } = startNumericWorkflow();
+  assert.ok(completion);
+  context.now += completion[1].ms; context.timers.delete(completion[0]); completion[1].fn();
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].method, 'GET'); assert.equal(calls[2].url, '/dual-ct-research/view');
+  calls[2].callback(null, { research: { status: 'complete', valuesCaptured: true, previewDiagnostics: { enabled: true } },
+    preview: numericPreview(captureId, 120.25) });
+  assert.equal(context.document.getElementById('includeDualCtComparison').checked, true);
+  assert.equal(context.document.getElementById('consentDualCtCandidateExport').checked, false);
+  assert.equal(context.document.getElementById('downloadDualCtCandidates').disabled, true);
+  assert.equal(context.document.getElementById('dualCtCandidateText').textContent, '');
+  assert.match(context.document.getElementById('dualCtWorkflowStatus').textContent, /Capture finished/);
+  assert.match(context.document.getElementById('dualCtExportKind').textContent, /dual_ct_comparison/);
+  assert.equal(calls.filter(call => call.method === 'POST').length, 1);
+  assert.equal([...context.timers.values()].some(timer => timer.ms === 110250), false);
+});
+
+test('one-shot completion refresh never retries errors, timeouts, an active result or an identity mismatch', () => {
+  for (const result of ['error', 'timeout', 'active', 'identity']) {
+    const { context, calls, completion } = startNumericWorkflow();
+    context.now += completion[1].ms; context.timers.delete(completion[0]); completion[1].fn();
+    if (result === 'error') calls[2].callback(new Error('PRIVATE'));
+    else if (result === 'timeout') {
+      [...context.timers.values()].find(timer => timer.ms === 20000).fn();
+      calls[2].callback(null, { research: { status: 'complete' }, preview: numericPreview() });
+    } else calls[2].callback(null, {
+      research: { status: result === 'active' ? 'listening' : 'complete', captureAgeSec: 120, previewDiagnostics: { enabled: true } },
+      preview: numericPreview(result === 'identity' ? '22222222-2222-4222-8222-222222222222' : captureId),
+    });
+    assert.equal(calls.length, 3, result);
+    assert.equal([...context.timers.values()].some(timer => timer.ms === 110250), false, result);
+    assert.equal(context.document.getElementById('consentDualCtCandidateExport').checked, false, result);
+    if (result !== 'active') assert.equal(context.document.getElementById('dualCtCandidateText').textContent, '', result);
+    else assert.match(context.document.getElementById('dualCtWorkflowStatus').textContent, /No automatic retry/);
+  }
+});
+
+test('manual refresh does not postpone completion, and a cancelled timer cannot read a reused capture', () => {
+  const { context, calls, completion } = startNumericWorkflow();
+  context.now += 60000;
+  context.document.getElementById('refreshDualCtResearch').click();
+  calls[2].callback(null, { research: { status: 'listening', captureAgeSec: 70, previewDiagnostics: { enabled: true } },
+    preview: numericPreview(captureId, 60) });
+  assert.equal(context.timers.has(completion[0]), true, 'manual refresh does not reset the scheduled deadline');
+  assert.equal([...context.timers.values()].filter(timer => timer.ms === 110250).length, 1);
+  context.document.getElementById('startDualCtResearch').click();
+  calls[3].callback(null, { captureStart: { reused: true, requiresRestart: false } });
+  calls[4].callback(null, { research: { status: 'listening', captureAgeSec: 70, previewDiagnostics: { enabled: true } },
+    preview: numericPreview(captureId, 60) });
+  assert.equal(context.timers.has(completion[0]), false);
+  assert.ok([...context.timers.values()].some(timer => timer.ms === 50250));
+  const count = calls.length; completion[1].fn();
+  assert.equal(calls.length, count, 'same capture identity cannot revive an older cancelled timer');
+});
+
+test('completion refresh is cancelled on Stop, page teardown, account removal and failed manual refresh', async () => {
+  for (const action of ['stop', 'pagehide', 'account', 'refresh_error']) {
+    const { context, calls, completion } = startNumericWorkflow();
+    if (action === 'stop') context.document.getElementById('stopDualCtResearch').click();
+    else if (action === 'pagehide') context.events.pagehide();
+    else if (action === 'account') await context.document.getElementById('clearAppAuth').click();
+    else {
+      context.document.getElementById('refreshDualCtResearch').click();
+      calls.at(-1).callback(new Error('PRIVATE'));
+    }
+    assert.equal(context.timers.has(completion[0]), false, action);
+    const count = calls.length; completion[1].fn();
+    assert.equal(calls.length, count, action + ': cancelled timer callback cannot read or restart');
+  }
+});
+
+test('only an explicit numeric Start with valid effective identity and timing can arm the completion read', () => {
+  for (const options of [{ enabled: false }, { requiresRestart: true }, { superseded: true }, { requested: false }, { id: null }, { id: 'invalid' },
+    { age: null }, { age: -1 }, { age: 120 }, { age: Infinity }]) {
+    const { context, completion } = startNumericWorkflow(options);
+    assert.equal(completion, undefined, JSON.stringify(options));
+    assert.equal([...context.timers.values()].some(timer => !timer.interval && timer.ms > 90000 && timer.ms <= 120250),
+      false, JSON.stringify(options));
+  }
+});
+
+test('guided workflow and report identity explanations are localized in EN, DE and NL', () => {
+  const keys = ['capture_step', 'export_step', 'numeric_start', 'workflow_idle', 'workflow_numeric_running',
+    'workflow_numeric_manual', 'workflow_structure_running', 'workflow_complete', 'compact_title', 'compact_help',
+    'numeric_combined_identity', 'numeric_scalar_identity', 'numeric_combined_download'];
+  for (const language of ['en', 'de', 'nl']) {
+    const wording = require(`../locales/${language}.json`).settings.dual_ct;
+    for (const key of keys) assert.equal(typeof wording[key], 'string', language + ':' + key);
+    assert.match(wording.compact_help, /valuesCaptured: true/);
+    assert.match(wording.compact_help, /valuesIncluded: false/);
+    assert.match(wording.numeric_combined_identity, /ecoflow-dual-ct-comparison.json/);
+  }
 });
 
 function loadSettingsScript() {

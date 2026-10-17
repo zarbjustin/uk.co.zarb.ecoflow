@@ -465,8 +465,26 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     const devices = homey.drivers.getDriver('smartmeter')?.getDevices?.();
     if (Array.isArray(devices)) smartMeters = devices.map((device, deviceIndex) => ({ deviceIndex, evidence: meterSnapshot(device) }));
   } catch { /* Meter driver may not be packaged or paired. */ }
+  let dualCtPreviews: any[] = [];
+  try {
+    dualCtPreviews = homey.drivers.getDriver('smartmeter_dual_ct_preview').getDevices().slice(0, 16)
+      .map((device: any, deviceIndex: number) => {
+        const input = device.getDualCtPreviewDiagnostics?.();
+        return {
+          deviceIndex,
+          enabled: input?.enabled === true,
+          status: ['waiting', 'recent', 'waiting_stale', 'disabled', 'account_changed', 'model_unavailable', 'connection_failed', 'display_failed'].includes(input?.status)
+            ? input.status : 'unknown',
+          acceptedPackets: safeNumber(input?.acceptedPackets),
+          lastReceiptAgeSec: safeNumber(input?.lastReceiptAgeSec),
+          valuesIncluded: false,
+          contributesToEnergy: false,
+          controlsEnabled: false,
+        };
+      });
+  } catch { /* Optional numeric-free preview evidence. */ }
   return {
-    schemaVersion: 16,
+    schemaVersion: 17,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
@@ -479,6 +497,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       peers: correlateStreamPeers(source.evidence, pairedUnits, now),
     })),
     smartMeters,
+    dualCtPreviews,
     installationTopology: streamAggregateOverlapSnapshot(aggregates, now),
     reporterShadow: reporterShadowSnapshot(shadowAggregates, reporters, now),
     reporterRepair: reporters.map((reporter) => {

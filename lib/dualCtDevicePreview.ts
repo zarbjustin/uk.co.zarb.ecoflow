@@ -1,4 +1,6 @@
-/** Unwired device-adapter rehearsal. No Homey object, network, persistence or activation switch. */
+/** Pure candidate adapter. No Homey object, network, persistence or activation switch.
+ * The separate opt-in preview driver consumes it without unlocking verified meter gates.
+ */
 import { decodeDualCtCandidates, DualCtDecodeContext } from './dualCtDecoder';
 import { DUAL_CT_BANK_DEFINITIONS, DUAL_CT_FIELD_DEFINITIONS, dualCtReadingTime } from './dualCtContract';
 import { DualCtBankCheck } from './dualCtBanks';

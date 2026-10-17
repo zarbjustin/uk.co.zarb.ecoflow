@@ -12,9 +12,27 @@ export function dualCtReleaseReadiness() {
     },
     energyAdoption: {
       status: 'blocked',
-      missingEvidence: ['counter_units_period', 'counter_reset_restart', 'authoritative_source', 'upgrade_rollback', 'physical_energy_comparison'],
+      missingEvidence: ['model_firmware_contract', 'grid_role', 'authoritative_source', 'upgrade_rollback', 'physical_energy_comparison'],
+      powerPath: {
+        status: 'blocked',
+        nativeCountersRequired: false,
+        totalsBasis: 'derived_from_power',
+        missingEvidence: ['model_firmware_contract', 'grid_role', 'power_units_direction', 'measurement_freshness', 'authoritative_source', 'upgrade_rollback', 'physical_energy_comparison'],
+      },
+      counterPath: {
+        status: 'blocked',
+        missingEvidence: ['model_firmware_contract', 'grid_role', 'counter_units_period', 'counter_reset_restart', 'authoritative_source', 'upgrade_rollback', 'physical_energy_comparison'],
+      },
     },
     pairingEnabled: false,
+    experimentalPreview: {
+      driverId: 'smartmeter_dual_ct_preview',
+      optInRequired: true,
+      rawCandidatesOnly: true,
+      verifiedMeterPairingEnabled: false,
+      contributesToEnergy: false,
+      controlsEnabled: false,
+    },
     contributesToEnergy: false,
     controlsEnabled: false,
   };

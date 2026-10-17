@@ -319,6 +319,7 @@ test('settings readiness and JSON download work in the browser without hidden po
     assert.match(await page.locator('#reporterStatus').innerText(), /Meter minus flow: 24 W/);
     await page.setViewportSize({ width: 390, height: 900 });
     await page.locator('#dualCtTitle').click();
+    await page.locator('#dualCtCompactTitle').click();
     assert.match(await page.locator('#dualCtResearchResult').innerText(), /Channel mapping, units and direction are still unverified/);
     await page.locator('#refreshDualCtResearch').click();
     assert.equal(await page.evaluate(() => window.calls), 3, 'manual local refresh only');

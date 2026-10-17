@@ -12,8 +12,10 @@ imagined product. `images/{small,large,xlarge}.png` are transparent line art at
 75/500/1000 pixels; `wireframe-preview.png` is white-backed QA only. Preserve the
 original photo as the product listing image; the generated art is for the icon.
 
-These are future assets, not enabled support. No active driver references them.
-See `docs/SMART_METER_DUAL_CT_PLAN.md` for identity/telemetry gates and channel roles.
+17 October: the local, unpublished `smartmeter_dual_ct_preview` driver now uses
+byte-identical copies of `icon.svg` and `store-photo/{small,large,xlarge}.png`.
+This is explicitly opted-in raw read-only preview, not verified meter or Energy
+support. See `docs/STATUS.md` and `docs/DUAL_CT_RELEASE_GATES.md` for current gates.
 
 Reproduce line-art preparation with sharp available through workspace NODE_PATH:
 

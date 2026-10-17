@@ -1,0 +1,1 @@
+{"type":"number","title":{"en":"Packet receipt age","de":"Paketempfangsalter","nl":"Pakketontvangstleeftijd"},"units":{"en":"s","de":"s","nl":"s"},"decimals":0,"min":0,"getable":true,"setable":false,"uiComponent":"sensor","insights":false,"icon":"/assets/capabilities/solar-meter.svg"}

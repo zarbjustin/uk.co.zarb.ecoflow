@@ -21,6 +21,8 @@
     .dual-ct-card { border:1px solid #ccc; border-radius:8px; padding:10px; margin:12px 0; overflow-wrap:anywhere; }
     .dual-ct-card table { width:100%; table-layout:fixed; font-size:12px; border-collapse:collapse; }
     .dual-ct-card th, .dual-ct-card td { padding:5px; border:1px solid #ddd; vertical-align:top; overflow-wrap:anywhere; }
+    .secondary-action { background:#eee; color:#333; }
+    #dualCtWorkflowStatus, #dualCtExportKind { font-size:14px; line-height:1.5; }
   </style>
 </head>
 <body>
@@ -142,37 +144,46 @@
       No reports are sent automatically. Afterwards use Show integration support report at your convenience.
       No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
     </details>
-    <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
+    <h3 id="dualCtCaptureStep">1. Choose what to capture</h3>
     <label class="beta-toggle"><input id="enableDualCtPreview" type="checkbox"><span id="dualCtPreviewOptIn"></span></label>
     <label class="beta-toggle"><input id="enableDualCtCounters" type="checkbox" disabled><span id="dualCtCounterOptIn"></span></label>
-    <button id="stopDualCtResearch" type="button">Stop Dual CT discovery</button>
-    <button id="refreshDualCtResearch" type="button">Refresh local capture summary</button>
+    <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
+    <p id="dualCtWorkflowStatus" role="status" aria-live="polite"></p>
+    <button id="stopDualCtResearch" class="secondary-action" type="button">Stop Dual CT discovery</button>
+    <button id="refreshDualCtResearch" class="secondary-action" type="button">Refresh local capture summary</button>
     <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
     <p id="dualCtCaptureMode" role="status" aria-live="polite"></p>
-    <div id="dualCtResearchResult" role="status" aria-live="polite"></div>
-    <button id="copyDualCtCompact" type="button" disabled>Copy compact Dual CT report</button>
-    <button id="downloadDualCtCompact" type="button" disabled>Download compact Dual CT report</button>
-    <p id="dualCtShareStatus" role="status" aria-live="polite"></p>
+    <h3 id="dualCtExportStep">2. Review and export captured readings</h3>
     <details id="dualCtPreviewPanel"><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
-      <button id="refreshDualCtPreview" type="button"></button>
-      <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
+      <button id="refreshDualCtPreview" class="secondary-action" type="button"></button>
       <p id="dualCtDiagnosticState" class="help" role="status" aria-live="polite"></p>
+      <label class="beta-toggle"><input id="includeDualCtComparison" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtComparisonInclude"></span></label>
+      <p id="dualCtExportKind" role="status" aria-live="polite"></p>
+      <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtCandidateConsent"></span></label>
+      <p id="dualCtExportAvailability" class="help" role="status" aria-live="polite"></p>
+      <button id="downloadDualCtCandidates" type="button" disabled></button>
+      <button id="copyDualCtCandidates" class="secondary-action" type="button" disabled></button>
+      <p id="dualCtCandidateShareStatus" role="status" aria-live="polite"></p>
+      <p id="dualCtCandidateHelp" class="help"></p>
+      <pre id="dualCtCandidateText" hidden></pre>
+      <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
       <p id="dualCtBankState" class="help" style="white-space:pre-wrap" role="status" aria-live="polite"></p>
       <details id="dualCtComparisonPanel"><summary id="dualCtComparisonTitle"></summary>
         <div id="dualCtComparisonState"></div>
       </details>
-      <label class="beta-toggle"><input id="includeDualCtComparison" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtComparisonInclude"></span></label>
-      <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtCandidateConsent"></span></label>
-      <p id="dualCtExportAvailability" class="help" role="status" aria-live="polite"></p>
-      <p id="dualCtCandidateHelp" class="help"></p>
-      <pre id="dualCtCandidateText" hidden></pre>
-      <button id="copyDualCtCandidates" type="button" disabled></button>
-      <button id="downloadDualCtCandidates" type="button" disabled></button>
-      <p id="dualCtCandidateShareStatus" role="status" aria-live="polite"></p>
     </details>
-    <pre id="dualCtCompactText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+    <details id="dualCtCompactPanel">
+      <summary id="dualCtCompactTitle">Technical diagnostics — no numeric readings</summary>
+      <p id="dualCtCompactHelp" class="help"></p>
+      <div id="dualCtResearchResult" role="status" aria-live="polite"></div>
+      <button id="copyDualCtCompact" class="secondary-action" type="button" disabled>Copy compact Dual CT report</button>
+      <button id="downloadDualCtCompact" class="secondary-action" type="button" disabled>Download compact Dual CT report</button>
+      <p id="dualCtShareStatus" role="status" aria-live="polite"></p>
+      <pre id="dualCtCompactText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+    </details>
   </details>
-  <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
+  <p class="help">For general integration support only, not the Dual CT numeric export above:
+    this displayed integration JSON report is separate from Homey's diagnostic log ID.
     Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
@@ -250,10 +261,46 @@
       var comparisonTimer;
       var comparisonNotes = [];
       var candidateAvailability = 'not_loaded';
+      var comparisonDefaultCaptureId = null;
+      var completionRefreshTimer;
+      var completionRefreshCaptureId = null;
+      var completionRefreshUsed = false;
+      var completionRefreshGeneration = 0;
+      function cancelCompletionRefresh() {
+        completionRefreshGeneration++;
+        clearTimeout(completionRefreshTimer);
+        completionRefreshTimer = null;
+        completionRefreshCaptureId = null;
+      }
+      function scheduleCompletionRefresh(evidence) {
+        var research = evidence?.research;
+        var id = evidence?.preview?.captureId;
+        var age = research?.captureAgeSec;
+        if (completionRefreshUsed || research?.previewDiagnostics?.enabled !== true
+          || !['discovering', 'listening'].includes(research?.status)
+          || typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id)
+          || !Number.isFinite(age) || age < 0 || age >= 120) return;
+        completionRefreshCaptureId = id;
+        var generation = completionRefreshGeneration;
+        // One local read after an explicitly started numeric capture. Never poll,
+        // discover, renew retention, restart a capture or opt into sharing.
+        completionRefreshTimer = setTimeout(function () {
+          completionRefreshTimer = null;
+          if (generation !== completionRefreshGeneration || completionRefreshCaptureId !== id || completionRefreshUsed) return;
+          completionRefreshUsed = true;
+          completionRefreshCaptureId = null;
+          dualCtAction('refresh', id);
+        }, Math.ceil((120 - age) * 1000) + 250);
+      }
       function renderCandidateAvailability() {
         document.getElementById('includeDualCtComparison').disabled = !candidateSnapshot || !comparisonSnapshot;
         document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
         document.getElementById('dualCtExportAvailability').textContent = Homey.__('settings.dual_ct.export_' + candidateAvailability);
+        var combined = !!comparisonSnapshot && document.getElementById('includeDualCtComparison').checked;
+        document.getElementById('dualCtExportKind').textContent = candidateSnapshot
+          ? Homey.__('settings.dual_ct.' + (combined ? 'numeric_combined_identity' : 'numeric_scalar_identity')) : '';
+        document.getElementById('downloadDualCtCandidates').textContent = Homey.__('settings.dual_ct.'
+          + (combined ? 'numeric_combined_download' : 'candidate_download'));
       }
       function renderComparisonView() {
         clearTimeout(comparisonTimer);
@@ -300,6 +347,16 @@
           : enabled === false ? 'capture_mode_structure' : 'capture_mode_unknown')) : '';
         if (active) mode.textContent += ' ' + Homey.__('settings.dual_ct.capture_mode_locked');
         if (evidence?.captureStart?.requiresRestart === true) mode.textContent += ' ' + Homey.__('settings.dual_ct.capture_mode_mismatch');
+        document.getElementById('dualCtWorkflowStatus').textContent = Homey.__('settings.dual_ct.'
+          + (active ? enabled === true ? completionRefreshUsed ? 'workflow_numeric_manual' : 'workflow_numeric_running' : 'workflow_structure_running'
+            : ['stopped', 'account_changed'].includes(evidence?.status) ? 'export_' + evidence.status
+            : evidence?.valuesCaptured === true && ['complete', 'sample_limit'].includes(evidence?.status)
+              ? 'workflow_complete' : 'workflow_idle'));
+        renderCaptureStartLabel();
+      }
+      function renderCaptureStartLabel() {
+        document.getElementById('startDualCtResearch').textContent = Homey.__('settings.dual_ct.'
+          + (document.getElementById('enableDualCtPreview').checked ? 'numeric_start' : 'start'));
       }
       function prepareCandidateExport() {
         candidateReport = null;
@@ -351,6 +408,10 @@
           }).join('\n') : '';
       }
       function clearDualCtPreview(reason, preserveConsent) {
+        if (['request_failed', 'stopped', 'account_changed', 'transport_unavailable', 'discovery_unavailable'].includes(reason)) cancelCompletionRefresh();
+        if (['request_failed', 'stopped', 'account_changed'].includes(reason)) {
+          document.getElementById('dualCtWorkflowStatus').textContent = Homey.__('settings.dual_ct.export_' + reason);
+        }
         previewOperation++;
         clearTimeout(previewDeadline);
         clearTimeout(previewExpiry);
@@ -361,6 +422,7 @@
         previewSnapshot = null;
         candidateSnapshot = null;
         if (!preserveConsent) {
+          comparisonDefaultCaptureId = null;
           document.getElementById('consentDualCtCandidateExport').checked = false;
           candidateCaptureId = null;
           comparisonNotes = [];
@@ -402,6 +464,11 @@
       document.getElementById('dualCtTitle').textContent = Homey.__('settings.dual_ct.title');
       document.getElementById('dualCtOverview').textContent = Homey.__('settings.dual_ct.overview');
       document.getElementById('dualCtTechnicalTitle').textContent = Homey.__('settings.dual_ct.technical_title');
+      document.getElementById('dualCtCaptureStep').textContent = Homey.__('settings.dual_ct.capture_step');
+      document.getElementById('dualCtExportStep').textContent = Homey.__('settings.dual_ct.export_step');
+      document.getElementById('dualCtCompactTitle').textContent = Homey.__('settings.dual_ct.compact_title');
+      document.getElementById('dualCtCompactHelp').textContent = Homey.__('settings.dual_ct.compact_help');
+      document.getElementById('dualCtWorkflowStatus').textContent = Homey.__('settings.dual_ct.workflow_idle');
       document.getElementById('startDualCtResearch').textContent = Homey.__('settings.dual_ct.start');
       document.getElementById('stopDualCtResearch').textContent = Homey.__('settings.dual_ct.stop');
       document.getElementById('refreshDualCtResearch').textContent = Homey.__('settings.dual_ct.refresh');
@@ -420,6 +487,7 @@
         var counter = document.getElementById('enableDualCtCounters');
         counter.disabled = !this.checked;
         if (!this.checked) counter.checked = false;
+        renderCaptureStartLabel();
       });
       document.getElementById('includeDualCtComparison').addEventListener('change', function () {
         document.getElementById('consentDualCtCandidateExport').checked = false;
@@ -476,6 +544,7 @@
         var elapsed = Date.now() - requestedAt;
         if (elapsed < 0 || elapsed >= 20000) { clearDualCtPreview('request_failed'); return; }
         var id = typeof evidence?.captureId === 'string' && /^[0-9a-f-]{36}$/.test(evidence.captureId) ? evidence.captureId : null;
+        if (completionRefreshCaptureId && id !== completionRefreshCaptureId) cancelCompletionRefresh();
         if (!id || id !== candidateCaptureId) {
           document.getElementById('consentDualCtCandidateExport').checked = false;
           comparisonNotes = [];
@@ -511,6 +580,12 @@
         candidateReadAt = Date.now();
         candidateAvailability = window.EcoFlowDualCtStatus.candidateExportAvailability(evidence, !!candidateSnapshot, !!comparisonSnapshot);
         if (!comparisonSnapshot) document.getElementById('includeDualCtComparison').checked = false;
+        else if (comparisonDefaultCaptureId !== id) {
+          // Format is a default, not collection or sharing consent. Consent stays
+          // unchecked and no report is prepared until the user explicitly agrees.
+          document.getElementById('includeDualCtComparison').checked = true;
+          comparisonDefaultCaptureId = id;
+        }
         if (candidateSnapshot) {
           document.getElementById('dualCtDiagnosticState').textContent = Homey.__('settings.dual_ct.candidate_snapshot_ready');
           candidateExpiry = setTimeout(function () {
@@ -551,7 +626,13 @@
           document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.download_requested');
         } catch { document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
       });
-      function dualCtAction(action) {
+      function dualCtAction(action, automaticCaptureId) {
+        var numericStartRequested = action === 'start' && document.getElementById('enableDualCtPreview').checked === true;
+        if (action !== 'refresh') {
+          cancelCompletionRefresh();
+          completionRefreshUsed = false;
+          comparisonDefaultCaptureId = null;
+        }
         clearDualCtPreview(action === 'refresh' ? 'refreshing' : action === 'start' ? 'starting' : 'stopped', action === 'refresh');
         dualCtCompact = null;
         document.getElementById('dualCtCompactText').textContent = '';
@@ -580,11 +661,19 @@
           clearTimeout(dualCtDeadline);
           dualCtOperation++;
           start.disabled = false;
-          if (err) { clearDualCtPreview('request_failed'); result.textContent = Homey.__('settings.dual_ct.error'); return; }
+          if (err) { cancelCompletionRefresh(); clearDualCtPreview('request_failed'); result.textContent = Homey.__('settings.dual_ct.error'); return; }
           if (action === 'stop') { renderDualCt(evidence); return; }
+          var id = evidence?.preview?.captureId;
+          if ((automaticCaptureId && id !== automaticCaptureId)
+            || (completionRefreshCaptureId && id !== completionRefreshCaptureId)) {
+            cancelCompletionRefresh();
+            if (automaticCaptureId) { clearDualCtPreview('account_changed'); return; }
+          }
+          if (!['discovering', 'listening'].includes(evidence?.research?.status)) cancelCompletionRefresh();
           var showPreview = previewGeneration === previewOperation;
           renderDualCt({ ...evidence?.research, captureStart: captureStart }, true);
           if (showPreview) applyDualCtPreview(evidence?.preview, requestedAt);
+          if (numericStartRequested && !captureStart?.requiresRestart && !captureStart?.superseded) scheduleCompletionRefresh(evidence);
         }
         Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/dual-ct-research/view' : '/dual-ct-research/' + action,
           action === 'refresh' ? null : action === 'start'
@@ -602,6 +691,7 @@
       document.getElementById('stopDualCtResearch').addEventListener('click', function () { dualCtAction('stop'); });
       document.getElementById('refreshDualCtResearch').addEventListener('click', function () { dualCtAction('refresh'); });
       function invalidateDualCtView() {
+        cancelCompletionRefresh();
         dualCtOperation++;
         clearTimeout(dualCtDeadline);
         document.getElementById('startDualCtResearch').disabled = false;
@@ -696,6 +786,7 @@
       }
       startCaptureTimer();
       window.addEventListener('pagehide', function () {
+        cancelCompletionRefresh();
         document.getElementById('enableDualCtPreview').checked = false;
         renderDualCt(null);
         dualCtOperation++;

@@ -51,6 +51,7 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       }, require('../locales/en.json'));
       assert.equal(await page.evaluate(() => window.uiCalls.length), 0);
       await page.locator('#dualCtTitle').click();
+      await page.locator('#dualCtCompactTitle').click();
       await page.locator('#dualCtPreviewTitle').click();
       await page.locator('#refreshDualCtPreview').click();
       assert.match(await page.locator('#dualCtPreviewState').innerText(), /preview is off/);
@@ -81,6 +82,7 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       assert.equal(await page.locator('#copyDualCtCandidates').isDisabled(), true);
       assert.equal(await page.locator('#dualCtCandidateText').isVisible(), false);
       assert.equal(await page.evaluate(() => window.copiedCandidate), null);
+      await page.locator('#includeDualCtComparison').uncheck();
       await page.locator('#consentDualCtCandidateExport').check();
       const reviewed = JSON.parse(await page.locator('#dualCtCandidateText').innerText());
       assert.equal(reviewed.devices[0].readings[0].value, -123.5);
@@ -103,7 +105,7 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
       assert.equal(await page.evaluate(() => document.getElementById('dualCtPreviewPanel').open), true);
       await page.evaluate(() => { window.failCopy = true; });
       await page.locator('#copyDualCtCandidates').click();
-      assert.match(await page.locator('#dualCtCandidateShareStatus').innerText(), /candidate JSON shown above.*manually/);
+      assert.match(await page.locator('#dualCtCandidateShareStatus').innerText(), /candidate JSON shown on this page.*manually/);
       await page.evaluate(() => { URL.createObjectURL = () => { throw new Error('PRIVATE'); }; });
       await page.locator('#downloadDualCtCandidates').click();
       assert.match(await page.locator('#dualCtCandidateShareStatus').innerText(), /nothing has been sent/);
