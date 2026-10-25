@@ -6,7 +6,7 @@
   "excluded": ["new_5000_controls", "remaining_time", "dual_ct_energy", "automatic_mixed_generation_merge", "new_product_admission"],
   "gates": [
     {"id":"native_upgrade","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
-    {"id":"pairing_workflow","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#candidate-upgrade"},
+    {"id":"pairing_workflow","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#candidate-upgrade"},
     {"id":"normal_use_soak","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#normal-use"},
     {"id":"es21.identity","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3","observedAt":"2026-10-25T21:49:48.103Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
     {"id":"es21.discharge","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3","observedAt":"2026-10-25T21:49:48.103Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},

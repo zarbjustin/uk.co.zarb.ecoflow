@@ -2,16 +2,17 @@
 
 ## Current monitoring candidate — 25 October 2026
 
-Newer **source-only pairing cleanup** separates supported unit monitoring
+The **owner-installed diagnostic pairing cleanup** separates supported unit monitoring
 (no opt-in) from Home Battery (5000) aggregate Energy pairing (new, default-off
 explicit opt-in). The retired Beta flag cannot grant aggregate consent, and no
-existing paired device is changed. This cleanup is not installed or published;
-the prior owner-installed candidate and its exact hardware evidence remain distinct.
+existing paired device is changed. Exact-commit CI and direct installation passed;
+store Test/Live remain unchanged. Desktop entry/blocked-consent checks passed,
+but full pairing and model/role hardware acceptance remain distinct and open.
 
 The [monitoring release candidate](STREAM_5000_MONITORING_RC.md) supersedes the
 historical version/build/local-state statements below for current acceptance.
 Owner ES21 discharge/configuration has now been compared read-only with EcoFlow
-on installed Test 1.10.56. It is partial evidence, not a pass for the unpublished
+on the earlier installed Development 1.10.56 runtime. It is partial evidence, not a pass for the newer
 candidate, ES22, charging/idle, PV/socket, recovery or aggregate accounting.
 The model/role ledger is machine-checked separately from software tests.
 No controls, Energy role, product admission or release channel is changed by this

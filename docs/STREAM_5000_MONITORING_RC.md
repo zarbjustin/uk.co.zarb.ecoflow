@@ -182,12 +182,22 @@ as an acceptance shortcut.
 
 ## Candidate upgrade
 
-Source follow-up: the authorized Beta cleanup separates normal unit monitoring
-from default-off Home Battery Energy pairing. It is not reinstalled or published.
+Delivered follow-up: diagnostic commit `2119122` separates normal unit monitoring
+from default-off Home Battery Energy pairing. Exact-commit CI passed and it was
+directly installed non-clean; store Test/Live remain unchanged.
 `stream5000AggregatePairingEnabled` is new explicit consent; the old saved Beta
 flag is inactive but retained. Existing paired devices/accounting are unaffected.
-The installed a15ae0d candidate still uses the previous UI. New runtime fingerprint
-means its hardware passes cannot automatically approve this newer source.
+Installed runtime fingerprint is now
+`9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Earlier a15ae0d hardware passes cannot automatically approve this newer source.
+Readback at 22:30:13 UTC confirms schema 18, running Development 1.10.56, no crash,
+all 11 EcoFlow devices available with identities/settings retained, all 99 saved
+Flow definitions unchanged and no 5000 aggregate paired. Update readback found no
+lost capabilities or counter resets. Desktop Settings and both pairing entry
+screens were inspected: normal unit disclosure, aggregate disabled-consent block.
+Both were cancelled before account entry/addition, without saving consent.
+Full inventory/add, mobile-host, rollback and per-model hardware acceptance remain
+open. See the [current delivery checkpoint](STATUS.md) for CI and installation evidence.
 
 Before installing, identify the exact candidate runtime fingerprint, preserve
 the existing app/version/device/Flow/counter baseline privately, and agree a

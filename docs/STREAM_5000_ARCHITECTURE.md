@@ -41,7 +41,8 @@ Unknown prefixes must remain absent from pairing even when their names contain
   `stream5000AggregatePairingEnabled`, checked before/after inventory and before
   account commitment on add. The retired Beta key is neither read nor removed.
   No gate controls existing device availability or accounting. This cleanup is
-  source-only; the owner-installed candidate still has the earlier pairing UI.
+  directly installed on the owner Homey; desktop entry and disabled aggregate
+  access were checked without creating devices. Store Test/Live are unchanged.
 - `lib/Stream5000UnitDevice.ts` owns transport-independent lifecycle,
   availability, role-specific capability application and cross-driver credential cleanup.
 - ES21 and ES22 have explicit runtime adapters. They share the corroborated

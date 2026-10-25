@@ -2,7 +2,42 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Diagnostic delivery — 25 October 2026, COMMIT/CI/DIRECT INSTALL AUTHORIZED
+## Diagnostic delivery — 25 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
+
+Implementation commit `21191228ed90a4fb171b18363a7cdcbad8e63c69` is on the
+diagnostic branch. [Exact-commit CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40239765856)
+passed: 1064 tests, lint, release checks, dependency audit (zero vulnerabilities)
+and verified-level Homey validation. Version remains 1.10.56.
+
+The updated candidate was directly installed non-clean on the owner Homey.
+Readback at **22:30:13 UTC** confirms running Development 1.10.56, no crash,
+support schema 18, unit monitoring requiring no opt-in and aggregate Energy
+pairing disabled. All **11** EcoFlow devices are available with unchanged
+identities/settings; no capability was lost or counter reset on the update.
+All **99** saved standard/Advanced Flow definitions match the private baseline.
+Preservation is not an execution test of those Flows.
+
+Installed desktop inspection confirms the retired Beta checkbox is absent, the
+separate Energy switch/help is present, unit pairing opens the monitoring
+disclosure without an opt-in and aggregate pairing stops at the disabled-consent
+screen without Continue. Both sessions were cancelled before credentials or
+device addition; no setting was saved. Zero 5000 aggregates remain paired.
+Inventory/add completion and mobile-host acceptance are still untested.
+
+Runtime fingerprint is
+`9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Earlier a15ae0d physical signoffs remain historical, not silently carried over.
+Charging/idle, accessory/model coverage, recovery/rollback, aggregate Energy and
+48-hour native soak remain open. Passive timer observation and new controls stay
+disabled. No additional Robert capture is requested for this delivery.
+
+Mainline refs, store Test/Live, physical configuration and Energy participation
+are unchanged. No store command or version bump was performed. The staged
+installation first needed a local validation-path correction before contacting
+Homey; the subsequent validated package installed successfully. Deployment notes
+and acceptance evidence below retain their historical checkpoint dates.
+
+### Delivery authorization and baseline (historical pre-install checkpoint)
 
 Owner now authorizes committing and pushing the prepared diagnostic work,
 checking exact-commit CI, and directly installing the updated candidate on their
@@ -17,7 +52,8 @@ diagnostic commits were found. Fresh owner baseline: running Development 1.10.56
 support schema 17, 11 EcoFlow devices, 99 Flow definitions and no 5000 aggregate.
 Identity/settings/Flow/counter baselines remain private. Candidate runtime
 fingerprint is `9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
-Source commit, CI and updated installation are pending at this checkpoint.
+Source commit, CI and updated installation were pending at this checkpoint;
+the completed delivery above supersedes it.
 Earlier local-only restrictions below describe their historical checkpoints.
 
 ## Pairing cleanup — 25 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED

@@ -10,10 +10,11 @@ No existing paired device, counter, credential or Flow is migrated or removed.
 Only admitted ES21/ES22 units are discoverable; unknown models remain excluded.
 Normal unit discovery is not hardware acceptance of every model/feature.
 
-This cleanup has not been installed, committed/pushed or published. The earlier
-owner-installed Development 1.10.56 keeps its old pairing screens until an
-explicitly authorized reinstall. The historical Beta instructions below do not
-describe this newer source. Follow the [monitoring candidate plan](STREAM_5000_MONITORING_RC.md)
+This cleanup is committed/pushed and directly installed on the owner Homey as
+Development 1.10.56; exact-commit CI passed. Store Test/Live remain unchanged.
+Installed desktop checks confirm unit entry has no opt-in and aggregate pairing
+is blocked while its separate consent is off; no device was added. The historical
+Beta instructions below do not describe this newer source. Follow the [monitoring candidate plan](STREAM_5000_MONITORING_RC.md)
 and [current architecture](STREAM_5000_ARCHITECTURE.md) for role/acceptance scope.
 
 > **Status: monitoring only. EcoFlow provides no supported public API for this model.**
