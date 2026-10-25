@@ -5,7 +5,8 @@
     "build": "tsc",
     "test": "tsc && node --test test/*.test.js",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
-    "release:check": "node scripts/check-release-boundaries.mjs",
+    "release:check": "node scripts/check-release-boundaries.mjs && node scripts/check-stream-5000-acceptance.mjs",
+    "release:acceptance": "node scripts/check-stream-5000-acceptance.mjs --require-ready",
     "widgets:preview": "node scripts/generate-widget-previews.mjs"
   },
   "dependencies": {

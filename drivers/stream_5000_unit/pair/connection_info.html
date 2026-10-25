@@ -1,0 +1,19 @@
+<style>
+  .connection-info { padding: 16px; max-width: 460px; margin: 0 auto; font-family: inherit; line-height: 1.5; }
+  .connection-info button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1aa3e8; color: white; font-size: 15px; cursor: pointer; }
+</style>
+<div class="connection-info">
+  <h2>STREAM 5000 Series Unit</h2>
+  <p><strong>Read-only monitoring</strong> for supported STREAM 5000 (ES21) and STREAM AC 5000 (ES22) units.</p>
+  <p>Sign in with your EcoFlow app account. This connection uses EcoFlow's app service,
+    not Developer API keys, and its availability can change with EcoFlow updates.</p>
+  <p>No Energy opt-in is needed for this unit monitor. It does not
+    contribute to Homey Energy or send control commands. Where supplied, system
+    readings are labelled separately from unit readings; unknown readings stay unavailable.</p>
+  <p>STREAM Home Battery (5000) is a separate installation-level Energy device with
+    its own pairing opt-in. Do not replace or delete an existing device to add this monitor.</p>
+  <button id="connection-continue" type="button">Continue</button>
+</div>
+<script type="text/javascript">
+  document.getElementById('connection-continue').addEventListener('click', function () { Homey.showView('app_credentials'); });
+</script>

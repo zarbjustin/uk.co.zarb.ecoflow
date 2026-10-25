@@ -3,11 +3,13 @@
 import { AppDevice, stream5000Devices } from './appDevices';
 import { registerAppAuthHandlers } from './appAuthPairing';
 import {
-  isStream5000BetaEnabled,
-  requireStream5000BetaAccess,
-} from './stream5000Beta';
+  isStream5000AggregatePairingEnabled,
+  requireStream5000PairingAccess,
+  stream5000PairingRole,
+} from './stream5000PairingAccess';
 import {
   STREAM_5000_UNIT_DRIVER_IDS,
+  STREAM_5000_SYSTEM_DRIVER_IDS,
   stream5000ModelFromSn,
   Stream5000ModelSpec,
 } from './stream5000Models';
@@ -75,18 +77,20 @@ export function registerStream5000Pairing(
   session: any,
   options: Stream5000PairingOptions = {},
 ): void {
-  const appAuth = registerAppAuthHandlers(driver, session);
+  const role = stream5000PairingRole(driver.id);
+  const requireAccess = () => requireStream5000PairingAccess(role, driver?.homey);
+  const appAuth = registerAppAuthHandlers(driver, session, { beforeAdd: requireAccess });
   const selectDevices = options.selectDevices || stream5000Devices;
-  const duplicateDriverIds = options.duplicateDriverIds || STREAM_5000_UNIT_DRIVER_IDS;
+  const duplicateDriverIds = options.duplicateDriverIds
+    || (role === 'system' ? STREAM_5000_SYSTEM_DRIVER_IDS : STREAM_5000_UNIT_DRIVER_IDS);
 
-  session.setHandler('check_stream_5000_beta_access', async () => {
-    return isStream5000BetaEnabled(driver?.homey);
-  });
+  if (role === 'system') {
+    session.setHandler('check_stream_5000_aggregate_access', async () => isStream5000AggregatePairingEnabled(driver?.homey));
+  }
 
   session.setHandler('list_devices', async () => {
-    // Pairing is the only gated operation. Already-paired devices continue to
-    // run if the owner later disables beta access in Settings.
-    requireStream5000BetaAccess(driver?.homey);
+    // Physical monitors need no opt-in. Only new aggregate pairing is gated.
+    requireAccess();
     const client = appAuth.getClient();
     if (!client) {
       throw new Error(options.noAccountMessage || 'No EcoFlow account is configured for STREAM 5000 Series pairing.');
@@ -94,6 +98,8 @@ export function registerStream5000Pairing(
     const pairedSerials = pairedStream5000Serials(driver, duplicateDriverIds);
     const observe = driver?.homey?.app?.beginStreamDiscoveryObservation?.();
     const accountDevices = await client.getDeviceList();
+    // Revoking consent during an in-flight cloud read must not return a list.
+    requireAccess();
     if (typeof observe === 'function') observe(accountDevices);
     const devices = selectDevices(accountDevices)
       .filter((device) => !pairedSerials.has(device.sn));

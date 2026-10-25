@@ -1,6 +1,24 @@
 # STREAM model coverage and admission evidence
 
-## Current diagnostic scope — 17 October 2026
+## Current monitoring candidate — 25 October 2026
+
+Newer **source-only pairing cleanup** separates supported unit monitoring
+(no opt-in) from Home Battery (5000) aggregate Energy pairing (new, default-off
+explicit opt-in). The retired Beta flag cannot grant aggregate consent, and no
+existing paired device is changed. This cleanup is not installed or published;
+the prior owner-installed candidate and its exact hardware evidence remain distinct.
+
+The [monitoring release candidate](STREAM_5000_MONITORING_RC.md) supersedes the
+historical version/build/local-state statements below for current acceptance.
+Owner ES21 discharge/configuration has now been compared read-only with EcoFlow
+on installed Test 1.10.56. It is partial evidence, not a pass for the unpublished
+candidate, ES22, charging/idle, PV/socket, recovery or aggregate accounting.
+The model/role ledger is machine-checked separately from software tests.
+No controls, Energy role, product admission or release channel is changed by this
+preparation. Dual CT now has an opt-in preview, superseding the
+historical combined Gateway/Dual CT catalogue-only row below.
+
+## Historical diagnostic scope — 17 October 2026
 
 This summary supersedes the historical development states below. Original BK
 models retain their existing monitoring/guarded-control paths. ES21 and ES22

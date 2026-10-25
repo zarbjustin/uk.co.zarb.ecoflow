@@ -367,7 +367,7 @@ test('ordinary support export contains preview health but never preview numbers,
     return { getDevices: () => [{ getDualCtPreviewDiagnostics: () => ({ enabled: true, status: 'recent', acceptedPackets: 59,
       lastReceiptAgeSec: 1, value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
   } } });
-  assert.equal(report.schemaVersion, 17); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
+  assert.equal(report.schemaVersion, 18); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
   assert.equal(report.dualCtPreviews[0].valuesIncluded, false);
   assert.equal(report.dualCtPreviews[0].contributesToEnergy, false);
   assert.doesNotMatch(JSON.stringify(report), /PRIVATE|1234567/);

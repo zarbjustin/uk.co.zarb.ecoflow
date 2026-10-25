@@ -18,8 +18,13 @@ test('release check rejects accidental Energy, actions, public routes, permissio
     value => { value.app.permissions.push('homey:manager:flow'); },
     value => { value.app.flow.conditions.find(card => card.id === 'battery_soc').args[1].name = 'changed'; },
     value => { value.gridGate = value.gridGate.replace('RUNTIME_ENABLED = false', 'RUNTIME_ENABLED = true'); },
+    value => { value.timeObserver = value.timeObserver.replace('RUNTIME_ENABLED = false', 'RUNTIME_ENABLED = true'); },
+    value => { value.timeObserverRuntime += '\nthis.timeObserver.start();'; },
+    value => { value.timeObserverRuntime = value.timeObserverRuntime.replace('new Stream5000TimeObserver(sn)', 'new Stream5000TimeObserver(sn, true)'); },
     value => { value.app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_preview').settings[0].value = true; },
     value => { value.pkg.version = '0.0.0'; },
+    value => { value.app.drivers.find(driver => driver.id === 'stream_5000_system').pair[0].id = 'app_credentials'; },
+    value => { value.pairingAccess = value.pairingAccess.replace('=== true', '!== false'); },
   ]) {
     const next = structuredClone(baseline); mutate(next); assert.throws(() => assertReleaseBoundaries(next));
   }

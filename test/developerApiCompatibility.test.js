@@ -28,7 +28,7 @@ function loadWithHomeyMock(modulePath) {
 
 const { BaseEcoFlowDevice } = loadWithHomeyMock('../.homeybuild/lib/BaseEcoFlowDevice.js');
 const StreamDevice = loadWithHomeyMock('../.homeybuild/drivers/stream/device.js');
-const LOCALIZED_ES22_MESSAGE = 'Enable beta pairing, then delete this device and add it again as STREAM Home Battery (5000).';
+const LOCALIZED_ES22_MESSAGE = 'Use STREAM 5000 Series Unit for monitoring; Home Battery Energy pairing has a separate opt-in.';
 const LOCALIZED_UNSUPPORTED_MESSAGE = 'Delete this unsupported device and add its dedicated type.';
 
 class TestDevice extends BaseEcoFlowDevice {

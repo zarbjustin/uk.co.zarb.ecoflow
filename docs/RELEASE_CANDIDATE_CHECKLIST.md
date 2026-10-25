@@ -1,10 +1,18 @@
 # Release candidate acceptance — diagnostic hardening wave
 
 This is an acceptance checklist, not certification or physical acceptance.
-Current 25 October authority allows diagnostic-branch commit/push and exact CI
-verification only: do not publish or update an installed host. Earlier Test
-authorisations do not authorise another release. See STATUS.md for historical
-version/archive evidence and the current source checkpoint.
+Current 25 October monitoring-candidate work is local preparation and read-only
+owner validation only. The earlier passive observer remains disabled. Do not
+activate, commit/push, publish or update an installed host without renewed authority.
+Earlier source/Test authorisations do not authorise this wave's release.
+See STATUS.md for historical evidence and the current local checkpoint.
+
+The [monitoring candidate plan](STREAM_5000_MONITORING_RC.md) now defines the
+first-release scope, per-model/per-role acceptance and explicit exclusions.
+`npm run release:acceptance` is a separate fail-closed hardware readiness check;
+software checks passing never closes its open gates. The newer source cleanup
+allows unit discovery without a shared Beta switch; aggregate Energy pairing
+retains a separate default-off opt-in. That cleanup is not installed/published.
 
 ## Software checks available without new tester data
 
@@ -23,6 +31,10 @@ version/archive evidence and the current source checkpoint.
 - Source/privacy: known candidate previews stay out of Flow monitoring, blocked
   fields name the problem, units are explicit, platform permission is honest,
   and no token/measurement export is expanded.
+- Passive timer observer: runtime gate false, no start/activation/export route;
+  malformed/foreign/duplicate fields fail closed, every buffer/row/time budget
+  is bounded, and reconnect/teardown purge candidates without another connection
+  or timer. Explicit-start tests are not hardware/capture acceptance.
 - Documentation/store copy distinguishes monitoring, display-only candidates,
   reported settings, calculated totals and physical actuation. No false claim
   that all candidate measurements enter Insights or every model supports control.

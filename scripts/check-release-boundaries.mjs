@@ -17,12 +17,16 @@ export function loadReleaseInputs(root) {
     app, compose: json('.homeycompose/app.json'), pkg: json('package.json'), lock: json('package-lock.json'),
     legacy: json('test/fixtures/legacy-flow-v1.10.54-contract.json'), live: json('test/fixtures/live-v1.10.3-contract.json'),
     definitions: app.capabilities,
+    pairingAccess: fs.readFileSync(path.join(root, 'lib/stream5000PairingAccess.ts'), 'utf8'),
     gridGate: fs.readFileSync(path.join(root, 'lib/dualCtGridEnergySource.ts'), 'utf8'),
+    timeObserver: fs.readFileSync(path.join(root, 'lib/stream5000TimeObserver.ts'), 'utf8'),
+    timeObserverRuntime: fs.readFileSync(path.join(root, 'lib/Stream5000UnitDevice.ts'), 'utf8'),
     runtime: ['app.ts', 'api.ts', ...app.drivers.map(driver => `drivers/${driver.id}/device.ts`)]
       .filter(name => fs.existsSync(path.join(root, name))).map(name => fs.readFileSync(path.join(root, name), 'utf8')).join('\n'),
   };
 }
-export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, gridGate, runtime }) {
+export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, runtime,
+  timeObserver, timeObserverRuntime }) {
   assert.equal(app.id, 'uk.co.zarb.ecoflow');
   for (const version of [compose.version, pkg.version, lock.version, lock.packages[''].version]) assert.equal(version, app.version, 'version mismatch');
   assert.deepEqual([...app.permissions].sort(), ['homey:manager:api', 'homey:manager:geolocation']);
@@ -51,7 +55,14 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
     assert.equal(preview.capabilitiesOptions[id].preventTag, true); assert.equal(preview.capabilitiesOptions[id].preventInsights, true);
   }
   assert.equal(preview.settings.find(setting => setting.id === 'preview_enabled').value, false);
+  assert.equal(app.drivers.find(driver => driver.id === 'stream_5000_unit').pair[0].id, 'connection_info');
+  assert.equal(app.drivers.find(driver => driver.id === 'stream_5000_system').pair[0].id, 'energy_access');
+  assert.match(pairingAccess, /settings\?\.get\(STREAM_5000_AGGREGATE_PAIRING_SETTING\) === true/);
+  assert.doesNotMatch(pairingAccess, /\.get\(['"]stream5000BetaEnabled['"]\)/);
   assert.match(gridGate, /^export const DUAL_CT_ENERGY_RUNTIME_ENABLED = false;/m);
+  assert.match(timeObserver, /^export const STREAM_5000_TIME_OBSERVER_RUNTIME_ENABLED = false;/m);
+  assert.match(timeObserverRuntime, /new Stream5000TimeObserver\(sn\)/);
+  assert.doesNotMatch(timeObserverRuntime, /timeObserver\??\.start\s*\(/, 'timer research must not autostart');
   assert.match(gridGate, /^export const resolveDualCtGridEnergyContract: .* = \(\) => null;/m);
   assert.doesNotMatch(runtime, /(?:from\s*|require\s*\()['"][^'"]*(?:dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption)/);
   for (const route of Object.values(app.api)) assert.notEqual(route.public, true, 'unexpected public app route');

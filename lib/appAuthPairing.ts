@@ -83,6 +83,8 @@ export interface AppAuthPairingSession {
 }
 
 export interface RegisterAppAuthOptions {
+  /** Role-specific admission check before committing credentials for a new device. */
+  beforeAdd?: () => void;
   /** Injectable transport, so the pairing flow can be tested without a network. */
   transport?: AppAuthTransport;
   /** Delay before the orphaned-account safety net runs. */
@@ -187,6 +189,7 @@ export function registerAppAuthHandlers(
   });
 
   session.setHandler('add_device', async () => {
+    options.beforeAdd?.();
     controller.commit();
   });
 

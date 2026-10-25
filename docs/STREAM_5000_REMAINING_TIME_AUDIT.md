@@ -77,3 +77,69 @@ a timer. No blank/guessed timer capability is added.
 No further Robert capture is requested. The owner's hardware can provide the
 next observations without changing its settings; controlled transitions require
 separate bounded authorisation.
+
+## Owner follow-up and passive observer preparation
+
+Later read-only native checks found two distinct changing estimates: the main
+device card and the expanded battery panel disagree, including after normal page
+navigation. This is not evidence that either is a verified system- or pack-scoped
+timer. The simple displayed-capacity/SOC/power calculation does not reproduce
+them reliably. The standard API returned 1006 for both full quota and targeted
+named remaining-time reads; this does not prove the app protocol has no timer.
+The official page was subsequently readable in the browser: it still presents
+BK-series examples, with no ES21/ES22 duration contract identified there.
+No private captures or numeric household observations are added to this document.
+
+The diagnostic branch now prepares `Stream5000TimeObserver`:
+
+- Runtime gate is **false**. Construction does not start collection; no current
+  device code calls `start()`. No setting, Flow, public/private API route or saved
+  flag can activate it. Tests exercise explicit-start enabled instances locally.
+- It taps the existing frame callback only. There is no new MQTT connection,
+  polling, get request, command publication, credential access, file write,
+  log output or telemetry/counter/availability update from the observer.
+- Only the exact subscribed property/get-reply topics and unencrypted, valid
+  `254/39`, `32/2`, `32/50` headers are eligible. Foreign headers, set messages,
+  acknowledgements and unknown commands are not candidates.
+- Selection is structural, not semantic: numeric leaves in `254/39 f11/f33/f44`,
+  the exactly matching serial's `f50.1/f54.1` record, `32/2 f1`, and selected BMS
+  scalar positions. Scope labels describe those locations, not timer ownership.
+  No minutes/seconds scaling, capacity formula, zero-fill or BK field borrowing.
+  The `f44` summary does not replace BMS readings or prove the expanded-panel
+  source. This narrow selection is not exhaustive; absence is not proof that
+  another command/path cannot carry a timer. Repeated unknown pack lists are not
+  flattened into an assumed single battery.
+- Strings, serials, peer records, raw buffers, packed arrays, task windows and
+  undeclared groups are not retained. Non-finite/unsafe/oversized numbers and
+  duplicate selected fields/own records are rejected. Numeric unknowns remain
+  private research data, not guaranteed anonymous or safe for public sharing.
+- Receipt timestamps come from the observer's clock, not device time or a
+  caller-supplied timestamp. Reads do not renew them. Each command is sampled
+  at most once per five-second interval (bundle siblings retain one receipt).
+
+| Limit | Hard preparation bound |
+| --- | --- |
+| Collection | At most 2 minutes after explicit start |
+| Evidence access | Expires 10 minutes after start, not after last read/receipt |
+| Frame / cumulative inspected bytes | 16 KiB / 2 MiB |
+| Inspected frames / retained samples | 512 / 64 |
+| Retained scalar rows / rows per header | 2,048 / 48 |
+| Headers / parsed fields per frame | 8 / 1,024 |
+
+There is no additional timer. Deadline checks run on every observation/status/
+private read and on the existing watchdog. Expired evidence is never returned;
+idle in-memory cleanup happens on the next watchdog tick (nominally within one
+minute), not a new scheduled task. Clock rollback or invalid clock purges the
+evidence. Explicit device-driver resubscription, teardown and deletion close/
+purge it; no automatic restart. The shared broker's transparent reconnects are
+not signalled by the existing two-argument frame callback. A future activation
+must also bind capture lifetime to a transport-session epoch (or explicitly
+close it on broker/account replacement); driver-resubscription tests alone do
+not prove that additional boundary. The runtime gate stays false.
+
+`status()` and the device's `getTimeObserverDiagnostics()` return only fixed
+status/counts/limits. Explicit local `readEvidence()` returns cloned, bounded,
+historical numeric candidates; **no support report, log, UI, Flow, Insights or
+Energy export calls it**. General integration reports remain unchanged. A future
+activation and private export/annotation workflow requires separate owner
+authority and tests. Nothing was activated, installed or published in this wave.

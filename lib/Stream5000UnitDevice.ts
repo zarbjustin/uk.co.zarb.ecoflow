@@ -21,6 +21,7 @@ import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } fro
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
+import { Stream5000TimeObserver } from './stream5000TimeObserver';
 import { migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_5000_CONFIGURATION_TITLES } from './streamReadingScopes';
 import {
   STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
@@ -89,6 +90,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private ignoredEnergyGaps = 0;
   private topologyTracker?: Stream5000TopologyTracker;
   private configurationTracker?: Stream5000ConfigurationTracker;
+  private timeObserver?: Stream5000TimeObserver;
   private readonly readingAges = new Stream5000ReadingAges();
   private linkedPowerWarning = false;
   private lastOfflineMessage = '';
@@ -121,6 +123,9 @@ export class Stream5000UnitDevice extends Homey.Device {
       return;
     }
     this.telemetryAdapter = stream5000TelemetryAdapter(model);
+    // Disabled default and no start/settings/API path. Reuse this subscription
+    // only; preparing research must never open another account connection.
+    this.timeObserver = new Stream5000TimeObserver(sn);
     this.configurationTracker = new Stream5000ConfigurationTracker(sn);
     this.topologyTracker = this.telemetryAdapter.createTopologyTracker(sn);
     const mapTelemetry = this.telemetryAdapter.createMapper(sn, this.isEnergyAggregate() ? 'system' : 'unit');
@@ -189,6 +194,9 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.framesReceived += 1;
       this.bytesReceived += payload.length;
       this.lastFrameAt = Date.now();
+      try {
+        this.timeObserver?.observe(payload, topic);
+      } catch { /* Optional research cannot interrupt production telemetry or log private bytes. */ }
       this.configurationTracker?.observe(payload, this.lastFrameAt);
       this.queueConfiguration().catch((e) => this.error('apply configuration observations', e?.message || e));
       const telemetry = this.telemetryAdapter.parse(payload, sn);
@@ -402,6 +410,11 @@ export class Stream5000UnitDevice extends Homey.Device {
     return this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
   }
 
+  /** Status/counts only. Numeric candidates have no support-report/export route. */
+  getTimeObserverDiagnostics(): Record<string, unknown> | undefined {
+    return this.timeObserver?.status();
+  }
+
   getSystemReporterDiagnostics(): Record<string, unknown> {
     return this.reporterObservations.snapshot(Date.now());
   }
@@ -602,6 +615,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async checkAvailability(): Promise<void> {
+    this.timeObserver?.tick();
     await this.queueConfiguration();
     const expire = async () => {
       if (this.isStopped()) return;
@@ -639,6 +653,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async resubscribe(): Promise<void> {
     if (this.isStopped()) return;
+    this.timeObserver?.close(); // Never resume a capture across a connection/session boundary.
     this.resubscribeCount += 1;
     if (this.subscribedSn && this.frameHandler) {
       this.realtimeApp?.unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
@@ -700,6 +715,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async teardown(): Promise<void> {
     this.subscriptionState = 'stopped';
+    this.timeObserver?.close();
     if (this.framesReceived > 0) {
       this.log(
         `[diag] ${this.telemetryAdapter.diagnosticLabel} session summary frames=${this.framesReceived} parsed=${this.parsedFrames} `

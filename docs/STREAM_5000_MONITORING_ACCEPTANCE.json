@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "scope": "read_only_monitoring",
+  "models": ["es21", "es22"],
+  "roles": ["unit", "system"],
+  "excluded": ["new_5000_controls", "remaining_time", "dual_ct_energy", "automatic_mixed_generation_merge", "new_product_admission"],
+  "gates": [
+    {"id":"native_upgrade","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
+    {"id":"pairing_workflow","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#candidate-upgrade"},
+    {"id":"normal_use_soak","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#normal-use"},
+    {"id":"es21.identity","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3","observedAt":"2026-10-25T21:49:48.103Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
+    {"id":"es21.discharge","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3","observedAt":"2026-10-25T21:49:48.103Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
+    {"id":"es21.charge","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#core-transitions"},
+    {"id":"es21.idle","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#core-transitions"},
+    {"id":"es21.freshness_recovery","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
+    {"id":"es21.configuration_scope","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-candidate-installation"},
+    {"id":"es21.accessories","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#accessory-scope"},
+    {"id":"es21.system_scope","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"},
+    {"id":"es21.energy_continuity","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"},
+    {"id":"es22.identity","status":"partial","evidence":"community","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#model-boundaries"},
+    {"id":"es22.discharge","status":"partial","evidence":"community","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#model-boundaries"},
+    {"id":"es22.charge","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#core-transitions"},
+    {"id":"es22.idle","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#core-transitions"},
+    {"id":"es22.freshness_recovery","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#recovery"},
+    {"id":"es22.configuration_scope","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#model-boundaries"},
+    {"id":"es22.accessories","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#accessory-scope"},
+    {"id":"es22.system_scope","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"},
+    {"id":"es22.energy_continuity","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"}
+  ]
+}

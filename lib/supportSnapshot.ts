@@ -1,6 +1,6 @@
 'use strict';
 
-import { isStream5000BetaEnabled } from './stream5000Beta';
+import { isStream5000AggregatePairingEnabled } from './stream5000PairingAccess';
 import { streamDiscoverySnapshot } from './streamDiscovery';
 import { dualCtResearchSnapshot } from './dualCtResearch';
 import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
@@ -485,12 +485,16 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       });
   } catch { /* Optional numeric-free preview evidence. */ }
   return {
-    schemaVersion: 17,
+    schemaVersion: 18,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
     platform,
-    betaPairingEnabled: isStream5000BetaEnabled(homey),
+    betaPairingEnabled: false, // Retired compatibility field; no longer gates unit pairing.
+    stream5000Pairing: {
+      unitMonitoringRequiresOptIn: false,
+      aggregateEnergyOptInEnabled: isStream5000AggregatePairingEnabled(homey),
+    },
     drivers,
     peerCorrelation: peerSources.map((source) => ({
       driverId: source.driverId,

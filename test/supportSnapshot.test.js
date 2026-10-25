@@ -6,6 +6,21 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('passive timer research is not reflected into support reports or promoted to legacy remaining-time readings', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getTimeObserverDiagnostics: () => ({ status: 'collecting', samples: [{ receivedAt: 100000,
+      fields: [{ path: 'f33.10', value: 1234, serial: 'PRIVATE_TIMER' }] }] }),
+    getRemainingTimeDiagnostics: () => ({ discharge_remaining: { reportedMinutes: 1234, source: 'PRIVATE_TIMER' } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const unit = report.drivers.find(driver => driver.id === 'stream_5000_unit');
+  assert.deepEqual(unit.remainingTime, []);
+  assert.equal(unit.timeObserver, undefined);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE_TIMER|f33\.10|1234/);
+  assert.equal(Object.values(manifest.api).some(route => /time-observer|timer-research/.test(route.path)), false);
+});
+
 test('recent power and queue diagnostics use bounded fixed projections and isolate hostile getters', t => {
   const now = 100000; t.mock.method(Date, 'now', () => now);
   const instance = homey();
@@ -320,7 +335,7 @@ function homey() {
     version: '13.5.0', platform: 'local',
     manifest: { version: '1.10.17', drivers: [{ id: 'stream_5000_system' }, { id: 'stream_5000_unit' }] },
     settings: { get: (key) => {
-      assert.equal(key, 'stream5000BetaEnabled', 'report must not read credentials');
+      assert.equal(key, 'stream5000AggregatePairingEnabled', 'report must not read credentials or retired settings');
       return true;
     } },
     drivers: { getDriver: () => { throw new Error('private serial ES22PRIVATE000001'); } },
@@ -363,7 +378,8 @@ test('support report distinguishes packaged drivers from runtime registration', 
   const snapshot = createSupportSnapshot(homey());
   assert.equal(snapshot.appVersion, '1.10.17');
   assert.equal(snapshot.homeyVersion, '13.5.0');
-  assert.equal(snapshot.betaPairingEnabled, true);
+  assert.equal(snapshot.betaPairingEnabled, false);
+  assert.deepEqual(snapshot.stream5000Pairing, { unitMonitoringRequiresOptIn: false, aggregateEnergyOptInEnabled: true });
   const driver = snapshot.drivers.find((item) => item.id === 'stream_5000_system');
   assert.equal(driver.packaged, true);
   assert.equal(driver.registered, false);
@@ -397,7 +413,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 17);
+  assert.equal(report.schemaVersion, 18);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {

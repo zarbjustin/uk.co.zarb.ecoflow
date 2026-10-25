@@ -2,6 +2,10 @@
 
 ## Purpose
 
+For current release claims and owner acceptance, use the
+[25 October monitoring candidate](STREAM_5000_MONITORING_RC.md).
+The table below describes model admission and driver roles, not hardware signoff.
+
 EcoFlow's 5 kWh STREAM platform contains multiple products. Homey devices are
 therefore split by energy role rather than launch SKU: `stream_5000_system` is
 the installation-level Home Battery and `stream_5000_unit` is a physical-unit
@@ -14,8 +18,8 @@ hardware acceptance. See [model evidence and release gates](STREAM_MODEL_COVERAG
 
 | Product | Serial evidence | Telemetry adapter | Pairable |
 |---|---|---|---|
-| STREAM AC 5000 | `ES22` | `es22` | Yes: one installation aggregate and an optional unit monitor |
-| STREAM 5000 | `ES21`, corroborated public masked captures | Dedicated `es21` core-monitoring adapter | Local opt-in beta; Homey hardware acceptance still open |
+| STREAM AC 5000 | `ES22` | `es22` | Unit monitoring without an opt-in; separate default-off aggregate Energy gate |
+| STREAM 5000 | `ES21`, corroborated captures and owner unit observation | Dedicated `es21` core-monitoring adapter | Unit monitoring without an opt-in; aggregate Energy acceptance/gate separate |
 | STREAM 3000 | Not yet verified | None | No |
 | STREAM Expansion Battery 5000 | Not yet verified | None | No |
 | STREAM Gateway | Not yet verified | None | No; likely a separate functional driver |
@@ -32,9 +36,12 @@ Unknown prefixes must remain absent from pairing even when their names contain
 - `lib/stream5000Adapters.ts` connects an admitted model to parsing, mapping and
   privacy-safe diagnostic functions.
 - `lib/stream5000Pairing.ts` is the shared app-auth discovery and pairing path.
-- `lib/stream5000Beta.ts` owns the default-off feature gate applied to every
-  5000-family pairing path. It gates new pairing only; it never disables an
-  existing device.
+- `lib/stream5000PairingAccess.ts` derives role from the real driver ID. Unit
+  monitoring needs no opt-in; new aggregate pairing requires explicit true in
+  `stream5000AggregatePairingEnabled`, checked before/after inventory and before
+  account commitment on add. The retired Beta key is neither read nor removed.
+  No gate controls existing device availability or accounting. This cleanup is
+  source-only; the owner-installed candidate still has the earlier pairing UI.
 - `lib/Stream5000UnitDevice.ts` owns transport-independent lifecycle,
   availability, role-specific capability application and cross-driver credential cleanup.
 - ES21 and ES22 have explicit runtime adapters. They share the corroborated

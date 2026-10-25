@@ -2,6 +2,214 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Diagnostic delivery — 25 October 2026, COMMIT/CI/DIRECT INSTALL AUTHORIZED
+
+Owner now authorizes committing and pushing the prepared diagnostic work,
+checking exact-commit CI, and directly installing the updated candidate on their
+Homey after CI succeeds. Mainline and store Test/Live must stay unchanged; no
+store publication, version bump, aggregate pairing, Energy activation, battery
+configuration change or manual Flow execution is authorized by this delivery.
+The source remains monitoring-only with new aggregate pairing default-off and
+the passive timer observer disabled.
+
+Before delivery, remote diagnostic HEAD matched local `1b5f7ef`; no competing
+diagnostic commits were found. Fresh owner baseline: running Development 1.10.56,
+support schema 17, 11 EcoFlow devices, 99 Flow definitions and no 5000 aggregate.
+Identity/settings/Flow/counter baselines remain private. Candidate runtime
+fingerprint is `9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Source commit, CI and updated installation are pending at this checkpoint.
+Earlier local-only restrictions below describe their historical checkpoints.
+
+## Pairing cleanup — 25 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
+
+Current authority: separate unit monitoring from aggregate Energy pairing on
+the diagnostic branch, add regression tests, keep Main/Live unchanged and do not
+publish or reinstall. The owner Homey remains on the earlier directly installed
+Development 1.10.56 fingerprint recorded below, with its older pairing UI.
+No live setting, device, Flow, account or Energy participation changed this wave.
+No commit/push or version bump was performed.
+
+- Unit/legacy physical-monitor discovery no longer needs a Beta setting. Exact
+  ES21/ES22 model/adapter admission and same-role duplicate checks remain intact.
+- Home Battery (5000) new pairing has its own default-off key:
+  `stream5000AggregatePairingEnabled`. Only boolean true permits it. Actual driver
+  ID determines the role; browser-supplied data cannot choose the unit exemption.
+  Consent is checked before inventory, after asynchronous inventory and before
+  credential commitment on device addition. Generic app-auth users keep their
+  prior behaviour when no admission hook is supplied.
+- The retired `stream5000BetaEnabled` value is neither read, overwritten nor
+  removed. It cannot silently grant new Energy consent. Existing paired units
+  and aggregates keep their data/settings/identity/accounting independently of
+  pairing consent; no repair/delete/re-pair or credential migration is performed.
+- Unit pairing starts with a connection disclosure; aggregate pairing has a
+  separate Energy-access screen. Settings, credential headings, EN/DE/NL store
+  summaries and wrong-path guidance no longer direct users to a shared Beta gate.
+  Unknown models, mixed-generation trials, Dual CT previews/energy and controls
+  keep their existing restrictions.
+- Support schema 18 adds anonymous role-specific pairing access. The old
+  `betaPairingEnabled` field remains false as a retired compatibility field.
+  The report reads only the new non-secret setting, not the old flag or credentials.
+- Source/runtime fingerprint changes deliberately invalidate prior candidate
+  signoffs for the new source. Earlier owner observations/passes remain attached
+  to the installed a15ae0d candidate; do not relabel them as cleanup acceptance.
+
+Local checks: **1064/1064 tests** (9 new regressions), lint, release boundaries
+and ledger checks pass. Desktop/mobile Chromium pairing pages check normal unit
+entry, strict aggregate consent/recheck and layout without JavaScript errors.
+The settings tests cover old-flag isolation, cancellation, save failure and a late
+initial read; real lifecycle regression keeps existing aggregate accounting and
+unit monitoring running with pairing opt-ins off. Dependency audit reports zero
+vulnerabilities. Verified-level Homey validation passes with the existing broad
+API review warning; it does not install. Build-folder regeneration conflicted
+with one overlapping check run; the final full suite was rerun sequentially and
+passed. Native pairing acceptance of this cleanup remains open.
+
+New source fingerprint:
+`9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Hardware readiness correctly remains pending, including previously observed
+checks whose saved fingerprint belongs to the older installed candidate. No new
+remote CI or hardware acceptance is claimed. No further Robert capture requested.
+
+## Owner monitoring candidate — 25 October 2026, DIRECTLY INSTALLED / STORE UNCHANGED
+
+Owner authorized installation on their Homey and continued STREAM 5000 validation.
+The candidate was non-clean installed directly; readback at 21:44:47 UTC confirms
+version **1.10.56**, origin **devkit_install** (Development), running, not crashed.
+This supersedes the earlier uninstalled/local-only checkpoint below for installed
+state only. Mainline, store Test/Live and physical battery configuration are
+unchanged by this work. No commit/push, version bump, store upload/publication,
+new pairing, manual Flow execution or battery-setting command was performed.
+
+Exact source runtime fingerprint remains
+`a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3`.
+The source is still local/uncommitted. No new remote CI is claimed. The disabled
+passive observer remains disabled, as do new 5000 controls and Dual CT Energy.
+
+Installation preparation recovered from a CLI dependency-fixture copy stall
+before contacting Homey: production dependencies were reconstructed offline in
+the generated build from the identical lockfile, TypeScript rebuilt, the official
+SDK shim restored and the staged package verified-level validated. The validated
+package then installed successfully without a further copy/build pass. Runtime
+source/manifest/dependency versions did not change. No clean install was used.
+
+Native acceptance through 21:49:48 UTC:
+
+- All **11** EcoFlow devices returned available with unchanged IDs, driver/data
+  identities and settings; no existing capability was removed. Only the expected
+  5000 reserve-state tile was added. Known default labels migrated in place.
+- All **99** standard/Advanced Flow definitions matched their pre-install hashes.
+  This is preservation, not a physical execution test of every Flow. Original
+  Home Battery and meter counters did not reset; unit SOC/power Insights contain
+  samples before and after installation. Direct SDK history reads work with null
+  gaps; the connected reader's numeric-only schema is a separate limitation.
+- ES21 identity and observed standalone natural-discharge SOC/sign/power comparison
+  pass for this exact fingerprint. No full-range calibration, ES22, linked-pack
+  direction, charging/idle or aggregate Energy acceptance follows from this.
+- New read-only reserve state and stored target remain separate and agree with
+  EcoFlow. Configuration cleared at restart and only repopulated on fresh receipt;
+  mode/grid/reserve data arrived after native settings navigation. Immediate
+  autonomous configuration refresh is not established. Configuration/recovery
+  acceptance remains partial rather than displaying old settings as current.
+- Installed desktop Configure/support report works and correctly distinguishes
+  available unit readings from unverified physical-pack scope and Energy. The
+  5000 aggregate remains unpaired; independent grid-meter reading remains unknown.
+- A pre-existing same-day Homey backup and retained previous Test source provide
+  recovery options, but rollback was not exercised. No raw reports, household
+  numbers, private IDs or credentials enter the repository.
+
+See [candidate plan and native findings](STREAM_5000_MONITORING_RC.md#owner-candidate-installation)
+and the sanitized model/role ledger. Overall readiness intentionally remains
+pending. Next physical steps require a bounded charge/idle test and separate
+approval to pair one new-space Home Battery (5000); do not replace the original
+battery, install the Dual CT or alter wiring/schedules as an implicit test.
+Longer native soak, mobile settings, controlled silence/reconnect and rollback
+remain open. No additional Robert capture is requested.
+
+Post-install local checks: **1055/1055 tests**, lint and software/acceptance-ledger
+checks pass; the staged package passed Homey CLI 4.5.3 verified validation before
+installation. The expected broad-API review warning remains. Hardware readiness
+is still pending. End readback at **21:52:43 UTC**: running Development app,
+no crash reported, all 11 EcoFlow devices available and no 5000 aggregate paired.
+
+## Monitoring release candidate — 25 October 2026, LOCAL / VALIDATION STARTED / UNPUBLISHED
+
+Current authority: read-only owner validation and local monitoring-candidate
+preparation on the diagnostic branch. Mainline, Live, Test, installed app,
+battery configuration and existing Flows remain unchanged. No commit/push,
+version bump, installation, restart, re-pairing or publication is performed.
+The preceding disabled observer preparation remains intact and inactive.
+Source version remains 1.10.56; installed Test 1.10.56 does not contain this work.
+
+- Fresh near-time native EcoFlow/Homey comparisons corroborate ES21 discharge
+  SOC/direction/power and configuration, with independent successful receipt ages.
+  Fresh Developer-key inventory/main-address reads corroborate identity/routing;
+  full quota still returns 1006. The app-connected feed remains the working path.
+- The owner's new device is the optional physical monitor; no 5000 aggregate is
+  paired. The original Home Battery remains separate. Grid flow is not an
+  independent whole-house meter. Night-time zero PV and unavailable socket output
+  do not validate those accessories. No settings or physical commands changed.
+- Native battery-management display confirms reserve is disabled while a stored
+  target is reported. New reserve-state tile/label migrations remain uninstalled.
+  The connected Insights history reader rejects null entries at its schema
+  boundary; no history-based acceptance or device fault is inferred from that.
+- Added a [bounded monitoring release plan](STREAM_5000_MONITORING_RC.md), sanitized
+  per-model/per-role acceptance ledger and exact-runtime fingerprint checker.
+  Partial installed/community evidence cannot sign off unpublished source, another
+  model or aggregate Energy. Unknown/raw evidence fields are rejected.
+- Normal software `release:check` reports pending hardware gates; separate
+  `release:acceptance` deliberately refuses readiness until the declared model/
+  role gates pass. This tool cannot activate, install or publish anything.
+  Current pairing gates remain in place until their scope is accepted.
+- Added regression coverage for ledger/schema/privacy, evidence provenance,
+  fingerprint mismatch, model/role separation, readiness exit status and unchanged
+  monitoring/control/pairing boundaries. Updated model/architecture pointers so
+  historical version/build statements are not read as today's release status.
+
+Final local checks: **1055/1055 tests** (11 new acceptance regressions), lint,
+release boundaries/ledger validation, zero reported dependency-audit
+vulnerabilities and Homey CLI 4.5.3 verified validation pass. The existing broad
+Homey API permission review warning remains. Runtime fingerprint:
+`a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3`.
+The explicit hardware-readiness command returns exit 1, as intended: gates are
+still open, not failed software tests. Source stays local/uncommitted; no new
+remote CI or hardware charging/idle/recovery/upgrade/Energy pass is claimed.
+Next: explicitly approved candidate installation and acceptance on owner Homey,
+then bounded state/recovery/aggregate comparisons and normal-use observation.
+No further Robert capture is requested by this wave.
+
+## Passive remaining-time observer — 25 October 2026, LOCAL / DISABLED / UNPUBLISHED
+
+Current authority: prepare the bounded observer and regressions on the diagnostic
+branch only. Keep it disabled. No commit/push, publication, installed-host update,
+physical command, mainline/Live/Test change or activation is authorised this turn.
+The preceding source checkpoint `1b5f7efe2d20ed3e45d27d1199ba07c37feb3348`
+passed exact [CI 40230853803](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40230853803);
+the work below is local only and has no new remote CI. Version remains 1.10.56.
+
+- Added an inert existing-subscription tap. Runtime default is false and there
+  is no start call, setting, API/Flow activation, new connection or polling.
+- Explicit-start test instances collect only bounded numeric structural
+  candidates/receipt times. No raw payload, text, serial/peer record, credential,
+  schedule window, guessed duration, scalar scaling or production reading write.
+- Caps: 2-minute capture, 10-minute evidence-access deadline, 16 KiB/frame,
+  2 MiB input, 512 inspected frames, 64 samples, 2,048 rows, bounded headers and
+  scalar parsing. Read/receipt/watchdog expiry does not refresh evidence; explicit
+  driver resubscription and teardown purge it. No extra timer, persistence,
+  logging or general export. Transparent broker/account-session epoch binding
+  remains an activation gate; no reconnect continuity is inferred.
+- Status getter is numeric-evidence-free. Private candidate retrieval is not
+  wired to support reports, UI, Insights, Flows or Energy. Existing support
+  schema/capabilities, pairing, version and control/accounting contracts unchanged.
+- Release-boundary checks reject accidental gate activation or runtime start.
+  See [timer audit](STREAM_5000_REMAINING_TIME_AUDIT.md) for limits, privacy,
+  lazy cleanup semantics and the future explicitly authorised activation gate.
+
+Local tests: **1044/1044** (19 added), lint, release-boundary checks, zero
+reported dependency-audit vulnerabilities and Homey CLI 4.5.3 verified validation
+pass. The existing broad-API review warning remains. These are offline checks,
+not capture/activation/native-upgrade acceptance or a new remote CI result.
+No new owner or Robert capture was requested or started.
+
 ## Configuration labels / reserve status / timer audit — 25 October 2026, PUBLICATION HELD
 
 Current authority: commit/push the diagnostic branch and verify its exact CI.

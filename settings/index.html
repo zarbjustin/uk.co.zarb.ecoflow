@@ -54,43 +54,46 @@
 
   <hr style="margin:28px 0;border:0;border-top:1px solid #e3e3e3;" />
 
-  <h1 style="font-size:17px;">STREAM 5000 Series (Beta)</h1>
+  <h1 style="font-size:17px;">STREAM 5000 Series</h1>
   <div class="beta-warning">
-    <strong>Experimental, read-only integration</strong><br />
-    EcoFlow does not currently provide a supported public API for these products. This beta uses
-    the connection used by EcoFlow's mobile app. It may stop working, and the device model,
-    capabilities, Homey Energy behaviour, credentials or pairing may need to change when EcoFlow
-    releases its official API. Re-pairing may be required.
+    <strong>Read-only app-connected monitoring</strong><br />
+    Supported ES21/ES22 units use your EcoFlow app account, not Developer API keys.
+    This is not a verified official Developer-key API for these products, and service
+    changes by EcoFlow can affect availability. Controls are intentionally disabled.
   </div>
-  <label class="beta-toggle" for="stream5000BetaEnabled">
-    <input id="stream5000BetaEnabled" type="checkbox" />
-    <span>Enable STREAM 5000 beta pairing</span>
+  <p class="help">Choose <strong>STREAM 5000 Series Unit</strong> for monitoring without an opt-in.
+    It does not contribute to Homey Energy. The separate Home Battery aggregate has its own gate below.</p>
+  <label class="beta-toggle" for="stream5000AggregatePairingEnabled">
+    <input id="stream5000AggregatePairingEnabled" type="checkbox" />
+    <span>Allow Home Battery (5000) Energy pairing</span>
   </label>
   <p class="help">
-    Disabled by default. Turning this off later prevents new pairing only; it does not remove or
-    disable STREAM 5000 devices you already paired.
+    Disabled by default. This opt-in permits new installation-level Home Battery pairing only.
+    Aggregate Energy validation is still in progress. Check that the installation is not already
+    represented by another Home Battery. Turning this off does not remove or disable existing devices,
+    stop their accounting, or affect unit monitoring. The retired Beta flag does not enable this opt-in.
   </p>
-  <div class="saved" id="stream5000BetaSaved"></div>
+  <div class="saved" id="stream5000AggregateSaved"></div>
   <div class="help" id="stream5000PairingHelp">
     <p>Use these settings in the <strong>Homey EcoFlow integration</strong>, not in EcoFlow's own mobile app.</p>
     <ol>
-      <li>Install a Homey app version that includes the beta choices. They are currently available in the
-        <a href="https://homey.app/a/uk.co.zarb.ecoflow/test/" target="_blank" rel="noopener noreferrer">Homey test version</a>.</li>
-      <li>Enable beta pairing above, then open <strong>Add device &rarr; EcoFlow STREAM Series</strong>.</li>
-      <li>Choose <strong>STREAM Home Battery (5000)</strong> once for the installation's Homey Energy readings.</li>
-      <li>Optionally choose <strong>STREAM 5000 Series Unit</strong> for a physical monitor, not a second Energy battery.</li>
+      <li>Open <strong>Add device &rarr; EcoFlow STREAM Series</strong> and choose
+        <strong>STREAM 5000 Series Unit</strong> for monitoring, not a second Energy battery.</li>
+      <li>For aggregate Energy testing only, enable the separate opt-in above, then choose
+        <strong>STREAM Home Battery (5000)</strong> once per already combined installation.</li>
+      <li>Sign in with your EcoFlow app account. Keep the original Home Battery if it represents another space.</li>
     </ol>
     <p>This switch permits pairing only; it does not install or update the app or dynamically add device types.
-      If the two beta choices are missing, report the installed EcoFlow Homey app version, Homey OS version,
+      If the device choices are missing, report the installed EcoFlow Homey app version, Homey OS version,
       Homey mobile-app version and a screenshot of the device picker. Please do not delete existing devices
       until the correct replacement is visible; deleting a device can affect its Flows and history.</p>
   </div>
   <p class="help">
-    Verified STREAM 5000-family units use EcoFlow's app connection because they are not available
-    through the supported public API. This beta supports STREAM AC 5000
+    Supported STREAM 5000-family units use EcoFlow's app connection; their telemetry was not available
+    through the tested Developer API. Model admission includes STREAM AC 5000
     (<code>ES22&hellip;</code>) and STREAM 5000 (<code>ES21&hellip;</code>) core battery monitoring.
-    ES21 still needs Homey hardware validation; direct PV/string tiles, expansion batteries,
-    STREAM 3000 and Gateway pairing are not enabled. Your EcoFlow <em>account</em> sign-in is stored separately from the
+    Model/role hardware acceptance remains separate; observed PV/socket/configuration tiles depend on fresh data.
+    Expansion batteries, STREAM 3000 and Gateway pairing are not enabled. Your EcoFlow <em>account</em> sign-in is stored separately from the
     keys above. Monitoring only &mdash; controls are intentionally disabled and no commands are sent.
     Removing the last STREAM 5000-family unit also clears it.
   </p>
@@ -100,9 +103,9 @@
 
   <h1 style="font-size:17px;">Setup and Energy diagnostics</h1>
   <p class="help">This local report shows the installed app and Homey versions, packaged/registered
-    battery drivers, beta pairing access, anonymous Energy accounting counters and observed battery
+    battery drivers, separate aggregate pairing access, anonymous Energy accounting counters and observed battery
     peer counts and which peer fields have been seen during this session. After opening an existing
-    beta pairing device list, it also includes a cached account inventory: model prefixes, counts and
+    app-connected pairing device list, it also includes a cached account inventory: model prefixes, counts and
     unverified product-category hints for expansion batteries, STREAM 3000, Gateway and Dual CT.
     You can cancel pairing without adding or deleting a device. The inventory is not an installation
     membership list; a missing expansion entry does not mean no expansion is connected. Possible overlap between Home Batteries is a review hint, not confirmed membership;
@@ -235,9 +238,10 @@
       Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
       Homey.get('mqtt_enabled', function (err, v) { if (!err && v === false) document.getElementById('mqtt').checked = false; });
-      document.getElementById('stream5000BetaEnabled').checked = false;
-      Homey.get('stream5000BetaEnabled', function (err, v) {
-        if (!err) document.getElementById('stream5000BetaEnabled').checked = v === true;
+      document.getElementById('stream5000AggregatePairingEnabled').checked = false;
+      var aggregatePairingTouched = false;
+      Homey.get('stream5000AggregatePairingEnabled', function (err, v) {
+        if (!err && !aggregatePairingTouched) document.getElementById('stream5000AggregatePairingEnabled').checked = v === true;
       });
 
       // The stored account password is never read back into this page.
@@ -891,39 +895,43 @@
         });
       }
 
-      function confirmBetaEnable(Homey) {
+      function confirmAggregateEnable(Homey) {
         return new Promise(function (resolve) {
           if (typeof Homey.confirm !== 'function') {
             resolve(false);
             return;
           }
           Homey.confirm(
-            'STREAM 5000 support is experimental and uses EcoFlow\'s unsupported app connection. It may stop working or require changes and re-pairing when EcoFlow releases its official API. Enable beta pairing?',
+            'Allow new Home Battery (5000) Energy pairing? Aggregate validation is still in progress. Pair one per combined installation and check for overlap with existing Home Batteries. Calculated charged/discharged totals are not historical EcoFlow totals. Unit monitoring needs no opt-in. No control commands will be enabled.',
             'warning',
             function (err, accepted) { resolve(!err && accepted === true); }
           );
         });
       }
 
-      document.getElementById('stream5000BetaEnabled').addEventListener('change', async function () {
-        var checkbox = document.getElementById('stream5000BetaEnabled');
-        var status = document.getElementById('stream5000BetaSaved');
+      document.getElementById('stream5000AggregatePairingEnabled').addEventListener('change', async function () {
+        var checkbox = document.getElementById('stream5000AggregatePairingEnabled');
+        var status = document.getElementById('stream5000AggregateSaved');
+        if (checkbox.disabled) return;
+        aggregatePairingTouched = true;
         var enabled = checkbox.checked === true;
-        if (enabled && !(await confirmBetaEnable(Homey))) {
-          checkbox.checked = false;
-          status.textContent = 'Beta pairing remains disabled.';
-          return;
-        }
-        status.textContent = 'Saving...';
+        checkbox.disabled = true;
         try {
-          await saveSetting(Homey, 'stream5000BetaEnabled', enabled);
+          if (enabled && !(await confirmAggregateEnable(Homey))) {
+            checkbox.checked = false;
+            status.textContent = 'Home Battery Energy pairing remains disabled. Unit monitoring is available without it.';
+            return;
+          }
+          status.textContent = 'Saving...';
+          await saveSetting(Homey, 'stream5000AggregatePairingEnabled', enabled);
           status.textContent = enabled
-            ? 'Beta pairing enabled. Choose STREAM Home Battery (5000) for Homey Energy; the physical unit monitor is optional.'
-            : 'Beta pairing disabled. Existing paired devices will continue to run.';
+            ? 'Home Battery Energy pairing enabled. Add one aggregate per combined installation; check for duplicate Energy sources.'
+            : 'Home Battery Energy pairing disabled. Existing paired devices will continue to run; unit monitoring is unaffected.';
         } catch (err) {
           checkbox.checked = !enabled;
-          status.textContent = 'Could not update beta access: '
-            + ((err && err.message) ? err.message : err);
+          status.textContent = 'Could not update Home Battery pairing access. Please try again.';
+        } finally {
+          checkbox.disabled = false;
         }
       });
 

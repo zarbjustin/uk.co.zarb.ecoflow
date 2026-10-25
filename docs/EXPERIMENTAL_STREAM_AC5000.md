@@ -1,5 +1,21 @@
 # EcoFlow STREAM AC 5000 (ES22) / STREAM 5000 (ES21): monitoring-only app connection
 
+## Current source pairing policy — 25 October 2026
+
+The diagnostic source now separates unit monitoring from aggregate Energy:
+`STREAM 5000 Series Unit` requires no opt-in, while `STREAM Home Battery (5000)`
+requires the new default-off `stream5000AggregatePairingEnabled` consent. The
+retired `stream5000BetaEnabled` value stays saved for rollback but is inactive.
+No existing paired device, counter, credential or Flow is migrated or removed.
+Only admitted ES21/ES22 units are discoverable; unknown models remain excluded.
+Normal unit discovery is not hardware acceptance of every model/feature.
+
+This cleanup has not been installed, committed/pushed or published. The earlier
+owner-installed Development 1.10.56 keeps its old pairing screens until an
+explicitly authorized reinstall. The historical Beta instructions below do not
+describe this newer source. Follow the [monitoring candidate plan](STREAM_5000_MONITORING_RC.md)
+and [current architecture](STREAM_5000_ARCHITECTURE.md) for role/acceptance scope.
+
 > **Status: monitoring only. EcoFlow provides no supported public API for this model.**
 > Connection, security and role rules apply to the explicit ES22 and ES21 adapters used by the
 > installation-level `stream_5000_system` Home Battery, the physical

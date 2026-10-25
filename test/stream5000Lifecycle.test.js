@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const captures = require('./fixtures/stream5000Telemetry.json');
+const { Stream5000TimeObserver } = require('../.homeybuild/lib/stream5000TimeObserver');
 
 // Homey's runtime exists on the hub, not in this test runner. Only replace the
 // Device base class; use the real adapter, parser, role mapping and accounting.
@@ -261,6 +262,87 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
     },
   };
 }
+
+test('timer observer cannot be activated by saved settings, stored flags, normal frames or settings changes', async () => {
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, { time_observer_enabled: true },
+    captures.pair.unit_a, {}, device => { device.settings.time_observer_enabled = true; });
+  await h.emit(frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex')));
+  await h.device.onSettings({ newSettings: { time_observer_enabled: true }, changedKeys: ['time_observer_enabled'] });
+  assert.equal(h.device.getTimeObserverDiagnostics().status, 'disabled');
+  assert.equal(h.device.getTimeObserverDiagnostics().inspectedFrames, 0);
+  assert.equal(h.device.getTimeObserverDiagnostics().retainedSamples, 0);
+  assert.deepEqual(h.device.timeObserver.readEvidence().samples, []);
+  assert.equal(h.device.values.measure_battery, 87);
+  assert.equal(h.resources().subscriptions, 1);
+  assert.equal(h.resources().timers, 1);
+  await h.device.onUninit();
+  assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+});
+
+test('test-only passive observer does not alter telemetry, availability, accounting, logs or resources', async (t) => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const baseline = await harness(classes.Stream5000UnitDevice);
+  const observed = await harness(classes.Stream5000UnitDevice);
+  // Explicit local injection only: current device runtime never starts/enables one.
+  observed.device.timeObserver = new Stream5000TimeObserver(captures.pair.unit_a, true, () => now);
+  assert.equal(observed.device.timeObserver.start(), true);
+  const payload = frame(Buffer.concat([group(11, Buffer.concat([varint(40), varint(61)])),
+    group(12, Buffer.concat([varint(32), varint(250)])), group(33, Buffer.concat([varint(80), varint(1234)]))]));
+  for (let count = 0; count < 3; count++) {
+    await baseline.emit(payload); await observed.emit(payload); now += 5000;
+  }
+  assert.deepEqual(observed.device.values, baseline.device.values);
+  assert.deepEqual(observed.device.getEnergyDiagnostics(), baseline.device.getEnergyDiagnostics());
+  assert.equal(observed.device.available, baseline.device.available);
+  assert.deepEqual(observed.resources(), baseline.resources());
+  assert.equal(observed.device.getTimeObserverDiagnostics().retainedSamples, 3);
+  assert.doesNotMatch(JSON.stringify(observed.device.getTimeObserverDiagnostics()), /receivedAt|f33|1234|TESTUNIT/);
+  assert.doesNotMatch(JSON.stringify(observed.device.logs), /f33|1234/);
+  assert.deepEqual(observed.device.logs, baseline.device.logs);
+  assert.deepEqual(observed.device.store, baseline.device.store);
+  await observed.device.onUninit(); await baseline.device.onUninit();
+  assert.deepEqual(observed.device.timeObserver.readEvidence().samples, []);
+  await observed.emit(payload); // A late callback after teardown cannot revive research or readings.
+  assert.deepEqual(observed.device.timeObserver.readEvidence().samples, []);
+  assert.deepEqual(observed.resources(), { timers: 0, subscriptions: 0 });
+});
+
+test('existing watchdog expires passive evidence and reconnect discards it without automatic restart', async (t) => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000PhysicalUnitDevice);
+  h.device.timeObserver = new Stream5000TimeObserver(captures.pair.unit_a, true, () => now);
+  h.device.timeObserver.start();
+  await h.emit(frame(group(11, Buffer.concat([varint(40), varint(61)]))));
+  assert.equal(h.device.getTimeObserverDiagnostics().retainedSamples, 1);
+  now += 120000;
+  await h.device.checkAvailability();
+  assert.equal(h.device.getTimeObserverDiagnostics().reason, 'time_limit');
+  now += 480000;
+  await h.device.checkAvailability();
+  assert.equal(h.device.getTimeObserverDiagnostics().reason, 'retention_expired');
+  assert.deepEqual(h.device.timeObserver.readEvidence().samples, []);
+  h.device.timeObserver = new Stream5000TimeObserver(captures.pair.unit_a, true, () => now);
+  h.device.timeObserver.start();
+  await h.emit(frame(group(11, Buffer.concat([varint(40), varint(61)]))));
+  assert.equal(h.device.getTimeObserverDiagnostics().retainedSamples, 1);
+  await h.device.resubscribe();
+  assert.equal(h.device.getTimeObserverDiagnostics().status, 'stopped');
+  await h.emit(frame(group(11, Buffer.concat([varint(40), varint(60)]))));
+  assert.equal(h.device.getTimeObserverDiagnostics().retainedSamples, 0);
+  assert.equal(h.resources().subscriptions, 1);
+  await h.device.onUninit();
+  assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+});
+
+test('an unexpected optional observer error cannot block production frame handling or leak error content', async () => {
+  const h = await harness(classes.Stream5000PhysicalUnitDevice);
+  h.device.timeObserver.observe = () => { throw new Error('PRIVATE_CANDIDATE'); };
+  await h.emit(frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex')));
+  assert.equal(h.device.values.measure_battery, 87);
+  assert.equal(h.device.getAvailable(), true);
+  assert.doesNotMatch(JSON.stringify([...h.device.logs, ...h.device.errors]), /PRIVATE_CANDIDATE/);
+  await h.device.onUninit();
+});
 
 test('5000 physical monitoring still starts when optional scope-title metadata cannot be read', async () => {
   const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, device => {
@@ -861,4 +943,30 @@ test('5000 aggregate retries failed energy persistence; physical monitor has no 
   assert.ok(system.device.store.chargedWh > 0);
   assert.equal(system.device.getEnergyDiagnostics().checkpoint.failures, 1);
   await unit.device.onUninit();
+});
+
+test('pairing opt-out cannot disable already-paired unit or aggregate telemetry and accounting', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  for (const DeviceClass of [classes.Stream5000UnitDevice, classes.Stream5000PhysicalUnitDevice]) {
+    const gateReads = [];
+    const target = await harness(DeviceClass, { chargedWh: 1250, dischargedWh: 500 }, captures.pair.unit_a, {}, device => {
+      device.homey.settings = { get: key => { gateReads.push(key); return false; } };
+    });
+    const payload = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+    await target.emit(payload);
+    now += 60000;
+    await target.emit(payload);
+    assert.equal(target.device.available, true);
+    assert.deepEqual(gateReads, [], 'new-pairing consent is not a runtime switch');
+    if (DeviceClass === classes.Stream5000UnitDevice) {
+      assert.ok(target.device.values['meter_power.charged'] > 1.25);
+      assert.equal(target.device.values['meter_power.discharged'], 0.5);
+    } else {
+      assert.equal(target.device.hasCapability('measure_power'), false);
+      assert.equal(target.device.hasCapability('meter_power.charged'), false);
+      assert.equal(target.device.getEnergyDiagnostics(), null);
+    }
+    await target.device.onUninit();
+  }
 });

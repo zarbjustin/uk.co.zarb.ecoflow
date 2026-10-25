@@ -704,45 +704,85 @@ test('support report failure cannot display private exception contents', async (
   assert.equal(context.document.getElementById('supportSnapshot').disabled, false);
 });
 
-test('STREAM 5000 beta pairing is disabled by default and requires acknowledgement', async () => {
+test('aggregate Energy pairing is disabled by default and requires acknowledgement', async () => {
   const context = loadSettingsScript();
   const homey = fakeHomey({ confirmAccepted: false });
   context.onHomeyReady(homey);
-  const checkbox = context.document.getElementById('stream5000BetaEnabled');
+  const checkbox = context.document.getElementById('stream5000AggregatePairingEnabled');
 
   assert.strictEqual(checkbox.checked, false);
   checkbox.checked = true;
   await checkbox.change();
   assert.strictEqual(checkbox.checked, false);
-  assert.strictEqual(homey.store.has('stream5000BetaEnabled'), false);
-  assert.match(context.document.getElementById('stream5000BetaSaved').textContent, /remains disabled/i);
+  assert.strictEqual(homey.store.has('stream5000AggregatePairingEnabled'), false);
+  assert.match(context.document.getElementById('stream5000AggregateSaved').textContent, /remains disabled/i);
 });
 
-test('accepting the warning persists STREAM 5000 beta access independently', async () => {
+test('accepting the aggregate warning persists only the separate Energy opt-in', async () => {
   const context = loadSettingsScript();
   const homey = fakeHomey();
   context.onHomeyReady(homey);
-  const checkbox = context.document.getElementById('stream5000BetaEnabled');
+  const checkbox = context.document.getElementById('stream5000AggregatePairingEnabled');
 
   checkbox.checked = true;
   await checkbox.change();
-  assert.strictEqual(homey.store.get('stream5000BetaEnabled'), true);
-  assert.match(context.document.getElementById('stream5000BetaSaved').textContent, /enabled/i);
+  assert.strictEqual(homey.store.get('stream5000AggregatePairingEnabled'), true);
+  assert.strictEqual(homey.store.has('stream5000BetaEnabled'), false);
+  assert.match(context.document.getElementById('stream5000AggregateSaved').textContent, /enabled/i);
 
   checkbox.checked = false;
   await checkbox.change();
-  assert.strictEqual(homey.store.get('stream5000BetaEnabled'), false);
-  assert.match(context.document.getElementById('stream5000BetaSaved').textContent, /Existing paired devices will continue/i);
+  assert.strictEqual(homey.store.get('stream5000AggregatePairingEnabled'), false);
+  assert.match(context.document.getElementById('stream5000AggregateSaved').textContent, /Existing paired devices will continue/i);
 });
 
-test('the STREAM 5000 settings clearly disclose the beta API risk', () => {
+test('settings retire the shared Beta control and disclose separate transport and Energy scope', () => {
   const html = fs.readFileSync(SETTINGS_HTML, 'utf8');
-  assert.match(html, /STREAM 5000 Series \(Beta\)/i);
-  assert.match(html, /Experimental, read-only integration/i);
-  assert.match(html, /official API/i);
-  assert.match(html, /Re-pairing may be required/i);
+  assert.doesNotMatch(html, /id="stream5000BetaEnabled"|Enable STREAM 5000 beta pairing|STREAM 5000 Series \(Beta\)/i);
+  assert.match(html, /Read-only app-connected monitoring/i);
+  assert.match(html, /official Developer-key API/i);
+  assert.match(html, /Allow Home Battery \(5000\) Energy pairing/i);
   assert.match(html, /Disabled by default/i);
-  assert.match(html, /not available\s+through the supported public API/i);
+  assert.match(html, /Unit monitoring needs no opt-in/i);
   assert.match(html, /Monitoring only/i);
   assert.match(html, /controls are intentionally disabled/i);
+});
+
+test('legacy opt-in does not silently enable aggregate pairing or get deleted by settings', () => {
+  for (const legacy of [false, true]) {
+    const context = loadSettingsScript();
+    const homey = fakeHomey({ values: { stream5000BetaEnabled: legacy } });
+    context.onHomeyReady(homey);
+    assert.equal(context.document.getElementById('stream5000AggregatePairingEnabled').checked, false);
+    assert.equal(homey.store.get('stream5000BetaEnabled'), legacy);
+    assert.equal(homey.store.has('stream5000AggregatePairingEnabled'), false);
+  }
+});
+
+test('aggregate save failure rolls back the checkbox without leaking private errors or changing old consent', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey({ values: { stream5000BetaEnabled: true }, setFails: { stream5000AggregatePairingEnabled: 'PRIVATE_TOKEN' } });
+  context.onHomeyReady(homey);
+  const checkbox = context.document.getElementById('stream5000AggregatePairingEnabled');
+  checkbox.checked = true; await checkbox.change();
+  assert.equal(checkbox.checked, false);
+  assert.equal(homey.store.get('stream5000BetaEnabled'), true);
+  assert.equal(homey.store.has('stream5000AggregatePairingEnabled'), false);
+  assert.doesNotMatch(context.document.getElementById('stream5000AggregateSaved').textContent, /PRIVATE_TOKEN/);
+  assert.equal(checkbox.disabled, false);
+});
+
+test('a late initial Energy opt-in read cannot overwrite a newer explicit opt-out', async () => {
+  const context = loadSettingsScript();
+  const homey = fakeHomey();
+  const original = homey.get;
+  let initial;
+  homey.get = (key, cb) => key === 'stream5000AggregatePairingEnabled' ? (initial = cb) : original(key, cb);
+  context.onHomeyReady(homey);
+  const checkbox = context.document.getElementById('stream5000AggregatePairingEnabled');
+  checkbox.checked = true; await checkbox.change();
+  checkbox.checked = false; await checkbox.change();
+  initial(null, true);
+  assert.equal(checkbox.checked, false);
+  assert.equal(homey.store.get('stream5000AggregatePairingEnabled'), false);
 });

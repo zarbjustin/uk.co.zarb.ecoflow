@@ -3185,7 +3185,7 @@
       ],
       "pair": [
         {
-          "id": "beta_access"
+          "id": "energy_access"
         },
         {
           "id": "app_credentials"
@@ -3419,7 +3419,7 @@
       ],
       "pair": [
         {
-          "id": "beta_access"
+          "id": "connection_info"
         },
         {
           "id": "app_credentials"

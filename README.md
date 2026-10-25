@@ -19,8 +19,8 @@ the single source used by Homey Energy and the STREAM widgets, including one-uni
 Pair **STREAM Unit** only when you also want separate per-device telemetry; physical units
 do not contribute to Homey Energy and do not contain reliable whole-installation totals.
 
-### STREAM 5000 Series Beta — ES22 and ES21 monitoring
-Test-channel support includes **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** core monitoring through EcoFlow's app connection, not a verified official Developer-key API. Enable **STREAM 5000 beta pairing** after acknowledging the warning. Pair **STREAM Home Battery (5000)** once per installation for battery Energy and widgets; add **STREAM 5000 Series Unit** only for optional physical telemetry, not duplicate Energy. Both use your EcoFlow app-account sign-in. Available direct-PV/socket/configuration views are read-only and depend on received fields. No 5000 command is sent. ES21/ES22 physical acceptance remains open; mixed-generation reporter selection is an explicit monitoring trial, not automatic merging or control migration. Expansion/3000/Gateway pairing remains gated. See [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
+### STREAM 5000 Series — separate monitoring and Energy pairing
+The diagnostic source candidate offers **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** monitoring through EcoFlow's app connection, not a verified official Developer-key API. **STREAM 5000 Series Unit** needs no Beta switch or Energy opt-in and contributes no battery Energy. **STREAM Home Battery (5000)** has a separate, default-off **Allow Home Battery (5000) Energy pairing** opt-in in the Homey integration settings; use it only once per already combined installation, checking for overlap. The retired Beta flag does not grant this new consent. Existing paired devices keep working when the new gate is off. Both roles use your EcoFlow app-account sign-in. Available PV/socket/configuration views are read-only and depend on received fields; no 5000 command is sent. Model/role hardware acceptance remains separate. Mixed-generation trials, Dual CT previews and expansion/3000/Gateway admission retain their own restrictions. See [delivery/installed status](docs/STATUS.md), [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
 
 The socket/configuration update includes battery-to-backup-socket discharge in
 the installation's power and future energy totals. It adds read-only configuration
@@ -87,7 +87,7 @@ English, **German** and **Dutch**.
    **STREAM Unit** only for optional per-device monitoring. Enter the keys + region when prompted.
 3. Manage credentials later under the app's **Settings** page.
 
-> **STREAM AC 5000 beta testers:** enable beta pairing in the app settings, add **STREAM Home Battery (5000)** for Homey Energy, then optionally add **STREAM 5000 Series Unit** for physical telemetry. The optional unit does not contribute separately to Homey Energy. These use a separate EcoFlow app sign-in and are monitoring only—see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md).
+> **STREAM 5000 setup:** choose **STREAM 5000 Series Unit** for monitoring without an opt-in. Aggregate Energy testing uses the separate **Home Battery (5000) Energy pairing** opt-in; pair one Home Battery per combined installation, not per unit. These use your EcoFlow app sign-in and are monitoring only—see [`docs/EXPERIMENTAL_STREAM_AC5000.md`](docs/EXPERIMENTAL_STREAM_AC5000.md). Source, direct installation and store availability are recorded separately in [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Development
 ```sh
