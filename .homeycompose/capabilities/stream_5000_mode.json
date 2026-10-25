@@ -1,25 +1,33 @@
 {
   "type": "enum",
   "title": {
-    "en": "Operating mode"
+    "en": "Operating mode",
+    "de": "Betriebsmodus",
+    "nl": "Bedrijfsmodus"
   },
   "values": [
     {
       "id": "self_powered",
       "title": {
-        "en": "Self-powered"
+        "en": "Self-consumption",
+        "de": "Eigenverbrauch",
+        "nl": "Eigen verbruik"
       }
     },
     {
       "id": "intelligent_plus",
       "title": {
-        "en": "Intelligent Mode+"
+        "en": "Intelligent Mode+",
+        "de": "Intelligenter Modus+",
+        "nl": "Intelligente modus+"
       }
     },
     {
       "id": "custom",
       "title": {
-        "en": "Custom"
+        "en": "Custom mode",
+        "de": "Benutzerdefinierter Modus",
+        "nl": "Aangepaste modus"
       }
     }
   ],

@@ -127,6 +127,54 @@ test('linked unit and pending update explanations use fixed translated text, not
   }
 });
 
+test('unit-only pairing help distinguishes a separate legacy installation from a 5000 Home Battery', () => {
+  const text = drivers => {
+    const element = { children: [], ownerDocument: { createElement: () => ({}) },
+      appendChild(child) { this.children.push(child); } };
+    render(element, { drivers }, key => key);
+    return element.children.map(child => child.textContent).join('\n');
+  };
+  const units = [{ id: 'stream_5000_unit', pairedCount: 1, physicalPower: [{ status: 'unit_reading_available' }] }];
+  assert.match(text([...units, { id: 'stream', pairedCount: 1 }]), /unit_only_setup/);
+  assert.match(text([...units, { id: 'stream_5000_system', pairedCount: 0 }]), /unit_only_setup/);
+  assert.doesNotMatch(text([...units, { id: 'stream_5000_system', pairedCount: 1 }]), /unit_only_setup/);
+  assert.doesNotMatch(text([{ id: 'stream', pairedCount: 1 }]), /unit_only_setup/);
+  assert.match(text(units), /unit_reading_available/);
+  for (const locale of ['en', 'de', 'nl']) {
+    const strings = require(`../locales/${locale}.json`).settings.reporter;
+    for (const key of ['unit_only_setup', 'unit_reading_available', 'reserve_setting', 'reserve_enabled',
+      'reserve_disabled', 'reserve_target', 'reserve_scope', 'configuration_scope']) assert.ok(strings[key]);
+  }
+});
+
+test('stored reserve target never implies enabled reserve and expires independently', () => {
+  const field = (value, ageSec = 0, stale = false) => ({ value, ageSec, stale });
+  const text = (enabled, target) => {
+    const element = { children: [], ownerDocument: { createElement: () => ({}) },
+      appendChild(child) { this.children.push(child); } };
+    render(element, { drivers: [{ id: 'stream_5000_unit', configuration: [{ name: 'PRIVATE', values: {
+      backupReserveEnabled: enabled, backupReservePct: target,
+    } }] }] }, key => key);
+    return element.children.map(child => child.textContent).join('\n');
+  };
+  assert.match(text(field(false), field(37)), /reserve_setting 1: reserve_disabled/);
+  assert.match(text(field(false), field(37)), /reserve_target: 37%/);
+  assert.match(text(field(true), field(0)), /reserve_setting 1: reserve_enabled/);
+  assert.match(text(field(true), field(0)), /reserve_target: 0%/);
+  for (const entry of [undefined, field('PRIVATE'), field(true, -1), field(false, 1201), field(true, 0, true)]) {
+    assert.match(text(entry, field(37)), /reserve_setting 1: field_unavailable/);
+    assert.match(text(entry, field(37)), /reserve_target: 37%/);
+  }
+  for (const entry of [undefined, field('PRIVATE'), field(101), field(-1), field(0.5), field(NaN),
+    field(Infinity), field(37, NaN), field(37, 1201), field(37, 0, true)]) {
+    const output = text(field(false), entry);
+    assert.match(output, /reserve_setting 1: reserve_disabled/);
+    assert.match(output, /reserve_target: field_unavailable/);
+    assert.match(output, /reserve_scope/);
+    assert.doesNotMatch(output, /PRIVATE/);
+  }
+});
+
 test('source labels keep grid meter and flow separate and suppress stale/skewed comparisons', () => {
   const field = (value, ageSec = 0, stale = false) => ({ value, ageSec, stale });
   const text = (meter, flow) => {

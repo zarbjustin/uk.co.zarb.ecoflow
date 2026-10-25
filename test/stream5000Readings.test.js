@@ -67,6 +67,28 @@ test('power/state expire independently within three minutes while SOC and temper
   assert.equal(ages.snapshot(181001, 1200000)['measure_power.load'].stale, true);
 });
 
+test('reserve status is independent of stored target, accepts false and zero, and never guesses unknown as disabled', () => {
+  const field = value => ({ value, stale: false });
+  const values = (state, target) => stream5000ConfigurationValues({ values: {
+    backupReserveEnabled: state, backupReservePct: target,
+  } });
+  assert.equal(values(field(false), field(40)).stream_5000_backup_reserve_state, 'disabled');
+  assert.equal(values(field(false), field(40)).stream_5000_backup_reserve, 40);
+  assert.equal(values(field(true), field(0)).stream_5000_backup_reserve_state, 'enabled');
+  assert.equal(values(field(true), field(0)).stream_5000_backup_reserve, 0);
+  for (const state of [undefined, null, field(0), field(1), field('false'), field('true'),
+    field({ enabled: true }), { value: true, stale: true }, { value: false }]) {
+    const result = values(state, field(40));
+    assert.equal(result.stream_5000_backup_reserve_state, null);
+    assert.equal(result.stream_5000_backup_reserve, 40);
+  }
+  for (const target of [undefined, null, field(-1), field(101), field('40'), { value: 40, stale: true }]) {
+    const result = values(field(true), target);
+    assert.equal(result.stream_5000_backup_reserve_state, 'enabled');
+    assert.equal(result.stream_5000_backup_reserve, null);
+  }
+});
+
 test('failed application keeps the applied age while separating receipt age and recovery per field', () => {
   const ages = new Stream5000ReadingAges();
   ages.observe({ 'measure_power.load': 42 }, 1000);

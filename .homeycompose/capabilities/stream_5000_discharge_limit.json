@@ -1,7 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Reported discharge limit"
+    "en": "Discharge limit",
+    "de": "Entladegrenze",
+    "nl": "Ontlaadlimiet"
   },
   "units": {
     "en": "%"

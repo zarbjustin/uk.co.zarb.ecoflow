@@ -4982,7 +4982,9 @@
     "stream_5000_backup_reserve": {
       "type": "number",
       "title": {
-        "en": "Reported backup reserve"
+        "en": "Backup reserve target (stored)",
+        "de": "Backup-Reserveziel (gespeichert)",
+        "nl": "Back-upreservedoel (opgeslagen)"
       },
       "units": {
         "en": "%"
@@ -4995,10 +4997,43 @@
       "icon": "/assets/capabilities/reserve.svg",
       "insights": true
     },
+    "stream_5000_backup_reserve_state": {
+      "type": "enum",
+      "title": {
+        "en": "Backup reserve",
+        "de": "Backup-Reserve",
+        "nl": "Back-upreserve"
+      },
+      "values": [
+        {
+          "id": "enabled",
+          "title": {
+            "en": "Enabled",
+            "de": "Aktiviert",
+            "nl": "Ingeschakeld"
+          }
+        },
+        {
+          "id": "disabled",
+          "title": {
+            "en": "Disabled",
+            "de": "Deaktiviert",
+            "nl": "Uitgeschakeld"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/reserve.svg",
+      "insights": false
+    },
     "stream_5000_charge_limit": {
       "type": "number",
       "title": {
-        "en": "Reported charge limit"
+        "en": "Charge limit",
+        "de": "Ladegrenze",
+        "nl": "Laadlimiet"
       },
       "units": {
         "en": "%"
@@ -5029,7 +5064,9 @@
     "stream_5000_discharge_limit": {
       "type": "number",
       "title": {
-        "en": "Reported discharge limit"
+        "en": "Discharge limit",
+        "de": "Entladegrenze",
+        "nl": "Ontlaadlimiet"
       },
       "units": {
         "en": "%"
@@ -5045,7 +5082,9 @@
     "stream_5000_grid_input_limit": {
       "type": "number",
       "title": {
-        "en": "Reported grid input limit"
+        "en": "Max Power from Grid",
+        "de": "Max. Leistung aus dem Netz",
+        "nl": "Max. vermogen uit het net"
       },
       "units": {
         "en": "W"
@@ -5061,7 +5100,9 @@
     "stream_5000_grid_output_limit": {
       "type": "number",
       "title": {
-        "en": "Reported grid output limit"
+        "en": "Max grid-tied output power",
+        "de": "Max. netzgekoppelte Ausgangsleistung",
+        "nl": "Max. netgekoppeld uitgangsvermogen"
       },
       "units": {
         "en": "W"
@@ -5077,25 +5118,33 @@
     "stream_5000_mode": {
       "type": "enum",
       "title": {
-        "en": "Operating mode"
+        "en": "Operating mode",
+        "de": "Betriebsmodus",
+        "nl": "Bedrijfsmodus"
       },
       "values": [
         {
           "id": "self_powered",
           "title": {
-            "en": "Self-powered"
+            "en": "Self-consumption",
+            "de": "Eigenverbrauch",
+            "nl": "Eigen verbruik"
           }
         },
         {
           "id": "intelligent_plus",
           "title": {
-            "en": "Intelligent Mode+"
+            "en": "Intelligent Mode+",
+            "de": "Intelligenter Modus+",
+            "nl": "Intelligente modus+"
           }
         },
         {
           "id": "custom",
           "title": {
-            "en": "Custom"
+            "en": "Custom mode",
+            "de": "Benutzerdefinierter Modus",
+            "nl": "Aangepaste modus"
           }
         }
       ],

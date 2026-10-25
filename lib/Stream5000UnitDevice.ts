@@ -21,7 +21,7 @@ import { EnergyAccountingDiagnostic, integrateTimedSignedPower, MAX_GAP_MS } fro
 import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
-import { migrateReadingTitle, STREAM_5000_UNIT_TITLES } from './streamReadingScopes';
+import { migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_5000_CONFIGURATION_TITLES } from './streamReadingScopes';
 import {
   STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
   Stream5000ReadingAges, stream5000ConfigurationValues,
@@ -143,8 +143,21 @@ export class Stream5000UnitDevice extends Homey.Device {
     for (const capability of Object.values(STREAM_5000_CONFIGURATION_CAPABILITIES)) {
       if (this.isStopped()) return;
       if (!this.hasCapability(capability)) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await this.addCapability(capability);
+        } catch (e) {
+          // An optional read-only tile must not make an existing device lose
+          // its telemetry subscription during an in-place upgrade.
+          this.error(`add configuration ${capability}`, e);
+          continue;
+        }
+      }
+      if (STREAM_5000_CONFIGURATION_TITLES[capability]) {
+        // Cosmetic, known-default-only migration. A custom title/read failure
+        // must not lose devices or prevent their telemetry subscription.
         // eslint-disable-next-line no-await-in-loop
-        await this.addCapability(capability);
+        await migrateReadingTitle(this, capability, STREAM_5000_CONFIGURATION_TITLES[capability], () => !this.isStopped());
       }
       // Clear persisted observations until this session actually reports them.
       // eslint-disable-next-line no-await-in-loop
@@ -403,8 +416,17 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   getPhysicalPowerDiagnostics(): Record<string, unknown> | null {
     if (this.isEnergyAggregate()) return null;
+    const power = this.getCapabilityValue('stream_unit_power_battery_flow');
+    const reading = this.readingAges.snapshot(Date.now(), this.unavailableAfterMs())
+      .stream_unit_power_battery_flow as { stale?: boolean; applicationStatus?: string } | undefined;
+    // An applied reading (including zero) is not independent physical scope/sign validation.
+    const available = !this.isStopped() && typeof power === 'number' && Number.isFinite(power)
+      && reading?.stale === false && reading.applicationStatus === 'applied';
+    let status = available ? 'unit_reading_available' : 'waiting_for_unit_evidence';
+    if (this.linkedPowerWarning) status = 'linked_power_unverified';
     return {
-      status: this.linkedPowerWarning ? 'linked_power_unverified' : 'waiting_for_unit_evidence',
+      status,
+      physicalScopeVerified: false,
       linkedSystemPowerCopiedToUnit: false,
       energyContribution: false,
     };

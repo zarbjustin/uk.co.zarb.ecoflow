@@ -1,0 +1,23 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Backup reserve",
+    "de": "Backup-Reserve",
+    "nl": "Back-upreserve"
+  },
+  "values": [
+    {
+      "id": "enabled",
+      "title": { "en": "Enabled", "de": "Aktiviert", "nl": "Ingeschakeld" }
+    },
+    {
+      "id": "disabled",
+      "title": { "en": "Disabled", "de": "Deaktiviert", "nl": "Uitgeschakeld" }
+    }
+  ],
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/reserve.svg",
+  "insights": false
+}

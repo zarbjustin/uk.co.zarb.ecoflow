@@ -416,6 +416,26 @@ test('self observations and linked-power explanation are re-projected without pr
   assert.ok(!JSON.stringify(driver).includes('PRIVATE'));
 });
 
+test('physical reading availability is a fixed privacy projection, never scope or Energy authority', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [
+    { getPhysicalPowerDiagnostics: () => ({ status: 'unit_reading_available', physicalScopeVerified: true,
+      energyContribution: true, linkedSystemPowerCopiedToUnit: true, secret: 'PRIVATE' }) },
+    { getPhysicalPowerDiagnostics: () => ({ status: 'PRIVATE' }) },
+    { getPhysicalPowerDiagnostics: () => { throw new Error('PRIVATE'); } },
+  ] : [] });
+  const driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_5000_unit');
+  assert.equal(driver.physicalPower[0].status, 'unit_reading_available');
+  assert.equal(driver.physicalPower[1].status, 'waiting_for_unit_evidence');
+  assert.equal(driver.physicalPower[2].status, 'waiting_for_unit_evidence');
+  driver.physicalPower.forEach(entry => {
+    assert.equal(entry.physicalScopeVerified, false);
+    assert.equal(entry.energyContribution, false);
+    assert.equal(entry.linkedSystemPowerCopiedToUnit, false);
+  });
+  assert.doesNotMatch(JSON.stringify(driver), /PRIVATE/);
+});
+
 test('support report re-projects cached discovery without network or identity access', () => {
   const instance = homey();
   const observedAt = Date.now() - 1000;

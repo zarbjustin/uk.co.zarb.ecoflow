@@ -2,6 +2,89 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Configuration labels / reserve status / timer audit — 25 October 2026, PUBLICATION HELD
+
+Current authority: commit/push the diagnostic branch and verify its exact CI.
+Publication, version bump, installed-host update and physical commands are not
+authorised. Mainline, Live and Test remain unchanged. Source remains 1.10.56.
+This includes the earlier local owner-validation wave below; Build 70 does not
+contain these changes. CI is pending at this source checkpoint; read the exact
+commit's validation result independently of the local checks below.
+
+- Configuration titles now match EcoFlow terminology, translated EN/DE/NL.
+  Known defaults migrate in place while custom titles/options, capability IDs,
+  mode IDs and Flow arguments survive. No control listeners were added.
+- New read-only `stream_5000_backup_reserve_state` distinguishes enabled/disabled
+  from the existing numeric stored target. Unknown/stale status stays null;
+  state and target expire independently and restart clears both until receipt.
+  An optional capability-add failure cannot prevent telemetry subscription.
+- The report explains subscription-source versus independently verified system
+  scope, grid draw versus total charging/task power, and electrical-capacity limits.
+- Native EcoFlow display comparison corroborates observed configuration and
+  natural-discharge readings, not electrical calibration or setting enforcement.
+  No raw private reports, screenshots or household measurements are committed.
+- Remaining time is still unmapped, not zero. Fresh primary upstream review and
+  offline public-capture replay do not identify a verified duration contract.
+  Tests reject accidental BK-field borrowing and SOC/capacity/power estimates.
+  See [remaining-time audit](STREAM_5000_REMAINING_TIME_AUDIT.md) for evidence
+  boundaries and owner-hardware next steps; no further Robert capture requested.
+
+Checks: **1025/1025 tests** (6 added this wave), lint, release-boundary check,
+zero reported dependency-audit vulnerabilities, and Homey CLI 4.5.3 verified
+validation. Existing broad-API review warning remains. Desktop/mobile synthetic
+settings workflow passes without writes/discovery; mobile report inspected.
+A pre-existing browser-test zero-age race appeared under full-suite load;
+its clock is now explicitly paused and expiry remains explicitly advanced.
+Local checks are not new remote CI or native upgrade acceptance.
+
+## Owner ES21 read-only validation — 25 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorises available STREAM 5000 validation and diagnostic-branch
+improvements only. Mainline, Live and Test remain unchanged. Source version is
+still 1.10.56; Build 70 does not contain this local work. No commit/push, version
+bump, pairing, installed app update/restart, Flow execution or battery-setting
+write was performed. The owner confirms the Dual CT is not installed.
+
+Live, read-only Homey/settings evidence identifies the new device as ES21 and
+the physical-monitor role, not a 5000 Energy aggregate. Repeated snapshots show
+fresh discharge/SOC/temperature and reported configuration. The app flow matrix
+is internally consistent in those discharge snapshots, but is not an independent
+EcoFlow-screen, electrical or whole-house-meter comparison. The Developer API
+lists the unit and resolves its main address to itself; quota access returns
+1006. That is routing evidence, not verified space membership. Raw reports,
+credentials, serials, device names and household measurements are not in Git.
+
+Local improvements:
+
+- Physical diagnostics now distinguish a fresh successfully applied Unit watt
+  reading (including zero) from waiting/stale/write-failed values. Existing
+  linked-scope warnings take precedence. `physicalScopeVerified` stays false;
+  neither diagnostics nor optional unit tiles acquire Energy authority.
+- EN/DE/NL report UI separates reserve enablement from the independently fresh
+  stored percentage. A disabled reserve's target is not presented as active
+  protection. No setting/capability/control contract is changed.
+- Unit-only setup guidance explains that a separate Home Battery (5000) is
+  needed for installation accounting, without replacing a legacy battery in
+  another space or pairing one aggregate per unit. It does not infer topology.
+- Updated the indirect MQTT `ip-address` lock entry from 10.7.2 to 10.7.4 for
+  [GHSA-rxp7-6hxx-x8q5](https://github.com/advisories/GHSA-rxp7-6hxx-x8q5).
+  No direct dependency/API changed. An isolated, deadline-bounded regression
+  checks valid addresses and oversized multiline-zone rejection. The lock URL
+  remains the public npm registry, not the local registry mirror.
+
+Local checks: **1019/1019 tests** (7 added), lint, release-boundary checks, zero
+reported audit vulnerabilities and sequential Homey CLI 4.5.3 verified validation.
+The existing broad-API review warning remains. Desktop/mobile report workflows
+passed with synthetic inputs, no settings writes or automatic discovery. These
+are local checks, not a new CI, Test or native-upgrade acceptance claim.
+
+Still open: charging/idle transitions, independent power/sign/scale comparison,
+PV, backup socket, reconnect/restore behaviour, 5000 aggregate energy continuity,
+meter installation and two-space membership/overlap validation. ES22 and mixed
+generation acceptance do not follow from this ES21 observation. No new controls,
+Dual CT Energy, automatic grouping or legacy accounting changes. No further
+Robert captures requested. See RELEASE_CANDIDATE_CHECKLIST.md.
+
 ## Test v1.10.56 / Build 70 — published 17 October 2026
 
 Supersedes the authorised/local checkpoints below. Diagnostic source commit

@@ -23,6 +23,7 @@ export const STREAM_5000_CONFIGURATION_CAPABILITIES: Readonly<Record<string, str
   mode: 'stream_5000_mode',
   maxChargeSocPct: 'stream_5000_charge_limit',
   minDischargeSocPct: 'stream_5000_discharge_limit',
+  backupReserveEnabled: 'stream_5000_backup_reserve_state',
   backupReservePct: 'stream_5000_backup_reserve',
   maxGridInputW: 'stream_5000_grid_input_limit',
   maxGridOutputW: 'stream_5000_grid_output_limit',
@@ -32,6 +33,15 @@ export function stream5000ConfigurationValues(snapshot: any): Record<string, num
   const values: Record<string, number | string | null> = {};
   for (const [field, capability] of Object.entries(STREAM_5000_CONFIGURATION_CAPABILITIES)) {
     const entry = snapshot?.values?.[field];
+    if (field === 'backupReserveEnabled') {
+      // A stored percentage is not evidence that reserve protection is enabled.
+      // Missing/stale status stays unknown; it must never become "Disabled".
+      values[capability] = null;
+      if (entry?.stale === false && typeof entry.value === 'boolean') {
+        values[capability] = entry.value ? 'enabled' : 'disabled';
+      }
+      continue;
+    }
     const numericMax = field.endsWith('Pct') ? 100 : 100000;
     const valid = field === 'mode' ? ['self_powered', 'intelligent_plus', 'custom'].includes(entry?.value)
       : typeof entry?.value === 'number' && Number.isFinite(entry.value) && entry.value >= 0 && entry.value <= numericMax;

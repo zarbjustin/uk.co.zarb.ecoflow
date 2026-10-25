@@ -1,8 +1,10 @@
 # Release candidate acceptance — diagnostic hardening wave
 
 This is an acceptance checklist, not certification or physical acceptance.
-The owner has authorised a diagnostic-only Test release after exact CI passes;
-see STATUS.md for the final version, archive and publication evidence.
+Current 25 October authority allows diagnostic-branch commit/push and exact CI
+verification only: do not publish or update an installed host. Earlier Test
+authorisations do not authorise another release. See STATUS.md for historical
+version/archive evidence and the current source checkpoint.
 
 ## Software checks available without new tester data
 
@@ -36,7 +38,7 @@ software scope check, not physical acceptance or certification evidence.
 | --- | --- | --- |
 | Native update and recovery | Backed-up non-production Homey, real settings bridge, original saved Flows/Insights/totals, restart and rollback readback | Open; no installed host changed |
 | Original STREAM | Unit versus installation grid, valid zero, remaining-time scope, per-field age and normal-use Flow behaviour | Existing software coverage; physical acceptance separate |
-| ES21 / ES22 | Each model's charge/discharge/idle, direct PV where relevant, socket flow, silence/reconnect and linked reporter scope | Open for owner commissioning |
+| ES21 / ES22 | Each model's charge/discharge/idle, direct PV where relevant, socket flow, silence/reconnect and linked reporter scope | 25 October: owner ES21 unmetered discharge/configuration compared with native EcoFlow display; not electrical calibration/enforcement. Charge/PV/socket/reconnect and ES22 still open |
 | Dual CT | Each circuit/phase, signed CT1 net, hybrid CT2 interpretation and independent expiry | Community display evidence; not a verified Energy/automation contract |
 | Cross-app sources | Actual installed app/version, timestamps/zero substitution, W/kW/polarity, same physical battery and whole-grid scope | Metadata contract only |
 | New controls / Energy | Separate model-specific approval and commissioning, restore path and duplicate-source checks | Disabled; not part of this wave |
@@ -47,7 +49,7 @@ explicit owner approval on a suitable host. This wave requests no more captures
 from Robert. A release may keep experimental features opt-in or withheld; define
 the supported monitoring subset explicitly before certification.
 
-## Authorised Test publication sequence
+## Future Test publication sequence — requires renewed authority
 
 Commit/push on the diagnostic branch; verify exact remote CI, version/tag CI, archive
 contents and Test portal/listing separately. Do not publish red. Certification,

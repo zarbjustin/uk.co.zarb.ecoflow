@@ -266,10 +266,11 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       physicalPower: !['stream_5000_unit', 'stream_ac5000'].includes(id) ? [] : devices.map((device, deviceIndex) => {
         let status = 'waiting_for_unit_evidence';
         try {
-          if (device.getPhysicalPowerDiagnostics?.()?.status === 'linked_power_unverified') status = 'linked_power_unverified';
+          const observed = device.getPhysicalPowerDiagnostics?.()?.status;
+          if (['linked_power_unverified', 'unit_reading_available'].includes(observed)) status = observed;
         } catch { /* Fixed diagnostic labels only. */ }
         return {
-          deviceIndex, status, linkedSystemPowerCopiedToUnit: false, energyContribution: false,
+          deviceIndex, status, physicalScopeVerified: false, linkedSystemPowerCopiedToUnit: false, energyContribution: false,
         };
       }),
       monitoringTrial: id === 'stream' ? devices.map((device, deviceIndex) => {

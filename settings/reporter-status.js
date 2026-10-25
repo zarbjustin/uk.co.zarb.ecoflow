@@ -39,6 +39,10 @@
     });
     append(translate('scope'));
     append(translate('snapshot'));
+    if (report.drivers?.some(driver => ['stream_5000_unit', 'stream_ac5000'].includes(driver.id) && driver.pairedCount > 0)
+      && !report.drivers.some(driver => driver.id === 'stream_5000_system' && driver.pairedCount > 0)) {
+      append(translate('unit_only_setup'));
+    }
     const explanationKeys = { individual_flow_unverified: 'individual_flow_unverified',
       expired: 'reading_expired', write_failed: 'application_failed', not_reported: 'reading_not_reported' };
     (Array.isArray(report.drivers) ? report.drivers : []).slice(0, 8).forEach(driver => {
@@ -72,6 +76,21 @@
         }
         (Array.isArray(driver.physicalPower) ? driver.physicalPower : []).slice(0, 64).forEach(power => {
           if (power?.status === 'linked_power_unverified') append(translate('linked_unit_power'));
+          if (power?.status === 'unit_reading_available') append(translate('unit_reading_available'));
+        });
+        (Array.isArray(driver.configuration) ? driver.configuration : []).slice(0, 64).forEach((config, index) => {
+          const current = field => field?.stale === false && typeof field.ageSec === 'number'
+            && Number.isFinite(field.ageSec) && field.ageSec >= 0 && field.ageSec <= 1200;
+          const enabled = config?.values?.backupReserveEnabled;
+          const target = config?.values?.backupReservePct;
+          const state = current(enabled) && typeof enabled.value === 'boolean'
+            ? translate(enabled.value ? 'reserve_enabled' : 'reserve_disabled') : translate('field_unavailable');
+          const percentage = current(target) && Number.isInteger(target.value) && target.value >= 0 && target.value <= 100
+            ? `${target.value}% (${translate('receipt_age')}: ${Math.floor(target.ageSec)} s)` : translate('field_unavailable');
+          append(`${translate('reserve_setting')} ${index + 1}: ${state}`);
+          append(`${translate('reserve_target')}: ${percentage}`);
+          append(translate('reserve_scope'));
+          append(translate('configuration_scope'));
         });
         (Array.isArray(driver.systemFlow) ? driver.systemFlow : []).slice(0, 64).forEach((flow, index) => {
           append(`${translate('flow_sources')} ${index + 1}`);

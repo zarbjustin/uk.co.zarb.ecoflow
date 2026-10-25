@@ -274,6 +274,25 @@ test('5000 physical monitoring still starts when optional scope-title metadata c
   assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
 });
 
+test('an optional reserve-status tile add failure does not lose the device or its subscription', async () => {
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, device => {
+    const add = device.addCapability.bind(device);
+    device.addCapability = async cap => {
+      if (cap === 'stream_5000_backup_reserve_state') throw new Error('synthetic optional capability failure');
+      await add(cap);
+    };
+  });
+  assert.equal(h.resources().subscriptions, 1);
+  assert.equal(h.device.hasCapability('stream_5000_backup_reserve_state'), false);
+  await h.emit(frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex')));
+  assert.equal(h.device.values.measure_battery, 87);
+  assert.equal(h.device.getAvailable(), true);
+  assert.equal(h.device.hasCapability('measure_power'), false);
+  assert.equal(h.device.hasCapability('meter_power.discharged'), false);
+  await h.device.onUninit();
+  assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+});
+
 test('physical startup migrates legacy scope labels in place and preserves custom titles and units', async () => {
   const { device } = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {
     'measure_power.load': { title: 'House consumption', units: 'W', decimals: 2 },
@@ -352,6 +371,52 @@ test('serial-keyed self record reaches diagnostics without becoming signed physi
   assert.equal(device.values.battery_charging_state, null);
   assert.equal(device.getEnergyDiagnostics(), null);
   await device.onUninit();
+});
+
+test('physical diagnostics distinguish fresh applied power including zero from absent, expired and failed readings', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  const status = () => device.getPhysicalPowerDiagnostics();
+  assert.equal(status().status, 'waiting_for_unit_evidence');
+  await device.queueTelemetry({ measure_power: -42, battery_charging_state: 'discharging' }, now, true);
+  assert.equal(status().status, 'unit_reading_available');
+  assert.equal(status().physicalScopeVerified, false);
+  assert.equal(status().energyContribution, false);
+  now += 180001;
+  await device.queueTelemetry({ measure_temperature: 21 }, now, true);
+  assert.equal(status().status, 'waiting_for_unit_evidence', 'unrelated receipts cannot refresh watts');
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, now, true);
+  assert.equal(status().status, 'unit_reading_available', 'a successfully applied zero is data');
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'stream_unit_power_battery_flow' && value === 42) throw new Error('synthetic write failure');
+    await write(key, value);
+  });
+  now += 1000;
+  await device.queueTelemetry({ measure_power: 42, battery_charging_state: 'charging' }, now, true);
+  assert.equal(status().status, 'waiting_for_unit_evidence');
+  assert.equal(device.getReadingDiagnostics().stream_unit_power_battery_flow.applicationStatus, 'write_failed');
+  now += 1000;
+  await device.queueTelemetry({ measure_power: 0 }, now, true);
+  assert.equal(status().status, 'unit_reading_available');
+  assert.equal(device.hasCapability('measure_power'), false);
+  assert.equal(device.getEnergyDiagnostics(), null);
+  await device.onUninit();
+  assert.equal(status().status, 'waiting_for_unit_evidence');
+});
+
+test('physical diagnostic availability cannot remove a linked-scope warning or promote an aggregate', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  await device.queueTelemetry({ measure_power: null, battery_charging_state: null }, 100000, true);
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, 100000, true);
+  assert.equal(device.getPhysicalPowerDiagnostics().status, 'linked_power_unverified');
+  assert.equal(device.getPhysicalPowerDiagnostics().physicalScopeVerified, false);
+  await device.onUninit();
+  const system = await harness(classes.Stream5000UnitDevice);
+  assert.equal(system.device.getPhysicalPowerDiagnostics(), null);
+  await system.device.onUninit();
 });
 
 test('configuration-only frames populate diagnostics without availability, power samples or Energy changes', async (t) => {
@@ -654,6 +719,7 @@ test('configuration tiles and conditions use fresh readback, never make a config
   await emit(frame(Buffer.concat([varint(200), varint(2), group(30, Buffer.concat([varint(8), varint(1), varint(16), varint(20)]))])));
   assert.equal(device.values.stream_5000_mode, 'custom');
   assert.equal(device.values.stream_5000_backup_reserve, 20);
+  assert.equal(device.values.stream_5000_backup_reserve_state, 'enabled');
   assert.equal(await device.configurationModeIs('custom'), true);
   assert.equal(await device.configurationModeIs('self_powered'), false);
   assert.equal(await device.configurationReserveEnabled(), true);
@@ -662,9 +728,50 @@ test('configuration tiles and conditions use fresh readback, never make a config
   now += 1200001;
   await device.checkAvailability();
   assert.equal(device.values.stream_5000_mode, null);
+  assert.equal(device.values.stream_5000_backup_reserve_state, null);
   await assert.rejects(device.configurationModeIs('custom'), /unavailable/);
   await assert.rejects(device.configurationReserveEnabled(), /unavailable/);
   await device.onUninit();
+});
+
+test('reserve status migrates in place, clears after restart and expires independently from its stored target', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  for (const DeviceClass of [classes.Stream5000UnitDevice, classes.Stream5000PhysicalUnitDevice]) {
+    const h = await harness(DeviceClass, {}, captures.pair.unit_a, {
+      stream_5000_grid_input_limit: { title: 'Reported grid input limit', units: 'W', decimals: 2 },
+      stream_5000_backup_reserve: { title: 'My reserve target', decimals: 0 },
+    }, device => { device.values.stream_5000_backup_reserve_state = 'enabled'; });
+    const { device, emit } = h;
+    assert.equal(device.hasCapability('stream_5000_backup_reserve_state'), true);
+    assert.equal(device.values.stream_5000_backup_reserve_state, null, 'persisted state is not fresh readback');
+    assert.equal(device.options.stream_5000_grid_input_limit.title.en, 'Max Power from Grid');
+    assert.equal(device.options.stream_5000_grid_input_limit.decimals, 2);
+    assert.equal(device.options.stream_5000_backup_reserve.title, 'My reserve target');
+    const reserve = (...parts) => frame(group(30, Buffer.concat(parts)));
+    await emit(reserve(varint(8), varint(0), varint(16), varint(40)));
+    assert.equal(device.values.stream_5000_backup_reserve_state, 'disabled');
+    assert.equal(device.values.stream_5000_backup_reserve, 40);
+    assert.equal(await device.configurationReserveEnabled(), false);
+    const before = device.getEnergyDiagnostics();
+    now += 1200001;
+    // Limits are another message, not a refresh of reserve status/target.
+    await emit(frame(Buffer.concat([varint(200), varint(2)])));
+    assert.equal(device.values.stream_5000_backup_reserve_state, null);
+    assert.equal(device.values.stream_5000_backup_reserve, null);
+    await assert.rejects(device.configurationReserveEnabled(), /unavailable/);
+    // Enabled flag on its own is real evidence, not evidence of a fresh percentage.
+    await emit(reserve(varint(8), varint(1)));
+    assert.equal(device.values.stream_5000_backup_reserve_state, 'enabled');
+    assert.equal(device.values.stream_5000_backup_reserve, null);
+    assert.equal(await device.configurationReserveEnabled(), true);
+    assert.equal(device.lastTelemetryAt, 0);
+    if (before) assert.equal(device.getEnergyDiagnostics().samples, before.samples);
+    else assert.equal(device.getEnergyDiagnostics(), null);
+    assert.equal(device.getData().sn, captures.pair.unit_a);
+    await device.onUninit();
+    assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+  }
 });
 
 test('real parsed peer frames feed private topology evidence without changing pairing, capability roles or persisted stores', async () => {

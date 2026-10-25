@@ -2,7 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { scopedReadingOptions, migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_UNIT_GRID_TITLE } = require('../.homeybuild/lib/streamReadingScopes');
+const { scopedReadingOptions, migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_UNIT_GRID_TITLE,
+  STREAM_5000_CONFIGURATION_TITLES } = require('../.homeybuild/lib/streamReadingScopes');
 const { mapStreamQuota } = require('../.homeybuild/lib/streamMapping');
 
 test('known default titles migrate without resetting custom titles or options', () => {
@@ -110,4 +111,31 @@ test('released Time to full/empty labels migrate to explicit unit or system scop
       assert.deepEqual(scopedReadingOptions(key, { title: name, units: 'min' }, title), { title, units: 'min' });
     }
   }
+});
+
+test('5000 configuration terminology migrates old defaults, preserving custom titles, options and capability IDs', () => {
+  const old = {
+    stream_5000_mode: 'Operating mode', stream_5000_charge_limit: 'Reported charge limit',
+    stream_5000_discharge_limit: 'Reported discharge limit', stream_5000_backup_reserve: 'Reported backup reserve',
+    stream_5000_grid_input_limit: 'Reported grid input limit', stream_5000_grid_output_limit: 'Reported grid output limit',
+  };
+  for (const [key, title] of Object.entries(STREAM_5000_CONFIGURATION_TITLES)) {
+    const options = { title: old[key], units: key.includes('grid') ? 'W' : '%', preventTag: true, decimals: 2 };
+    assert.deepEqual(scopedReadingOptions(key, options, title), { ...options, title });
+    assert.equal(options.title, old[key]);
+    assert.equal(scopedReadingOptions(key, { title: 'My chosen label' }, title), null);
+    assert.deepEqual(scopedReadingOptions(key, { title: { en: old[key], de: 'Mein eigener Name' } }, title),
+      { title: { ...title, de: 'Mein eigener Name' } });
+    const definition = require(`../.homeycompose/capabilities/${key}.json`);
+    assert.deepEqual(definition.title, title);
+    assert.equal(definition.setable, false);
+  }
+  const mode = require('../.homeycompose/capabilities/stream_5000_mode.json');
+  assert.deepEqual(mode.values.map(value => value.id), ['self_powered', 'intelligent_plus', 'custom']);
+  assert.equal(mode.values[0].title.en, 'Self-consumption');
+  assert.equal(mode.values[2].title.en, 'Custom mode');
+  const state = require('../.homeycompose/capabilities/stream_5000_backup_reserve_state.json');
+  assert.deepEqual(state.values.map(value => value.id), ['enabled', 'disabled']);
+  assert.equal(state.setable, false);
+  assert.equal(state.insights, false);
 });

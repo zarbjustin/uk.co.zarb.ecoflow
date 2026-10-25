@@ -17,6 +17,20 @@ export const STREAM_UNIT_GRID_TITLE = {
   en: 'Unit grid connection port', de: 'Einheit: Netzanschluss', nl: 'Unit: netaansluiting',
 };
 
+/** EcoFlow terminology, with the stored reserve target kept distinct from its enable state. */
+export const STREAM_5000_CONFIGURATION_TITLES: Record<string, Record<string, string>> = {
+  stream_5000_mode: { en: 'Operating mode', de: 'Betriebsmodus', nl: 'Bedrijfsmodus' },
+  stream_5000_charge_limit: { en: 'Charge limit', de: 'Ladegrenze', nl: 'Laadlimiet' },
+  stream_5000_discharge_limit: { en: 'Discharge limit', de: 'Entladegrenze', nl: 'Ontlaadlimiet' },
+  stream_5000_backup_reserve: {
+    en: 'Backup reserve target (stored)', de: 'Backup-Reserveziel (gespeichert)', nl: 'Back-upreservedoel (opgeslagen)',
+  },
+  stream_5000_grid_input_limit: { en: 'Max Power from Grid', de: 'Max. Leistung aus dem Netz', nl: 'Max. vermogen uit het net' },
+  stream_5000_grid_output_limit: {
+    en: 'Max grid-tied output power', de: 'Max. netzgekoppelte Ausgangsleistung', nl: 'Max. netgekoppeld uitgangsvermogen',
+  },
+};
+
 // Released v1.10.34 defaults: migrate these as well as the older import/export
 // titles. EcoFlow calls this connection "Grid connection port" in its app.
 const PREVIOUS_SCOPED_TITLES: Record<string, Record<string, string>> = {
@@ -28,6 +42,12 @@ const PREVIOUS_SCOPED_TITLES: Record<string, Record<string, string>> = {
 };
 
 const LEGACY_TITLES: Record<string, Record<string, string>> = {
+  stream_5000_mode: { en: 'Operating mode' },
+  stream_5000_charge_limit: { en: 'Reported charge limit' },
+  stream_5000_discharge_limit: { en: 'Reported discharge limit' },
+  stream_5000_backup_reserve: { en: 'Reported backup reserve' },
+  stream_5000_grid_input_limit: { en: 'Reported grid input limit' },
+  stream_5000_grid_output_limit: { en: 'Reported grid output limit' },
   charge_remaining: { en: 'Charge time remaining', de: 'Verbleibende Ladezeit', nl: 'Resterende laadtijd' },
   discharge_remaining: { en: 'Discharge time remaining', de: 'Verbleibende Entladezeit', nl: 'Resterende ontlaadtijd' },
   measure_battery: { en: 'Battery', de: 'Batterie', nl: 'Batterij' },
