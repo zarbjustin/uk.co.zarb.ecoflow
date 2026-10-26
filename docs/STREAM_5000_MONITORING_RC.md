@@ -130,7 +130,7 @@ are retained in this record. Next useful physical steps need their own bounded
 approval: charging/idle comparison and pairing one Home Battery (5000) for the
 new space to validate aggregate accounting without touching the original system.
 
-## Owner sparse-idle installation
+## Owner sparse idle installation
 
 26 October: diagnostic implementation `a6e4e31`, exact CI green (1074 tests), was
 directly installed non-clean after staged verified validation. Runtime fingerprint:

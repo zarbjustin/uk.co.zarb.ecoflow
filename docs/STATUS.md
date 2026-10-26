@@ -41,6 +41,10 @@ exercised. Raw reports, household values, IDs and credentials remain outside Git
 Earlier local/pre-install checkpoints below are historical; the installed
 runtime is now 4834191, not 9d9881d.
 
+The documentation-only follow-up CI caught a literal-heading/anchor mismatch in
+the acceptance link check. The heading was corrected without changing its
+GitHub anchor or the runtime; this is not a candidate runtime test failure.
+
 ### Delivery authorization and baseline (historical pre-install checkpoint)
 
 The owner authorizes committing/pushing the prepared diagnostic increment,
