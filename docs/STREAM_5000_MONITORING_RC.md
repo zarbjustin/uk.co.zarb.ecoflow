@@ -130,17 +130,41 @@ are retained in this record. Next useful physical steps need their own bounded
 approval: charging/idle comparison and pairing one Home Battery (5000) for the
 new space to validate aggregate accounting without touching the original system.
 
+## Owner sparse-idle installation
+
+26 October: diagnostic implementation `a6e4e31`, exact CI green (1074 tests), was
+directly installed non-clean after staged verified validation. Runtime fingerprint:
+`4834191f7d05103da42b500c17dedd6587aaafa754d3ac6210d65a9db0c5a7b0`.
+The cloud upload was rejected without updating the previous app; standard direct
+discovery succeeded. Running Development 1.10.56/schema 19 and the new read-only
+status capability independently confirm delivery. No Mainline/store changes.
+
+At 16:28:51 UTC all 11 devices, identities/settings/capabilities, 99 saved Flow
+definitions and counter continuity were preserved. Exactly one expected new
+status tile was added to the physical unit. Desktop Homey displayed its live
+state with fresh zero/idle battery evidence. At 16:32:43 UTC, the last coherent
+standby receipt was still fresh; the subscription was active. Native EcoFlow
+navigation stopped when owner app use was noticed. No battery setting was
+changed by this validation.
+
+Native sparse expiry, reconnect, retained-hint horizon, charging/accessories and
+48-hour soak remain open; fresh reports continuing in this window cannot pass
+the sparse-idle transition. Software replays cover those edge cases, not native
+acceptance. Aggregate Energy pairing stays off, no aggregate was added, timer
+research stays disabled, and no remaining-time capability is introduced.
+Previous source is retained privately for recovery; rollback is not exercised.
+
 ## Core transitions
 
-26 October source follow-up (not installed): sparse-idle presentation adds a
+26 October follow-up (now owner-installed only): sparse-idle presentation adds a
 separate physical-monitor status tile. A coherent successfully applied zero/idle
 delta can be described as `Last report: Standby (not live)` after numeric expiry,
 for at most 20 minutes and never across a reconnect. No watts/state are revived,
 no missing value becomes zero, and this hint is not an Energy/Flow numeric source.
-The installed 9d9881d candidate remains distinct from source 4834191. See STATUS
+The previous 9d9881d candidate remains distinct from installed 4834191. See STATUS
 for checks and privacy-safe findings; idle acceptance is still open.
 
-After an explicitly approved future install, check fresh zero/idle, then sparse
+On the installed candidate, continue checking fresh zero/idle, then sparse
 idle with fresh unrelated temperature receipts: live power/state must expire,
 the last-report tile must be clearly non-live and bounded, and new nonzero or
 zero battery evidence must recover independently. Verify no aggregate tile,

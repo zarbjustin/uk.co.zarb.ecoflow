@@ -2,7 +2,46 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Sparse-idle delivery — 26 October 2026, AUTHORIZED / CI AND INSTALL PENDING
+## Sparse-idle delivery — 26 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
+
+Implementation `a6e4e316cc25aae49be9cabb609df550c9bfa1c1` is pushed to the
+diagnostic branch. [Exact-commit CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40358890530)
+passed all 1074 tests, lint, release checks, audit (zero vulnerabilities) and
+verified Homey validation. Source/runtime fingerprint remains
+`4834191f7d05103da42b500c17dedd6587aaafa754d3ac6210d65a9db0c5a7b0`.
+
+Direct non-clean installation succeeded using Homey's normal direct discovery
+route. The initial cloud-routed upload was rejected (400); readback confirmed the
+previous schema-18 candidate still running before retrying. CLI exit zero alone
+is not success evidence. The normal direct retry explicitly reported successful
+installation; subsequent readback confirmed running Development 1.10.56,
+schema 19, no crash, ungated unit monitoring and aggregate pairing consent off.
+No version bump, store upload/publication, Mainline merge or battery command.
+
+Owner readback at **16:28:51 UTC**: all 11 EcoFlow devices available, identities,
+settings and existing capabilities preserved; exactly the expected new status
+capability was added to the physical unit. All 99 saved standard/Advanced Flow
+definitions match the immediate pre-install baseline, and cumulative counters
+show no reset. Zero 5000 aggregates are paired. These are preservation checks,
+not physical execution of every Flow or aggregate accounting acceptance.
+
+Installed desktop Homey shows the read-only `Battery reading status` tile and a
+fresh zero/idle pair. At **16:32:43 UTC**, report and tile both remained `live`
+with a recent coherent standby receipt; unrelated connection receipts had their
+own ages. Active EcoFlow app use was noticed and native navigation was stopped.
+Fresh receipts continued during this short window, so native sparse expiry,
+20-minute retention, reconnect and recovery are NOT signed off by the replay
+tests or this installation. A native long soak and charge/idle/model/accessory
+and rollback gates remain open. No extra Robert capture is requested.
+
+The install package used the identical production lockfile, staged SDK shim and
+verified validation without the CLI's dependency-fixture copy path. The previous
+owner source is privately retained as a recovery archive; rollback was not
+exercised. Raw reports, household values, IDs and credentials remain outside Git.
+Earlier local/pre-install checkpoints below are historical; the installed
+runtime is now 4834191, not 9d9881d.
+
+### Delivery authorization and baseline (historical pre-install checkpoint)
 
 The owner authorizes committing/pushing the prepared diagnostic increment,
 checking exact-commit CI, and directly installing it non-clean for read-only
@@ -12,8 +51,8 @@ Remote diagnostic HEAD was independently checked against local `91b0093` with
 no intervening work. Fresh owner readback: running Development 1.10.56, schema 18,
 all 11 EcoFlow devices available, 99 Flow definitions, aggregate pairing opt-in
 off. Detailed identity/settings/counter baseline is private. The prepared runtime
-is 4834191 (full fingerprint below); installed runtime is still 9d9881d until
-successful delivery/readback. Earlier local-only checkpoints below are historical.
+is 4834191 (full fingerprint below); installed runtime was still 9d9881d at this
+checkpoint. Completed delivery/readback above supersedes this state.
 
 ## Sparse-idle presentation — 26 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
 
