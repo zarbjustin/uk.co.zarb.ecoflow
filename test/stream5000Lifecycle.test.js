@@ -263,6 +263,119 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
   };
 }
 
+test('sparse idle has an explicit last-reported tile without reviving expired watts, state or accounting', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  assert.equal(device.values.stream_5000_reading_status, 'waiting');
+  const send = async (values) => { device.lastTelemetryAt = now; await device.queueTelemetry(values, now, true); };
+  await send({ measure_power: 0, battery_charging_state: 'idle' });
+  assert.equal(device.values.stream_5000_reading_status, 'live');
+  now += 180001;
+  await send({ measure_temperature: 21 });
+  await device.checkAvailability();
+  assert.equal(device.values.stream_unit_power_battery_flow, null);
+  assert.equal(device.values.battery_charging_state, null);
+  assert.equal(device.values.stream_5000_reading_status, 'last_reported_standby');
+  assert.equal(device.getBatteryReadingStatusDiagnostics().live, false);
+  assert.equal(device.getPhysicalPowerDiagnostics().status, 'waiting_for_unit_evidence');
+  assert.equal(device.getReadingDiagnostics().stream_unit_power_battery_flow.stale, true);
+  assert.equal(device.energySamples, 0);
+  assert.equal(device.hasCapability('measure_power'), false);
+  now = 1300001;
+  await send({ measure_temperature: 22 });
+  await device.checkAvailability();
+  assert.equal(device.values.stream_5000_reading_status, 'expired');
+  await send({ measure_power: -100, battery_charging_state: 'discharging' });
+  assert.equal(device.values.stream_5000_reading_status, 'live');
+  assert.equal(device.values.stream_unit_power_battery_flow, -100);
+  assert.equal(device.getBatteryReadingStatusDiagnostics().lastStandbyAgeSec, null);
+  await device.onUninit();
+});
+
+test('presentation resets across reconnect and failed writes; aggregate gets no presentation tile', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  device.lastTelemetryAt = now;
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, now, true);
+  now += 180001;
+  await device.checkAvailability();
+  assert.equal(device.values.stream_5000_reading_status, 'last_reported_standby');
+  await device.resubscribe();
+  assert.notEqual(device.getBatteryReadingStatusDiagnostics().status, 'last_reported_standby');
+  // A fresh unrelated delta after reconnect does not resurrect an old zero/idle pair.
+  device.lastTelemetryAt = now;
+  await device.queueTelemetry({ measure_temperature: 22 }, now, true);
+  assert.notEqual(device.values.stream_5000_reading_status, 'last_reported_standby');
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'stream_unit_power_battery_flow' && value === 0) throw new Error('synthetic failure');
+    await write(key, value);
+  });
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, now, true);
+  assert.equal(device.values.stream_5000_reading_status, 'write_failed');
+  assert.equal(device.getBatteryReadingStatusDiagnostics().lastStandbyAgeSec, null);
+  await device.onUninit();
+  const aggregate = (await harness(classes.Stream5000UnitDevice)).device;
+  assert.equal(aggregate.hasCapability('stream_5000_reading_status'), false);
+  assert.equal(aggregate.getBatteryReadingStatusDiagnostics(), null);
+  await aggregate.onUninit();
+});
+
+test('optional presentation tile failure cannot prevent subscription or valid battery readings', async () => {
+  const { device, resources } = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, d => {
+    const add = d.addCapability.bind(d);
+    d.addCapability = async key => {
+      if (key === 'stream_5000_reading_status') throw new Error('synthetic tile failure');
+      return add(key);
+    };
+  });
+  assert.equal(resources().subscriptions, 1);
+  device.lastTelemetryAt = Date.now();
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, Date.now(), true);
+  assert.equal(device.values.stream_unit_power_battery_flow, 0);
+  assert.equal(device.getAvailable(), true);
+  await device.onUninit();
+});
+
+test('slow presentation writes stay ordered with newer telemetry and presentation failures clear best-effort', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  device.lastTelemetryAt = now;
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, now, true);
+  now += 180001;
+  device.lastTelemetryAt = now;
+  let release, entered;
+  const began = new Promise(resolve => { entered = resolve; });
+  const paused = new Promise(resolve => { release = resolve; });
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'stream_5000_reading_status' && value === 'last_reported_standby') {
+      entered(); await paused;
+    }
+    await write(key, value);
+  });
+  const checking = device.checkAvailability();
+  await began;
+  now += 1;
+  const newer = device.queueTelemetry({ measure_power: -100, battery_charging_state: 'discharging' }, now, true);
+  release(); await checking; await newer;
+  assert.equal(device.values.stream_5000_reading_status, 'live');
+  assert.equal(device.values.stream_unit_power_battery_flow, -100);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'stream_5000_reading_status' && value !== null) throw new Error('synthetic status rejection');
+    await write(key, value);
+  });
+  now += 180001;
+  device.lastTelemetryAt = now;
+  await device.checkAvailability();
+  assert.equal(device.values.stream_5000_reading_status, null);
+  assert.equal(device.getAvailable(), true, 'optional display failure does not disconnect valid telemetry');
+  await device.onUninit();
+});
+
 test('timer observer cannot be activated by saved settings, stored flags, normal frames or settings changes', async () => {
   const h = await harness(classes.Stream5000PhysicalUnitDevice, { time_observer_enabled: true },
     captures.pair.unit_a, {}, device => { device.settings.time_observer_enabled = true; });

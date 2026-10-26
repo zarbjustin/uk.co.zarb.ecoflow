@@ -57,6 +57,18 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
   assert.equal(preview.settings.find(setting => setting.id === 'preview_enabled').value, false);
   assert.equal(app.drivers.find(driver => driver.id === 'stream_5000_unit').pair[0].id, 'connection_info');
   assert.equal(app.drivers.find(driver => driver.id === 'stream_5000_system').pair[0].id, 'energy_access');
+  const readingStatus = 'stream_5000_reading_status';
+  assert.equal(definitions[readingStatus].type, 'enum');
+  assert.equal(definitions[readingStatus].getable, true);
+  assert.equal(definitions[readingStatus].setable, false);
+  assert.equal(definitions[readingStatus].insights, false);
+  for (const id of ['stream_5000_unit', 'stream_ac5000']) {
+    const unit = app.drivers.find(driver => driver.id === id);
+    assert(unit.capabilities.includes(readingStatus));
+    assert.equal(unit.capabilitiesOptions[readingStatus].preventTag, true);
+    assert.equal(unit.capabilitiesOptions[readingStatus].preventInsights, true);
+  }
+  assert(!app.drivers.find(driver => driver.id === 'stream_5000_system').capabilities.includes(readingStatus));
   assert.match(pairingAccess, /settings\?\.get\(STREAM_5000_AGGREGATE_PAIRING_SETTING\) === true/);
   assert.doesNotMatch(pairingAccess, /\.get\(['"]stream5000BetaEnabled['"]\)/);
   assert.match(gridGate, /^export const DUAL_CT_ENERGY_RUNTIME_ENABLED = false;/m);

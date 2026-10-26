@@ -2,6 +2,68 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Sparse-idle delivery — 26 October 2026, AUTHORIZED / CI AND INSTALL PENDING
+
+The owner authorizes committing/pushing the prepared diagnostic increment,
+checking exact-commit CI, and directly installing it non-clean for read-only
+validation. Store Test/Live and Mainline must stay unchanged. No charging test,
+battery-setting write, aggregate pairing, Energy activation or observer start.
+Remote diagnostic HEAD was independently checked against local `91b0093` with
+no intervening work. Fresh owner readback: running Development 1.10.56, schema 18,
+all 11 EcoFlow devices available, 99 Flow definitions, aggregate pairing opt-in
+off. Detailed identity/settings/counter baseline is private. The prepared runtime
+is 4834191 (full fingerprint below); installed runtime is still 9d9881d until
+successful delivery/readback. Earlier local-only checkpoints below are historical.
+
+## Sparse-idle presentation — 26 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
+
+Read-only owner validation of the installed 9d9881d candidate found natural
+discharge-to-standby history and a healthy subscription, but sparse battery-flow
+receipts during standby. Temperature/health receipts continued while the live
+power/state tiles expired. EcoFlow's expanded battery view reported Standby;
+the unit page's remaining-time estimate is still unmapped. Its settings panel
+did not populate reliable power-limit values, so configuration parity was not
+signed off. Legacy units briefly reported offline and recovered; this does not
+establish a 5000 regression. Cloud Homey reads recovered access after a cached
+local SDK route timed out; no app crash or deliberate restart was observed.
+Private comparisons found device identities/settings/capabilities, saved Flow
+definitions and cumulative-counter continuity preserved. Raw evidence remains
+private. No hardware acceptance gate was promoted on this basis.
+
+Prepared on the diagnostic branch:
+
+- Physical monitors gain a read-only `Battery reading status` enum tile, including
+  `Last report: Standby (not live)`. It requires zero flow and idle state together
+  in a successfully applied delta, and is never a replacement current-state value.
+- Last-standby evidence is memory-only, bounded to the shorter of the connection
+  limit and 20 minutes, and discarded on reconnect, teardown, clock rollback,
+  failed application, conflicting/missing direction or linked-pack uncertainty.
+  Unrelated updates cannot renew it. Status writes share the telemetry queue;
+  optional tile failures clear best-effort without preventing unit subscriptions.
+- The 180-second live-power/state expiry, standard numeric capabilities,
+  accounting, controls and Flow identities/contracts are unchanged. No extra
+  polling, requests, timers, observer activation or aggregate Energy admission.
+  The new tile has no automatic Flow tag or Insights history and is not added to
+  aggregate drivers. Existing devices receive it in place only on a future update.
+- Support schema 19 adds a fixed anonymous status/age projection, not last-known
+  watt numbers or private identities. Desktop/mobile report UI explains why a
+  connected device can have expired live battery readings.
+
+Local checks: **1074/1074 tests**, lint, release-boundary/acceptance-schema checks,
+zero audit vulnerabilities and verified Homey validation pass. Browser tests cover
+desktop/mobile report wording, layout and no writes. Runtime fingerprint:
+`4834191f7d05103da42b500c17dedd6587aaafa754d3ac6210d65a9db0c5a7b0`.
+Source version remains 1.10.56. This work is uncommitted and has no exact-commit CI
+or installed-host acceptance. Main/Live, store Test, installed candidate and
+battery configuration remain unchanged. Do not carry old hardware signoffs over.
+
+Next: with approval, commit/push/check CI and directly install this increment;
+then compare live-to-expired standby status and fresh recovery on the owner unit.
+Separate bounded approval is required for deliberate charging, silence/reconnect
+or aggregate pairing. Continue a native 48-hour soak and per-model/accessory
+acceptance; neither a healthy endpoint nor averaged Insights proves fresh power.
+No additional Robert capture is required.
+
 ## Diagnostic delivery — 25 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
 
 Implementation commit `21191228ed90a4fb171b18363a7cdcbad8e63c69` is on the

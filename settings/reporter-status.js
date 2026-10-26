@@ -78,6 +78,15 @@
           if (power?.status === 'linked_power_unverified') append(translate('linked_unit_power'));
           if (power?.status === 'unit_reading_available') append(translate('unit_reading_available'));
         });
+        (Array.isArray(driver.batteryReadingStatus) ? driver.batteryReadingStatus : []).slice(0, 64).forEach(entry => {
+          if (entry?.status === 'last_reported_standby') {
+            append(translate('last_reported_standby'));
+            if (typeof entry.lastStandbyAgeSec === 'number' && Number.isFinite(entry.lastStandbyAgeSec)
+              && entry.lastStandbyAgeSec >= 0 && entry.lastStandbyAgeSec <= 1200) {
+              append(`${translate('receipt_age')}: ${Math.floor(entry.lastStandbyAgeSec)} s`);
+            }
+          }
+        });
         (Array.isArray(driver.configuration) ? driver.configuration : []).slice(0, 64).forEach((config, index) => {
           const current = field => field?.stale === false && typeof field.ageSec === 'number'
             && Number.isFinite(field.ageSec) && field.ageSec >= 0 && field.ageSec <= 1200;

@@ -413,7 +413,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 18);
+  assert.equal(report.schemaVersion, 19);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {
@@ -430,6 +430,24 @@ test('self observations and linked-power explanation are re-projected without pr
   assert.equal(driver.physicalPower[0].status, 'linked_power_unverified');
   assert.equal(driver.physicalPower[0].energyContribution, false);
   assert.ok(!JSON.stringify(driver).includes('PRIVATE'));
+});
+
+test('last standby report is bounded, anonymous and cannot claim live readings or Energy use', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'last_reported_standby', lastStandbyAgeSec: 420.4,
+      live: true, energyUsed: true, value: 1234567, sn: 'PRIVATE' }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'last_reported_standby', lastStandbyAgeSec: Infinity }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'last_reported_standby', lastStandbyAgeSec: 1201 }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'PRIVATE', lastStandbyAgeSec: 1 }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ get status() { throw new Error('PRIVATE'); } }) },
+  ] : [] });
+  const entries = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_5000_unit').batteryReadingStatus;
+  assert.deepEqual(entries[0], { deviceIndex: 0, status: 'last_reported_standby', live: false,
+    energyUsed: false, lastStandbyAgeSec: 420 });
+  assert.deepEqual(entries.slice(1).map(e => e.status), ['expired', 'expired', 'waiting', 'waiting']);
+  assert.equal(entries.every(e => e.energyUsed === false), true);
+  assert.doesNotMatch(JSON.stringify(entries), /PRIVATE|1234567/);
 });
 
 test('physical reading availability is a fixed privacy projection, never scope or Energy authority', () => {

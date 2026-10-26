@@ -22,6 +22,7 @@ import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
 import { Stream5000TimeObserver } from './stream5000TimeObserver';
+import { Stream5000BatteryPresentation, STREAM_5000_PRESENTATION_CAPABILITY } from './stream5000BatteryPresentation';
 import { migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_5000_CONFIGURATION_TITLES } from './streamReadingScopes';
 import {
   STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
@@ -92,6 +93,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private configurationTracker?: Stream5000ConfigurationTracker;
   private timeObserver?: Stream5000TimeObserver;
   private readonly readingAges = new Stream5000ReadingAges();
+  private batteryPresentation = new Stream5000BatteryPresentation();
   private linkedPowerWarning = false;
   private lastOfflineMessage = '';
 
@@ -113,6 +115,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.reporterObservations = new StreamReporterObservations();
     this.ownUnitObservations = new StreamOwnUnitObservations();
     this.subscriptionState = 'starting';
+    this.batteryPresentation.reset();
     this.startedAt = Date.now();
     this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
     const sn = this.getData().sn as string;
@@ -137,6 +140,15 @@ export class Stream5000UnitDevice extends Homey.Device {
       await this.initialiseEnergyCapabilities();
     } else {
       await this.initialisePhysicalUnitCapabilities();
+      try {
+        if (!this.hasCapability(STREAM_5000_PRESENTATION_CAPABILITY)) await this.addCapability(STREAM_5000_PRESENTATION_CAPABILITY);
+        await this.setCapabilityValue(STREAM_5000_PRESENTATION_CAPABILITY, 'waiting');
+      } catch (e) {
+        this.error('initialise battery reading status', e);
+        if (this.hasCapability(STREAM_5000_PRESENTATION_CAPABILITY)) {
+          await this.setCapabilityValue(STREAM_5000_PRESENTATION_CAPABILITY, null).catch(() => {});
+        }
+      }
       for (const [capability, titles] of Object.entries(STREAM_5000_UNIT_TITLES)) {
         if (this.isStopped()) return;
         if (!this.hasCapability(capability)) continue;
@@ -291,6 +303,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       if (this.isStopped()) return;
       if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
       else if (applied && usable) await this.setOnline();
+      await this.updateBatteryPresentation();
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
@@ -311,11 +324,17 @@ export class Stream5000UnitDevice extends Homey.Device {
         });
     }
     let applied = true;
+    const appliedValues: Record<string, unknown> = {};
     for (const [capability, value] of Object.entries(roleValues)) {
       if (!this.hasCapability(capability)) continue;
       // eslint-disable-next-line no-await-in-loop
       const success = await this.applyLiveReading(capability, value, receivedAt);
+      if (success) appliedValues[capability] = value;
       applied = success && applied;
+    }
+    if (!this.isEnergyAggregate()) {
+      if (applied) this.batteryPresentation.observe(appliedValues, receivedAt, Date.now());
+      else this.batteryPresentation.reset();
     }
     const batteryPowerW = values.measure_power;
     if (this.isEnergyAggregate() && typeof batteryPowerW === 'number') {
@@ -408,6 +427,36 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   getReadingDiagnostics(): Record<string, unknown> {
     return this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
+  }
+
+  /** Display-only status. No last-known number is restored to a live capability. */
+  getBatteryReadingStatusDiagnostics(): Record<string, unknown> | null {
+    if (this.isEnergyAggregate()) return null;
+    const readings = this.readingAges.snapshot(Date.now(), this.unavailableAfterMs()) as any;
+    const power = readings.stream_unit_power_battery_flow;
+    return this.batteryPresentation.snapshot({
+      now: Date.now(),
+      connectionLimitMs: this.unavailableAfterMs(),
+      telemetryAt: this.lastTelemetryAt,
+      active: this.subscriptionState === 'active',
+      live: power?.stale === false && power?.applicationStatus === 'applied'
+        && typeof this.getCapabilityValue('stream_unit_power_battery_flow') === 'number',
+      seen: Boolean(power),
+      writeFailed: this.readingAges.hasWriteFailures(),
+      linked: this.linkedPowerWarning,
+    });
+  }
+
+  private async updateBatteryPresentation(): Promise<void> {
+    if (this.isStopped() || this.isEnergyAggregate() || !this.hasCapability(STREAM_5000_PRESENTATION_CAPABILITY)) return;
+    const status = this.getBatteryReadingStatusDiagnostics()?.status;
+    if (typeof status !== 'string' || this.getCapabilityValue(STREAM_5000_PRESENTATION_CAPABILITY) === status) return;
+    // Optional presentation failure must not take telemetry, accounting or existing Flows offline.
+    await this.setCapabilityValue(STREAM_5000_PRESENTATION_CAPABILITY, status)
+      .catch(async (e) => {
+        this.error('apply battery reading status', e);
+        if (!this.isStopped()) await this.setCapabilityValue(STREAM_5000_PRESENTATION_CAPABILITY, null).catch(() => {});
+      });
   }
 
   /** Status/counts only. Numeric candidates have no support-report/export route. */
@@ -632,6 +681,7 @@ export class Stream5000UnitDevice extends Homey.Device {
           }
         }
       }
+      await this.updateBatteryPresentation();
     };
     this.applyChain = this.applyChain.then(expire, expire);
     await this.applyChain;
@@ -653,12 +703,20 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async resubscribe(): Promise<void> {
     if (this.isStopped()) return;
+    this.subscriptionState = 'starting';
     this.timeObserver?.close(); // Never resume a capture across a connection/session boundary.
     this.resubscribeCount += 1;
     if (this.subscribedSn && this.frameHandler) {
       this.realtimeApp?.unsubscribeAppRealtime(this.subscribedSn, this.frameHandler);
       this.subscribedSn = undefined;
     }
+    const resetPresentation = async () => {
+      this.batteryPresentation.reset();
+      await this.updateBatteryPresentation();
+    };
+    this.applyChain = this.applyChain.then(resetPresentation, resetPresentation);
+    await this.applyChain;
+    if (this.isStopped()) return;
     await this.subscribe();
   }
 
@@ -715,6 +773,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async teardown(): Promise<void> {
     this.subscriptionState = 'stopped';
+    this.batteryPresentation.reset();
     this.timeObserver?.close();
     if (this.framesReceived > 0) {
       this.log(

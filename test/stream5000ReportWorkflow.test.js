@@ -11,10 +11,11 @@ test('desktop/mobile reports explain an unmetered unit-only setup without writes
   const translations = require('../locales/en.json');
   const now = 100000;
   const field = value => ({ value, ageSec: 1, stale: false });
-  const report = { schemaVersion: 17, capturedAt: new Date(now).toISOString(), appVersion: '1.10.56', drivers: [
+  const report = { schemaVersion: 19, capturedAt: new Date(now).toISOString(), appVersion: '1.10.56', drivers: [
     { id: 'stream', pairedCount: 0 },
     { id: 'stream_5000_unit', pairedCount: 1,
-      physicalPower: [{ status: 'unit_reading_available', physicalScopeVerified: false, energyContribution: false }],
+      physicalPower: [{ status: 'waiting_for_unit_evidence', physicalScopeVerified: false, energyContribution: false }],
+      batteryReadingStatus: [{ status: 'last_reported_standby', lastStandbyAgeSec: 420, live: false, energyUsed: false }],
       configuration: [{ values: { backupReserveEnabled: field(false), backupReservePct: field(37) } }],
       systemFlow: [{ fields: { gridFlowNetW: field(3) } }] },
     { id: 'stream_5000_system', pairedCount: 0 },
@@ -40,7 +41,10 @@ test('desktop/mobile reports explain an unmetered unit-only setup without writes
       await page.getByRole('button', { name: 'Show integration support report', exact: true }).click();
       const text = await page.locator('#reporterStatus').innerText();
       assert.match(text, /Only STREAM 5000 Unit monitors are paired/);
-      assert.match(text, /fresh Unit power reading/);
+      assert.doesNotMatch(text, /fresh Unit power reading/);
+      assert.match(text, /Last report: Standby \(not live\)/);
+      assert.match(text, /Current power and state have expired/);
+      assert.match(text, /420 s/);
       assert.match(text, /Backup reserve \(reported setting\) 1: Disabled/);
       assert.match(text, /Stored reserve target: 37%/);
       assert.match(text, /Max Power from Grid limits grid draw, not total charging power or a charge-task target/);

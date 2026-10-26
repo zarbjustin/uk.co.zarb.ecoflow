@@ -373,6 +373,7 @@
       "update_pending": "Nieuwe metingen wachten op verwerking. De laatste volledige, actuele momentopname blijft online; Flow-voorwaarden wachten op overeenkomende actuele waarden.",
       "linked_unit_power": "Gekoppelde 5000-unit: individueel batterijvermogen en richting zijn niet bevestigd. Lege waarden betekenen geen nulvermogen of verbroken verbinding. Home Battery toont de gecombineerde metingen.",
       "unit_reading_available": "Een verse vermogenswaarde van de unit is beschikbaar in Homey. Dit bevestigt niet onafhankelijk de fysieke accureikwijdte, het teken of de schaal. De unit levert geen Energy-totalen.",
+      "last_reported_standby": "Laatst gemeld: Stand-by (niet actueel). EcoFlow meldde nul batterijvermogen en ruststatus samen. Het huidige vermogen en de status zijn verlopen; temperatuur of batterijgezondheid vernieuwen ze niet. Deze tijdelijk bewaarde laatste status wordt niet voor Energy of als actuele batterijstatus gebruikt.",
       "unit_only_setup": "Alleen STREAM 5000-unitmonitors zijn gekoppeld; geen STREAM-thuisbatterij (5000). Behoud de monitors. Voeg voor batterij-energieregistratie eenmaal per afzonderlijke installatie Home Battery (5000) toe, niet per unit. Vervang geen bestaande thuisbatterij die bij een andere ruimte hoort.",
       "reserve_setting": "Back-upreserve (gemelde instelling)",
       "reserve_enabled": "Ingeschakeld",

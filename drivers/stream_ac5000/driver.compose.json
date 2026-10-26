@@ -16,6 +16,7 @@
     "measure_battery",
     "battery_charging_state",
     "stream_unit_power_battery_flow",
+    "stream_5000_reading_status",
     "measure_power.load",
     "measure_power.grid",
     "measure_power.grid_import",
@@ -24,6 +25,7 @@
     "battery_soh"
   ],
   "capabilitiesOptions": {
+    "stream_5000_reading_status": { "preventTag": true, "preventInsights": true },
     "measure_battery": {
       "title": {
         "en": "Unit battery level",

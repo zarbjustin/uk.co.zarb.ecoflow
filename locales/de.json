@@ -373,6 +373,7 @@
       "update_pending": "Neue Messwerte warten auf Übernahme. Die letzte vollständige aktuelle Momentaufnahme bleibt online; Flow-Bedingungen warten auf passende aktuelle Werte.",
       "linked_unit_power": "Verknüpfte 5000-Einheit: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Leere Einheitenwerte bedeuten weder Nullleistung noch Verbindungsverlust. Die Hausbatterie zeigt Gesamtwerte.",
       "unit_reading_available": "Ein frischer Leistungswert der Einheit ist in Homey verfügbar. Das bestätigt weder den physischen Akkubereich noch Vorzeichen oder Skalierung unabhängig. Die Einheit liefert keine Energy-Gesamtwerte.",
+      "last_reported_standby": "Zuletzt: Standby (nicht aktuell). EcoFlow meldete zuletzt zusammen null Batterieleistung und einen Ruhezustand. Aktuelle Leistung und Zustand sind veraltet; Temperatur oder Akkuzustand erneuern sie nicht. Dieser zeitlich begrenzte letzte Status wird nicht für Energy oder als aktueller Batteriezustand verwendet.",
       "unit_only_setup": "Nur STREAM-5000-Einheitenmonitore sind gekoppelt; keine STREAM-Hausbatterie (5000). Behalte die Monitore. Für die Batterie-Energiebilanz die Hausbatterie (5000) einmal pro separater Anlage hinzufügen, nicht pro Einheit. Eine bestehende Hausbatterie eines anderen Bereichs nicht ersetzen.",
       "reserve_setting": "Notstromreserve (gemeldete Einstellung)",
       "reserve_enabled": "Aktiviert",

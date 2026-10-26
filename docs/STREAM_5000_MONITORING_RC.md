@@ -132,6 +132,21 @@ new space to validate aggregate accounting without touching the original system.
 
 ## Core transitions
 
+26 October source follow-up (not installed): sparse-idle presentation adds a
+separate physical-monitor status tile. A coherent successfully applied zero/idle
+delta can be described as `Last report: Standby (not live)` after numeric expiry,
+for at most 20 minutes and never across a reconnect. No watts/state are revived,
+no missing value becomes zero, and this hint is not an Energy/Flow numeric source.
+The installed 9d9881d candidate remains distinct from source 4834191. See STATUS
+for checks and privacy-safe findings; idle acceptance is still open.
+
+After an explicitly approved future install, check fresh zero/idle, then sparse
+idle with fresh unrelated temperature receipts: live power/state must expire,
+the last-report tile must be clearly non-live and bounded, and new nonzero or
+zero battery evidence must recover independently. Verify no aggregate tile,
+automatic Flow tag, extra requests or counter changes. Test deliberate session
+loss/reconnect only with separate approval. No remaining-time estimate is added.
+
 For each model and accepted role, compare SOC, sign, state and power against
 the corresponding EcoFlow view in natural charge, discharge and idle. Record
 receipt skew; distinguish battery flow from inverter/GRID-port output. Preserve

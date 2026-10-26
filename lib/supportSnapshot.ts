@@ -6,6 +6,7 @@ import { dualCtResearchSnapshot } from './dualCtResearch';
 import { stream5000ConfigurationSnapshot } from './stream5000Configuration';
 import { stream5000Assessment } from './stream5000Assessment';
 import { STREAM_5000_LIVE_CAPABILITIES } from './stream5000Readings';
+import { STREAM_5000_PRESENTATION_STATES } from './stream5000BatteryPresentation';
 import { reportingSnapshot } from './streamReportingDiagnostics';
 import { BK_PV_CAPS } from './streamBkPvDiagnostics';
 import { REMAINING_TIME_CAPS } from './StreamRemainingTime';
@@ -273,6 +274,25 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           deviceIndex, status, physicalScopeVerified: false, linkedSystemPowerCopiedToUnit: false, energyContribution: false,
         };
       }),
+      batteryReadingStatus: !['stream_5000_unit', 'stream_ac5000'].includes(id) ? [] : devices.map((device, deviceIndex) => {
+        try {
+          const input = device.getBatteryReadingStatusDiagnostics?.();
+          let status = STREAM_5000_PRESENTATION_STATES.includes(input?.status) ? input.status : 'waiting';
+          const age = safeNumber(input?.lastStandbyAgeSec);
+          if (status === 'last_reported_standby' && (age === null || age > 1200)) status = 'expired';
+          return {
+            deviceIndex,
+            status,
+            live: status === 'live',
+            energyUsed: false,
+            lastStandbyAgeSec: ['live', 'last_reported_standby'].includes(status) && age !== null && age <= 1200 ? Math.floor(age) : null,
+          };
+        } catch {
+          return {
+            deviceIndex, status: 'waiting', live: false, energyUsed: false, lastStandbyAgeSec: null,
+          };
+        }
+      }),
       monitoringTrial: id === 'stream' ? devices.map((device, deviceIndex) => {
         let input = null;
         try {
@@ -485,7 +505,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       });
   } catch { /* Optional numeric-free preview evidence. */ }
   return {
-    schemaVersion: 18,
+    schemaVersion: 19,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),

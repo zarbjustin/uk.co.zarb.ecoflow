@@ -1,0 +1,18 @@
+{
+  "type": "enum",
+  "title": { "en": "Battery reading status", "de": "Status der Batteriemessung", "nl": "Status batterijmeting" },
+  "values": [
+    { "id": "waiting", "title": { "en": "Waiting for battery data", "de": "Warte auf Batteriedaten", "nl": "Wachten op batterijgegevens" } },
+    { "id": "live", "title": { "en": "Live battery reading", "de": "Aktuelle Batteriemessung", "nl": "Actuele batterijmeting" } },
+    { "id": "last_reported_standby", "title": { "en": "Last report: Standby (not live)", "de": "Zuletzt: Standby (nicht aktuell)", "nl": "Laatst gemeld: Stand-by (niet actueel)" } },
+    { "id": "expired", "title": { "en": "Battery reading expired", "de": "Batteriemessung veraltet", "nl": "Batterijmeting verlopen" } },
+    { "id": "disconnected", "title": { "en": "Waiting for connection data", "de": "Warte auf Verbindungsdaten", "nl": "Wachten op verbindingsgegevens" } },
+    { "id": "write_failed", "title": { "en": "Reading could not be applied", "de": "Messung konnte nicht übernommen werden", "nl": "Meting kon niet worden toegepast" } },
+    { "id": "scope_unverified", "title": { "en": "Individual battery scope unverified", "de": "Bereich der Einzelbatterie unbestätigt", "nl": "Bereik individuele batterij niet bevestigd" } }
+  ],
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/reserve.svg",
+  "insights": false
+}
