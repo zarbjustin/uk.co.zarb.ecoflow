@@ -1,5 +1,45 @@
 # STREAM 5000 monitoring release candidate
 
+## Firmware and history review
+
+27 October, approximately 22:32–22:34 UTC: read-only native EcoFlow firmware
+listing for the paired ES21 reports **1.1.6.18**, with no devices available for
+update in that view. No updater, command or setting was activated. This is the
+owner device's displayed version/status, not a universal latest-release claim
+or a separate inventory of every internal component's firmware.
+
+Homey SDK Insights history was read at last-hour (five-second bins) and
+last-24-hours (five-minute bins) resolutions, preserving nulls. The recent SOC,
+battery-flow and temperature display series have no null/timestamp gaps in the
+queried window; after the candidate installation the numeric values remain
+consistent with standby. Independent system-grid-meter history is entirely
+unknown, as expected in this unmetered space. Flow-derived import/consumption
+have a leading null run before this candidate was installed, covering at least
+11 minutes of the queried window; the true beginning is outside that window.
+This is unavailable reading history, not evidence of an app crash or network
+outage. Prior-day signed battery activity predates the new candidate and cannot
+approve its physical charge/discharge gates.
+
+Important platform limitation: battery Insights shows numeric zero through the
+brief startup interval when the independently recorded post-install capability
+readback was null. A continuous resampled graph therefore does not prove
+continuous telemetry or faithfully preserve every transient unknown. Do not
+derive a receipt cadence, outage duration or energy acceptance from these bins.
+
+Current per-field applied/receipt ages are independently available: the two
+support snapshots show a new battery receipt while temperature/health have their
+own recent ages. Subscription remains active, one attempt and no reconnects in
+this installed session. These samples establish fresh application at those
+times, not the maximum gap over the preceding day. No raw per-packet receipt
+history was reconstructed or invented. Sparse expiry/recovery is still open.
+
+All 11 devices remain available with identities/settings/capability sets
+unchanged; all 99 saved Flow definitions match the install baseline. Private
+firmware screenshot and selected history/receipt data are outside Git. No
+runtime change, restart, observer activation, extra MQTT session, acceptance-gate
+promotion or publication occurred. Continue normal-use observation; deliberately
+inducing silence or charging still requires separately bounded approval.
+
 ## Owner read only comparison
 
 27 October 2026, approximately 22:22–22:24 UTC: native EcoFlow application and

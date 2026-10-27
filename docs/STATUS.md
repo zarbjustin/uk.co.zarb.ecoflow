@@ -2,6 +2,28 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Firmware/history check — 27 October 2026, READ-ONLY VALIDATION RECORD
+
+Native firmware listing for the owner ES21 reports **1.1.6.18**, with no update
+available in that view. No update was started. Last-hour/five-second and
+last-day/five-minute Homey histories were reviewed alongside fresh support
+receipt ages. Current installed candidate remains ac38129/Development 1.10.56.
+
+Recent battery/SOC/temperature graphs contain no gaps, but Insights masks the
+brief independently observed startup-unknown interval with numeric values; it
+is not a packet freshness log. The independent grid-meter channel stays unknown
+as expected. A leading flow-derived import/consumption null run, at least eleven
+minutes within the retrieved window, predates the current installation; its
+full duration/cause is not established. Prior-day activity does not sign off
+this candidate. Current battery receipts renewed independently of temperature/
+health, with one active subscription attempt and no reconnect in this session.
+
+All 11 devices/99 Flow definitions remain preserved. No runtime, hardware
+setting, restart, observer, Energy, store or Mainline change. Evidence remains
+private; this diagnostic records-only update leaves hardware gates unchanged.
+See [firmware and history review](STREAM_5000_MONITORING_RC.md#firmware-and-history-review)
+for the limits on interpreting gaps, resampling and firmware status.
+
 ## Read-only native comparison — 27 October 2026, VALIDATION RECORD
 
 Installed ac38129 was compared with the native EcoFlow application at
