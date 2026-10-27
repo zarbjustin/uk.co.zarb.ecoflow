@@ -2,6 +2,37 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Monitoring validation — 27 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
+
+Prepared on `codex/mixed-generation-reporting-diagnostics` after verifying local
+and remote diagnostic HEAD `43669cc` agree. No commit/push or CI dispatch in this
+wave; Mainline and Test/Live remain unchanged. Installed owner Development
+1.10.56/schema 19 remains the older 4834191 runtime.
+
+Reconnect now clears the previous session's configuration tracker and tiles;
+failed tile clears no longer prevent unrelated clears, and watchdog retry is
+preserved. Flow conditions remain unknown until fresh configuration evidence.
+Report projection also requires explicit freshness rather than promoting an
+omitted flag. Added regression tests cover these cases plus physical-monitor
+charge/discharge/idle expiry, unchanged identity/store, no Energy/timers and
+strict per-model/per-role release-readiness selection. No capability, control,
+setting, permission, Flow identity or aggregate Energy contract was added.
+
+The monitoring-only readiness command separates physical-unit acceptance from
+system Energy. It does not waive model/hardware gates. See
+[current validation wave](STREAM_5000_MONITORING_RC.md#current-validation-wave)
+for scope, read-only owner baseline and the next acceptance steps. Hardware
+acceptance remains open for the new candidate; previous fingerprint signoffs
+are not inherited. Raw evidence and support email remain outside Git.
+
+Local results: **1080/1080 tests**, lint, release-boundary/acceptance-schema
+checks, offline dependency audit (zero reported vulnerabilities), diff whitespace
+checks and Homey CLI 4.5.3 verified validation passed. Full tests include existing
+desktop/mobile workflow checks. Candidate runtime fingerprint:
+`ac38129ed5d61435f0092f96180718708ee594a767e352fc3fd84609d600f2c9`.
+No new native mobile-host acceptance or EcoFlow-screen comparison was performed.
+Readiness remains PENDING, independently of these green software checks.
+
 ## Sparse-idle delivery — 26 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
 
 Implementation `a6e4e316cc25aae49be9cabb609df550c9bfa1c1` is pushed to the

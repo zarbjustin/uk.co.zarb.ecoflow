@@ -1,5 +1,63 @@
 # STREAM 5000 monitoring release candidate
 
+## Current validation wave
+
+27 October 2026: local diagnostic-branch preparation only. The installed owner
+candidate remains 4834191; this wave is not installed, committed, pushed or
+published. Mainline, store Test/Live, hardware configuration and Energy gates
+remain unchanged. Do not use observations from the installed candidate to
+sign off this newer fingerprint.
+
+Scope remains ES21/ES22 physical unit monitoring. The support clarification
+acknowledges aggregate SOC and battery-power fields but does not supply an
+authoritative mixed-generation reporter/membership contract, grid-port scope,
+remaining-time mapping or a supported new control contract. Do not turn those
+unresolved semantics into automatic merging, SOC averaging, counter transfer,
+new controls or inferred timer estimates. The owner's Dual CT is not installed.
+
+Prepared reliability changes:
+
+- Reconnect discards session-old configuration before subscription recovery.
+  Mode, reserve enabled/disabled state, reserve target and reported limits must
+  return from new configuration telemetry. Unrelated live readings do not renew
+  them, and configuration-only telemetry cannot establish live battery flow.
+- A failed configuration tile write no longer prevents the other expired tiles
+  being cleared; subsequent watchdog passes retry the failed tile. Flow
+  conditions use the fresh tracker, not a possibly uncleared display value.
+- Report projection requires an explicit fresh status. An omitted or malformed
+  status cannot become a fresh reserve/mode observation.
+- Software regression covers charge/discharge/idle presentation and independent
+  expiry, reconnect configuration reset/recovery, failed-clear retry, unknown
+  reserve versus disabled, unchanged identity/store and no unit Energy/timers.
+  These are software replays, not newly performed physical charge/reconnect tests.
+
+Read-only owner baseline at 22:10 UTC found the installed Development 1.10.56
+running with all 11 EcoFlow devices available. The physical ES21 appropriately
+showed a non-live last-standby status with expired power/state unknown. This is
+a single observation, not a 48-hour soak, current native EcoFlow comparison,
+controlled recovery test or acceptance of the uninstalled candidate.
+
+Readiness can now be checked at an explicit boundary:
+
+- `npm run release:monitoring`: both admitted models, physical units only;
+  fails unless their exact-fingerprint hardware gates pass.
+- `node scripts/check-stream-5000-acceptance.mjs --model es21 --role unit --require-ready`:
+  an explicitly narrowed ES21 unit decision; never approves ES22 or Energy.
+- `npm run release:acceptance`: unchanged full model/role acceptance.
+
+All still fail readiness while hardware gates remain open. Invalid/duplicate
+selection options fail closed. No gate is removed or promoted by selecting a
+smaller scope. Remaining-time capabilities remain withheld rather than showing
+zero, guessing from SOC/power or borrowing legacy fields.
+
+Next acceptance sequence: review the local increment, authorize a non-clean
+owner candidate update separately, then compare natural charge/discharge/idle
+and independent expiry with EcoFlow on that exact fingerprint. Deliberate
+restart/reconnect, charging/settings changes, accessory loads or aggregate
+pairing each need bounded approval; no such operation occurred in this wave.
+ES22 needs its own acceptance; ES21 hardware cannot sign it off. Retain the
+normal-use soak and recovery/rollback gates before a production decision.
+
 ## Decision and authority
 
 25 October 2026: owner subsequently authorized a non-clean direct candidate

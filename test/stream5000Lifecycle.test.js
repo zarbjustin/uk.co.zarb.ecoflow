@@ -488,6 +488,90 @@ test('an optional reserve-status tile add failure does not lose the device or it
   assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
 });
 
+test('reconnect invalidates old configuration without guessing reserve state or changing identity and counters', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device, emit } = await harness(classes.Stream5000PhysicalUnitDevice);
+  const identity = device.getData();
+  const store = structuredClone(device.store);
+  const pdata = Buffer.concat([varint(25 * 8), varint(2),
+    group(30, Buffer.concat([varint(1 * 8), varint(1), varint(2 * 8), varint(40)]))]);
+  await emit(frame(pdata));
+  assert.equal(await device.configurationModeIs('custom'), true);
+  assert.equal(await device.configurationReserveEnabled(), true);
+  assert.equal(device.values.stream_5000_backup_reserve, 40);
+  now += 1000;
+  await device.resubscribe();
+  assert.equal(device.values.stream_5000_mode, null);
+  assert.equal(device.values.stream_5000_backup_reserve_state, null);
+  assert.equal(device.values.stream_5000_backup_reserve, null);
+  await assert.rejects(device.configurationModeIs('custom'), /unavailable/);
+  await assert.rejects(device.configurationReserveEnabled(), /unavailable/);
+  await device.queueTelemetry({ measure_temperature: 22 }, now, true);
+  assert.equal(device.values.stream_5000_backup_reserve_state, null);
+  assert.deepEqual(device.getData(), identity);
+  assert.deepEqual(device.store, store);
+  assert.equal(device.hasCapability('meter_power.charged'), false);
+  now += 1000;
+  await emit(frame(group(30, Buffer.alloc(0))));
+  assert.equal(await device.configurationReserveEnabled(), false);
+  assert.equal(device.values.stream_5000_backup_reserve_state, 'disabled');
+  assert.equal(device.values.stream_5000_backup_reserve, null);
+  assert.equal(device.values.stream_5000_mode, null);
+  await device.onUninit();
+});
+
+test('a failed configuration clear cannot retain unrelated old settings or stop reconnect; watchdog retries it', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device, emit } = await harness(classes.Stream5000PhysicalUnitDevice);
+  await emit(frame(Buffer.concat([varint(25 * 8), varint(2), group(30, Buffer.concat([
+    varint(1 * 8), varint(1), varint(2 * 8), varint(40),
+  ]))])));
+  const write = device.setCapabilityValue.bind(device);
+  let reject = true;
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (reject && key === 'stream_5000_mode' && value === null) throw new Error('synthetic configuration clear failure');
+    await write(key, value);
+  });
+  await device.resubscribe();
+  assert.equal(device.values.stream_5000_mode, 'custom', 'failed SDK clear is not hidden');
+  assert.equal(device.values.stream_5000_backup_reserve_state, null);
+  assert.equal(device.values.stream_5000_backup_reserve, null);
+  await assert.rejects(device.configurationModeIs('custom'), /unavailable/);
+  assert.deepEqual(device.getConfigurationDiagnostics().values, {});
+  reject = false;
+  await device.checkAvailability();
+  assert.equal(device.values.stream_5000_mode, null);
+  await device.onUninit();
+});
+
+test('monitoring charge/discharge/idle transitions retain scope and expire independently without timers or Energy', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  for (const [power, state] of [[250, 'charging'], [-250, 'discharging'], [0, 'idle']]) {
+    now += 1000;
+    device.lastTelemetryAt = now;
+    await device.queueTelemetry({ measure_power: power, battery_charging_state: state, measure_battery: 50 }, now, true);
+    assert.equal(device.values.stream_unit_power_battery_flow, power);
+    assert.equal(device.values.battery_charging_state, state);
+    assert.equal(device.values.stream_5000_reading_status, 'live');
+    assert.equal(device.hasCapability('measure_power'), false);
+    assert.equal(device.hasCapability('meter_power.discharged'), false);
+    assert.equal(device.hasCapability('charge_remaining'), false);
+    assert.equal(device.hasCapability('discharge_remaining'), false);
+    now += 180001;
+    device.lastTelemetryAt = now;
+    await device.queueTelemetry({ measure_temperature: 22 }, now, true);
+    await device.checkAvailability();
+    assert.equal(device.values.stream_unit_power_battery_flow, null);
+    assert.equal(device.values.battery_charging_state, null);
+    assert.equal(device.values.measure_battery, 50);
+    assert.equal(device.values.stream_5000_reading_status, state === 'idle' ? 'last_reported_standby' : 'expired');
+  }
+  await device.onUninit();
+});
+
 test('physical startup migrates legacy scope labels in place and preserves custom titles and units', async () => {
   const { device } = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {
     'measure_power.load': { title: 'House consumption', units: 'W', decimals: 2 },

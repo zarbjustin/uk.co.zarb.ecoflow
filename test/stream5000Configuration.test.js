@@ -132,3 +132,18 @@ test('privacy projection excludes arbitrary identifiers and nested secrets; malf
   input.values.tasks.value[0].chargeW = Infinity;
   assert.equal(project(input).values.tasks, undefined);
 });
+
+test('configuration projection requires explicit freshness and never promotes an unknown reserve status', () => {
+  const { stream5000ConfigurationValues } = require('../.homeybuild/lib/stream5000Readings');
+  for (const stale of [undefined, null, 'false', 0, true]) {
+    const projected = project({ source: 'captured_app_protocol', values: {
+      backupReserveEnabled: { value: false, ageSec: 0, stale },
+      backupReservePct: { value: 40, ageSec: 0, stale: false },
+      mode: { value: 'custom', ageSec: 0, stale },
+    } });
+    const values = stream5000ConfigurationValues(projected);
+    assert.equal(values.stream_5000_backup_reserve_state, null);
+    assert.equal(values.stream_5000_mode, null);
+    assert.equal(values.stream_5000_backup_reserve, 40);
+  }
+});

@@ -132,3 +132,35 @@ test('readiness command exit status agrees with exact-candidate hardware gates, 
   const ready = spawnSync(process.execPath, [script, '--require-ready'], { cwd: root, encoding: 'utf8', timeout: 10000 });
   assert.equal(ready.status, results.every(result => result.ready) ? 0 : 1, ready.stderr);
 });
+
+test('monitoring readiness selects exact models/roles without waiving unit gates or admitting Energy', async () => {
+  const { acceptanceTargets, assessAcceptance } = await modulePromise;
+  assert.deepEqual(acceptanceTargets(['--role', 'unit', '--require-ready']), [
+    { model: 'es21', role: 'unit' }, { model: 'es22', role: 'unit' },
+  ]);
+  assert.deepEqual(acceptanceTargets(['--model', 'es21', '--role', 'unit']), [{ model: 'es21', role: 'unit' }]);
+  assert.equal(acceptanceTargets([]).length, 4);
+  const next = acceptedRecord();
+  for (const id of ['es21.system_scope', 'es21.energy_continuity', 'es22.charge']) {
+    Object.assign(next.gates.find(g => g.id === id), { status: 'open', evidence: 'none', candidateFingerprint: null });
+  }
+  assert.equal(assessAcceptance(next, fingerprint, 'es21', 'unit').ready, true);
+  assert.equal(assessAcceptance(next, fingerprint, 'es21', 'system').ready, false);
+  assert.equal(assessAcceptance(next, fingerprint, 'es22', 'unit').ready, false);
+  for (const args of [['--model'], ['--role'], ['--model', 'ES21'], ['--role', 'gateway'],
+    ['--publish'], ['--role', 'unit', '--role', 'system'], ['--require-ready', '--require-ready']]) {
+    assert.throws(() => acceptanceTargets(args));
+  }
+});
+
+test('monitoring CLI stays non-ready for open hardware gates and rejects misspelled narrowing flags', () => {
+  const script = path.join(root, 'scripts/check-stream-5000-acceptance.mjs');
+  const result = spawnSync(process.execPath, [script, '--model', 'es21', '--role', 'unit', '--require-ready'],
+    { cwd: root, encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /es21\/unit: PENDING/);
+  assert.doesNotMatch(result.stdout, /es22\/|es21\/system/);
+  const invalid = spawnSync(process.execPath, [script, '--roles', 'unit'], { cwd: root, encoding: 'utf8', timeout: 10000 });
+  assert.equal(invalid.status, 1);
+  assert.match(invalid.stderr, /Unknown acceptance option/);
+});

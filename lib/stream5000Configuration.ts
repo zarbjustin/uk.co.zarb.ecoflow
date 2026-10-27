@@ -261,7 +261,9 @@ export function stream5000ConfigurationSnapshot(input: any): Record<string, unkn
       if (!valid) continue;
       value = tasks;
     }
-    values[key] = { value, ageSec: Math.floor(entry.ageSec), stale: entry.stale === true || entry.ageSec * 1000 > STALE_AFTER_MS };
+    // Only explicit freshness is evidence; a malformed/custom snapshot must not
+    // turn an omitted status into a fresh setting in the report or preview.
+    values[key] = { value, ageSec: Math.floor(entry.ageSec), stale: entry.stale !== false || entry.ageSec * 1000 > STALE_AFTER_MS };
   }
   return {
     source: 'captured_app_protocol', scope: 'subscription_source', ordering: 'receipt_only', controlsEnabled: false, values,

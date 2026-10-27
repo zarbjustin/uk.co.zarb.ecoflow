@@ -377,7 +377,13 @@ export class Stream5000UnitDevice extends Homey.Device {
         if (this.isStopped()) return;
         if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== value) {
           // eslint-disable-next-line no-await-in-loop
-          await this.setCapabilityValue(capability, value);
+          try {
+            await this.setCapabilityValue(capability, value);
+          } catch (e) {
+            // One rejected tile must not keep the other expired/session-old
+            // observations visible. The watchdog retries the failed tile.
+            this.error(`configuration ${capability}`, e);
+          }
         }
       }
     };
@@ -711,11 +717,16 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.subscribedSn = undefined;
     }
     const resetPresentation = async () => {
+      // Configuration belongs to the connection that observed it. Never reuse
+      // a previous session's reserve/mode/limits as current after reconnect.
+      this.configurationTracker = new Stream5000ConfigurationTracker(this.getData().sn);
       this.batteryPresentation.reset();
       await this.updateBatteryPresentation();
     };
     this.applyChain = this.applyChain.then(resetPresentation, resetPresentation);
     await this.applyChain;
+    if (this.isStopped()) return;
+    await this.queueConfiguration();
     if (this.isStopped()) return;
     await this.subscribe();
   }

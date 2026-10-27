@@ -78,11 +78,35 @@ export function assessAcceptance(record, fingerprint, model, role) {
   return { model, role, ready: pending.length === 0, pending: pending.map(gate => gate.id) };
 }
 
+/** A narrow readiness decision never approves another model or system Energy. */
+export function acceptanceTargets(args) {
+  let selectedModel; let selectedRole;
+  const seen = new Set();
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    assert(['--model', '--role', '--require-ready'].includes(flag), 'Unknown acceptance option');
+    assert(!seen.has(flag), 'Duplicate acceptance option');
+    seen.add(flag);
+    if (flag === '--require-ready') continue;
+    const value = args[++index];
+    if (flag === '--model') {
+      assert(models.includes(value), 'Unsupported acceptance model');
+      selectedModel = value;
+    } else {
+      assert(['unit', 'system'].includes(value), 'Unsupported acceptance role');
+      selectedRole = value;
+    }
+  }
+  return (selectedModel ? [selectedModel] : models).flatMap(model =>
+    (selectedRole ? [selectedRole] : ['unit', 'system']).map(role => ({ model, role })));
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const record = JSON.parse(fs.readFileSync(path.join(root, 'docs/STREAM_5000_MONITORING_ACCEPTANCE.json'), 'utf8'));
   const fingerprint = candidateFingerprint(root);
-  const results = models.flatMap(model => record.roles.map(role => assessAcceptance(record, fingerprint, model, role)));
+  const results = acceptanceTargets(process.argv.slice(2))
+    .map(({ model, role }) => assessAcceptance(record, fingerprint, model, role));
   console.log(`Monitoring candidate fingerprint: ${fingerprint}`);
   for (const result of results) console.log(`${result.model}/${result.role}: ${result.ready ? 'ACCEPTED' : `PENDING (${result.pending.join(', ')})`}`);
   console.log('No pairing gate, setting, device, publication or Energy contract is changed by this check.');
