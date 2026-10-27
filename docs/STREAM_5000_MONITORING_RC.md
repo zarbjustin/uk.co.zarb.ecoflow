@@ -1,5 +1,77 @@
 # STREAM 5000 monitoring release candidate
 
+## Owner bounded charge test
+
+27 October: owner approved a revised attended manual-stop test after the native
+ten-minute scheduling precheck failed. The native fallback window was a single
+23:30–00:00 (+1) occurrence on 27 October at a requested 500 W grid charging
+limit, with manual cancellation due at 23:40. Owner confirmed attendance, a local
+stop route and an independent alarm. The saved task was reopened to verify
+Never / 27 Oct 2026, exact time/power and unchanged SOC target. No recurring task
+was left enabled. Native custom controls were used; no undocumented API writer,
+integration control activation or additional MQTT session was introduced.
+
+Baseline had no tasks, standalone native membership, no direct saved Homey Flow
+reference to this physical unit, zero observed solar and fresh standby telemetry.
+Absence of a direct Flow reference is not proof of no external controllers.
+Existing reserve, SOC and global grid limits were preserved. Observed firmware
+baseline was 1.1.6.18. Raw screenshots, readings and the timestamped observation
+journal remain private outside Git.
+
+Charging was first observed at 23:30:29 UTC. Native and Homey charging direction,
+near-time watts and SOC increase agreed at this standalone operating point.
+Independent applied reading ages remained fresh, the sampled temperature did not
+rise, and the subscription needed no reconnect. The native unit displayed an
+explicit remaining-charge estimate, unlike its earlier standby estimate. This
+does not establish an API field mapping; remaining-time display stays withheld
+and the passive observer was not activated. No electrical-efficiency, calibrated
+cell-side measurement or full-power-range enforcement claim is made.
+
+Cancellation was requested at 23:39:47.973; the native deletion confirmation was
+applied at 23:40:01.737. Fresh Homey readback at 23:40:11.807 reported an empty
+task list and discharge rather than charge. Thus this is an approximately
+ten-minute scheduled test with manual/UI timing, not a precise ten-minute
+physical-duration measurement. The later midnight fallback cutoff was not used.
+
+Native discharge and Homey signed power agreed near 23:41:11 UTC, showing the
+original unscheduled discharge fallback resumed rather than an invented idle.
+The two-minute recovery readback at 23:42:19 confirms the empty task list, fresh
+non-charging readings and unchanged reported mode, reserve, SOC/grid limits,
+socket state and output-ceiling observation. All 11 device identities/settings/
+capability sets and all 99 saved Flow definitions match baseline. Six cumulative
+meter readings are comparable and nondecreasing. No 5000 aggregate was paired,
+and no Energy gate, deployment, Mainline or store state changed.
+
+ES21 charge and the newly observed natural discharge are accepted only for
+installed runtime ac38129 and this unlinked operating point, without accessory-load validation.
+ES22, linked packs, accessories, aggregate Energy, reserve/limit enforcement,
+controlled reconnect, rollback and normal-use soak are not approved by this test.
+Idle/freshness/configuration gates retain their existing partial status.
+
+## Bounded charge precheck
+
+27 October, approximately 22:42–22:46 UTC: owner authorized the proposed 500 W,
+10-minute test only after its preconditions pass. Fresh monitoring showed standby,
+no configured tasks, no saved Homey Flows directly referencing this physical
+unit and no paired aggregate. Native task list confirmed no tasks. Direct Flow
+reference absence does not prove there are no external/scripted controllers.
+Physical attendance/local-stop confirmation was requested but not yet received
+at this initial checkpoint. It was subsequently confirmed for the separately
+approved revised manual-stop test recorded above.
+
+The native editor exposed only minute choices 00 and 30 for start/end times.
+A ten-minute native task could not be configured, so the agreed timing
+precondition failed. No save/confirm was invoked: the default charge draft was
+discarded through Don't save. Native No tasks and support's empty task list
+were rechecked; battery remained idle and settings/Flow definitions unchanged.
+
+Do not replace the approved ten-minute task with a thirty-minute window or use
+undocumented control commands as a workaround. A manual-stop test or a different
+duration needs a separately reviewed bound/stop route and explicit owner approval.
+No charging gate was promoted by this failed initial attempt. Evidence screenshots remain private; no runtime,
+installation, Mainline or store change occurred. The previous proposed native
+ten-minute test was provisional and is not executable in the observed editor.
+
 ## Firmware and history review
 
 27 October, approximately 22:32–22:34 UTC: read-only native EcoFlow firmware

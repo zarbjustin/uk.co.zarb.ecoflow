@@ -2,6 +2,46 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Owner manual-stop charging test — 27 October 2026, COMPLETED / RESTORED / VALIDATION RECORD
+
+Owner approved the revised 500 W one-time 23:30–00:00 native task, with manual
+stop at 23:40, confirmed physical attendance/local stop and an independent alarm.
+Saved non-recurrence/date/time/power were verified in EcoFlow and the existing
+read-only app-connected subscription before start. No undocumented controls were used.
+
+Native/Homey charging direction, near-time power and SOC increase agreed on the
+installed ac38129 candidate. Sampled temperature stayed unchanged; per-field
+receipts remained fresh and the subscription did not reconnect. Cancellation
+was initiated at 23:39:47.973 and confirmed at **23:40:01.737 UTC**, followed by
+fresh empty-task/discharge readback. This is manual timing, not a claim of an
+exact ten-minute physical interval. Existing normal discharge resumed as expected.
+
+At 23:42:19, the two-minute recovery check passed: reported configuration matches
+baseline, all 11 device identities/settings/capability sets and 99 Flow definitions
+are preserved, and six cumulative meter readings are nondecreasing. No remaining
+test task or persistent setting change. This diagnostic record update changes
+no Energy gate, runtime, installation, Mainline or store state. Detailed private
+evidence stays outside Git.
+
+ES21 charge and current-candidate natural discharge gates are recorded for this
+standalone operating point only. ES22/accessories/linked packs, controlled
+recovery, rollback, soak and Energy remain unaccepted. Overall readiness stays
+PENDING. See [owner bounded charge test](STREAM_5000_MONITORING_RC.md#owner-bounded-charge-test).
+
+## Charging precheck — 27 October 2026, HISTORICAL INITIAL ATTEMPT NOT STARTED
+
+The owner-approved 500 W / ten-minute test was gated on a native one-time end
+time and physical supervision. Native timing controls expose 00/30-minute
+choices only, so the ten-minute scheduling prerequisite failed. The unsaved
+default draft was discarded (Don't save); native No tasks and the support
+empty-task readback were verified, with battery still idle and device settings/
+Flow definitions unchanged. No native task was saved or activated at this initial
+checkpoint. Physical attendance/local stop was confirmed later, and a separately
+approved revised test was completed as recorded above. No replacement duration
+or undocumented command was used in this initial attempt.
+See [bounded charge precheck](STREAM_5000_MONITORING_RC.md#bounded-charge-precheck).
+This is a local evidence update only, not a runtime/source delivery or publication.
+
 ## Firmware/history check — 27 October 2026, READ-ONLY VALIDATION RECORD
 
 Native firmware listing for the owner ES21 reports **1.1.6.18**, with no update
