@@ -2,6 +2,45 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Monitoring recovery delivery — 27 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
+
+Implementation `935547d455413357c2d4c034e065dce32733d252` is pushed on the
+diagnostic branch. [Exact implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40593150462)
+passed 1080 tests, lint, release checks, online audit and Homey verified validation.
+Runtime fingerprint is
+`ac38129ed5d61435f0092f96180718708ee594a767e352fc3fd84609d600f2c9`.
+Earlier local-preparation statements below are historical, not current delivery.
+
+Owner explicitly authorized non-clean installation. The initial CLI attempt
+looked for a nested build directory and failed local validation before contacting
+Homey. A programmatic packing attempt in the desktop runtime could not load a
+native CLI dependency and also never contacted Homey. The normal shell runtime
+then used the official CLI packer and Homey SDK devkit route with the explicit
+validated staging directory, `clean:false`, and no debug session. Installation
+returned the expected app ID at **22:17:10 UTC**. Production dependencies came
+from the identical lockfile with scripts disabled; the official SDK shim was
+restored. No dependency version, candidate source or store channel changed.
+
+Independent readback at **22:17:26 UTC**: running Development 1.10.56, schema 19,
+all 11 EcoFlow devices available; IDs, driver/data identities, settings and
+capability sets match the private baseline. All 99 standard/Advanced Flow
+definitions match. Six existing cumulative meter readings are comparable and
+nondecreasing. Zero 5000 aggregates are paired, unit monitoring needs no opt-in,
+and aggregate Energy pairing stays off. No Flows or battery commands were run.
+
+The physical unit cleared its persisted power/state/configuration at startup;
+its reading status is waiting. The subscription is active, with fresh applied
+temperature/health receipts and fresh SOC-limit configuration. This demonstrates
+initial reconnection and safe unknowns, not recovery of all battery/config fields,
+natural charge/discharge/idle acceptance or a completed soak. Mode/reserve values
+must not be restored from the old session merely to populate the display.
+
+Previous source and the private pre-install preservation baseline are retained
+outside Git. Rollback was prepared, not exercised. Mainline, store Test/Live,
+hardware settings and existing Energy contracts remain unchanged. The next
+physical step is continued read-only comparison on this exact runtime; hardware
+acceptance gates remain open and require their own evidence.
+
 ## Monitoring validation — 27 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
 
 Prepared on `codex/mixed-generation-reporting-diagnostics` after verifying local

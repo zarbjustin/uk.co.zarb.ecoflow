@@ -1,5 +1,28 @@
 # STREAM 5000 monitoring release candidate
 
+## Monitoring recovery installation
+
+27 October: owner-authorized implementation `935547d` passed exact-commit CI
+(1080 tests, lint, release boundaries, audit, verified validation) and was directly
+installed non-clean at 22:17 UTC. Runtime fingerprint:
+`ac38129ed5d61435f0092f96180718708ee594a767e352fc3fd84609d600f2c9`.
+This supersedes the local/not-installed state in the historical validation wave
+below; installed Development version remains 1.10.56/schema 19.
+
+Readback preserves all 11 device identities/settings/capability sets, all 99 saved
+Flow definitions and six cumulative meter readings without reset. Aggregate
+pairing consent remains off with no 5000 aggregate paired. The physical monitor
+starts with unknown power/state/configuration and waiting status; fresh applied
+temperature/health and SOC-limit configuration have returned on an active
+subscription. Do not call unrelated receipts fresh battery power, infer reserve
+state, or promote the new fingerprint's physical acceptance gates from this.
+
+No battery commands, Energy activation, re-pairing, version bump, store upload or
+publication occurred. Mainline/Live/Test remain unchanged. Previous source and
+the preservation baseline are privately retained; rollback is unexercised.
+Continue natural-state and native-display comparison, then the bounded recovery
+and normal-use soak plan. No additional Robert captures are requested.
+
 ## Current validation wave
 
 27 October 2026: local diagnostic-branch preparation only. The installed owner
