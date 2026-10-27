@@ -1,5 +1,58 @@
 # STREAM 5000 monitoring release candidate
 
+## Owner read only comparison
+
+27 October 2026, approximately 22:22–22:24 UTC: native EcoFlow application and
+the installed ac38129 candidate were compared read-only. The native device
+management identity exactly matches the paired Homey ES21. Native membership
+shows that device in the new system; the original STREAM units are offered as
+unlinked candidates. No Link, confirm, slider, toggle, mode, schedule or power
+action was invoked. Device/Flow IDs, settings and capability sets remain intact.
+Private screenshots and selected support data stay outside Git.
+
+At this natural standby operating point, native SOC and zero battery flow agree
+with Homey SOC/idle/zero. Native Custom mode, reported grid input/output limits,
+charge/discharge SOC limits and disabled backup reserve agree with Homey. The
+stored reserve percentage is separately reported but is not visible as an
+active reserve in EcoFlow while disabled; it is not inferred to be an effective
+discharge floor. This is display/readback agreement, not electrical enforcement.
+The native grid-input help explicitly distinguishes circuit draw from total
+charging power and excludes the Gateway-connected path from that setting.
+
+The native system diagram's grid/consumption flow is distinct from its device
+GRID-port input. Homey preserves that distinction: no independent whole-grid
+meter reading is invented, and flow-derived import is not a measured whole-house
+claim. The Dual CT is still not installed. Night-time PV zero and unavailable
+socket output do not validate accessories under load.
+
+The native unit page displays a multi-day remaining-time estimate despite zero
+SOC and standby. Its semantic and source remain unverified; no Homey timer is
+enabled, computed from SOC, or accepted from this observation. The disabled
+passive observer was not started, and no additional MQTT session was opened.
+
+Only ES21 identity is newly signed off for this exact runtime and observation.
+Idle is partial (a steady standby comparison, not a charge/discharge transition).
+Configuration and freshness/recovery remain partial. ES22 and prior-fingerprint
+discharge evidence are not promoted. Charge, accessories, controlled recovery,
+rollback, normal-use soak and aggregate Energy remain separate open gates.
+
+Next checks in order: inspect normal-use history and per-field receipt gaps
+without new commands, then compare any naturally occurring state changes with
+the corresponding native unit view. Current empty standby and an empty reported
+task list cannot validate discharge or promise a scheduled charge. To exercise
+both directions promptly, obtain a separate bounded owner approval for charging
+through the commissioned setup, agreed limits/stop conditions and restoration;
+do not infer an electrically safe test limit from the reported configuration.
+After some charge, compare normal discharge and return to idle without adding
+an aggregate. Read-only telemetry can observe these tests, but initiating charge
+or a load is a physical change, not covered by a read-only request.
+
+A deliberate integration restart also needs a separate window because it affects
+all paired EcoFlow devices and their Flows. Do not interrupt household networking,
+revoke credentials or reset/re-pair the battery to manufacture a recovery test.
+PV/socket, linked-pack and Dual CT commissioning remain later accessory-specific
+checks; no new high-power load is needed for this monitoring-record update.
+
 ## Monitoring recovery installation
 
 27 October: owner-authorized implementation `935547d` passed exact-commit CI

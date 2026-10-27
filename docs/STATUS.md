@@ -2,6 +2,30 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Read-only native comparison — 27 October 2026, VALIDATION RECORD
+
+Installed ac38129 was compared with the native EcoFlow application at
+approximately 22:22–22:25 UTC. Exact device identity matches the paired ES21;
+only that identity gate is newly accepted for the current fingerprint. Standby
+SOC/zero battery flow, Custom mode, grid limits, SOC limits and disabled reserve
+agree at this operating point. Stored reserve target is not an enabled floor.
+Native diagram versus unit GRID-port scopes remain distinct; no independent
+whole-house meter is inferred. The native multi-day timer during empty standby
+remains semantically unresolved and is not exposed in Homey.
+
+Native membership lists the new unit; legacy units are unlinked suggestions.
+Nothing was linked or configured. All 11 devices remain available, identity/
+settings/capability sets and all 99 Flow definitions match the install baseline.
+Subscription stays active with fresh per-field battery receipts; this window
+does not exercise sparse expiry, controlled reconnect or the longer soak.
+Charge/discharge, accessory loads, rollback and aggregate Energy remain open.
+
+This record-only diagnostic update changes no runtime source, installation,
+settings or store channel. Acceptance tests (13) and release
+boundary/schema checks pass; overall readiness stays PENDING. Private screenshots
+and selected timestamped observations remain outside Git. See
+[owner read-only comparison](STREAM_5000_MONITORING_RC.md#owner-read-only-comparison).
+
 ## Monitoring recovery delivery — 27 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
 
 Implementation `935547d455413357c2d4c034e065dce32733d252` is pushed on the
