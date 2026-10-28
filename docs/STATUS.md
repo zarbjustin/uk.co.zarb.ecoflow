@@ -2,6 +2,93 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+## Legacy daily-history capability retention — 28 October 2026, LOCAL SOURCE ONLY
+
+Removed the original STREAM startup routine that deleted existing daily-history
+capabilities merely because their values were null. Paired capability identities
+and custom titles now survive blank readings, restart/reinitialization and
+unavailable history. Day rollover still clears yesterday's values to unknown;
+fresh data (including true zero) updates existing tiles in place. Missing tiles
+are still added only when their own history metric is returned, not as empty
+defaults. No history/counter source, Flow contract or settings change.
+
+Three regression tests cover startup with history enabled/disabled, repeated
+initialization, null/zero/populated values, custom titles, rejected/empty history,
+rollover, recovery and on-demand addition. All 1085 tests, lint and release checks
+pass. Local source fingerprint:
+`f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+This fix has NOT been installed; owner Homey remains on the fba275ff expiry
+candidate below. It does not automatically restore tiles already removed by that
+older runtime; absent tiles return on fresh history under the existing behavior.
+Native upgrade/preservation must be rechecked after a separately requested install.
+No commit/push, Mainline change, store publication or hardware setting change.
+
+## Physical reading expiry hardening — 28 October 2026, OWNER-INSTALLED / EXPIRY TIMING PENDING
+
+Local diagnostic source separates physical-monitor reading expiry from the
+60-second connection watchdog. A five-second local timer clears stale readings
+through the existing serialized write chain; pending checks coalesce so slow
+SDK writes cannot accumulate an unbounded queue. No EcoFlow requests, faster
+reconnects, aggregate accounting, controls or Energy activation are introduced.
+Timers stop on teardown; failed clears remain diagnostic failures and retry.
+
+1082 tests (including two new lifecycle regressions), lint, release checks and
+verified Homey validation passed. Runtime fingerprint:
+`fba275ff6c225d77d1e377675a28612df9aaa8c3827625103211cafc36ed6093`.
+The official package was installed non-clean on the owner Homey at 01:07:32 UTC;
+independent readback shows running Development 1.10.56, with fresh zero/idle
+battery telemetry. The uploaded compiled device file matches the local build.
+Native EcoFlow remains closed. Earlier ac38129 hardware signoffs remain
+historical; this new runtime does not inherit them.
+
+Read-only app-closed observation 01:07:37–01:14:12 UTC found fresh zero/idle,
+independent temperature ages and zero reconnects. Battery receipts renewed
+approximately every two minutes, so the installed fast-expiry callback was not
+physically exercised in this bounded window. Do not substitute the previous
+candidate's expiry event or software tests for new-candidate timing acceptance.
+Natural silence/expiry, recovery and the hint horizon remain hardware-pending.
+
+All 11 identities/settings and 99 Flow definitions are preserved; six cumulative
+meters are nondecreasing. Capability sets are NOT fully identical: one original
+STREAM's six daily-history tiles, all null in the baseline, were removed by its
+existing `cleanupBlankHistoryCapabilities` startup routine. That code was not
+changed; a working history feed can re-add the tiles. No measurement value is
+claimed lost, but this is recorded as an upgrade-preservation exception, not
+silently passed. Review legacy blank-tile retention before production release.
+
+No commit/push, Mainline change, version bump or store upload/publication.
+
+## Owner app-closed sparse standby — 28 October 2026, READ-ONLY VALIDATION
+
+After quitting EcoFlow on the Mac, battery receipts became sparse while
+temperature stayed fresh. Battery diagnostics were stale at 199 seconds;
+numeric watts/state cleared by the next observed watchdog readback, leaving
+only the explicitly non-live `last_reported_standby` tile. They stayed null
+at battery age 318 seconds, with an active subscription and no reconnect.
+
+Record the timing limitation: freshness expires after three minutes, but
+capability clearing is on a 60-second watchdog and is not instantaneous.
+Recovery/hint horizon/reconnect remain untested; the combined hardware gate
+stays partial. All 11 device definitions and 99 Flows are unchanged; 56 targeted
+software tests passed. Local records only, no runtime changes or publication.
+See [app-closed sparse standby](STREAM_5000_MONITORING_RC.md#owner-app-closed-sparse-standby).
+
+## Owner natural standby — 28 October 2026, READ-ONLY VALIDATION
+
+Native EcoFlow explicitly shows Standby/0 W/1%, matching fresh Homey zero/idle/SOC
+on installed runtime `ac38129`. The standalone ES21 idle gate is accepted for
+that fingerprint. History places settled zero at approximately 23:58 UTC,
+after discharge and a short positive-flow interval; the exact transition and
+reason were not witnessed. No explanation is inferred from the low SOC alone.
+
+Battery receipt ages advance separately from temperature updates. Fresh battery
+receipts continue, so actual silence expiry/retained-standby/recovery remains an
+open hardware gate, despite 13 passing software freshness/presentation tests.
+All 11 device definitions and 99 Flows are preserved; no reconnect or setting
+change. These are local validation-record changes only: no runtime change,
+installation, commit/push or publication; Main and Live remain unchanged.
+See [natural standby observation](STREAM_5000_MONITORING_RC.md#owner-natural-standby-observation).
+
 ## Owner manual-stop charging test — 27 October 2026, COMPLETED / RESTORED / VALIDATION RECORD
 
 Owner approved the revised 500 W one-time 23:30–00:00 native task, with manual

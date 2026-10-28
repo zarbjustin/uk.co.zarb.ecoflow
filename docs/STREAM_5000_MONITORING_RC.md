@@ -376,6 +376,106 @@ are retained in this record. Next useful physical steps need their own bounded
 approval: charging/idle comparison and pairing one Home Battery (5000) for the
 new space to validate aggregate accounting without touching the original system.
 
+## Owner natural standby observation
+
+28 October 2026, read-only, on the unchanged installed `ac38129` runtime.
+The unit was already idle when this observation began. The previous direct
+discharge readback and resampled Homey history establish a subsequent natural
+return to standby, not a witnessed live transition. Five-second history bins
+show negative battery flow until approximately 23:54:45 UTC on 27 October,
+a short positive-power interval, then zero from approximately 23:58. These
+are display-history timestamps, not raw receipt/event timing; the cause of
+the intermediate positive flow and the standby threshold is not established.
+
+Native EcoFlow explicitly displayed Standby, 0 W and 1% SOC, matching Homey's
+fresh zero/idle/1% readings. This accepts the standalone ES21 idle operating
+point for this fingerprint only. It does not accept the sparse-expiry or
+reconnect gate. During the passive window, temperature receipts advanced
+independently while battery power/state receipt ages increased, without
+being renewed by those unrelated fields. Continuing coherent battery receipts
+kept the reading live; no forced silence, restart or network change was used.
+The read-only window ran 00:50:08–00:55:07 UTC. Sampled battery ages advanced
+to 100 seconds, then returned to 15 seconds after a new applied battery receipt;
+temperature was independently nine seconds old at the final readback. The native
+app remained open during comparison, so this is not an app-closed sparse test.
+The task list remained empty and fresh.
+
+The power/state 180-second expiry, non-live retained-standby hint and bounded
+hint horizon remain software-tested rather than hardware-accepted here.
+The targeted freshness/presentation suite passed 13 tests. Private native
+screenshots and projected receipt/history evidence stay outside Git.
+All 11 device definitions and 99 Flow definitions remained unchanged, the
+subscription had no reconnects, and no setting, task, Energy source, observer,
+installation or store channel changed. Overall monitoring readiness remains
+PENDING; normal-use soak and recovery/accessory/model gates remain open.
+
+## Owner fast-expiry candidate
+
+28 October 2026: source runtime fingerprint
+`fba275ff6c225d77d1e377675a28612df9aaa8c3827625103211cafc36ed6093`
+adds a physical-monitor-only five-second local expiry check. It uses the
+existing serialized write chain, coalesces pending checks and clears the timer
+on teardown. It does not request data, alter aggregate accounting or accelerate
+connection recovery. Expiry is not a hard real-time promise: busy event loops,
+queued SDK writes and failed clears can delay completion; failures remain
+visible and retry. The 60-second watchdog remains a fallback.
+
+1082 tests, lint, release checks and verified Homey validation passed. Two new
+lifecycle tests cover the freshness boundary, fresh-temperature independence,
+recovery before an old deadline, teardown/late callbacks, aggregate exclusion,
+slow-clear coalescing and retry without renewing receipt age. The targeted
+reading/presentation/lifecycle suite passes 58 tests.
+
+Official non-clean owner installation completed at 01:07:32 UTC. The packed
+compiled implementation hash matches the local build; running Development
+1.10.56 and new-session receipt ages independently confirm restart/readback.
+With EcoFlow on the Mac still closed, battery zero/idle receipts continued
+roughly every two minutes through 01:14:12. They correctly renewed freshness
+and temperature retained its own age, with no subscription reconnect. No quiet
+interval exceeded the battery freshness limit on this new candidate, so actual
+fast expiry/recovery and hint-horizon acceptance remain open. Prior runtime
+hardware evidence is historical, not transferred to this fingerprint.
+
+All 11 device identities/settings and 99 Flows are preserved; six cumulative
+meters are nondecreasing. One original STREAM device lost six previously-null
+daily-history capabilities through its unchanged blank-history startup cleanup.
+This exception needs a separate retention review before production; do not
+claim complete capability-set preservation. No battery configuration/task,
+Energy gate, Mainline ref or store channel changed. Source is local/uncommitted;
+no push or publication was requested. Raw preservation evidence stays private.
+
+## Owner app-closed sparse standby
+
+28 October 2026, unchanged installed `ac38129` runtime, read-only telemetry.
+The native Mac EcoFlow app was quit through its normal UI and the app inventory
+confirmed it was not running before the 00:58:50 UTC baseline. This establishes
+the Mac-app condition only, not the absence of every possible account client.
+No battery setting, subscription, network or Homey app lifecycle was changed.
+
+Battery power/state aged independently while temperature continued updating.
+At 00:59:48 the applied battery receipt was 176 seconds old and still live.
+At 01:00:11 it was 199 seconds old: freshness diagnostics were stale and the
+computed status was `last_reported_standby`, but Homey's numeric capabilities
+still held zero/idle. At 01:00:59 they were null, with the actual status tile
+`last_reported_standby`, live false and Energy used false. Temperature was
+three seconds old and the subscription stayed active with zero reconnects.
+At 01:02:10 battery age reached 318 seconds with the numeric tiles still null
+and temperature fresh; unrelated receipts did not revive battery values.
+
+This accepts the observed sparse numeric-clear/non-live-hint subcase, with an
+important timing qualification: diagnostics expire after 180 seconds, whereas
+stored capability clearing runs on the existing 60-second watchdog. The sample
+shows a stale-but-still-numeric interval; it is not strict clearing at 180 seconds
+and should be considered before relying on raw numeric Flow tokens near expiry.
+Do not call the watchdog delay a fresh receipt or a hardware failure to report.
+
+Natural recovery, the retained-hint maximum horizon and controlled reconnect
+were not exercised. The combined freshness/recovery gate remains partial.
+All 11 device definitions and 99 Flows were unchanged. The 56 targeted reading,
+presentation and lifecycle tests passed separately from this hardware evidence.
+Private projected snapshots remain outside Git; no runtime/source delivery,
+installation, Energy activation or publication took place.
+
 ## Owner sparse idle installation
 
 26 October: diagnostic implementation `a6e4e31`, exact CI green (1074 tests), was

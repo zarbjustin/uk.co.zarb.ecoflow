@@ -239,6 +239,7 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
   let handler;
   let nextTimer = 0;
   const timers = new Set();
+  const intervals = new Map();
   const subscriptions = new Set();
   device.homey = {
     __: (key) => key,
@@ -246,8 +247,8 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
       subscribeAppRealtime: async (address, callback) => { subscriptions.add(address); handler = callback; return true; },
       unsubscribeAppRealtime: address => subscriptions.delete(address),
     },
-    setInterval: () => { timers.add(++nextTimer); return nextTimer; },
-    clearInterval: id => timers.delete(id),
+    setInterval: (callback, ms) => { timers.add(++nextTimer); intervals.set(nextTimer, { callback, ms }); return nextTimer; },
+    clearInterval: id => { timers.delete(id); intervals.delete(id); },
     setTimeout: () => { timers.add(++nextTimer); return nextTimer; },
     clearTimeout: id => timers.delete(id),
   };
@@ -255,6 +256,7 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
   await device.onInit();
   return {
     device,
+    intervals,
     resources: () => ({ timers: timers.size, subscriptions: subscriptions.size }),
     emit: async (payload) => {
       handler(payload, `/app/device/property/${sn}`);
@@ -262,6 +264,76 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
     },
   };
 }
+
+test('physical expiry timer clears watts/state within five seconds without running connection recovery', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000PhysicalUnitDevice);
+  const { device } = h;
+  const expiry = [...h.intervals.values()].find(x => x.ms === 5000);
+  assert.ok(expiry);
+  assert.ok([...h.intervals.values()].some(x => x.ms === 60000), 'connection watchdog remains unchanged');
+  device.lastTelemetryAt = now;
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle', measure_temperature: 21 }, now, true);
+  now += 180000;
+  device.lastTelemetryAt = now; // Real frame handling, outside queueTelemetry, records connection liveness.
+  expiry.callback(); await device.applyChain; await Promise.resolve();
+  assert.equal(device.values.stream_unit_power_battery_flow, 0, 'inclusive boundary is still fresh');
+  now += 1;
+  device.lastTelemetryAt = now;
+  await device.queueTelemetry({ measure_temperature: 22 }, now, true);
+  expiry.callback(); await device.applyChain; await Promise.resolve();
+  assert.equal(device.values.stream_unit_power_battery_flow, null);
+  assert.equal(device.values.battery_charging_state, null);
+  assert.equal(device.values.measure_temperature, 22);
+  assert.equal(device.values.stream_5000_reading_status, 'last_reported_standby');
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.subscriptionAttempts, 1, 'local expiry does not resubscribe');
+  now += 1000;
+  await device.queueTelemetry({ measure_power: -120, battery_charging_state: 'discharging' }, now, true);
+  expiry.callback(); await device.applyChain; await Promise.resolve();
+  assert.equal(device.values.stream_unit_power_battery_flow, -120, 'fresh recovery wins over the old deadline');
+  assert.equal(device.values.stream_5000_reading_status, 'live');
+  await device.onUninit();
+  assert.equal(h.intervals.size, 0);
+  expiry.callback(); await device.applyChain;
+  assert.equal(h.resources().timers, 0, 'late timer callbacks do not restart work');
+  const system = await harness(classes.Stream5000UnitDevice);
+  assert.equal([...system.intervals.values()].some(x => x.ms === 5000), false, 'aggregate scheduling/accounting unchanged');
+  await system.device.onUninit();
+});
+
+test('physical expiry timer coalesces slow clears and retries failures without renewing receipt age', async (t) => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000PhysicalUnitDevice);
+  const { device } = h;
+  const expiry = [...h.intervals.values()].find(x => x.ms === 5000);
+  await device.queueTelemetry({ measure_power: 0, battery_charging_state: 'idle' }, now, true);
+  now += 180001;
+  const write = device.setCapabilityValue.bind(device);
+  let release; let entered; let attempts = 0;
+  const started = new Promise(resolve => { entered = resolve; });
+  const pending = new Promise(resolve => { release = resolve; });
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'stream_unit_power_battery_flow' && value === null && ++attempts === 1) {
+      entered(); await pending; throw new Error('synthetic slow clear failure');
+    }
+    await write(key, value);
+  });
+  expiry.callback(); await started;
+  const queued = device.applyChain;
+  expiry.callback(); expiry.callback();
+  assert.equal(device.applyChain, queued, 'only one expiry operation may be pending');
+  release(); await device.applyChain; await Promise.resolve(); await Promise.resolve();
+  assert.equal(device.values.battery_charging_state, null, 'failure cannot block other expired tiles');
+  assert.equal(device.getReadingDiagnostics().stream_unit_power_battery_flow.applicationStatus, 'write_failed');
+  now += 5000;
+  expiry.callback(); await device.applyChain; await Promise.resolve();
+  assert.equal(device.values.stream_unit_power_battery_flow, null);
+  assert.equal(device.getReadingDiagnostics().stream_unit_power_battery_flow.ageSec, 185);
+  await device.onUninit();
+});
 
 test('sparse idle has an explicit last-reported tile without reviving expired watts, state or accounting', async (t) => {
   let now = 100000;
@@ -387,7 +459,7 @@ test('timer observer cannot be activated by saved settings, stored flags, normal
   assert.deepEqual(h.device.timeObserver.readEvidence().samples, []);
   assert.equal(h.device.values.measure_battery, 87);
   assert.equal(h.resources().subscriptions, 1);
-  assert.equal(h.resources().timers, 1);
+  assert.equal(h.resources().timers, 2, 'connection watchdog plus local reading expiry; observer remains disabled');
   await h.device.onUninit();
   assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
 });

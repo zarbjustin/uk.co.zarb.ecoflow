@@ -90,6 +90,90 @@ test('Live STREAM counter-store upgrade/restart preserves totals, identity and u
   for(const key of ['chargedWh','dischargedWh','chargedRawWh','dischargedRawWh','countersAvailable','mainSn','ownerMarker'])assert.ok(Object.hasOwn(restarted.store,key));
 });
 
+// Exercise the real legacy onReady/refresh path with already-paired history tiles.
+const historyCaps = ['energy_solar_today', 'energy_consumption_today', 'energy_grid_import_today',
+  'energy_grid_export_today', 'energy_savings_today', 'co2_today', 'energy_independence'];
+function historyHarnessOptions(device) {
+  const capabilities = new Set(historyCaps);
+  const removed = []; const added = []; const options = {};
+  const originalHas = device.hasCapability.bind(device);
+  device.hasCapability = cap => capabilities.has(cap) || originalHas(cap);
+  device.removeCapability = async cap => { removed.push(cap); capabilities.delete(cap); delete device.values[cap]; };
+  device.addCapability = async cap => { added.push(cap); capabilities.add(cap); };
+  device.setCapabilityOptions = async (cap, value) => { options[cap] = value; };
+  device.homey.clock = { getTimezone: () => 'UTC' };
+  for (const cap of historyCaps) { device.values[cap] = null; options[cap] = { title: `Custom ${cap}` }; }
+  return { capabilities, removed, added, options };
+}
+
+test('legacy startup/reinitialization preserves blank daily-history capabilities and custom titles with history on or off', async () => {
+  for (const enabled of [false, true]) {
+    let state; let starts = 0;
+    const device = await harness({}, d => {
+      state = historyHarnessOptions(d);
+      d.getSetting = key => key === 'enable_history' && enabled;
+      d.startHistory = () => { starts++; };
+      d.values.energy_grid_import_today = 0;
+      d.values.energy_savings_today = 1.25;
+    });
+    const before = structuredClone(state.options);
+    await device.onTeardown();
+    await device.onReady();
+    assert.deepEqual([...state.capabilities], historyCaps);
+    assert.deepEqual(state.removed, []);
+    assert.deepEqual(state.added, []);
+    assert.deepEqual(state.options, before);
+    assert.equal(device.values.energy_solar_today, null, 'unknown must not become zero');
+    assert.equal(device.values.energy_grid_import_today, 0, 'real zero survives');
+    assert.equal(device.values.energy_savings_today, 1.25);
+    assert.equal(starts, enabled ? 2 : 0);
+    await device.onTeardown();
+  }
+});
+
+test('legacy empty/rejected history and day rollover keep capability identities; fresh zero/data recover in place', async () => {
+  let state;
+  const device = await harness({}, d => { state = historyHarnessOptions(d); });
+  device.client = { getHistory: async () => { throw new Error('synthetic unavailable history'); } };
+  await device.refreshHistory();
+  assert.ok(historyCaps.every(cap => device.values[cap] === null));
+  device.values.energy_solar_today = 2;
+  device.values.energy_savings_today = 3;
+  device.historyDay = '2000-01-01';
+  device.client.getHistory = async () => [];
+  await device.refreshHistory();
+  assert.ok(historyCaps.every(cap => device.values[cap] === null), 'yesterday clears to unknown, not zero or deleted tiles');
+  await device.applyDailyEnergy({ solarWh: 0, consumptionWh: 1234, gridImportWh: 0, gridExportWh: 2000,
+    savings: 0, co2g: 125, independencePct: 0 });
+  assert.equal(device.values.energy_solar_today, 0);
+  assert.equal(device.values.energy_consumption_today, 1.234);
+  assert.equal(device.values.energy_grid_import_today, 0);
+  assert.equal(device.values.energy_grid_export_today, 2);
+  assert.equal(device.values.co2_today, 0.125);
+  assert.equal(device.values.energy_independence, 0);
+  assert.deepEqual(state.removed, []); assert.deepEqual(state.added, []);
+  assert.deepEqual([...state.capabilities], historyCaps);
+  assert.equal(state.options.energy_solar_today.title, 'Custom energy_solar_today');
+  await device.onTeardown();
+});
+
+test('legacy missing history tiles remain opt-in by evidence rather than all being added empty', async () => {
+  let state;
+  const device = await harness({}, d => {
+    state = historyHarnessOptions(d);
+    state.capabilities.clear();
+    for (const cap of historyCaps) delete d.values[cap];
+  });
+  await device.applyDailyEnergy({});
+  assert.equal(state.capabilities.size, 0);
+  await device.applyDailyEnergy({ solarWh: 0 });
+  assert.deepEqual([...state.capabilities], ['energy_solar_today']);
+  assert.deepEqual(state.added, ['energy_solar_today']);
+  assert.equal(device.values.energy_solar_today, 0);
+  assert.deepEqual(state.removed, []);
+  await device.onTeardown();
+});
+
 test('read-only reporter resolution is throttled and leaves identity, address and energy stores untouched', async (t) => {
   t.mock.method(Date, 'now', () => 1000000);
   const device = await harness({ chargedWh: 499775, dischargedWh: 474818, mainSn: 'BK61TEST00000001' });

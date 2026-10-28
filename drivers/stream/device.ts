@@ -386,8 +386,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   /**
    * Daily-history capabilities and their titles. These are NOT declared on the
    * driver: they only populate when EcoFlow's history feed returns data, so they
-   * are added on demand (and stale/blank ones are removed) to avoid empty tiles
-   * when the history feed is unavailable for a model.
+   * are added on demand. Once present, retain their identity even when readings
+   * are blank or the history feed is unavailable, preserving Insights and Flows.
    */
   private static readonly HISTORY_TITLES: Record<string, string> = {
     energy_solar_today: 'Solar today',
@@ -522,8 +522,6 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
 
-    await this.cleanupBlankHistoryCapabilities();
-
     if (this.getSetting('enable_history') !== false) this.startHistory();
     if (this.getSetting('solar_forecast') !== false) this.startSolarForecast();
     if (this.monitoringEnabled) {
@@ -532,19 +530,6 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       this.startMonitoringTimer();
     } else if (this.monitoringRollbackPending) {
       await this.clearRollbackReadings();
-    }
-  }
-
-  /**
-   * Remove any daily-history capability that exists but never received a value
-   * (e.g. left over from an older version, or a model whose history feed the API
-   * rejects). A working feed re-adds them via applyDailyEnergy.
-   */
-  private async cleanupBlankHistoryCapabilities(): Promise<void> {
-    for (const cap of Object.keys(StreamDevice.HISTORY_TITLES)) {
-      if (this.hasCapability(cap) && this.getCapabilityValue(cap) === null) {
-        await this.removeCapability(cap).catch((e) => this.error(`remove ${cap}`, e));
-      }
     }
   }
 

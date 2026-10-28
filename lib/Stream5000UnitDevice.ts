@@ -43,6 +43,8 @@ import {
 
 /** How often the data-age watchdog runs. */
 const WATCHDOG_INTERVAL_MS = 60 * 1000;
+/** Local physical-tile expiry only; never poll EcoFlow or accelerate reconnects. */
+const READING_EXPIRY_INTERVAL_MS = 5 * 1000;
 /** Default age after which the device is reported unavailable. */
 const DEFAULT_UNAVAILABLE_AFTER_MIN = 20;
 /** Grace period after (re)start before a silent device is called unavailable. */
@@ -68,6 +70,8 @@ export class Stream5000UnitDevice extends Homey.Device {
   private lastTelemetryAt = 0;
   private startedAt = 0;
   private watchdog: NodeJS.Timeout | null = null;
+  private readingExpiryTimer: NodeJS.Timeout | null = null;
+  private readingExpiryPending = false;
   private resubscribeTimer: NodeJS.Timeout | null = null;
   private applyChain: Promise<void> = Promise.resolve();
   private lastValues: Stream5000CapabilityValues = {};
@@ -247,6 +251,17 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.watchdog = this.homey.setInterval(() => {
       this.checkAvailability().catch((e) => this.error('availability check', e?.message || e));
     }, WATCHDOG_INTERVAL_MS);
+    if (!this.isEnergyAggregate()) {
+      this.readingExpiryTimer = this.homey.setInterval(() => {
+        // Coalesce slow SDK writes instead of building an unbounded timer queue.
+        if (this.isStopped() || this.readingExpiryPending) return;
+        this.readingExpiryPending = true;
+        this.queueReadingExpiry().catch((e) => this.error('reading expiry', e?.message || e))
+          .finally(() => {
+            this.readingExpiryPending = false;
+          });
+      }, READING_EXPIRY_INTERVAL_MS);
+    }
 
     this.log(`${model.name} ${sn.slice(0, 4)}… initialised (monitoring only)`);
   }
@@ -669,9 +684,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     );
   }
 
-  private async checkAvailability(): Promise<void> {
-    this.timeObserver?.tick();
-    await this.queueConfiguration();
+  private queueReadingExpiry(): Promise<void> {
     const expire = async () => {
       if (this.isStopped()) return;
       for (const capability of this.readingAges.expired(Date.now(), this.unavailableAfterMs())) {
@@ -690,7 +703,13 @@ export class Stream5000UnitDevice extends Homey.Device {
       await this.updateBatteryPresentation();
     };
     this.applyChain = this.applyChain.then(expire, expire);
-    await this.applyChain;
+    return this.applyChain;
+  }
+
+  private async checkAvailability(): Promise<void> {
+    this.timeObserver?.tick();
+    await this.queueConfiguration();
+    await this.queueReadingExpiry();
     if (this.isStopped()) return;
     if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
     const limitMs = this.unavailableAfterMs();
@@ -801,6 +820,10 @@ export class Stream5000UnitDevice extends Homey.Device {
     if (this.watchdog) {
       this.homey.clearInterval(this.watchdog);
       this.watchdog = null;
+    }
+    if (this.readingExpiryTimer) {
+      this.homey.clearInterval(this.readingExpiryTimer);
+      this.readingExpiryTimer = null;
     }
     if (this.resubscribeTimer) {
       this.homey.clearInterval(this.resubscribeTimer);
