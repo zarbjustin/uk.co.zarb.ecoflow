@@ -409,6 +409,32 @@ subscription had no reconnects, and no setting, task, Energy source, observer,
 installation or store channel changed. Overall monitoring readiness remains
 PENDING; normal-use soak and recovery/accessory/model gates remain open.
 
+## Owner history-retention installation
+
+28 October 2026: implementation `e270578568718afd2fd3450694dc8226a2a897a2`,
+exact CI green, installed non-clean at 01:27:41 UTC. Runtime fingerprint:
+`f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+The packed legacy implementation matches the local compiled file. App readback
+independently confirms running Development 1.10.56 with new-session telemetry.
+All 11 device identities/settings and pre-existing capability sets are retained,
+99 Flows unchanged, six cumulative meters nondecreasing. Fresh history responses
+also re-added the six previously missing daily-summary tiles with numeric data.
+No blank daily tile existed at the immediate pre-install baseline; therefore the
+null-value preservation scenario is regression-tested, not native-reproduced.
+
+Native EcoFlow explicitly showed Standby/0 W/1% at 01:28:42 UTC, agreeing with
+Homey's fresh power/state/SOC. Only this standalone idle point is signed off for
+this fingerprint. Native EcoFlow was quit at 01:28:43 and confirmed not running.
+Through the 01:30:57 readback, battery receipts renewed before expiry and
+temperature had independent fresh ages. No reconnect or battery setting/task
+change. Actual five-second expiry completion, natural recovery after expiry,
+hint horizon, accessories, soak and remaining model/role gates remain open.
+Do not inherit the earlier ac38129 expiry event or charge/discharge signoffs.
+
+Source push/CI, owner installation and native behaviour are separate evidence.
+No store Test/Live publication, Mainline change, aggregate admission or new
+control/Energy activation. Raw baselines and screenshots remain private.
+
 ## Owner fast-expiry candidate
 
 28 October 2026: source runtime fingerprint

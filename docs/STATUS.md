@@ -2,7 +2,41 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
-## Legacy daily-history capability retention — 28 October 2026, LOCAL SOURCE ONLY
+## History retention delivery — 28 October 2026, PUSHED / CI GREEN / OWNER-INSTALLED
+
+Implementation `e270578568718afd2fd3450694dc8226a2a897a2` is pushed to the
+diagnostic branch. [Exact-commit CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40614977219)
+passed tests, lint, release checks, audit and verified Homey validation.
+Runtime fingerprint remains
+`f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+The validated package was directly installed non-clean at 01:27:41 UTC;
+independent readback confirms running Development 1.10.56. No store command.
+
+All 11 device identities/settings, all existing capabilities, 99 Flow definitions
+and six cumulative meter sequences are preserved. The six previously removed
+daily-history tiles were re-added by fresh numeric history responses, not by
+inventing values or forcibly migrating capabilities. No blank daily tiles were
+present immediately before installation, so native preservation of a null-valued
+tile is not claimed; the regression tests cover that specific input.
+
+Native EcoFlow at 01:28:42 explicitly displayed Standby/0 W/1%, matching Homey's
+fresh zero/idle/SOC. This accepts the standalone idle point for this fingerprint,
+not other earlier candidate gates. EcoFlow was then quit normally and confirmed
+not running. Battery and temperature receipt ages remain independent, with one
+active subscription attempt and no reconnect. Through 01:30:57, new battery
+receipts continued before the three-minute threshold; actual fast-expiry timing
+on this installed candidate remains unexercised, not passed by software replay.
+
+Git access initially blocked because a six-byte worktree metadata file was
+offloaded by macOS. Finder's Keep Downloaded restored access without editing Git
+metadata or changing refs; iCloud quota exhaustion was visible and merits a
+separate repository-storage review. Remote branch equality was independently
+verified before the normal non-forced push. Mainline refs are unchanged;
+store Test/Live, hardware configuration, Energy gates and controls are untouched.
+Private baselines, measurements and native screenshots remain outside Git.
+See [owner history-retention installation](STREAM_5000_MONITORING_RC.md#owner-history-retention-installation).
+
+## Legacy daily-history capability retention — 28 October 2026, HISTORICAL LOCAL PREPARATION
 
 Removed the original STREAM startup routine that deleted existing daily-history
 capabilities merely because their values were null. Paired capability identities
