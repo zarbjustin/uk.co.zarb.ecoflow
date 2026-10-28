@@ -2,6 +2,11 @@
 
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
 
+For a fresh Codex instance/machine, read [CODEX_HANDOVER.md](CODEX_HANDOVER.md)
+and the repository-root AGENTS.md before the dated history below. They identify
+the active branch, installed fingerprint, open gates and private transfer limits.
+The latest handover-only commit does not alter the installed runtime or channels.
+
 ## History retention delivery — 28 October 2026, PUSHED / CI GREEN / OWNER-INSTALLED
 
 Implementation `e270578568718afd2fd3450694dc8226a2a897a2` is pushed to the

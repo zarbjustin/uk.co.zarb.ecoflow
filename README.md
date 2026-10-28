@@ -4,6 +4,11 @@ Monitor **EcoFlow STREAM** systems and the original **EcoFlow Smart Meter** from
 
 > App ID `uk.co.zarb.ecoflow` · Homey SDK v3 · TypeScript
 
+**Continuing development on another machine?** Start with
+[the Codex handover](docs/CODEX_HANDOVER.md) and [current status](docs/STATUS.md).
+The active diagnostic work is not on the default `master` branch; source,
+installed Homey candidate and store releases are separate states.
+
 ## Features
 
 ### STREAM (Ultra / Pro / AC Pro / Max / Ultra X)
