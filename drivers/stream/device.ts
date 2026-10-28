@@ -1,6 +1,7 @@
 'use strict';
 
 import { BaseEcoFlowDevice, QuotaSampleContext } from '../../lib/BaseEcoFlowDevice';
+import { reconcileStreamQuota } from '../../lib/streamQuotaReconciliation';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import {
   integrateTimedSignedPower, followResettableCounter, batteryEnergyMode,
@@ -37,6 +38,10 @@ const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
 type ControlWaitResolver = () => void;
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
+  protected reconcileRestQuota(quota: Record<string, any>, newerFields: ReadonlySet<string>): Record<string, any> {
+    return reconcileStreamQuota(quota, newerFields);
+  }
+
   private mainSn = '';
   private reportingObservations: Record<string, ReportingObservation> = {};
   private limitObservations = new StreamLimitObservations();

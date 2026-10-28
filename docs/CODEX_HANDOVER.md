@@ -4,6 +4,46 @@ Updated 28 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
+## Current release preparation — 1.10.57
+
+The owner authorized committing/pushing the consolidated diagnostic changes and
+publishing one new Test build. Version 1.10.57 is prepared; fingerprint
+`f790f04fd12985cf0cdf28dce191397195388eea2f7c7b446acb179309a64ec5`.
+Fresh locked-dependency validation passes 1101 tests, lint/release/audit/verified
+checks. Follow the newest STATUS checkpoint for CI and actual channel outcome;
+preparation is not publication. Mainline/Live and owner Development f1234365…9ba2
+must remain unchanged. The local-only entries below describe earlier preparation.
+
+## Latest local source — field-aware original STREAM reconciliation
+
+The newest STATUS checkpoint records a local fix for REST starvation by unrelated
+MQTT packets on the original STREAM aggregate. Conflicting raw fields/aliases and
+derived power/counter/PV/mode groups are withheld; unrelated REST fields recover.
+Five new regressions plus the existing suite pass (**1101 tests**, lint/release/
+verified validation). Latest local fingerprint:
+`8dc2d532deca2dc995b664f7745d757668983659791b46e4bed365632be53d9a`.
+The widget changes below remain included. None of this local work is committed,
+pushed, installed or published. Installed f1234365…9ba2 and historical hardware
+acceptance remain separate. Stefan's exact freeze has not been hardware-reproduced.
+
+## Local follow-up in the new checkout — 28 October 2026
+
+Uncommitted diagnostic work now follows the synced `63b229c` checkpoint. The
+original STREAM freeze/capacity investigation fixed locally reproduced widget
+refresh stalls (unsettled bridge response and page restoration), with ten page-
+script regressions. Capacity setting hints now explicitly distinguish widget
+estimates from Homey Energy capacity; a selected-installation regression guards
+against inferred unit-count/other-space capacity. The reporter's built-in Sensors
+freeze and Energy screen concern remain unreproduced pending version/screen
+clarification. Do not announce those symptoms fixed from widget tests.
+
+All 1096 tests, lint, release checks, diff checks and pinned verified Homey
+validation pass. Local source fingerprint is
+`5ca108a2fd945dfbe83ed37c14da9a3deffe7584a5da1dcdf0bea681d65812c9`.
+This candidate is NOT installed, pushed or published. The owner installation and
+its `f1234365…9ba2` evidence below remain unchanged; no hardware acceptance is
+transferred to the new fingerprint. See the newest STATUS checkpoint for details.
+
 ## 1. Clone the right branch
 
 Repository: https://github.com/zarbjustin/uk.co.zarb.ecoflow (public).

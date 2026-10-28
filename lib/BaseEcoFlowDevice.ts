@@ -47,6 +47,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private pollPromise: Promise<void> | null = null;
   private lastRealtimeAt = 0;
   private realtimeRevision = 0;
+  private pendingRestFields: Set<string> | null = null;
   private stopping = false;
   private developerApiQuarantineReason: string | null = null;
   private consecutiveUnsupportedApiFailures = 0;
@@ -310,6 +311,9 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.quotaHandler = (q) => {
       this.lastRealtimeAt = Date.now();
       this.realtimeRevision += 1;
+      if (q && typeof q === 'object') {
+        for (const key of Object.keys(q)) this.pendingRestFields?.add(key);
+      }
       this.queueQuota(q, 'mqtt').catch((e) => this.error('mqtt apply', e));
     };
     if (this.handlesStatus()) {
@@ -367,6 +371,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
 
   private async performPoll(): Promise<void> {
     const requestedRevision = this.realtimeRevision;
+    const newerFields = new Set<string>();
+    this.pendingRestFields = newerFields;
     try {
       this.refreshClientCredentials();
       const quota = await this.client.getQuotaAll(this.getReadSn());
@@ -374,7 +380,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       this.consecutiveUnsupportedApiFailures = 0;
       // A revision detects newer MQTT even within the same millisecond. Check
       // again when the queued reply runs: capability writes may hold the queue.
-      if (this.realtimeRevision === requestedRevision) await this.queueQuota(quota, 'rest', requestedRevision);
+      await this.queueQuota(quota, 'rest', requestedRevision, newerFields);
       // Don't override a realtime MQTT "offline" with a possibly-stale REST 200.
       if (!this.mqttOffline) await this.setOnlineState(true);
     } catch (e: any) {
@@ -402,16 +408,29 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       this.error('quota poll error', e?.message || e);
       const realtimeHealthy = Date.now() - this.lastRealtimeAt <= REALTIME_GRACE_MS;
       if (!realtimeHealthy) await this.setOnlineState(false, e?.message || 'EcoFlow API error');
+    } finally {
+      if (this.pendingRestFields === newerFields) this.pendingRestFields = null;
     }
   }
 
-  private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest', requestedRevision?: number): Promise<void> {
+  /** Other drivers keep the conservative whole-response guard. */
+  protected reconcileRestQuota(_quota: Record<string, any>, _newerFields: ReadonlySet<string>): Record<string, any> | null {
+    return null;
+  }
+
+  private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest', requestedRevision?: number,
+    newerFields: ReadonlySet<string> = new Set()): Promise<void> {
     if (this.stopping) return Promise.resolve();
     const context = { receivedAt: Date.now(), source };
     const run = async () => {
       if (this.developerApiQuarantineReason) return;
-      if (source === 'rest' && requestedRevision !== this.realtimeRevision) return;
-      await this.applyQuota(quota, context);
+      let selected = quota;
+      if (source === 'rest' && requestedRevision !== this.realtimeRevision) {
+        const reconciled = this.reconcileRestQuota(quota, newerFields);
+        if (!reconciled || !Object.keys(reconciled).length) return;
+        selected = reconciled;
+      }
+      await this.applyQuota(selected, context);
       if (source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
     };
     this.applyChain = this.applyChain.then(run, run);

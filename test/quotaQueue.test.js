@@ -162,3 +162,68 @@ test('late BK subscription releases captured handlers without accessing a destro
   await device.poll();
   assert.equal(polls, 0);
 });
+
+const { reconcileStreamQuota } = require('../.homeybuild/lib/streamQuotaReconciliation');
+const { mapStreamQuota } = require('../.homeybuild/lib/streamMapping');
+class StreamQueueDevice extends QueueDevice {
+  reconcileRestQuota(quota, fields) { return reconcileStreamQuota(quota, fields); }
+}
+
+test('original STREAM temperature MQTT cannot starve repeated REST SOC/power polls', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const device = new StreamQueueDevice(); await device.onInit(); device.applied = [];
+  for (let n = 0; n < 4; n++) {
+    const reply = deferred(); device.client.getQuotaAll = () => reply.promise;
+    const poll = device.poll();
+    device.emit({ maxCellTemp: 30 + n });
+    reply.resolve({ temp: 20, cmsBattSoc: 70 + n, powGetBpCms: -200, accuDsgEnergy: 1000 + n });
+    await poll; await device.applyChain;
+  }
+  const rest = device.applied.filter(s => s.context.source === 'rest');
+  assert.deepEqual(rest.map(s => s.quota.cmsBattSoc), [70, 71, 72, 73]);
+  assert.ok(rest.every(s => !('temp' in s.quota)));
+  assert.deepEqual(rest.map(s => s.quota.accuDsgEnergy), [1000, 1001, 1002, 1003]);
+  await device.onUninit();
+});
+
+test('queued original REST protects newer counter pair and derived power/state/time, preserving unrelated SOC', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const device = new StreamQueueDevice(); await device.onInit(); device.applied = [];
+  const held = deferred(); device.emit({ hold: held.promise }); await Promise.resolve();
+  device.client.getQuotaAll = async () => ({ accuChgEnergy: 1000, accuDsgEnergy: 900,
+    powGetBpCms: -300, cmsDsgRemTime: 60, cmsBattSoc: 75, maxCellTemp: 22 });
+  const poll = device.poll(); await Promise.resolve(); await Promise.resolve();
+  device.emit({ accuChgEnergy: 1200, powGetBpCms: 0 });
+  held.resolve(); await poll; await device.applyChain;
+  const rest = device.applied.find(s => s.context.source === 'rest').quota;
+  assert.deepEqual(rest, { cmsBattSoc: 75, maxCellTemp: 22 });
+  assert.equal(mapStreamQuota(rest).battery_charging_state, undefined);
+  assert.equal(device.applied.at(-1).quota.accuChgEnergy, 1200);
+  await device.onUninit();
+});
+
+test('original reconciliation withholds aliases and complete derived groups without merging partial samples', () => {
+  const rest = { temp: 20, maxCellTemp: 21, soh: 95, cmsBattSoh: 96,
+    powGetPvSum: 300, powGetPv: 100, plugInInfoPvAmp: 2, plugInInfoPvVol: 40,
+    'energyStrategyOperateMode.operateSelfPoweredOpen': 1,
+    'energyStrategyOperateMode.operateScheduledOpen': 0,
+    powGetSysGrid: 50, cmsBattSoc: 80 };
+  const result = reconcileStreamQuota(rest, new Set(['maxCellTemp', 'bmsBattSoh', 'plugInInfoPvAmp',
+    'energyStrategyOperateMode.operateScheduledOpen', 'cmsBattSoc']));
+  assert.deepEqual(result, { powGetSysGrid: 50 });
+  assert.equal(mapStreamQuota(result)['measure_power.pv'], undefined);
+  assert.equal(mapStreamQuota(result).operating_mode, undefined);
+  assert.equal(rest.cmsBattSoc, 80, 'shared cached reply remains unchanged');
+  assert.deepEqual(reconcileStreamQuota({ cmsBattSoc: 30 }, new Set(['cmsBattSoc'])), {});
+});
+
+test('obsolete REST zero and invalid MQTT fields do not revive older readings', async () => {
+  const device = new StreamQueueDevice(); await device.onInit(); device.applied = [];
+  const reply = deferred(); device.client.getQuotaAll = () => reply.promise;
+  const poll = device.poll(); device.emit({ cmsBattSoc: null, powGetBpCms: 0 });
+  reply.resolve({ cmsBattSoc: 40, powGetBpCms: -300, temp: 25 });
+  await poll; await device.applyChain;
+  assert.deepEqual(device.applied.find(s => s.context.source === 'rest').quota, { temp: 25 });
+  assert.equal(device.applied[0].quota.powGetBpCms, 0);
+  await device.onUninit();
+});

@@ -99,9 +99,10 @@
 
       function set(id, text) { document.getElementById(id).textContent = text; }
 
-      async function refresh() {
+      async function refresh(requestGeneration) {
         try {
           const d = await Homey.api('GET', '/?index=' + index + selector, {});
+          if (stopped || requestGeneration !== generation) return;
           if (!d || !d.ok) {
             set('title', tr('widgets.common.pair_home_battery'));
             document.querySelector('.card').classList.add('muted');
@@ -135,20 +136,60 @@
 
           document.querySelector('.card').classList.toggle('muted', d.available === false);
         } catch (e) {
+          if (stopped || requestGeneration !== generation) return;
           set('title', tr('widgets.common.data_unavailable'));
           document.querySelector('.card').classList.add('muted');
         }
       }
 
+      // A missing bridge reply must not hold the refresh lock forever. Ignore
+      // completions from expired requests or a previous page lifecycle.
       let busy = false;
-      function scheduledRefresh() {
-        if (busy) return;
-        busy = true;
-        refresh().finally(function () { busy = false; });
+      let stopped = false;
+      let generation = 0;
+      let deadline = null;
+      let timer = null;
+      function unavailable() {
+        document.getElementById('title').textContent = tr('widgets.common.data_unavailable');
+        document.querySelector('.card').classList.add('muted');
       }
-      scheduledRefresh();
-      const timer = setInterval(scheduledRefresh, 3000);
-      window.addEventListener('pagehide', function () { clearInterval(timer); });
+      function scheduledRefresh() {
+        if (stopped || busy) return;
+        busy = true;
+        const requestGeneration = ++generation;
+        deadline = setTimeout(function () {
+          if (stopped || requestGeneration !== generation) return;
+          generation += 1;
+          busy = false;
+          deadline = null;
+          unavailable();
+        }, 15000);
+        refresh(requestGeneration).catch(function () {
+          if (!stopped && requestGeneration === generation) unavailable();
+        }).finally(function () {
+          if (requestGeneration !== generation) return;
+          clearTimeout(deadline);
+          deadline = null;
+          busy = false;
+        });
+      }
+      function startRefresh() {
+        if (timer !== null) return;
+        stopped = false;
+        scheduledRefresh();
+        timer = setInterval(scheduledRefresh, 3000);
+      }
+      window.addEventListener('pagehide', function () {
+        stopped = true;
+        generation += 1;
+        busy = false;
+        clearInterval(timer);
+        clearTimeout(deadline);
+        timer = null;
+        deadline = null;
+      });
+      window.addEventListener('pageshow', startRefresh);
+      startRefresh();
     }
   </script>
 </body>

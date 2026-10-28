@@ -41,8 +41,9 @@
       const deviceId = (Homey.getDeviceIds && Homey.getDeviceIds()[0]) || '';
       const selector = deviceId ? '&deviceId=' + encodeURIComponent(deviceId) : '';
       Homey.ready();
-      async function refresh() {
+      async function refresh(requestGeneration) {
         const d = await Homey.api('GET', '/?index=' + index + selector, {});
+          if (stopped || requestGeneration !== generation) return;
         if (!d || !d.ok) { document.getElementById('title').textContent = tr('widgets.common.pair_home_battery'); document.getElementById('card').classList.add('muted'); return; }
         document.getElementById('title').textContent = d.name || 'Energy Recommendation';
         document.getElementById('price').textContent = d.priceNow == null ? '' : (d.priceNow.toFixed(2) + ' /kWh');
@@ -54,18 +55,54 @@
         document.getElementById('feed').textContent = d.feedIn == null ? '—' : d.feedIn ? 'On' : 'Off';
         document.getElementById('card').classList.toggle('muted', d.available === false);
       }
-      var busy = false;
-      function scheduledRefresh() {
-        if (busy) return;
-        busy = true;
-        refresh().catch(function () {
-          document.getElementById('title').textContent = tr('widgets.common.data_unavailable');
-          document.getElementById('card').classList.add('muted');
-        }).finally(function () { busy = false; });
+      // A missing bridge reply must not hold the refresh lock forever. Ignore
+      // completions from expired requests or a previous page lifecycle.
+      let busy = false;
+      let stopped = false;
+      let generation = 0;
+      let deadline = null;
+      let timer = null;
+      function unavailable() {
+        document.getElementById('title').textContent = tr('widgets.common.data_unavailable');
+        document.querySelector('.card').classList.add('muted');
       }
-      scheduledRefresh();
-      var timer = setInterval(scheduledRefresh, 10000);
-      window.addEventListener('pagehide', function () { clearInterval(timer); });
+      function scheduledRefresh() {
+        if (stopped || busy) return;
+        busy = true;
+        const requestGeneration = ++generation;
+        deadline = setTimeout(function () {
+          if (stopped || requestGeneration !== generation) return;
+          generation += 1;
+          busy = false;
+          deadline = null;
+          unavailable();
+        }, 15000);
+        refresh(requestGeneration).catch(function () {
+          if (!stopped && requestGeneration === generation) unavailable();
+        }).finally(function () {
+          if (requestGeneration !== generation) return;
+          clearTimeout(deadline);
+          deadline = null;
+          busy = false;
+        });
+      }
+      function startRefresh() {
+        if (timer !== null) return;
+        stopped = false;
+        scheduledRefresh();
+        timer = setInterval(scheduledRefresh, 10000);
+      }
+      window.addEventListener('pagehide', function () {
+        stopped = true;
+        generation += 1;
+        busy = false;
+        clearInterval(timer);
+        clearTimeout(deadline);
+        timer = null;
+        deadline = null;
+      });
+      window.addEventListener('pageshow', startRefresh);
+      startRefresh();
     }
   </script>
 </body>

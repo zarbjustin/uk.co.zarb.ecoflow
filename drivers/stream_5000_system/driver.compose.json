@@ -125,9 +125,9 @@
       "min": 0.1,
       "max": 200,
       "hint": {
-        "en": "Optional total usable capacity of all batteries in this installation. Used only for stored-energy and runtime estimates.",
-        "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
-        "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen gebruikt voor energie- en looptijdschattingen."
+        "en": "Optional total usable capacity of all batteries in this installation. Used only for this app’s widget stored-energy and runtime estimates; does not configure the capacity shown by Homey Energy.",
+        "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Nur für die Speicherenergie- und Laufzeitschätzungen der App-Widgets; konfiguriert nicht die in Homey Energy angezeigte Kapazität.",
+        "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen voor schattingen van opgeslagen energie en looptijd in de app-widgets; stelt de capaciteit in Homey Energy niet in."
       }
     },
     {

@@ -346,3 +346,23 @@ test('streamData exposes stored, usable and preferred runtime data', () => {
   assert.equal(data.timeToEmptySource, 'calculated');
   assert.equal(data.dischargeRemaining, 5460);
 });
+
+test('original STREAM widget capacity uses the selected installation setting, never device count or another space', () => {
+  const settings = { installed_capacity_kwh: 3.84 };
+  const capabilities = { measure_battery: 50, backup_reserve_soc: 0, discharge_limit: 0 };
+  const selected = device('original-system', 'Original system', { settings, capabilities });
+  const other = device('separate-space', 'Separate space', {
+    settings: { installed_capacity_kwh: 10 }, capabilities: { measure_battery: 100 },
+  });
+  const units = [device('unit-a', 'AC Pro A'), device('unit-b', 'AC Pro B')];
+  const host = homey([other, selected], units);
+  const first = streamData(host, { deviceId: 'original-system' });
+  assert.equal(first.capacityKwh, 3.84);
+  assert.equal(first.storedEnergyKwh, 1.92);
+  assert.equal(first.usableEnergyKwh, 1.92);
+  settings.installed_capacity_kwh = null;
+  const unknown = streamData(host, { deviceId: 'original-system' });
+  assert.equal(unknown.capacityKwh, null);
+  assert.equal(unknown.storedEnergyKwh, null);
+  assert.equal(unknown.soc, 50, 'missing capacity does not prevent live percentage updates');
+});

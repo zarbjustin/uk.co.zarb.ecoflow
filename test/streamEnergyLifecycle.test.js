@@ -456,3 +456,15 @@ test('BK failed store writes stay pending and retry without changing baseline va
   assert.equal(device.store.countersAvailable, true);
   assert.equal(device.getEnergyDiagnostics().checkpoint.failures, 1);
 });
+
+test('real original STREAM driver opts into field reconciliation and preserves monotonic counters', async () => {
+  const device = await harness({ chargedWh: 50, dischargedWh: 60 });
+  await device.applyQuota({ accuChgEnergy: 1200, accuDsgEnergy: 2000, powGetBpCms: 0 });
+  const rest = device.reconcileRestQuota({ accuChgEnergy: 1000, accuDsgEnergy: 1900,
+    powGetBpCms: -300, cmsBattSoc: 75 }, new Set(['accuChgEnergy']));
+  assert.deepEqual(rest, { cmsBattSoc: 75 });
+  await device.applyQuota(rest);
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 0.05);
+  assert.equal(device.getEnergyDiagnostics().dischargedKWh, 0.06);
+  await device.onTeardown();
+});

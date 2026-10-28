@@ -277,5 +277,8 @@
   },
   "1.10.56": {
     "en": "Fix recovery after timed-out coordination reads, clarify source freshness and permission lifetimes, and strengthen lifecycle and release checks. Existing Flows are preserved; no new controls or Dual CT Energy activation."
+  },
+  "1.10.57": {
+    "en": "Fix original STREAM updates being suppressed by unrelated realtime messages. Protect newer readings and energy counters. Recover widget refresh after stalled requests and page restoration. Clarify that configured capacity is used for widget estimates."
   }
 }

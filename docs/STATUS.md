@@ -7,6 +7,103 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Consolidated 1.10.57 Test preparation — 28 October 2026
+
+Owner authorized diagnostic commit/push and one new Test release, keeping Mainline,
+Live and the owner Development installation unchanged. Final review checked raw
+mapping aliases/derived groups; disabling reconciliation reproduces three queue
+regression failures, and the previous widget pages fail all ten new lifecycle
+tests. Version 1.10.57 includes the reconciliation/widget fixes, capacity wording
+and previously owner-installed history/physical-expiry changes from this branch.
+No claim is made that Stefan's exact setup has passed or that 5000 hardware gates
+have closed. The Energy screenshot shows today's charged energy, not capacity.
+
+Fresh npm ci on Node 22: 1101 tests, lint, release checks, zero audit findings,
+verified Homey CLI 4.5.3 validation and diff checks pass. Runtime fingerprint:
+`f790f04fd12985cf0cdf28dce191397195388eea2f7c7b446acb179309a64ec5`.
+Source CI and Test upload/activation must be recorded independently after success.
+At preparation, CLI authentication is pending and local browser access is disabled.
+No store upload/activation or owner installation has happened in this checkpoint.
+
+## Original STREAM field-aware reconciliation — 28 October 2026, LOCAL ONLY / NOT INSTALLED
+
+Stefan's follow-up (public thread posts 77–78) distinguishes an aggregate device
+freeze from a widget-only failure: Homey device values stop while EcoFlow keeps
+updating, and an app restart restores them. Version is 1.10.56. The displayed
+1.9 kWh screenshot is today's charged energy, not installed capacity; the separate
+setting screenshot shows 3.84 kWh already configured. This does not establish a
+missing battery or prove this race caused the user's freeze.
+
+Reproduced a software starvation path: temperature-only MQTT during each REST
+poll caused the whole REST SOC/power/counter response to be discarded. Original
+STREAM aggregate now filters only conflicting REST fields. A request-local set
+tracks MQTT fields from request start until queued application; filtering happens
+when the serialized work runs, including same-millisecond/slow-write races.
+No MQTT payload is replayed, cached reply mutated or receipt timestamp renewed.
+Other drivers retain the conservative whole-response guard.
+
+Aliases are withheld together (temperature, health, heating, mode); all PV
+fallback/string dependencies form one group. Battery power/state derivation,
+charge/discharge counters and system remaining times are withheld together so
+an old REST snapshot cannot overwrite newer counters or enter power accounting
+around a newer battery receipt. Unrelated REST SOC/grid/configuration can still
+update. This is conservative omission, not merging old and new packet fields.
+
+Five new tests cover repeated starvation, queued conflicts, real-driver counter
+continuity, derived groups/aliases, zero and invalid newer fields. Existing queue
+teardown/default-driver guards and all earlier widget regressions remain green.
+Validation: **1101 tests**, lint, release checks, diff checks and pinned Homey
+4.5.3 verified validation pass on Node 22 with existing locked dependencies.
+Local source fingerprint:
+`8dc2d532deca2dc995b664f7745d757668983659791b46e4bed365632be53d9a`.
+This is not native acceptance of Stefan's setup or any 5000 model/role. The owner
+installation remains the recorded f1234365…9ba2 candidate; all hardware gates for
+this new local source remain pending. Previous local widget work is preserved.
+No commit/push, installation, Mainline/Test/Live change, publication, settings/task
+change, Flow execution, forced reconnect or control/Energy activation.
+
+## Original STREAM freeze/capacity investigation — 28 October 2026, LOCAL ONLY / NOT INSTALLED
+
+Community reports distinguish frozen Homey dashboard Sensors readings from an
+Energy capacity display concern on an original two-AC-Pro setup. Exact installed
+version, affected screen/device role and whether EcoFlow/device pages keep
+updating are still requested; no customer cause or native fix is claimed.
+No additional Robert capture is requested.
+
+Local execution of all five widget page scripts reproduced two refresh defects:
+a never-settling Homey bridge request permanently held the busy lock, and
+`pagehide` cleared polling without a `pageshow` restart. Widgets now expire the
+local wait after 15 seconds, retry on the existing cadence, ignore obsolete
+success/rejection/finalization, and restore exactly one polling interval after
+page restoration. This deadline does not cancel the underlying Homey bridge
+request or change EcoFlow subscription/polling behaviour. These widgets are
+separate from Homey's built-in Sensors dashboard; the customer's report remains
+unreproduced. Ten deterministic regressions execute the actual page scripts and
+cover timeout, overlap protection, late completion, restoration and cleanup.
+
+Capacity investigation found `installed_capacity_kwh` used by widget estimates,
+not a Homey Energy capacity declaration. Clarified that scope in EN/DE/NL hints
+and the composed manifest. A regression verifies selected-installation capacity,
+unknown capacity and isolation from physical-unit count/other spaces. No nominal
+capacity is guessed and no Energy declaration, counters, settings IDs, paired
+identity, Flow contract or backend telemetry mapping is changed.
+
+The existing REST/MQTT revision guard deliberately discards REST replies overtaken
+by MQTT, including counters. No speculative merging change was made: retaining
+newer counter/field evidence matters, and the report does not yet identify a
+transport failure. Widget reproduction is software evidence only.
+
+Validation: all **1096 tests**, lint, release boundary/acceptance-schema checks,
+verified Homey validation with CLI 4.5.3 and diff whitespace checks pass using
+Node 22 and the existing committed-lockfile dependencies.
+Local candidate fingerprint:
+`5ca108a2fd945dfbe83ed37c14da9a3deffe7584a5da1dcdf0bea681d65812c9`.
+Hardware readiness remains PENDING for this changed fingerprint; prior installed
+signoffs are not promoted. Installed owner app remains Development 1.10.56 with
+recorded fingerprint `f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+No commit/push, installation, version bump, Mainline/Test/Live change, publication,
+physical setting/task/Flow execution, reconnect or control/Energy activation.
+
 ## History retention delivery — 28 October 2026, PUSHED / CI GREEN / OWNER-INSTALLED
 
 Implementation `e270578568718afd2fd3450694dc8226a2a897a2` is pushed to the
