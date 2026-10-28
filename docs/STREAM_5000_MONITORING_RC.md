@@ -409,7 +409,7 @@ subscription had no reconnects, and no setting, task, Energy source, observer,
 installation or store channel changed. Overall monitoring readiness remains
 PENDING; normal-use soak and recovery/accessory/model gates remain open.
 
-## Owner history-retention installation
+## Owner history retention installation
 
 28 October 2026: implementation `e270578568718afd2fd3450694dc8226a2a897a2`,
 exact CI green, installed non-clean at 01:27:41 UTC. Runtime fingerprint:
