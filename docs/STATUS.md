@@ -7,6 +7,39 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Sprint 4 adoption and combined battery readiness — 29 October 2026, NOT INSTALLED
+
+Prepared diagnostic version 1.10.58. Added a source-bound, one-shot adoption
+review/confirmation workflow with 90-second expiry, fresh owned identity/firmware,
+fresh account-matched contributor inventory, overlap rejection and explicit
+external review. Confirmation rechecks the source/inventory and fences cancellation,
+account/firmware changes, duplicate Add and late activation withdrawal. External
+discovery errors are scrubbed. Client-supplied device/store objects are ignored.
+The workflow is unwired, not a registered Energy driver or adoption UI; production
+contract resolver remains empty and runtime false. Source/firmware/timing provider
+qualification and actual driver/subscription integration remain incomplete.
+
+Added release:full to assess Dual CT plus both STREAM 5000 model/role ledgers for
+one fingerprint. Open/old-runtime gates remain nonzero. Fresh locked-dependency
+Node 22 checks pass: **1126 tests**, lint, release/diff checks, audit with zero
+findings and Homey CLI 4.5.3 verified validation. Full CLI build and archive
+readback include production MQTT dependencies and compiled new modules; app,
+package and lock metadata match source. Version preparation is not publication.
+Runtime fingerprint:
+`da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+
+Read-only installed Homey remains Development 1.10.56. The 5000 subscription is
+active with recent configuration/empty task reports, but linked physical scope
+and battery power/state remain unverified. Another Dual CT stale interval was
+observed. Native computer-control timed out; no fresh native comparison, restart
+or forced silence was performed. No hardware gate passed. CLI authentication is
+absent; full private preservation baseline requires authenticated SDK readback.
+
+See [Sprint 4–6 execution and battery matrix](SPRINT_4_6_ACCEPTANCE_PLAN.md).
+No install, pairing, settings/Flow/hardware operation, Energy activation,
+Mainline/Test/Live change or publication. A diagnostic update and any later
+controlled hardware/adoption trial require separate bounded approval/readback.
+
 ## Dual CT CT1 release sprints — 29 October 2026, DIAGNOSTIC SOURCE / NOT INSTALLED
 
 Owner authorizes diagnostic-branch release engineering with CT1 as the future

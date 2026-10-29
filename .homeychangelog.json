@@ -280,5 +280,8 @@
   },
   "1.10.57": {
     "en": "Fix original STREAM updates being suppressed by unrelated realtime messages. Protect newer readings and energy counters. Recover widget refresh after stalled requests and page restoration. Clarify that configured capacity is used for widget estimates."
+  },
+  "1.10.58": {
+    "en": "Improve Dual CT telemetry health diagnostics and prepare guarded Energy adoption and hardware acceptance. Energy activation and new battery controls remain disabled."
   }
 }

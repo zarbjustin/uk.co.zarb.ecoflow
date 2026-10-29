@@ -76,7 +76,7 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
   assert.match(timeObserverRuntime, /new Stream5000TimeObserver\(sn\)/);
   assert.doesNotMatch(timeObserverRuntime, /timeObserver\??\.start\s*\(/, 'timer research must not autostart');
   assert.match(gridGate, /^export const resolveDualCtGridEnergyContract: .* = \(\) => null;/m);
-  assert.doesNotMatch(runtime, /(?:from\s*|require\s*\()['"][^'"]*(?:dualCtGridEnergyDeviceAdapter|dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption)/);
+  assert.doesNotMatch(runtime, /(?:from\s*|require\s*\()['"][^'"]*(?:dualCtEnergyAdoptionWorkflow|dualCtGridEnergyDeviceAdapter|dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption)/);
   for (const route of Object.values(app.api)) assert.notEqual(route.public, true, 'unexpected public app route');
 }
 

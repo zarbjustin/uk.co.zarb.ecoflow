@@ -1,6 +1,6 @@
 {
   "name": "uk.co.zarb.ecoflow",
-  "version": "1.10.57",
+  "version": "1.10.58",
   "scripts": {
     "build": "tsc",
     "test": "tsc && node --test test/*.test.js",
@@ -9,7 +9,8 @@
     "release:acceptance": "node scripts/check-stream-5000-acceptance.mjs --require-ready",
     "release:monitoring": "node scripts/check-stream-5000-acceptance.mjs --role unit --require-ready",
     "widgets:preview": "node scripts/generate-widget-previews.mjs",
-    "release:dual-ct": "node scripts/check-dual-ct-acceptance.mjs --require-ready"
+    "release:dual-ct": "node scripts/check-dual-ct-acceptance.mjs --require-ready",
+    "release:full": "node scripts/check-full-release-acceptance.mjs --require-ready"
   },
   "dependencies": {
     "mqtt": "^5.10.1"

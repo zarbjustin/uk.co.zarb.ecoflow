@@ -4,6 +4,21 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
+## Latest candidate — diagnostic 1.10.58, not installed or published
+
+Sprint 4 adds an unwired, source-bound adoption review/confirmation workflow;
+Sprint 5/6 readiness combines the separate meter and all battery model/role gates.
+1126 tests, locked-dependency Node 22 checks, lint/release/diff/audit and pinned
+Homey verified validation pass. Runtime fingerprint:
+`da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+See the newest STATUS checkpoint and SPRINT_4_6_ACCEPTANCE_PLAN.md. Actual Energy
+driver/UI/subscription integration and firmware/timing qualification remain open;
+resolver/runtime are still closed. Installed host is still Development 1.10.56,
+linked physical battery scope is unverified, Dual CT showed another stale interval,
+and native computer-control timed out. CLI is unauthenticated. No new hardware
+pass, deployment or publication. Do not equate requested sprint work with specific
+approval to install, operate hardware or change Energy sources.
+
 ## Current continuation — Dual CT property Energy release work
 
 Owner confirms Dual CT installed/paired, CT1 at the single-phase property incomer

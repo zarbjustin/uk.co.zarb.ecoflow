@@ -10,7 +10,7 @@ unchanged. No additional community capture requests are required for these sprin
 | 1 | Explain telemetry silence versus rejected candidates | Local preview frame/accept/reject counts and independent receipt ages, reset on scope teardown, numeric-free support projection; tested, not installed |
 | 2 | Exact-candidate hardware acceptance | Separate strict CT1 ledger/checker and physical protocol; native firmware observed, mapping/import comparison and natural recovery partial; no hardware gate passed |
 | 3 | Homey write lifecycle | Separate device adapter using real persistent session; committed totals before projection, consent/contract rechecks after async writes, failure/expiry/teardown and coalesced refresh tests; local, unwired/default off |
-| 4 | Qualified source and new-device adoption | Pending physical W/sign/timing contract and trustworthy fresh firmware/identity readback; then implement/review separate driver/pairing, source-bound consent, fresh contributor inventory and owned-subscription lifecycle. No preview conversion |
+| 4 | Qualified source and new-device adoption | Source-bound review/confirmation implemented and tested, unwired/default off. Physical W/sign/timing contract, trustworthy fresh firmware readback and separate driver/UI/subscription integration remain pending. No preview conversion |
 | 5 | Native candidate acceptance | Pending separately approved preservation baseline, non-clean installation, explicit source adoption/exclusions, native persistence/restart/rollback and physical energy comparisons; then exact-candidate 48-hour soak |
 | 6 | Release delivery | Pending exact final source review/CI/archive, approved Test delivery and readback, reviewed Mainline integration and certification/Live decision |
 
@@ -70,3 +70,11 @@ Local verification: 1114 tests, lint, release/diff checks and pinned Homey CLI
 4.5.3 verified validation pass. Runtime fingerprint:
 `ae5f67bfc05c1bbf1e91b88badfd232de594fe7c1875233271d53e70bb540e37`.
 The hardware-required command remains nonzero by design.
+
+## Sprint 4 follow-up
+
+Diagnostic 1.10.58 adds the source-specific adoption workflow and combined
+release:full meter/battery readiness command. 1126 tests and locked Node 22 checks,
+lint/release/audit/verified validation pass. It is not installed or published.
+See SPRINT_4_6_ACCEPTANCE_PLAN.md for the battery matrix and approval boundaries.
+No production contract is registered and no Energy driver or pairing UI exists.
