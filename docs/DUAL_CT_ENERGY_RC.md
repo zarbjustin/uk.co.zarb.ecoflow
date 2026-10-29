@@ -12,7 +12,9 @@ The existing strict wire adapter, persistent power session and single-process
 authority are implemented. A Homey write adapter is prepared with a production
 default-off boundary. It is not imported by app/driver runtime; no new Energy
 device is registered. Code-owned synthetic dependency injection is for testing,
-never a customer override. A qualified firmware/sign/timing contract, reviewed
+never a customer override. Failed unavailable/power clears remain pending for later local expiry ticks,
+without restarting accounting or resetting saved totals.
+A qualified firmware/sign/timing contract, reviewed
 adoption UI, owned subscription lifecycle and native acceptance remain required.
 
 `npm run release:dual-ct` must fail until each gate passes on the exact candidate.

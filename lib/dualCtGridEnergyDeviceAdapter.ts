@@ -16,6 +16,7 @@ export class DualCtGridEnergyDeviceAdapter {
   private chain: Promise<void> = Promise.resolve();
   private status = 'not_started';
   private refreshPending: Promise<void> | null = null;
+  private clearPending = false;
 
   private readonly session: DualCtGridEnergySession;
   private readonly port: DevicePort;
@@ -101,7 +102,11 @@ export class DualCtGridEnergyDeviceAdapter {
     if (this.refreshPending) return this.refreshPending;
     const { generation } = this;
     this.refreshPending = this.enqueue(async () => {
-      if (!this.active || generation !== this.generation) return;
+      if (generation !== this.generation) return;
+      if (!this.active) {
+        if (this.clearPending) await this.clearPower(this.status);
+        return;
+      }
       try {
         await this.project(generation);
       } catch {
@@ -154,9 +159,19 @@ export class DualCtGridEnergyDeviceAdapter {
   private async fail(reason: string): Promise<void> {
     this.active = false; this.status = reason;
     await this.session.close();
-    await this.port.setUnavailable(reason).catch(() => {});
-    await this.port.setCapabilityValue('measure_power', null).catch(() => {});
+    await this.clearPower(reason);
     // Retain committed cumulative totals; never reset/migrate another device or clear its checkpoint.
+  }
+
+  private async clearPower(reason: string): Promise<void> {
+    this.clearPending = true;
+    let unavailable = false;
+    try {
+      await this.port.setUnavailable(reason); unavailable = true;
+    } catch { /* Retry on a later local tick. */ }
+    try {
+      await this.port.setCapabilityValue('measure_power', null); this.clearPending = !unavailable;
+    } catch { /* Do not lose a failed clear. */ }
   }
 
   close(): Promise<void> {
@@ -165,10 +180,7 @@ export class DualCtGridEnergyDeviceAdapter {
     const closed = this.session.close();
     return this.enqueue(async () => {
       await closed;
-      if (wasActive) {
-        await this.port.setUnavailable('closed').catch(() => {});
-        await this.port.setCapabilityValue('measure_power', null).catch(() => {});
-      }
+      if (wasActive || this.clearPending) await this.clearPower('closed');
     });
   }
 

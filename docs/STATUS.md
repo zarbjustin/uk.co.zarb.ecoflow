@@ -33,9 +33,9 @@ recovered naturally after a stale interval, and sampled existing counters are
 nondecreasing. Original meter remains configured as a property Energy meter
 despite reported downstream relocation; no settings corrected without a reviewed
 source transition. Firmware readback/timing contract, export/zero/energy intervals,
-native storage/upgrade/rollback and 48-hour soak remain open. Validation: 1113
+native storage/upgrade/rollback and 48-hour soak remain open. Validation: 1114
 tests, lint, release/diff checks and Homey CLI 4.5.3 verified validation pass.
-Runtime fingerprint: `e233b419adb13d665591f8c5629e9a9f0d99d681610149577379a13e5f3e0f22`.
+Runtime fingerprint: `ae5f67bfc05c1bbf1e91b88badfd232de594fe7c1875233271d53e70bb540e37`.
 Private UI evidence
 and household numbers stay outside Git; no tester capture requested.
 

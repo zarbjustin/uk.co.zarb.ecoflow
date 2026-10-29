@@ -66,7 +66,7 @@ observed CT1 watts without gap backfill. Export/zero, interval comparisons, nati
 storage/upgrade/rollback and soak remain pending, including model/role-specific
 STREAM 5000 gates outside this Dual CT ledger.
 
-Local verification: 1113 tests, lint, release/diff checks and pinned Homey CLI
+Local verification: 1114 tests, lint, release/diff checks and pinned Homey CLI
 4.5.3 verified validation pass. Runtime fingerprint:
-`e233b419adb13d665591f8c5629e9a9f0d99d681610149577379a13e5f3e0f22`.
+`ae5f67bfc05c1bbf1e91b88badfd232de594fe7c1875233271d53e70bb540e37`.
 The hardware-required command remains nonzero by design.

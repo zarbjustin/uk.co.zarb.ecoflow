@@ -105,6 +105,21 @@ test('consent revoked during configuration cannot apply an Energy declaration', 
   await h.adapter.close();
 });
 
+test('failed power clear remains pending and retries without resuming accounting or resetting totals', async () => {
+  const h = harness(); await h.adapter.start(); await h.sample(1000, 3600);
+  let failClear = true; const original = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'meter_power.exported') throw new Error('synthetic projection failure');
+    if (id === 'measure_power' && value === null && failClear) { failClear = false; throw new Error('synthetic clear failure'); }
+    return original(id, value);
+  };
+  await h.sample(61000, 3600);
+  assert.equal(h.caps.get('measure_power'), 3600); assert.equal(h.adapter.diagnostics().active, false);
+  const saved = h.saved(); await h.adapter.refresh();
+  assert.equal(h.caps.get('measure_power'), null); assert.deepEqual(h.saved(), saved);
+  await h.adapter.close();
+});
+
 test('consent revoked during setAvailable is rechecked and immediately clears the projected power', async () => {
   const h = harness(); await h.adapter.start(); h.port.setAvailable = async () => { h.revoke(); };
   await h.sample(1000, 3600); assert.equal(h.adapter.diagnostics().active, false);
