@@ -8,6 +8,7 @@ const { chromium } = require('playwright');
 async function setup(browser, viewport, expired = false) {
   const page = await browser.newPage({viewport});
   await page.goto(pathToFileURL(path.join(__dirname,'..','settings','index.html')).href);
+  await page.locator('#supportTitle').click();
   await page.clock.install({time:new Date('2026-10-14T20:00:00Z')});
   await page.evaluate(({translations,expired}) => {
     window.calls=[]; window.copied=null; window.originTime=Date.now(); window.expiredInitially=expired;

@@ -6,17 +6,21 @@
   <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; max-width: 520px; margin: 0 auto; }
-    h1 { font-size: 20px; }
-    .help { color: #888; font-size: 13px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 17px; }
+    details.settings-section { border-top: 1px solid #e3e3e3; margin-top: 24px; padding-top: 18px; }
+    details.settings-section > summary { font-size: 17px; font-weight: 600; cursor: pointer; padding: 6px 0; }
+    summary:focus-visible, button:focus-visible { outline: 2px solid #147eb5; outline-offset: 3px; }
+    .help { color: #666; font-size: 13px; line-height: 1.5; }
     #dualCtExportAvailability { color: #333; font-size: 14px; line-height: 1.45; border-left: 3px solid #1AA3E8; padding-left: 10px; }
     pre { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #f4f4f4; }
     label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: 13px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
     button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1AA3E8; color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
     .saved { color: #1a7f37; font-size: 13px; margin-top: 12px; min-height: 18px; }
-    .beta-warning { border: 1px solid #e0a800; background: #fff8e1; color: #5e4700; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; }
-    .beta-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
-    .beta-toggle input { width:auto; margin-top:3px; }
+    .connection-notice { border: 1px solid #e0a800; background: #fff8e1; color: #5e4700; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; }
+    .setting-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
+    .setting-toggle input { width:auto; margin-top:3px; }
     button:disabled { opacity:0.5; cursor:default; }
     .dual-ct-card { border:1px solid #ccc; border-radius:8px; padding:10px; margin:12px 0; overflow-wrap:anywhere; }
     .dual-ct-card table { width:100%; table-layout:fixed; font-size:12px; border-collapse:collapse; }
@@ -26,82 +30,62 @@
   </style>
 </head>
 <body>
-  <h1>EcoFlow account</h1>
-  <p class="help">
-    Credentials come from the EcoFlow developer portal (developer.ecoflow.com &rarr; IoT Background).
-    Changing them here updates all paired EcoFlow devices.
-  </p>
+  <h1>EcoFlow STREAM</h1>
+  <p class="help" id="connectionIntro">Connect your devices using the account requested during pairing.</p>
+  <details class="settings-section" id="developerConnection">
+    <summary id="developerConnectionTitle">Developer API connection</summary>
+    <p class="help" id="developerConnectionHelp">For devices paired with EcoFlow Developer API keys. Updating these keys applies to devices using this connection.</p>
+    <label for="accessKey">Access Key</label>
+    <input id="accessKey" type="text" autocomplete="off" spellcheck="false" />
+    <label for="secretKey">Secret Key</label>
+    <input id="secretKey" type="password" autocomplete="off" spellcheck="false" />
+    <label for="host" id="regionLabel">Region</label>
+    <select id="host">
+      <option value="https://api.ecoflow.com">Global (api.ecoflow.com)</option>
+      <option value="https://api-e.ecoflow.com">Europe (api-e.ecoflow.com)</option>
+    </select>
+    <label class="setting-toggle" for="mqtt">
+      <input id="mqtt" type="checkbox" checked />
+      <span id="mqttLabel">Realtime updates</span>
+    </label>
+    <button id="save" type="button">Save</button>
+    <div class="saved" id="saved" role="status" aria-live="polite"></div>
+  </details>
 
-  <label for="accessKey">Access Key</label>
-  <input id="accessKey" type="text" autocomplete="off" spellcheck="false" />
-
-  <label for="secretKey">Secret Key</label>
-  <input id="secretKey" type="password" autocomplete="off" spellcheck="false" />
-
-  <label for="host">Region</label>
-  <select id="host">
-    <option value="https://api.ecoflow.com">Global (api.ecoflow.com)</option>
-    <option value="https://api-e.ecoflow.com">Europe (api-e.ecoflow.com)</option>
-  </select>
-
-  <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
-    <input id="mqtt" type="checkbox" style="width:auto;" checked />
-    Realtime updates (MQTT)
-  </label>
-
-  <button id="save" type="button">Save</button>
-  <div class="saved" id="saved"></div>
-
-  <hr style="margin:28px 0;border:0;border-top:1px solid #e3e3e3;" />
-
-  <h1 style="font-size:17px;">STREAM 5000 Series</h1>
-  <div class="beta-warning">
-    <strong>Read-only app-connected monitoring</strong><br />
-    Supported ES21/ES22 units use your EcoFlow app account, not Developer API keys.
-    This is not a verified official Developer-key API for these products, and service
-    changes by EcoFlow can affect availability. Controls are intentionally disabled.
-  </div>
-  <p class="help">Choose <strong>STREAM 5000 Series Unit</strong> for monitoring without an opt-in.
-    It does not contribute to Homey Energy. The separate Home Battery aggregate has its own gate below.</p>
-  <label class="beta-toggle" for="stream5000AggregatePairingEnabled">
-    <input id="stream5000AggregatePairingEnabled" type="checkbox" />
-    <span>Allow Home Battery (5000) Energy pairing</span>
-  </label>
-  <p class="help">
-    Disabled by default. This opt-in permits new installation-level Home Battery pairing only.
-    Aggregate Energy validation is still in progress. Check that the installation is not already
-    represented by another Home Battery. Turning this off does not remove or disable existing devices,
-    stop their accounting, or affect unit monitoring. The retired Beta flag does not enable this opt-in.
-  </p>
-  <div class="saved" id="stream5000AggregateSaved"></div>
-  <div class="help" id="stream5000PairingHelp">
-    <p>Use these settings in the <strong>Homey EcoFlow integration</strong>, not in EcoFlow's own mobile app.</p>
-    <ol>
-      <li>Open <strong>Add device &rarr; EcoFlow STREAM Series</strong> and choose
-        <strong>STREAM 5000 Series Unit</strong> for monitoring, not a second Energy battery.</li>
-      <li>For aggregate Energy testing only, enable the separate opt-in above, then choose
-        <strong>STREAM Home Battery (5000)</strong> once per already combined installation.</li>
-      <li>Sign in with your EcoFlow app account. Keep the original Home Battery if it represents another space.</li>
-    </ol>
-    <p>This switch permits pairing only; it does not install or update the app or dynamically add device types.
-      If the device choices are missing, report the installed EcoFlow Homey app version, Homey OS version,
-      Homey mobile-app version and a screenshot of the device picker. Please do not delete existing devices
-      until the correct replacement is visible; deleting a device can affect its Flows and history.</p>
-  </div>
-  <p class="help">
-    Supported STREAM 5000-family units use EcoFlow's app connection; their telemetry was not available
-    through the tested Developer API. Model admission includes STREAM AC 5000
-    (<code>ES22&hellip;</code>) and STREAM 5000 (<code>ES21&hellip;</code>) core battery monitoring.
-    Model/role hardware acceptance remains separate; observed PV/socket/configuration tiles depend on fresh data.
-    Expansion batteries, STREAM 3000 and Gateway pairing are not enabled. Your EcoFlow <em>account</em> sign-in is stored separately from the
-    keys above. Monitoring only &mdash; controls are intentionally disabled and no commands are sent.
-    Removing the last STREAM 5000-family unit also clears it.
-  </p>
+  <h2 id="appConnectionTitle">EcoFlow app connection</h2>
+  <p class="help" id="appConnectionHelp">STREAM 5000 Series and Dual CT use your EcoFlow app account. Sign in when adding a device; Developer API keys are separate.</p>
   <p class="help" id="appAuthState" style="color:#555;">Checking&hellip;</p>
-  <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
-  <div class="saved" id="appAuthSaved"></div>
+  <details id="accountManagement">
+    <summary id="accountManagementTitle">Manage stored account</summary>
+    <p class="help" id="accountManagementHelp">Removing this sign-in interrupts devices using the EcoFlow app connection until an account is stored again. Developer API keys are kept separately.</p>
+    <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
+    <div class="saved" id="appAuthSaved" role="status" aria-live="polite"></div>
+  </details>
 
-  <h1 style="font-size:17px;">Setup and Energy diagnostics</h1>
+  <details class="settings-section" id="energySetup">
+    <summary id="energySetupTitle">Homey Energy</summary>
+    <p class="help" id="energyGridHelp">Use one whole-property grid meter in Homey Energy. A meter on a downstream circuit must not also count as the whole-property meter. Review each meter’s Energy settings before changing sources.</p>
+    <p class="help" id="energyBatteryHelp">Add one Home Battery per separate installation. Physical unit monitors provide device readings without contributing a second battery to Homey Energy. Capacity entered for app widgets does not set Homey Energy capacity.</p>
+    <div class="connection-notice" id="energyAvailability">Dual CT currently provides read-only monitoring. CT1 property Energy accounting and STREAM 5000 installation Energy are still being validated.</div>
+    <label class="setting-toggle" for="stream5000AggregatePairingEnabled">
+      <input id="stream5000AggregatePairingEnabled" type="checkbox" />
+      <span id="aggregatePairingLabel">Allow Home Battery (5000) Energy pairing</span>
+    </label>
+    <p class="help" id="aggregatePairingHelp">Off by default while installation Energy validation is in progress. This permits adding a new installation-level Home Battery only. Turning it off does not remove existing devices or stop their accounting. Check for overlap before adding a battery.</p>
+    <div class="saved" id="stream5000AggregateSaved" role="status" aria-live="polite"></div>
+    <p class="help" id="stream5000PairingHelp">In Add device, choose STREAM 5000 Series Unit for monitoring or STREAM Home Battery (5000) for a separately reviewed installation. Keep existing devices that represent other installations; deleting a device can affect its Flows and history.</p>
+  </details>
+
+  <details class="settings-section" id="supportPanel">
+    <summary id="supportTitle">Support and advanced diagnostics</summary>
+    <p class="help" id="supportIntro">Open a local support report or use an optional diagnostic tool when investigating a problem. Reports are never sent automatically. Review exported information before sharing.</p>
+    <details id="connectionDetails">
+      <summary id="connectionDetailsTitle">Connection details and supported devices</summary>
+      <p class="help" id="connectionDetailsHelp">STREAM 5000 (ES21) and STREAM AC 5000 (ES22) monitoring uses EcoFlow’s app service rather than its Developer API. Service changes can affect availability. Monitoring does not send control commands. Expansion batteries, STREAM 3000 and Gateway pairing are not available. Readings depend on model, configuration and fresh data.</p>
+    </details>
+    <p class="help" id="pairingSupportHelp">Missing a device choice? Check the installed app and Homey versions before changing devices.</p>
+    <h2 id="supportReportTitle">Integration report</h2>
+
   <p class="help">This local report shows the installed app and Homey versions, packaged/registered
     battery drivers, separate aggregate pairing access, anonymous Energy accounting counters and observed battery
     peer counts and which peer fields have been seen during this session. After opening an existing
@@ -148,8 +132,8 @@
       No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
     </details>
     <h3 id="dualCtCaptureStep">1. Choose what to capture</h3>
-    <label class="beta-toggle"><input id="enableDualCtPreview" type="checkbox"><span id="dualCtPreviewOptIn"></span></label>
-    <label class="beta-toggle"><input id="enableDualCtCounters" type="checkbox" disabled><span id="dualCtCounterOptIn"></span></label>
+    <label class="setting-toggle"><input id="enableDualCtPreview" type="checkbox"><span id="dualCtPreviewOptIn"></span></label>
+    <label class="setting-toggle"><input id="enableDualCtCounters" type="checkbox" disabled><span id="dualCtCounterOptIn"></span></label>
     <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
     <p id="dualCtWorkflowStatus" role="status" aria-live="polite"></p>
     <button id="stopDualCtResearch" class="secondary-action" type="button">Stop Dual CT discovery</button>
@@ -160,9 +144,9 @@
     <details id="dualCtPreviewPanel"><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
       <button id="refreshDualCtPreview" class="secondary-action" type="button"></button>
       <p id="dualCtDiagnosticState" class="help" role="status" aria-live="polite"></p>
-      <label class="beta-toggle"><input id="includeDualCtComparison" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtComparisonInclude"></span></label>
+      <label class="setting-toggle"><input id="includeDualCtComparison" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtComparisonInclude"></span></label>
       <p id="dualCtExportKind" role="status" aria-live="polite"></p>
-      <label class="beta-toggle"><input id="consentDualCtCandidateExport" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtCandidateConsent"></span></label>
+      <label class="setting-toggle"><input id="consentDualCtCandidateExport" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtCandidateConsent"></span></label>
       <p id="dualCtExportAvailability" class="help" role="status" aria-live="polite"></p>
       <button id="downloadDualCtCandidates" type="button" disabled></button>
       <button id="copyDualCtCandidates" class="secondary-action" type="button" disabled></button>
@@ -225,6 +209,7 @@
     <summary id="coordinationTitle">Read-only battery coordination preview</summary>
     <div id="coordinationWorkspace"></div>
   </details>
+  </details>
   <script src="coordination-settings.js"></script>
   <script src="reporter-status.js"></script>
   <script src="dual-ct-contract.js"></script>
@@ -233,6 +218,15 @@
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
+      [
+        'connectionIntro', 'developerConnectionTitle', 'developerConnectionHelp', 'regionLabel', 'mqttLabel',
+        'appConnectionTitle', 'appConnectionHelp', 'accountManagementTitle', 'accountManagementHelp',
+        'energySetupTitle', 'energyGridHelp', 'energyBatteryHelp', 'energyAvailability', 'aggregatePairingLabel',
+        'aggregatePairingHelp', 'stream5000PairingHelp', 'supportTitle', 'supportIntro',
+        'connectionDetailsTitle', 'connectionDetailsHelp', 'supportReportTitle', 'pairingSupportHelp',
+      ].forEach(function (id) {
+        document.getElementById(id).textContent = Homey.__('settings.setup.' + id);
+      });
       if (window.EcoFlowCoordinationSettings) window.EcoFlowCoordinationSettings.mount(document.getElementById('coordinationWorkspace'), Homey);
       Homey.get('accessKey', function (err, v) { if (!err && v) document.getElementById('accessKey').value = v; });
       Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
@@ -944,11 +938,9 @@
           await clearSetting(Homey, 'appAuthPassword');
           await clearSetting(Homey, 'appAuthEmail');
           await clearSetting(Homey, 'appAuthHost');
-          status.textContent = 'Removed. Any STREAM 5000-family unit will go unavailable until you re-pair it.';
+          status.textContent = Homey.__('settings.setup.accountRemoved');
         } catch (err) {
-          status.textContent = 'Could not remove the stored EcoFlow account: '
-            + ((err && err.message) ? err.message : err)
-            + ' Please try again.';
+          status.textContent = Homey.__('settings.setup.accountRemoveFailed');
         }
         refreshAppAuthState();
       });
@@ -970,7 +962,7 @@
           await saveSetting(Homey, 'mqtt_enabled', m);
           status.textContent = 'Saved. Running devices will apply the new connection settings.';
         } catch (err) {
-          status.textContent = 'Could not save settings: ' + (err && err.message ? err.message : err);
+          status.textContent = Homey.__('settings.setup.connectionSaveFailed');
         }
       });
     }

@@ -4,6 +4,21 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
+## Current continuation — production settings and complete Energy scope
+
+29 October: diagnostic source settings cleanup separates connections, Energy setup
+and collapsed optional Support. New guidance is localised EN/DE/NL; obsolete Beta
+copy removed while real preview/validation limitations and consent stay explicit.
+Raw settings exceptions are no longer displayed; existing IDs/behaviour preserved.
+See ENERGY_RELEASE_COMPLETION.md for the source/SDK role audit, fresh read-only
+owner Energy inclusion and remaining engineering dependencies. Dual CT is still
+unwired/default off; normal discovery does not provide a demonstrated firmware
+readback. Dedicated 5000 solar Energy scope and account re-authentication also
+need explicit completion decisions. Do not claim every Energy integration or
+sprints 4–6 complete. New source is not the installed runtime; installation and
+all channels remain unchanged. Hardware results below retain their exact older
+fingerprints. See newest STATUS for source verification outcome.
+
 ## Current owner installation — Development 1.10.58
 
 Latest read-only native comparison on 29 October accepts ES21 identity and the

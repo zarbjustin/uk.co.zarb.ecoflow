@@ -7,6 +7,38 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Production settings and Energy completion audit — 29 October 2026
+
+Diagnostic source now separates account connections, Homey Energy setup and
+collapsed optional Support tools. New guidance is localised in EN/DE/NL; obsolete
+Beta/history wording removed from settings and the store description. Native
+preview/validation limitations remain explicit. Existing consent settings, device
+IDs and runtime Energy gates are unchanged. Fixed raw exception disclosure in
+settings failures and removed the instruction to re-pair after account removal.
+
+Locked Node 22 dependencies, **1128 tests**, lint, release/diff checks, zero audit
+findings and Homey CLI 4.5.3 verified validation pass. Browser workflows include
+all three languages on desktop/mobile, no capture/settings writes from opening
+sections, existing consent and private-error regressions. New source fingerprint:
+`10f6af684f6e76fa4c4b6dc6bb9beefa9f7a448c7611811a740d8f02d50431bf`.
+This source is NOT installed. Existing Development 1.10.58 / da1da009…5baee1
+remains running, and its hardware evidence is not transferred to the new source.
+
+Fresh read-only Energy inspection confirms the original meter still contributes
+as a property source despite its downstream role; Home/Emporia and Octopus
+electricity remain excluded. Gas is separate. Dual CT preview remains non-Energy.
+No owner setting, account, device, Flow, Energy source or channel was changed.
+
+See [Energy completion audit](ENERGY_RELEASE_COMPLETION.md) for the Homey SDK role
+review and actual remaining work. Dual CT source qualification and real driver/UI/
+subscription integration remain incomplete; normal discovery has no demonstrated
+firmware readback. 5000 solar Energy scope and account re-authentication need
+completion decisions too. Native meter/battery intervals, expiry/recovery,
+persistence/rollback and final-candidate soak remain open. `release:full` remains
+nonzero; cosmetic cleanup and software checks cannot complete sprints 4–6.
+Mainline, Test, Live and the installed app remain unchanged. CI/source push outcome
+must be verified separately; no deployment or publication follows from this record.
+
 ## Native ES21 identity and idle point — 29 October 2026
 
 Fresh native access confirms the complete ES21 identity matches the paired unit,

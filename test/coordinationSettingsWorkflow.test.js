@@ -42,6 +42,7 @@ test('desktop/mobile selected-source settings remain opt-in, clear stale/hidden 
             else callback(null, {});
           } });
       }, require('../locales/en.json'));
+      await page.locator('#supportTitle').click();
       await page.locator('#coordinationTitle').click();
       assert.equal(await page.locator('#coord-consent').isChecked(), false); assert.equal(lists, 0); assert.equal(reads.length, 0);
       assert.equal(await page.locator('#coord-flow-consent').isChecked(), false);
@@ -112,6 +113,7 @@ test('desktop/mobile retry recovers a timed-out opening and clearly marks candid
           __(key) { return key.split('.').reduce((value, part) => value?.[part], translations) || key; },
           api(_method, url, body, cb) { if (url === '/coordination-workspace') window.coordRequest(body).then(value => cb(null, value)); else cb(null, {}); } });
       }, require('../locales/en.json'));
+      await page.locator('#supportTitle').click();
       await page.locator('#coordinationTitle').click(); await page.locator('#coord-consent').check();
       await page.locator('#coord-load').click();
       await started;
@@ -157,6 +159,7 @@ test('Flow monitoring has separate opt-in, explicit start/stop and no automatic 
           cb(null, {});
         } });
     }, { translations: require('../locales/en.json'), devices: fixture(100000) });
+    await page.locator('#supportTitle').click();
     await page.locator('#coordinationTitle').click();
     await page.locator('#coord-flow-consent').check();
     assert.deepEqual(await page.evaluate(() => window.flowCalls), []);
@@ -213,6 +216,7 @@ test('restored bindings do not restore consent; hiding the page clears readings 
           cb(null, body.action === 'open' ? { token: 'synthetic-session' } : { sources: [] });
         } });
     }, require('../locales/en.json'));
+    await page.locator('#supportTitle').click();
     await page.locator('#coordinationTitle').click();
     assert.equal(await page.locator('#coord-consent').isChecked(), false);
     assert.deepEqual(await page.evaluate(() => window.actions), []);
@@ -242,6 +246,7 @@ test('late responses after edits/opt-out are ignored and all locale labels exist
         __(key) { return key.split('.').reduce((value, part) => value?.[part], translations) || key; },
         api(_method, url, _body, cb) { if (url === '/coordination-workspace') window.late = cb; else cb(null, {}); } });
     }, require('../locales/de.json'));
+    await page.locator('#supportTitle').click();
     await page.locator('#coordinationTitle').click(); await page.locator('#coord-consent').check();
     await page.locator('#coord-load').click(); await page.evaluate(() => { window.oldLate = window.late; });
     await page.locator('#coord-consent').uncheck();

@@ -140,6 +140,33 @@
     "unchanged":"ongewijzigd"
   },
   "settings": {
+    "setup": {
+      "pairingSupportHelp": "Ontbreekt een apparaatkeuze? Vermeld de versies van de geïnstalleerde EcoFlow-app, Homey OS en de Homey-app met een screenshot van de apparaatkiezer. Toestemming voor koppelen installeert of vernieuwt de app niet en voegt geen apparaattypen toe. Verwijder geen bestaande apparaten tijdens het onderzoek.",
+      "accountRemoved": "Verwijderd. Apparaten met de EcoFlow-appverbinding hebben een opgeslagen account nodig voordat metingen kunnen worden hervat.",
+      "accountRemoveFailed": "Het opgeslagen EcoFlow-account kon niet volledig worden verwijderd. Probeer het opnieuw.",
+      "connectionSaveFailed": "De verbindingsinstellingen konden niet volledig worden opgeslagen. Controleer je sleutels en regio en probeer het opnieuw.",
+      "connectionIntro": "Verbind je apparaten met het account dat tijdens het koppelen wordt gevraagd.",
+      "developerConnectionTitle": "Developer-API-verbinding",
+      "developerConnectionHelp": "Voor apparaten die zijn gekoppeld met EcoFlow Developer-API-sleutels van developer.ecoflow.com. Wijzigingen gelden voor apparaten die deze verbinding gebruiken.",
+      "regionLabel": "Regio",
+      "mqttLabel": "Realtime updates",
+      "appConnectionTitle": "EcoFlow-appverbinding",
+      "appConnectionHelp": "STREAM 5000 Series en Dual CT gebruiken je EcoFlow-appaccount. Meld je aan bij het toevoegen van een apparaat; Developer-API-sleutels staan hier los van.",
+      "accountManagementTitle": "Opgeslagen account beheren",
+      "accountManagementHelp": "Het verwijderen van deze aanmelding onderbreekt apparaten met de EcoFlow-appverbinding totdat er weer een account is opgeslagen. Developer-API-sleutels worden apart bewaard.",
+      "energySetupTitle": "Homey Energy",
+      "energyGridHelp": "Gebruik in Homey Energy één netmeter voor het hele terrein. Een meter op een achterliggende groep mag niet ook als hoofdmeter meetellen. Controleer de Energy-instellingen van elke meter voordat je van bron wisselt.",
+      "energyBatteryHelp": "Voeg per afzonderlijke installatie één thuisbatterij toe. Monitoren voor afzonderlijke apparaten leveren metingen zonder een tweede batterij aan Homey Energy toe te voegen. Capaciteit voor app-widgets stelt niet de capaciteit in Homey Energy in.",
+      "energyAvailability": "Dual CT biedt momenteel alleen monitoring. De CT1-energiebalans voor het terrein en de installatie-energiebalans voor STREAM 5000 worden nog gevalideerd.",
+      "aggregatePairingLabel": "Energy-koppeling voor Home Battery (5000) toestaan",
+      "aggregatePairingHelp": "Standaard uit tijdens de validatie van de installatie-energiebalans. Staat alleen het toevoegen van een nieuwe thuisbatterij op installatieniveau toe. Uitschakelen verwijdert geen bestaande apparaten en stopt hun energiebalans niet. Controleer op overlap voordat je een batterij toevoegt.",
+      "stream5000PairingHelp": "Kies bij Apparaat toevoegen STREAM 5000 Series Unit voor monitoring of STREAM Home Battery (5000) voor een afzonderlijk beoordeelde installatie. Behoud apparaten van andere installaties; verwijderen kan Flows en historie beïnvloeden.",
+      "supportTitle": "Ondersteuning en geavanceerde diagnostiek",
+      "supportIntro": "Open bij problemen een lokaal ondersteuningsrapport of gebruik een optioneel diagnosehulpmiddel. Rapporten worden nooit automatisch verzonden. Controleer geëxporteerde informatie voordat je deze deelt.",
+      "connectionDetailsTitle": "Verbindingsdetails en ondersteunde apparaten",
+      "connectionDetailsHelp": "Monitoring van STREAM 5000 (ES21) en STREAM AC 5000 (ES22) gebruikt de appdienst van EcoFlow in plaats van de Developer-API. Wijzigingen in de dienst kunnen de beschikbaarheid beïnvloeden. Monitoring verstuurt geen bedieningsopdrachten. Uitbreidingsbatterijen, STREAM 3000 en Gateway kunnen niet worden gekoppeld. Metingen hangen af van model, configuratie en actuele gegevens.",
+      "supportReportTitle": "Integratierapport"
+    },
     "dual_ct": {
       "working_assumptions": "Werkaannames voor deze alleen-lezen preview, geen bevestigde koppelingen. Ruwe tekens blijven ongewijzigd. Bankletters zijn geen fysieke CT-poorten. Observaties schakelen geen boekhouding of bediening in.",
       "working_grid": "Werkaanname: EcoFlow Net. Richting en fasevolgorde moeten nog worden bevestigd.",

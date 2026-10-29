@@ -140,6 +140,33 @@
     "unchanged":"unverändert"
   },
   "settings": {
+    "setup": {
+      "pairingSupportHelp": "Fehlt eine Geräteauswahl? Senden Sie die Versionen der installierten EcoFlow-App, von Homey OS und der Homey-Mobil-App sowie einen Screenshot der Geräteauswahl. Eine Kopplungsfreigabe installiert oder aktualisiert die App nicht und fügt keine Gerätetypen hinzu. Löschen Sie während der Untersuchung keine vorhandenen Geräte.",
+      "accountRemoved": "Entfernt. Geräte mit EcoFlow-App-Verbindung benötigen ein gespeichertes Konto, bevor Messwerte wieder empfangen werden können.",
+      "accountRemoveFailed": "Das gespeicherte EcoFlow-Konto konnte nicht vollständig entfernt werden. Bitte versuchen Sie es erneut.",
+      "connectionSaveFailed": "Die Verbindungseinstellungen konnten nicht vollständig gespeichert werden. Prüfen Sie Schlüssel und Region und versuchen Sie es erneut.",
+      "connectionIntro": "Verbinden Sie Ihre Geräte mit dem bei der Einrichtung angeforderten Konto.",
+      "developerConnectionTitle": "Developer-API-Verbindung",
+      "developerConnectionHelp": "Für Geräte mit EcoFlow-Developer-API-Schlüsseln von developer.ecoflow.com. Änderungen gelten für Geräte, die diese Verbindung verwenden.",
+      "regionLabel": "Region",
+      "mqttLabel": "Echtzeitaktualisierungen",
+      "appConnectionTitle": "EcoFlow-App-Verbindung",
+      "appConnectionHelp": "STREAM 5000 Series und Dual CT verwenden Ihr EcoFlow-App-Konto. Melden Sie sich beim Hinzufügen eines Geräts an; Developer-API-Schlüssel sind davon getrennt.",
+      "accountManagementTitle": "Gespeichertes Konto verwalten",
+      "accountManagementHelp": "Das Entfernen dieser Anmeldung unterbricht Geräte mit EcoFlow-App-Verbindung, bis erneut ein Konto gespeichert wird. Developer-API-Schlüssel werden getrennt gespeichert.",
+      "energySetupTitle": "Homey Energy",
+      "energyGridHelp": "Verwenden Sie in Homey Energy einen Netzstromzähler für das gesamte Grundstück. Ein Zähler an einem nachgelagerten Stromkreis darf nicht zusätzlich als Gesamtzähler zählen. Prüfen Sie vor einem Wechsel die Energy-Einstellungen jedes Zählers.",
+      "energyBatteryHelp": "Fügen Sie pro eigenständiger Anlage eine Hausbatterie hinzu. Einzelgeräte-Monitore liefern Messwerte, ohne eine zweite Batterie zu Homey Energy beizutragen. Kapazitätsangaben für App-Widgets stellen nicht die Kapazität in Homey Energy ein.",
+      "energyAvailability": "Dual CT bietet derzeit nur Überwachung. Die CT1-Energiebilanz für das Grundstück und die Anlagen-Energiebilanz für STREAM 5000 werden noch validiert.",
+      "aggregatePairingLabel": "Energy-Kopplung für Home Battery (5000) zulassen",
+      "aggregatePairingHelp": "Während der Validierung der Anlagen-Energiebilanz standardmäßig deaktiviert. Erlaubt nur das Hinzufügen einer neuen Hausbatterie auf Anlagenebene. Das Deaktivieren entfernt keine vorhandenen Geräte und beendet deren Bilanzierung nicht. Prüfen Sie vor dem Hinzufügen mögliche Überschneidungen.",
+      "stream5000PairingHelp": "Wählen Sie unter Gerät hinzufügen STREAM 5000 Series Unit zur Überwachung oder STREAM Home Battery (5000) für eine separat geprüfte Anlage. Behalten Sie Geräte anderer Anlagen; das Löschen kann Flows und Verlauf beeinträchtigen.",
+      "supportTitle": "Support und erweiterte Diagnose",
+      "supportIntro": "Öffnen Sie bei Problemen einen lokalen Supportbericht oder verwenden Sie ein optionales Diagnosewerkzeug. Berichte werden nie automatisch versendet. Prüfen Sie exportierte Informationen vor dem Teilen.",
+      "connectionDetailsTitle": "Verbindungsdetails und unterstützte Geräte",
+      "connectionDetailsHelp": "Die Überwachung von STREAM 5000 (ES21) und STREAM AC 5000 (ES22) verwendet den App-Dienst von EcoFlow statt der Developer-API. Dienständerungen können die Verfügbarkeit beeinflussen. Die Überwachung sendet keine Steuerbefehle. Erweiterungsbatterien, STREAM 3000 und Gateway können nicht gekoppelt werden. Messwerte hängen von Modell, Konfiguration und aktuellen Daten ab.",
+      "supportReportTitle": "Integrationsbericht"
+    },
     "dual_ct": {
       "working_assumptions": "Arbeitsannahmen nur für diese schreibgeschützte Vorschau, keine bestätigten Zuordnungen. Rohe Vorzeichen bleiben unverändert. Bankbuchstaben bezeichnen keine physischen CT-Anschlüsse. Beobachtungen aktivieren weder Bilanzierung noch Steuerung.",
       "working_grid": "Arbeitsannahme: EcoFlow Netz. Richtung und Phasenfolge müssen noch bestätigt werden.",

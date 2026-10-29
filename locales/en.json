@@ -140,6 +140,33 @@
     "unchanged":"unchanged"
   },
   "settings": {
+    "setup": {
+      "pairingSupportHelp": "Missing a device choice? Include the installed EcoFlow app version, Homey OS version and Homey mobile-app version with a screenshot of the device picker. Pairing permission does not install or update the app or add device types. Do not delete existing devices while investigating.",
+      "accountRemoved": "Removed. Devices using the EcoFlow app connection need a stored account before readings can resume.",
+      "accountRemoveFailed": "Could not remove the stored EcoFlow account completely. Please try again.",
+      "connectionSaveFailed": "Could not finish saving connection settings. Check your keys and region, then try again.",
+      "connectionIntro": "Connect your devices using the account requested during pairing.",
+      "developerConnectionTitle": "Developer API connection",
+      "developerConnectionHelp": "For devices paired with EcoFlow Developer API keys, available from developer.ecoflow.com. Updating these keys applies to devices using this connection.",
+      "regionLabel": "Region",
+      "mqttLabel": "Realtime updates",
+      "appConnectionTitle": "EcoFlow app connection",
+      "appConnectionHelp": "STREAM 5000 Series and Dual CT use your EcoFlow app account. Sign in when adding a device; Developer API keys are separate.",
+      "accountManagementTitle": "Manage stored account",
+      "accountManagementHelp": "Removing this sign-in interrupts devices using the EcoFlow app connection until an account is stored again. Developer API keys are kept separately.",
+      "energySetupTitle": "Homey Energy",
+      "energyGridHelp": "Use one whole-property grid meter in Homey Energy. A meter on a downstream circuit must not also count as the whole-property meter. Review each meter’s Energy settings before changing sources.",
+      "energyBatteryHelp": "Add one Home Battery per separate installation. Physical unit monitors provide device readings without contributing a second battery to Homey Energy. Capacity entered for app widgets does not set Homey Energy capacity.",
+      "energyAvailability": "Dual CT currently provides read-only monitoring. CT1 property Energy accounting and STREAM 5000 installation Energy are still being validated.",
+      "aggregatePairingLabel": "Allow Home Battery (5000) Energy pairing",
+      "aggregatePairingHelp": "Off by default while installation Energy validation is in progress. This permits adding a new installation-level Home Battery only. Turning it off does not remove existing devices or stop their accounting. Check for overlap before adding a battery.",
+      "stream5000PairingHelp": "In Add device, choose STREAM 5000 Series Unit for monitoring or STREAM Home Battery (5000) for a separately reviewed installation. Keep existing devices that represent other installations; deleting a device can affect its Flows and history.",
+      "supportTitle": "Support and advanced diagnostics",
+      "supportIntro": "Open a local support report or use an optional diagnostic tool when investigating a problem. Reports are never sent automatically. Review exported information before sharing.",
+      "connectionDetailsTitle": "Connection details and supported devices",
+      "connectionDetailsHelp": "STREAM 5000 (ES21) and STREAM AC 5000 (ES22) monitoring uses EcoFlow’s app service rather than its Developer API. Service changes can affect availability. Monitoring does not send control commands. Expansion batteries, STREAM 3000 and Gateway pairing are not available. Readings depend on model, configuration and fresh data.",
+      "supportReportTitle": "Integration report"
+    },
     "dual_ct": {
       "working_assumptions": "Working assumptions for this read-only preview, not verified device mappings. Raw signs are unchanged. Bank letters do not identify physical CT ports. Your observations do not enable accounting or controls.",
       "working_grid": "Working assumption: EcoFlow Grid. Direction and phase order still need validation.",

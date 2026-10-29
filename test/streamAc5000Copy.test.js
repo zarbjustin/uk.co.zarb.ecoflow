@@ -249,12 +249,11 @@ test('both monitoring roles remain available on Homey Pro with distinct pairing 
 });
 
 test('settings explain separate Energy consent without promising picker repair or a new store build', () => {
-  const html = fs.readFileSync(path.join(root, 'settings', 'index.html'), 'utf8');
-  assert.match(html, /Homey EcoFlow integration/);
-  assert.match(html, /separate opt-in/);
-  assert.match(html, /does not install or update the app or dynamically add device types/);
-  assert.match(html, /STREAM Home Battery \(5000\)/);
-  assert.match(html, /not a second Energy battery/);
-  assert.match(html, /do not delete existing devices/);
-  assert.match(html, /Homey mobile-app version/);
+  const copy = require('../locales/en.json').settings.setup;
+  assert.match(copy.aggregatePairingHelp, /permits adding a new installation-level Home Battery only/);
+  assert.match(copy.pairingSupportHelp, /does not install or update the app or add device types/);
+  assert.match(copy.stream5000PairingHelp, /STREAM Home Battery \(5000\)/);
+  assert.match(copy.energyBatteryHelp, /without contributing a second battery/);
+  assert.match(copy.pairingSupportHelp, /Do not delete existing devices/);
+  assert.match(copy.pairingSupportHelp, /Homey mobile-app version/);
 });

@@ -311,6 +311,7 @@ test('settings readiness and JSON download work in the browser without hidden po
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
     await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
+    await page.locator('#supportTitle').click();
     const report = { capturedAt: '2026-10-11T01:02:03.004Z', appVersion: '1.10.31', schemaVersion: 11, padding: 'x'.repeat(19000),
       dualCtResearch: { status: 'complete', deviceCount: 1, frames: 2, rejectedFrames: 0, captureAgeSec: 121,
         routes: [{ deviceIndex: 0, source: 'app_mqtt', status: 'listening' }],

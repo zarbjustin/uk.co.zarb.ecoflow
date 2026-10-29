@@ -50,6 +50,7 @@ test('desktop and mobile settings keep numeric sharing optional, reviewed, bound
           } });
       }, require('../locales/en.json'));
       assert.equal(await page.evaluate(() => window.uiCalls.length), 0);
+      await page.locator('#supportTitle').click();
       await page.locator('#dualCtTitle').click();
       await page.locator('#dualCtCompactTitle').click();
       await page.locator('#dualCtPreviewTitle').click();

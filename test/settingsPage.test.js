@@ -624,7 +624,7 @@ test('a failing unset is reported instead of a false success', async () => {
 
   assert.ok(!status.startsWith('Removed'), `unexpected success message: ${status}`);
   assert.match(status, /Could not remove/);
-  assert.match(status, /settings unavailable/);
+  assert.doesNotMatch(status, /settings unavailable/);
   // The password did get cleared, and the page reports what is really left.
   assert.strictEqual(homey.store.has('appAuthPassword'), false);
   assert.strictEqual(homey.store.get('appAuthEmail'), 'tester@example.invalid');
@@ -736,16 +736,33 @@ test('accepting the aggregate warning persists only the separate Energy opt-in',
   assert.match(context.document.getElementById('stream5000AggregateSaved').textContent, /Existing paired devices will continue/i);
 });
 
-test('settings retire the shared Beta control and disclose separate transport and Energy scope', () => {
+test('release settings keep transport and Energy limitations while removing obsolete Beta copy', () => {
   const html = fs.readFileSync(SETTINGS_HTML, 'utf8');
-  assert.doesNotMatch(html, /id="stream5000BetaEnabled"|Enable STREAM 5000 beta pairing|STREAM 5000 Series \(Beta\)/i);
-  assert.match(html, /Read-only app-connected monitoring/i);
-  assert.match(html, /official Developer-key API/i);
-  assert.match(html, /Allow Home Battery \(5000\) Energy pairing/i);
-  assert.match(html, /Disabled by default/i);
-  assert.match(html, /Unit monitoring needs no opt-in/i);
-  assert.match(html, /Monitoring only/i);
-  assert.match(html, /controls are intentionally disabled/i);
+  assert.doesNotMatch(html, /id="stream5000BetaEnabled"|retired Beta|Enable STREAM 5000 beta pairing|STREAM 5000 Series \(Beta\)/i);
+  const copy = require('../locales/en.json').settings.setup;
+  assert.match(copy.connectionDetailsHelp, /app service rather than its Developer API/);
+  assert.match(copy.connectionDetailsHelp, /does not send control commands/);
+  assert.match(copy.aggregatePairingHelp, /Off by default/);
+  assert.match(copy.aggregatePairingHelp, /does not remove existing devices or stop their accounting/);
+  assert.match(copy.energyBatteryHelp, /without contributing a second battery/);
+  assert.match(copy.energyAvailability, /still being validated/);
+});
+
+test('account and Developer connection failures cannot expose private exception contents', async () => {
+  const homey = fakeHomey({ values: storedAccount(), unsetFails: { appAuthPassword: 'PRIVATE_PASSWORD' } });
+  const { status } = await clickRemove(homey);
+  assert.match(status, /Could not remove/);
+  assert.doesNotMatch(status, /PRIVATE_PASSWORD/);
+  const context = loadSettingsScript(); const saving = fakeHomey();
+  saving.api = (_method, _url, _body, cb) => cb(new Error('PRIVATE_ACCESS_KEY'));
+  context.onHomeyReady(saving);
+  context.document.getElementById('accessKey').value = 'synthetic-access';
+  context.document.getElementById('secretKey').value = 'synthetic-secret';
+  context.document.getElementById('host').value = 'https://api.ecoflow.com';
+  await context.document.getElementById('save').click();
+  assert.match(context.document.getElementById('saved').textContent, /Could not finish saving/);
+  assert.doesNotMatch(context.document.getElementById('saved').textContent, /PRIVATE_ACCESS_KEY/);
+  assert.equal(saving.store.has('accessKey'), false);
 });
 
 test('legacy opt-in does not silently enable aggregate pairing or get deleted by settings', () => {

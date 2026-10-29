@@ -11,7 +11,7 @@
       if (id) node.id = id; (parent || container).appendChild(node); return node;
     }
     function check(key) {
-      const label = el('label', '', container); label.className = 'beta-toggle';
+      const label = el('label', '', container); label.className = 'setting-toggle';
       const box = el('input', '', label, 'coord-' + key); box.type = 'checkbox'; box.checked = false;
       el('span', t(key), label); return box;
     }
@@ -44,7 +44,7 @@
       options.forEach(value => { const option = el('option', t(value ? 'sign_' + value : 'choose'), sign); option.value = value; });
     });
     const acknowledgementBox = el('div', '', body);
-    function ack(key) { const label = el('label', '', acknowledgementBox); label.className = 'beta-toggle';
+    function ack(key) { const label = el('label', '', acknowledgementBox); label.className = 'setting-toggle';
       const box = el('input', '', label, 'coord-' + key); box.type = 'checkbox'; el('span', t(key), label); return box; }
     const reviewed = ack('reviewed'), noManual = ack('noManualOverride'), noConflict = ack('noCompetingController'), other = ack('otherSourcesReviewed');
     const save = el('button', t('save'), body, 'coord-save'); save.type = 'button'; save.className = 'secondary-action';
@@ -56,7 +56,7 @@
     let flowEpoch = 0, flowBusy = false, flowActive = false;
     const flowBox = el('fieldset', '', container, 'coord-flow-panel'); flowBox.style.minWidth = '0';
     el('legend', t('flow_title'), flowBox); el('p', t('flow_help'), flowBox).className = 'help';
-    const flowLabel = el('label', '', flowBox); flowLabel.className = 'beta-toggle';
+    const flowLabel = el('label', '', flowBox); flowLabel.className = 'setting-toggle';
     const flowConsent = el('input', '', flowLabel, 'coord-flow-consent'); flowConsent.type = 'checkbox'; flowConsent.checked = false;
     el('span', t('flow_consent'), flowLabel);
     function flowNumber(id, key, value, min, max) {

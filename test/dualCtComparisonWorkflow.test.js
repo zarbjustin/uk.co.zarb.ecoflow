@@ -16,6 +16,7 @@ function fixture(changed=false,sparse=false){const preview=new DualCtPreview(tru
   const diagnostics=preview.diagnostics(view.reason);preview.clear();return {view,diagnostics};}
 async function setup(browser,viewport){const page=await browser.newPage({viewport});
   await page.goto(pathToFileURL(path.join(__dirname,'..','settings','index.html')).href);
+  await page.locator('#supportTitle').click();
   assert.equal(await page.evaluate(()=>Object.isFrozen(window.EcoFlowDualCtContract?.banks[0].power)),true,
     'shared profile must load before the settings projectors in the actual HTML workflow');
   await page.clock.install({time:new Date('2026-10-15T20:00:00Z')});

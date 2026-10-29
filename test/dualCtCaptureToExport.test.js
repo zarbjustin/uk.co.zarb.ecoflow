@@ -74,6 +74,7 @@ test('desktop/mobile numeric capture completes automatically and downloads one r
           return result;
         });
         await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
+        await page.locator('#supportTitle').click();
         await page.clock.install({ time: new Date(clock) });
         clock += 1000;
         await page.clock.pauseAt(new Date(clock));

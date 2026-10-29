@@ -26,6 +26,7 @@ test('desktop/mobile reports explain an unmetered unit-only setup without writes
       const errors = [], calls = [], writes = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(pathToFileURL(path.join(__dirname, '..', 'settings', 'index.html')).href);
+      await page.locator('#supportTitle').click();
       await page.clock.install({ time: new Date(now) });
       await page.exposeFunction('recordOwnerReportCall', (method, url) => { calls.push({ method, url }); });
       await page.exposeFunction('recordOwnerReportWrite', key => { writes.push(key); });
