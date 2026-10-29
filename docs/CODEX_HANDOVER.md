@@ -26,7 +26,8 @@ Fresh private readback confirms owner still running Development 1.10.58, all 12
 device definitions/settings, 99 full Flows and global setting hashes unchanged;
 six cumulative sequences nondecreasing. No install, Repair, pairing, source change,
 hardware operation or publication performed. Mainline/Test/Live unchanged.
-See newest STATUS for archive/source/CI outcome and ENERGY_RELEASE_COMPLETION.md
+Implementation c745ee63a536abe303bf6d2718e88c4f6ca46e05 is pushed; exact CI
+40934944955 passed. See newest STATUS for archive/delivery and ENERGY_RELEASE_COMPLETION.md
 for firmware qualification, 5000 solar, native tests and final-candidate soak.
 
 ## Previous source checkpoint — production settings and complete Energy scope

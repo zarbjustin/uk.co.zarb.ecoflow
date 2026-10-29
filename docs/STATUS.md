@@ -57,8 +57,11 @@ Archive `ecoflow-stream-1.10.59-e0216df1-diagnostic.tgz`, 1978 files,
 `5b36d4895dc8e140e04e68a57f51f9762232a73b3a00128c61f780800c3beaee`.
 The archived runtime flag is false and the driver hidden. Read-only SDK inventory
 classification is complete and identifies one included electricity property meter;
-this is not native adoption/HTTP-provider acceptance. Source push and exact CI are
-separate delivery checkpoints.
+this is not native adoption/HTTP-provider acceptance. Implementation
+`c745ee63a536abe303bf6d2718e88c4f6ca46e05` is pushed to the diagnostic branch and
+exact CI [40934944955](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40934944955)
+passed. This delivery record changes no runtime files or hardware acceptance.
+The documentation tip's CI remains a separate check when resuming.
 
 ## Production settings and Energy completion audit — 29 October 2026
 
