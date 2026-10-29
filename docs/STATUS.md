@@ -7,6 +7,20 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Native ES21 identity and idle point — 29 October 2026
+
+Fresh native access confirms the complete ES21 identity matches the paired unit,
+with Dual CT as current main-breaker meter and original units offered separately
+for linking. Native Standby/zero battery flow/system SOC and individual unit SOC
+agree with fresh Homey zero/idle/SOC on installed 1.10.58. Only ES21 identity and
+this single-unit idle point are accepted for exact runtime da1da009…5baee1;
+transitions, physical pack calibration and aggregate scope are not accepted.
+Native firmware V1.1.6.18 was read without updating. Nominal capacity display is
+not a usable-capacity test. A native/Homey temperature display difference remains
+unresolved; no field/offset fix or temperature acceptance. No settings, tasks,
+controls, Energy, Flows, forced reconnect, installation or channels changed.
+See [native idle comparison](STREAM_5000_MONITORING_RC.md#owner-native-idle-comparison).
+
 ## Owner-approved 1.10.58 diagnostic installation — 29 October 2026
 
 After the owner completed normal CLI consent, authenticated private readback

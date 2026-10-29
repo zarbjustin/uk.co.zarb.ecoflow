@@ -6,6 +6,14 @@ commands. See STATUS for the dated evidence behind each statement.
 
 ## Current owner installation — Development 1.10.58
 
+Latest read-only native comparison on 29 October accepts ES21 identity and the
+single-unit idle operating point for this exact runtime. Full serial matched
+privately; current native system has that unit plus Dual CT and offers original
+units separately for linking. Native firmware is V1.1.6.18; nominal 5 kWh/1x is
+not usable-capacity evidence. Temperature sensor/display difference stays open.
+See STATUS/RC owner-native-idle-comparison; no charge/discharge/recovery/soak,
+linked-pack or aggregate Energy gate is inherited from this point.
+
 Owner completed CLI consent and separately approved the reviewed non-clean
 diagnostic update. Source `85c5cad`, exact CI `40913604866` green, delivered
 29 October 16:50:07 UTC; running 1.10.58 independently read back. Runtime fingerprint

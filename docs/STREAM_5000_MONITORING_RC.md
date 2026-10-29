@@ -1,5 +1,42 @@
 # STREAM 5000 monitoring release candidate
 
+## Owner native idle comparison
+
+29 October 2026, read-only, on installed Development 1.10.58 / runtime
+`da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+The owner brought the native EcoFlow view into a readable state. At 17:16:56 UTC,
+native Device management's complete unit serial matched the paired Homey ES21
+exactly, compared privately without displaying identifiers. The current system
+lists that unit and Dual CT as its main-breaker meter. The six original STREAM
+units are offered under Link devices, not listed as members; no Link/Unlink was
+invoked. This accepts ES21 identity for this candidate and observed configuration,
+not automatic grouping or a general physical-pack contract.
+
+Native battery overview explicitly displayed Standby, zero battery watts and
+zero system SOC at 17:18:17 UTC. The individual unit page separately displayed
+zero SOC. Homey at 17:18:24 UTC agreed with fresh zero battery flow, idle and SOC;
+power/state were one second old, on one active subscription attempt with no
+reconnects. Only this single-unit idle operating point is accepted. This was not
+a witnessed charging/discharging transition, expiry, recovery or Energy test.
+The runtime's physical pack scope flag remains unverified; no linked/expansion
+role or new raw-power calibration is implied by the matching idle point.
+
+Native unit firmware reads V1.1.6.18 and up-to-date; no update was invoked. The
+unit shows a nominal 5 kWh / 1x label, not a measured usable-capacity result.
+Self-consumption, maximum grid input/output and the displayed charge-limit value
+agree with readback. An editable management view was left via Back with no slider,
+toggle or save action. Reserve/discharge/electrical-enforcement acceptance is not
+extended by that partial inspection.
+
+Native battery-detail temperature differed from Homey's reported temperature;
+Homey subsequently changed naturally while fresh. Sensor source and display/
+measurement skew remain unresolved. No constant offset, guessed field mapping,
+temperature signoff or control change is introduced. Native remaining time remains
+unverified even when displayed at empty standby and is still withheld in Homey.
+Raw native views, exact identity comparison and timestamped Homey readbacks stay
+private outside Git. Charge/discharge, sparse expiry/recovery/hint horizon,
+accessories, model/role accounting, rollback and normal-use soak remain open.
+
 ## Owner diagnostic installation
 
 29 October 2026, 16:50:07 UTC: owner specifically approved a non-clean
