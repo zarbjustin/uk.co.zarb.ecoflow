@@ -17,9 +17,9 @@ from customer settings/store description. Real preview/validation limitations
 remain explicit; visual polish does not confer official EcoFlow endorsement.
 
 Settings failures now display fixed messages instead of raw exceptions. Account
-removal no longer instructs users to re-pair existing devices. A complete account
-re-authentication/repair experience without adding another device remains a
-separate product task; no new sign-in path is claimed by this cleanup.
+removal no longer instructs users to re-pair existing devices. Diagnostic 1.10.59 now adds an account Repair path without adding another device.
+It verifies all existing app consumers before a confirmed, read-back credential
+update; native desktop/mobile acceptance is still required before release.
 
 ## Energy roles reviewed
 
@@ -40,7 +40,7 @@ separate feature, not authority to add battery controls here.
 | STREAM 5000 physical units | Read-only monitoring without battery Energy contribution | Exact ES21/ES22 model, accessory, freshness and recovery acceptance |
 | STREAM 5000 installation battery | Registered, separately gated battery aggregate | Native combined scope, charge/discharge kWh intervals, restart/rollback and exact-candidate soak; not currently paired on owner host |
 | STREAM 5000 PV generation | Unit PV monitoring is separate from Energy generation | No qualified dedicated 5000 solar Energy path has been established. Existing Developer-API solar pairing is not proof of app-connected 5000 support; decide and validate explicit scope before claiming every Energy function complete |
-| Dual CT CT1 property meter | Strict wire/session/checkpoint/write-adapter/adoption modules prepared, runtime disabled and no Energy driver registered | Qualified model/firmware/sign/timing provider; actual driver, pairing review and owned subscription lifecycle; native accounting and overlap transition |
+| Dual CT CT1 property meter | Separate driver/pairing/inventory/subscription path wired in 1.10.59, hidden and runtime disabled | Qualified model/firmware/sign/timing provider; native pairing/Repair/accounting and overlap transition |
 | Dual CT CT2 | Read-only preview only | Disconnected in owner topology. Do not infer production, another battery's power or whole-property contribution |
 
 Widget capacity settings do not configure Homey Energy capacity. Native capacity
@@ -78,10 +78,10 @@ No firmware/timing gate was weakened during this cleanup.
 
 ## Completion order
 
-1. Resolve the source qualification dependency and implement the actual new CT1
-   Energy driver/pairing/subscription path; preserve the existing preview.
-2. Establish the scope of 5000 solar Energy and account re-authentication; finish
-   required source work before selecting a final hardware candidate.
+1. Resolve firmware/sign/timing qualification for the new wired CT1 driver.
+   Keep it hidden/default off and preserve the existing preview until qualified.
+2. Establish 5000 solar Energy scope and implement/qualify the required source.
+   Account Repair is implemented in 1.10.59; native acceptance remains required.
 3. Review exact source/CI/package and separately approve any Development update.
 4. Review property-source transition and native battery/meter tests with explicit
    bounds. Battery operations, pairing and Energy exclusion changes each need
@@ -93,7 +93,8 @@ No firmware/timing gate was weakened during this cleanup.
    authorisation; successful software checks do not imply publication or physical
    acceptance.
 
-`release:full` currently combines Dual CT and STREAM 5000 hardware ledgers. It is
+`release:full` combines Dual CT/STREAM 5000 ledgers and rejects disabled/hidden
+Dual CT source admission. It is
 not a check for every product feature, solar path, source integration, UX issue,
 CI outcome or store delivery. All open dependencies above remain release work even
 if those hardware ledgers are later accepted. Do not describe sprints 4–6 or all

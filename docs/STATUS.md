@@ -7,6 +7,59 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Dual CT driver and account Repair — 29 October 2026
+
+Prepared diagnostic **1.10.59** on the active branch. New `smartmeter_dual_ct_energy`
+driver wires source-bound review/confirmation, owned/model identity and a firmware-provider interface,
+conservative Homey electricity contributor inventory, real persistent session and
+shared subscription lifecycle. Gas/water, excluded meters and downstream meter
+roles are distinguished; malformed/unknown inventory blocks adoption. Confirmation
+and final Add recheck source, inventory, expiry and activation before credentials
+are committed. No preview conversion or edits to other sources. The driver stays
+hidden from Add Device and runtime-off; the registry remains empty. Normal discovery
+still has no demonstrated firmware readback; tests inject a synthetic code-owned
+reader, never customer verification flags.
+
+Counter restoration rejects a missing/older checkpoint when Homey already holds
+higher projected totals. Restart establishes a fresh anchor without downtime fill.
+Process-wide authority, stale-power clearing, identity/credential invalidation,
+late callbacks, owned subscription teardown and bounded retry are covered. This
+cannot detect every whole-app backup rollback when both stores and capabilities
+roll back together; native recovery policy/acceptance stays open.
+
+Source-preserving account Repair is registered for app-connected device roles.
+It validates ownership of all existing consumers and protected account bindings,
+expires review after 90 seconds, requires confirmation and verifies persisted
+credential revision. Failed/partial writes attempt restoration without printing
+credentials. Only prior monitoring consent can resume; no paired definition,
+Energy permission, Flow or battery control is changed. Native Repair is unverified.
+Shared auth now fences disposed/superseded asynchronous logins and retains shared
+credentials when another consumer still needs them.
+
+**1156 tests**, locked Node 22 dependencies, lint/release/diff checks, zero audit
+findings and Homey CLI 4.5.3 verified validation pass. EN/DE/NL desktop/mobile tests
+cover blocked Energy pairing, review consent/expiry and account Repair without
+creating a device. Full readiness also rejects a disabled/unadmitted source even
+if hardware ledgers are marked passed. Current source fingerprint:
+`e0216df13cb1fc67ab11f1ccdef7ac94dc7b9e10b258bf4b3dc1ad7706bc2d7b`.
+
+Fresh read-only owner verification remains running Development **1.10.58**;
+all 12 full device definitions/settings and 99 complete Flow definitions match
+the private baseline, app-setting hashes match, six cumulative sequences are
+nondecreasing. Source 1.10.59 is **not installed or published**. No account Repair,
+new pairing, Energy inclusion, battery operation, Flow execution or forced reconnect
+was performed. Mainline/Test/Live remain unchanged. Firmware/sign/timing contract,
+5000 solar scope, native UI/accounting/Repair/recovery and final-candidate 48-hour
+soak remain open. A verified full archive readback contains production MQTT dependencies, the new
+driver and all six Repair views; root app/package/lock metadata match source.
+Archive `ecoflow-stream-1.10.59-e0216df1-diagnostic.tgz`, 1978 files,
+10446748 bytes; SHA256
+`5b36d4895dc8e140e04e68a57f51f9762232a73b3a00128c61f780800c3beaee`.
+The archived runtime flag is false and the driver hidden. Read-only SDK inventory
+classification is complete and identifies one included electricity property meter;
+this is not native adoption/HTTP-provider acceptance. Source push and exact CI are
+separate delivery checkpoints.
+
 ## Production settings and Energy completion audit — 29 October 2026
 
 Diagnostic source now separates account connections, Homey Energy setup and

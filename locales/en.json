@@ -1,4 +1,36 @@
 {
+  "app_account_repair": {
+    "title": "Reconnect EcoFlow account",
+    "intro": "Update the EcoFlow app sign-in shared by your existing devices. Device identities, history and Flows are kept. Developer API keys are managed separately in app settings.",
+    "emailLabel": "EcoFlow email",
+    "passwordLabel": "EcoFlow password",
+    "regionLabel": "Region",
+    "login": "Check sign-in",
+    "reviewText": "The account must own every existing app-connected EcoFlow device. No devices are added or deleted, and no Energy permissions or controls are enabled.",
+    "affected": "Devices using this sign-in:",
+    "consentText": "Update the shared sign-in and resume previously enabled monitoring. Readings may pause briefly.",
+    "confirm": "Update account connection",
+    "failed": "The account connection could not be completed. Check the account and region, then reopen Repair to try again. Existing devices must be owned by the same account.",
+    "expired": "The review expired. Check sign-in again.",
+    "saved": "Sign-in saved. Devices will reconnect; check their readings. Device identities and Energy permissions were kept."
+  },
+  "dual_ct_energy": {
+    "title": "Dual CT property Energy",
+    "intro": "Add CT1 as the grid meter for your whole property. CT2 and the existing preview are separate. No control commands are enabled.",
+    "unavailable": "Property Energy is unavailable until the meter source, firmware and accounting contract are qualified. Existing meters and Energy settings are unchanged.",
+    "emailLabel": "EcoFlow email",
+    "passwordLabel": "EcoFlow password",
+    "regionLabel": "Region",
+    "login": "Sign in",
+    "find": "Find owned meters",
+    "sourceLabel": "Property meter",
+    "review": "Review this meter",
+    "totals": "Import and export totals start with this device and are calculated from observed CT1 power. They are approximate, exclude unobserved gaps and do not copy historical totals.",
+    "scopeText": "CT1 measures the property incomer, including downstream circuits. I want this meter to be the property Energy source.",
+    "overlapText": "I have reviewed the wiring and other Homey Energy sources. No other included meter counts the same property boundary.",
+    "approve": "Continue to add this meter",
+    "expired": "The review expired. Review the meter again before continuing."
+  },
   "legacy_flow": {"readings":"Current, matching STREAM readings are unavailable or not time-coherent. Flow evaluation stopped, including when inverted.","arguments":"Use a supported comparison direction and a finite threshold in the card range.","forecast":"A recent forecast for the correct Homey-local date and current location/settings is unavailable. Flow evaluation stopped."},
   "coordination": {
     "source_limits": "Choose separate grid, battery SOC and battery-power readings; inverter output is not battery power. W/kW conversion does not verify direction or circuit scope. Upstream apps may estimate values or substitute zero for missing data. A recent capability timestamp is not a verified sensor heartbeat; unchanged values may expire. Never select a different reading just to bypass a blocked source.",
@@ -141,6 +173,8 @@
   },
   "settings": {
     "setup": {
+      "accountStored": "Stored EcoFlow account:",
+      "accountMissing": "No EcoFlow account stored.",
       "pairingSupportHelp": "Missing a device choice? Include the installed EcoFlow app version, Homey OS version and Homey mobile-app version with a screenshot of the device picker. Pairing permission does not install or update the app or add device types. Do not delete existing devices while investigating.",
       "accountRemoved": "Removed. Devices using the EcoFlow app connection need a stored account before readings can resume.",
       "accountRemoveFailed": "Could not remove the stored EcoFlow account completely. Please try again.",
@@ -153,7 +187,7 @@
       "appConnectionTitle": "EcoFlow app connection",
       "appConnectionHelp": "STREAM 5000 Series and Dual CT use your EcoFlow app account. Sign in when adding a device; Developer API keys are separate.",
       "accountManagementTitle": "Manage stored account",
-      "accountManagementHelp": "Removing this sign-in interrupts devices using the EcoFlow app connection until an account is stored again. Developer API keys are kept separately.",
+      "accountManagementHelp": "To update the shared app sign-in, use Repair on an existing app-connected device. Removing this sign-in interrupts readings until an account is stored again. Developer API keys are kept separately.",
       "energySetupTitle": "Homey Energy",
       "energyGridHelp": "Use one whole-property grid meter in Homey Energy. A meter on a downstream circuit must not also count as the whole-property meter. Review each meter’s Energy settings before changing sources.",
       "energyBatteryHelp": "Add one Home Battery per separate installation. Physical unit monitors provide device readings without contributing a second battery to Homey Energy. Capacity entered for app widgets does not set Homey Energy capacity.",

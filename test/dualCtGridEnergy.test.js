@@ -258,14 +258,14 @@ test('overloaded storage queue is bounded and fails closed rather than retaining
   await h.session.close();
 });
 
-test('Homey projection uses kWh cumulative import/export proposal, remains unwired and cannot change preview manifests', () => {
+test('Homey projection uses kWh cumulative import/export proposal without adding accounting to existing drivers', () => {
   assert.deepEqual(DUAL_CT_ENERGY_PROPOSAL.energy, { cumulative: true,
     cumulativeImportedCapability: 'meter_power.imported', cumulativeExportedCapability: 'meter_power.exported' });
   const preview = require('../drivers/smartmeter_dual_ct_preview/driver.compose.json');
   assert.equal(preview.energy, undefined); assert.ok(preview.capabilities.every(id => id.startsWith('dual_ct_preview_')));
   const root = path.join(__dirname, '..');
   const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
-  for (const file of [...walk(path.join(root, 'drivers')).filter(f => f.endsWith('.ts')), path.join(root, 'app.ts'), path.join(root, 'lib/dualCtMonitor.ts')]) {
+  for (const file of [...walk(path.join(root, 'drivers')).filter(f => f.endsWith('.ts') && !f.includes(path.join('drivers', 'smartmeter_dual_ct_energy'))), path.join(root, 'app.ts'), path.join(root, 'lib/dualCtMonitor.ts')]) {
     assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /dualCtEnergyAdoptionWorkflow|dualCtGridEnergyDeviceAdapter|dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption|dualCtEnergyCheckpoint/);
   }
 });

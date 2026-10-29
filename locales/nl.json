@@ -1,4 +1,36 @@
 {
+  "app_account_repair": {
+    "title": "EcoFlow-account opnieuw verbinden",
+    "intro": "Werk de EcoFlow-appaanmelding voor je bestaande apparaten bij. Apparaatidentiteiten, historie en Flows blijven behouden. Developer-API-sleutels beheer je apart in de app-instellingen.",
+    "emailLabel": "EcoFlow-e-mail",
+    "passwordLabel": "EcoFlow-wachtwoord",
+    "regionLabel": "Regio",
+    "login": "Aanmelding controleren",
+    "reviewText": "Het account moet eigenaar zijn van alle bestaande EcoFlow-apparaten met appverbinding. Er worden geen apparaten toegevoegd of verwijderd en geen Energy-toestemmingen of bediening ingeschakeld.",
+    "affected": "Apparaten met deze aanmelding:",
+    "consentText": "Werk de gedeelde aanmelding bij en hervat eerder ingeschakelde monitoring. Metingen kunnen kort onderbroken worden.",
+    "confirm": "Accountverbinding bijwerken",
+    "failed": "De accountverbinding kon niet worden voltooid. Controleer account en regio en open Repareren opnieuw. Alle bestaande apparaten moeten eigendom zijn van hetzelfde account.",
+    "expired": "De beoordeling is verlopen. Controleer de aanmelding opnieuw.",
+    "saved": "Aanmelding opgeslagen. Apparaten verbinden opnieuw; controleer hun metingen. Apparaatidentiteiten en Energy-toestemmingen zijn behouden."
+  },
+  "dual_ct_energy": {
+    "title": "Dual CT woningenergie",
+    "intro": "Voeg CT1 toe als netmeter voor het hele terrein. CT2 en de bestaande preview staan hier los van. Er worden geen bedieningsopdrachten ingeschakeld.",
+    "unavailable": "Woningenergie is pas beschikbaar zodra de meterbron, firmware en energiebalans zijn gekwalificeerd. Bestaande meters en Energy-instellingen blijven ongewijzigd.",
+    "emailLabel": "EcoFlow-e-mail",
+    "passwordLabel": "EcoFlow-wachtwoord",
+    "regionLabel": "Regio",
+    "login": "Aanmelden",
+    "find": "Eigen meters zoeken",
+    "sourceLabel": "Hoofdmeter",
+    "review": "Deze meter beoordelen",
+    "totals": "Afname- en terugleveringstotalen beginnen bij dit apparaat en worden berekend uit waargenomen CT1-vermogen. Dit zijn schattingen; niet-waargenomen perioden en historische totalen worden niet overgenomen.",
+    "scopeText": "CT1 meet de hoofdaansluiting inclusief achterliggende groepen. Ik wil deze meter als Energy-bron voor het terrein gebruiken.",
+    "overlapText": "Ik heb de bedrading en andere Homey Energy-bronnen gecontroleerd. Geen andere opgenomen meter telt dezelfde terreingrens.",
+    "approve": "Doorgaan met deze meter",
+    "expired": "De beoordeling is verlopen. Beoordeel de meter opnieuw."
+  },
   "legacy_flow": {"readings":"Actuele passende STREAM-waarden zijn niet beschikbaar of niet gelijktijdig. Flow-evaluatie gestopt, ook bij omkering.","arguments":"Gebruik een ondersteunde vergelijkingsrichting en een eindige drempel binnen het kaartbereik.","forecast":"Een recente prognose voor de juiste lokale Homey-datum en huidige locatie/instellingen is niet beschikbaar. Flow-evaluatie gestopt."},
   "coordination": {
     "source_limits": "Kies afzonderlijke waarden voor netvermogen, batterij-SOC en batterijvermogen; omvormeruitgang is geen batterijvermogen. W/kW-omrekening bewijst richting of circuitomvang niet. Andere apps kunnen waarden schatten of ontbrekende data door nul vervangen. Een recente tijdstempel is geen bewezen sensorhartslag; ongewijzigde waarden kunnen verlopen. Kies geen andere meting alleen om een blokkade te omzeilen.",
@@ -141,6 +173,8 @@
   },
   "settings": {
     "setup": {
+      "accountStored": "Opgeslagen EcoFlow-account:",
+      "accountMissing": "Geen EcoFlow-account opgeslagen.",
       "pairingSupportHelp": "Ontbreekt een apparaatkeuze? Vermeld de versies van de geïnstalleerde EcoFlow-app, Homey OS en de Homey-app met een screenshot van de apparaatkiezer. Toestemming voor koppelen installeert of vernieuwt de app niet en voegt geen apparaattypen toe. Verwijder geen bestaande apparaten tijdens het onderzoek.",
       "accountRemoved": "Verwijderd. Apparaten met de EcoFlow-appverbinding hebben een opgeslagen account nodig voordat metingen kunnen worden hervat.",
       "accountRemoveFailed": "Het opgeslagen EcoFlow-account kon niet volledig worden verwijderd. Probeer het opnieuw.",
@@ -153,7 +187,7 @@
       "appConnectionTitle": "EcoFlow-appverbinding",
       "appConnectionHelp": "STREAM 5000 Series en Dual CT gebruiken je EcoFlow-appaccount. Meld je aan bij het toevoegen van een apparaat; Developer-API-sleutels staan hier los van.",
       "accountManagementTitle": "Opgeslagen account beheren",
-      "accountManagementHelp": "Het verwijderen van deze aanmelding onderbreekt apparaten met de EcoFlow-appverbinding totdat er weer een account is opgeslagen. Developer-API-sleutels worden apart bewaard.",
+      "accountManagementHelp": "Gebruik Repareren op een bestaand apparaat met appverbinding om de gedeelde aanmelding bij te werken. Verwijderen onderbreekt metingen totdat er weer een account is opgeslagen. Developer-API-sleutels worden apart bewaard.",
       "energySetupTitle": "Homey Energy",
       "energyGridHelp": "Gebruik in Homey Energy één netmeter voor het hele terrein. Een meter op een achterliggende groep mag niet ook als hoofdmeter meetellen. Controleer de Energy-instellingen van elke meter voordat je van bron wisselt.",
       "energyBatteryHelp": "Voeg per afzonderlijke installatie één thuisbatterij toe. Monitoren voor afzonderlijke apparaten leveren metingen zonder een tweede batterij aan Homey Energy toe te voegen. Capaciteit voor app-widgets stelt niet de capaciteit in Homey Energy in.",

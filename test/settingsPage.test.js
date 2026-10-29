@@ -628,7 +628,7 @@ test('a failing unset is reported instead of a false success', async () => {
   // The password did get cleared, and the page reports what is really left.
   assert.strictEqual(homey.store.has('appAuthPassword'), false);
   assert.strictEqual(homey.store.get('appAuthEmail'), 'tester@example.invalid');
-  assert.match(state, /Signed in as/);
+  assert.match(state, /Stored EcoFlow account/);
 });
 
 test('a failing password unset stops before claiming anything was removed', async () => {

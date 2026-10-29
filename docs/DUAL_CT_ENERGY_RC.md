@@ -8,14 +8,20 @@ timing still unqualified. No three-phase or native-counter production claim.
 
 ## Current engineering status
 
-The existing strict wire adapter, persistent power session and single-process
-authority are implemented. A Homey write adapter is prepared with a production
-default-off boundary. It is not imported by app/driver runtime; no new Energy
-device is registered. Code-owned synthetic dependency injection is for testing,
-never a customer override. Failed unavailable/power clears remain pending for later local expiry ticks,
-without restarting accounting or resetting saved totals.
-A qualified firmware/sign/timing contract, reviewed
-adoption UI, owned subscription lifecycle and native acceptance remain required.
+Diagnostic 1.10.59 registers a separate CT1 property Energy driver, with owned
+source/inventory readback, review/confirmation, persistent session, Homey projection
+and the existing shared subscription. The driver is hidden from Add Device and
+runtime disabled. Firmware/sign/timing are unqualified; the production resolver
+remains empty and normal discovery has no demonstrated firmware reader. Synthetic
+code-owned injections test the real driver lifecycle without qualifying hardware.
+The existing preview is not converted and other meters are never edited.
+
+Source/consent/inventory are rechecked around adoption and asynchronous writes.
+Restore refuses to reduce already projected totals from a missing or older
+checkpoint. Expiry clears watts and retains totals; restart re-anchors without
+backfilling downtime. Native persistence and whole-backup recovery are unverified.
+The account Repair workflow preserves existing device definitions and prior consent;
+native Repair remains an explicit desktop/mobile acceptance item.
 
 `npm run release:dual-ct` must fail until each gate passes on the exact candidate.
 `npm run release:check` validates the ledger without pretending hardware is ready.
@@ -91,7 +97,9 @@ legacy devices across available natural states. No synthetic soak substitution.
 
 ## native-desktop-mobile
 
-Verify new-device selection/consent, blocked prerequisites, approximate-power
+Verify source-preserving account Repair, no identity/Flow/counter change, prior
+preview opt-in preservation and safe failed/cancelled sign-in. Verify new-device
+selection/consent, blocked prerequisites, approximate-power
 disclosure where applicable, native Energy rendering, unavailable readings and
 recovery on desktop/mobile. Preview readings must not acquire Energy or controls.
 

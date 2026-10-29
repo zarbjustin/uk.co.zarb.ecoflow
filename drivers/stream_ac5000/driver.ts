@@ -1,6 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
+import { registerAppAuthRepair } from '../../lib/appAuthRepair';
 import { streamAc5000Devices } from '../../lib/appDevices';
 import { registerStream5000Pairing } from '../../lib/stream5000Pairing';
 
@@ -22,5 +23,9 @@ module.exports = class StreamAc5000Driver extends Homey.Driver {
       selectDevices: streamAc5000Devices,
       noAccountMessage: 'No EcoFlow account is configured for the STREAM AC 5000 pairing flow.',
     });
+  }
+
+  async onRepair(session: any, device: any): Promise<void> {
+    registerAppAuthRepair(this, session, device);
   }
 };

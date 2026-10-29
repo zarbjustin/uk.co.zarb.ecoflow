@@ -57,7 +57,7 @@
   <p class="help" id="appAuthState" style="color:#555;">Checking&hellip;</p>
   <details id="accountManagement">
     <summary id="accountManagementTitle">Manage stored account</summary>
-    <p class="help" id="accountManagementHelp">Removing this sign-in interrupts devices using the EcoFlow app connection until an account is stored again. Developer API keys are kept separately.</p>
+    <p class="help" id="accountManagementHelp">To update the shared app sign-in, use Repair on an existing app-connected device. Removing this sign-in interrupts readings until an account is stored again. Developer API keys are kept separately.</p>
     <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
     <div class="saved" id="appAuthSaved" role="status" aria-live="polite"></div>
   </details>
@@ -242,8 +242,8 @@
       function refreshAppAuthState() {
         Homey.get('appAuthEmail', function (err, v) {
           document.getElementById('appAuthState').textContent = (!err && v)
-            ? 'Signed in as ' + v + '.'
-            : 'No EcoFlow account stored.';
+            ? Homey.__('settings.setup.accountStored') + ' ' + v + '.'
+            : Homey.__('settings.setup.accountMissing');
         });
       }
       refreshAppAuthState();

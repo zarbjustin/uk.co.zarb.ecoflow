@@ -1,0 +1,109 @@
+<style>
+  .energy-setup { padding:16px; max-width:480px; margin:auto; font:14px/1.5 -apple-system,system-ui,sans-serif; }
+  .energy-setup h2 { font-size:20px; }
+  .energy-setup label { display:block; margin-top:14px; }
+  .energy-setup input:not([type=checkbox]), .energy-setup select, .energy-setup button { box-sizing:border-box; width:100%; padding:10px; }
+  .energy-setup button { margin-top:16px; border:0; border-radius:8px; background:#1aa3e8; color:white; font:600 15px system-ui,sans-serif; }
+  .energy-setup button:disabled { opacity:.5; }
+  .energy-setup [hidden] { display:none; }
+</style>
+<div class="energy-setup">
+  <h2 id="title"></h2><p id="intro"></p><p id="status" role="status" aria-live="polite"></p>
+  <div id="connection" hidden>
+    <div id="loginForm" hidden>
+      <label for="email" id="emailLabel"></label><input id="email" type="email" autocomplete="off">
+      <label for="password" id="passwordLabel"></label><input id="password" type="password" autocomplete="off">
+      <label for="region" id="regionLabel"></label><select id="region"><option value="https://api-e.ecoflow.com">Europe</option><option value="https://api.ecoflow.com">Global</option></select>
+      <button id="login" type="button"></button>
+    </div>
+    <button id="find" type="button" hidden></button>
+    <div id="selection" hidden>
+      <label for="source" id="sourceLabel"></label><select id="source"></select>
+      <button id="review" type="button"></button>
+    </div>
+    <div id="confirmation" hidden>
+      <p id="reviewSource"></p><p id="totals"></p>
+      <label><input id="scopeConsent" type="checkbox"><span id="scopeText"></span></label>
+      <label><input id="overlapConsent" type="checkbox"><span id="overlapText"></span></label>
+      <button id="approve" type="button" disabled></button>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+(function () {
+  const element = id => document.getElementById(id);
+  const text = key => Homey.__('dual_ct_energy.' + key);
+  ['title', 'intro', 'emailLabel', 'passwordLabel', 'regionLabel', 'login', 'find', 'sourceLabel', 'review', 'totals', 'scopeText', 'overlapText', 'approve'].forEach(id => { element(id).textContent = text(id); });
+  let operation = 0, token = null, expiresAt = 0, expiry = null, handoff = false;
+  function invalidate() {
+    operation++; token = null; expiresAt = 0;
+    if (expiry) clearTimeout(expiry); expiry = null;
+    element('scopeConsent').checked = false; element('overlapConsent').checked = false;
+    element('approve').disabled = true; element('confirmation').hidden = true;
+  }
+  function updateConsent() {
+    element('approve').disabled = !token || Date.now() >= expiresAt || !element('scopeConsent').checked || !element('overlapConsent').checked;
+  }
+  element('scopeConsent').addEventListener('change', updateConsent);
+  element('overlapConsent').addEventListener('change', updateConsent);
+  element('source').addEventListener('change', function () {
+    invalidate(); Homey.emit('dual_ct_energy_cancel').catch(() => {});
+  });
+  element('login').addEventListener('click', async function () {
+    invalidate(); const generation = operation; this.disabled = true;
+    try {
+      await Homey.emit('app_login', { email: element('email').value.trim(), password: element('password').value, host: element('region').value });
+      if (generation !== operation) return;
+      element('loginForm').hidden = true; element('find').hidden = false; element('status').textContent = '';
+    } catch { if (generation === operation) element('status').textContent = text('unavailable'); }
+    finally { element('password').value = ''; this.disabled = false; }
+  });
+  element('find').addEventListener('click', async function () {
+    invalidate(); const generation = operation; this.disabled = true;
+    element('selection').hidden = true;
+    try {
+      const rows = await Homey.emit('dual_ct_energy_candidates');
+      if (generation !== operation) return;
+      element('source').replaceChildren();
+      rows.forEach(row => { const option = document.createElement('option'); option.value = row.sn; option.textContent = row.label; element('source').appendChild(option); });
+      element('selection').hidden = !rows.length;
+      element('status').textContent = rows.length ? '' : text('unavailable');
+    } catch { if (generation === operation) element('status').textContent = text('unavailable'); }
+    finally { this.disabled = false; }
+  });
+  element('review').addEventListener('click', async function () {
+    invalidate(); const generation = operation; this.disabled = true;
+    try {
+      const review = await Homey.emit('dual_ct_energy_review', { sn: element('source').value });
+      if (generation !== operation) return;
+      if (!review || typeof review.token !== 'string' || !Number.isFinite(review.expiresAt) || review.expiresAt <= Date.now()) throw new Error('review');
+      token = review.token; expiresAt = review.expiresAt;
+      element('reviewSource').textContent = review.sourceLabel;
+      element('confirmation').hidden = false; element('status').textContent = '';
+      expiry = setTimeout(() => { invalidate(); element('status').textContent = text('expired'); Homey.emit('dual_ct_energy_cancel').catch(() => {}); }, Math.min(90000, expiresAt - Date.now()));
+    } catch { if (generation === operation) element('status').textContent = text('unavailable'); }
+    finally { this.disabled = false; }
+  });
+  element('approve').addEventListener('click', async function () {
+    updateConsent(); if (this.disabled) return;
+    const generation = operation; this.disabled = true;
+    try {
+      await Homey.emit('dual_ct_energy_approve', { token, consent: element('scopeConsent').checked, externalOverlapReviewed: element('overlapConsent').checked });
+      if (generation !== operation || Date.now() >= expiresAt) return;
+      handoff = true; if (expiry) clearTimeout(expiry); expiry = null;
+      await Homey.showView('list_devices');
+    } catch { if (generation === operation) { handoff = false; invalidate(); Homey.emit('dual_ct_energy_cancel').catch(() => {}); element('status').textContent = text('unavailable'); } }
+  });
+  window.addEventListener('pagehide', function () { if (!handoff) { invalidate(); Homey.emit('dual_ct_energy_cancel').catch(() => {}); } });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && !handoff) { invalidate(); Homey.emit('dual_ct_energy_cancel').catch(() => {}); } });
+  element('status').textContent = text('unavailable');
+  const opening = operation;
+  Homey.emit('dual_ct_energy_access').then(async access => {
+    if (opening !== operation || access?.enabled !== true) return;
+    const saved = await Homey.emit('check_app_credentials');
+    if (opening !== operation) return;
+    element('connection').hidden = false; element('loginForm').hidden = saved === true; element('find').hidden = saved !== true;
+    element('status').textContent = '';
+  }).catch(() => {});
+})();
+</script>

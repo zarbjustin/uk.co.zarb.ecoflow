@@ -1,6 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
+import { registerAppAuthRepair } from '../../lib/appAuthRepair';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits } from '../../lib/streamPairing';
 import { streamModelFromSn } from '../../lib/streamModels';
@@ -27,5 +28,9 @@ module.exports = class StreamUnitDriver extends Homey.Driver {
         };
       });
     });
+  }
+
+  async onRepair(session: any, device: any): Promise<void> {
+    registerAppAuthRepair(this, session, device);
   }
 };

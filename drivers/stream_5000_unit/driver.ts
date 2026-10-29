@@ -1,6 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
+import { registerAppAuthRepair } from '../../lib/appAuthRepair';
 import { registerStream5000Pairing } from '../../lib/stream5000Pairing';
 
 module.exports = class Stream5000UnitDriver extends Homey.Driver {
@@ -10,5 +11,9 @@ module.exports = class Stream5000UnitDriver extends Homey.Driver {
 
   async onPair(session: any): Promise<void> {
     registerStream5000Pairing(this, session);
+  }
+
+  async onRepair(session: any, device: any): Promise<void> {
+    registerAppAuthRepair(this, session, device);
   }
 };

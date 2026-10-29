@@ -236,6 +236,18 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     }
   }
 
+  async resumeAppAccountAfterRepair(): Promise<void> {
+    const clearing = this.stop('waiting');
+    const { generation } = this;
+    await clearing;
+    if (generation !== this.generation || this.getSetting('preview_enabled') !== true) return;
+    if (this.getStoreValue('dualCtPreviewConsent') !== DUAL_CT_PREVIEW_CONSENT
+      || manifest.capabilities.some((capability) => !this.hasCapability(capability))) throw new Error(this.text('display_failed'));
+    // Repair retains existing capability titles/options; it is not a device migration or renewed preview opt-in.
+    this.enabled = true; this.retryDelay = 30000;
+    await this.connect(generation);
+  }
+
   async onUninit(): Promise<void> {
     this.homey.settings.removeListener('set', this.accountChanged);
     this.homey.settings.removeListener('unset', this.accountChanged);

@@ -24,7 +24,10 @@
     "battery_soh"
   ],
   "capabilitiesOptions": {
-    "stream_5000_reading_status": { "preventTag": true, "preventInsights": true },
+    "stream_5000_reading_status": {
+      "preventTag": true,
+      "preventInsights": true
+    },
     "measure_battery": {
       "title": {
         "en": "Unit battery level",
@@ -230,6 +233,11 @@
     {
       "id": "add_devices",
       "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "app_account_repair"
     }
   ]
 }

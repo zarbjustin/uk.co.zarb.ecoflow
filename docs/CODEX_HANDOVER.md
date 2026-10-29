@@ -4,7 +4,32 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
-## Current continuation — production settings and complete Energy scope
+## Current source — diagnostic 1.10.59, not installed
+
+New separate Dual CT CT1 Energy driver is wired through owned discovery, Homey
+contributor inventory, review/confirmation, persistent session and shared MQTT
+subscription. It is hidden from Add Device (`deprecated: true`) and runtime-off;
+production contract registry remains empty and firmware readback unavailable.
+Do not equate implemented driver plumbing with qualified or activated Energy.
+The existing preview and other Energy roles are unchanged.
+
+Existing app-connected roles now offer source-preserving account Repair. It checks
+ownership of all existing consumers and protected account bindings, requires fresh
+confirmation, reads back the shared credential write and resumes only prior
+monitoring consent. Partial writes attempt private rollback; no new Energy/control
+permission or device identity is created. Native Repair acceptance remains open.
+Late/cancelled/superseded sign-ins cannot overwrite the selected pending account.
+
+1156 tests, locked Node 22 dependencies, lint/release/diff/audit and pinned Homey
+verified checks pass. New source fingerprint `e0216df13cb1fc67ab11f1ccdef7ac94dc7b9e10b258bf4b3dc1ad7706bc2d7b`.
+Fresh private readback confirms owner still running Development 1.10.58, all 12
+device definitions/settings, 99 full Flows and global setting hashes unchanged;
+six cumulative sequences nondecreasing. No install, Repair, pairing, source change,
+hardware operation or publication performed. Mainline/Test/Live unchanged.
+See newest STATUS for archive/source/CI outcome and ENERGY_RELEASE_COMPLETION.md
+for firmware qualification, 5000 solar, native tests and final-candidate soak.
+
+## Previous source checkpoint — production settings and complete Energy scope
 
 29 October: diagnostic source settings cleanup separates connections, Energy setup
 and collapsed optional Support. New guidance is localised EN/DE/NL; obsolete Beta

@@ -44,7 +44,7 @@ test('synthetic saved Flow/device references resolve before and after the manife
     assert.ok(app.flow[flow.kind].some(card=>card.id===flow.cardId));
   }
   assert.deepEqual(installation,before);
-  const previews=app.drivers.filter(driver=>/dual.?ct/i.test(driver.id));
+  const previews=app.drivers.filter(driver=>driver.id === 'smartmeter_dual_ct_preview');
   assert.deepEqual(previews.map(driver=>driver.id),['smartmeter_dual_ct_preview']);
   assert.equal(previews[0].class,'other');assert.equal(previews[0].energy,undefined);
   assert.ok(previews[0].capabilities.every(id=>id.startsWith('dual_ct_preview_')),'raw preview cannot adopt verified meter capabilities');

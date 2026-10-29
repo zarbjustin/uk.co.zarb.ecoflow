@@ -1,0 +1,187 @@
+import Homey from 'homey';
+import { randomUUID } from 'crypto';
+import { appAuthClientFromSettings, clearSavedAppAuthCreds } from '../../lib/appAuthPairing';
+import { hasOtherAppAuthDevices } from '../../lib/appAuthConsumers';
+import { DualCtHomeyEnergyContext, dualCtCredentialsRevision } from '../../lib/dualCtHomeyEnergyContext';
+import { DualCtGridEnergySession } from '../../lib/dualCtGridEnergySession';
+import { DualCtGridEnergyDeviceAdapter } from '../../lib/dualCtGridEnergyDeviceAdapter';
+import { DualCtEnergyAuthority } from '../../lib/dualCtEnergyAdoption';
+import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint } from '../../lib/dualCtEnergyCheckpoint';
+import { DUAL_CT_ENERGY_RUNTIME_ENABLED, dualCtGridBinding, resolveDualCtGridEnergyContract } from '../../lib/dualCtGridEnergySource';
+
+// Shared by every instance in this app process; never one authority per device.
+const authority = new DualCtEnergyAuthority();
+
+module.exports = class DualCtEnergyDevice extends Homey.Device {
+  private generation = 0;
+  private context: DualCtHomeyEnergyContext | null = null;
+  private adapter: DualCtGridEnergyDeviceAdapter | null = null;
+  private handler: ((payload: Buffer, topic: string) => void) | null = null;
+  private retry: ReturnType<typeof setTimeout> | null = null;
+  private retryDelay = 30000;
+  private ticker: ReturnType<typeof setInterval> | null = null;
+  private identityRefresh: Promise<void> | null = null;
+  private lastRefresh = 0;
+  private credentialRevision = '';
+  private readonly accountChanged = (key: string) => {
+    if (['appAuthEmail', 'appAuthPassword', 'appAuthHost'].includes(key)) this.stop().catch(() => {});
+  };
+
+  /** Internal seams for synthetic lifecycle tests. No runtime setting can qualify a source or enable accounting. */
+  protected energyDependencies() {
+    return {
+      enabled: () => DUAL_CT_ENERGY_RUNTIME_ENABLED,
+      resolve: resolveDualCtGridEnergyContract,
+      context: () => new DualCtHomeyEnergyContext({
+        homey: this.homey,
+        sn: this.getData().sn,
+        ownDevice: { sn: this.getData().sn, driverId: 'homey:app:uk.co.zarb.ecoflow:smartmeter_dual_ct_energy' },
+        client: () => appAuthClientFromSettings(this.homey),
+      }),
+    };
+  }
+
+  async onInit(): Promise<void> {
+    this.homey.settings.on('set', this.accountChanged);
+    this.homey.settings.on('unset', this.accountChanged);
+    await this.connect();
+  }
+
+  private async connect(): Promise<void> {
+    const clearing = this.stop();
+    const { generation } = this;
+    await clearing;
+    if (generation !== this.generation) return;
+    const dependencies = this.energyDependencies();
+    if (!dependencies.enabled() || this.getStoreValue('dualCtEnergyConsent') !== 1) return;
+    this.credentialRevision = dualCtCredentialsRevision(this.homey);
+    const context = dependencies.context(); this.context = context;
+    try {
+      await context.refresh();
+      if (generation !== this.generation) return;
+      const snapshot = context.snapshot();
+      if (!snapshot) throw new Error('source');
+      const { source } = snapshot;
+      const contract = dependencies.resolve(source.identity);
+      const scope = {
+        account: source.account, device: source.device, grid: source.grid, session: randomUUID(),
+      };
+      const binding = contract && dualCtGridBinding(scope, contract);
+      if (!binding || binding !== this.getStoreValue('dualCtEnergySourceBinding')
+        || source.account !== this.getStoreValue('dualCtEnergyAccountBinding') || source.grid !== this.getStoreValue('dualCtEnergyGrid')) throw new Error('binding');
+      const storage = dualCtEnergyHomeyStorage(this);
+      const { read } = storage;
+      storage.read = async () => {
+        const saved = await read();
+        const checkpoint = readDualCtEnergyCheckpoint(saved, binding, contract!.timing);
+        for (const [capability, wh] of [['meter_power.imported', checkpoint?.importedWh], ['meter_power.exported', checkpoint?.exportedWh]] as const) {
+          const previous = this.getCapabilityValue(capability);
+          if (previous !== null && previous !== undefined && (typeof previous !== 'number' || !Number.isFinite(previous) || previous < 0)) throw new Error('counter_invalid');
+          if (typeof previous === 'number' && previous > 0 && (wh === undefined || previous > wh / 1000 + 1e-9)) throw new Error('counter_rollback');
+        }
+        return saved;
+      };
+      const session = new DualCtGridEnergySession({
+        scope,
+        identity: source.identity,
+        readIdentity: () => context.snapshot()?.source.identity || { productType: -1, firmware: '' },
+        storage,
+        authority,
+        resolveContract: dependencies.resolve,
+        review: () => ({
+          explicitConsent: generation === this.generation && this.getStoreValue('dualCtEnergyConsent') === 1
+          && this.credentialRevision === dualCtCredentialsRevision(this.homey),
+          target: 'new_energy_device',
+          accounting: 'power',
+          binding,
+          grid: scope.grid,
+          inventoryComplete: context.snapshot()?.inventory.complete === true,
+          contributors: context.snapshot()?.inventory.contributors || [],
+          externalOverlapReviewed: true,
+          contractQualified: true,
+        }),
+      });
+      const adapter = new DualCtGridEnergyDeviceAdapter(session, this, dependencies.enabled); this.adapter = adapter;
+      await adapter.start();
+      if (generation !== this.generation) {
+        await adapter.close(); return;
+      }
+      if (!adapter.diagnostics().active) throw new Error('blocked');
+      const handler = (payload: Buffer, topic: string) => {
+        if (generation === this.generation && this.handler === handler) {
+          adapter.observe(payload, topic, Date.now()).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
+        }
+      };
+      this.handler = handler;
+      const app = this.homey.app as any;
+      const subscribed = await app.subscribeAppRealtime(source.device, handler, () => generation === this.generation && dependencies.enabled());
+      if (generation !== this.generation) {
+        app.unsubscribeAppRealtime(source.device, handler); return;
+      }
+      if (!subscribed) throw new Error('subscription');
+      this.retryDelay = 30000;
+      this.lastRefresh = Date.now();
+      this.ticker = this.homey.setInterval(() => {
+        if (generation !== this.generation || this.adapter !== adapter) return;
+        adapter.refresh().then(() => {
+          if (generation === this.generation && !adapter.diagnostics().active) this.recover(generation, dependencies.enabled).catch(() => {});
+        }).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
+        // Local expiry never waits for a network inventory/identity refresh.
+        if (Date.now() - this.lastRefresh >= 60000 && !this.identityRefresh) {
+          this.lastRefresh = Date.now();
+          const refresh = context.refresh().then(() => (generation === this.generation ? adapter.refresh() : undefined)).catch(() => this.recover(generation, dependencies.enabled))
+            .finally(() => {
+              if (this.identityRefresh === refresh) this.identityRefresh = null;
+            });
+          this.identityRefresh = refresh;
+        }
+      }, 5000);
+    } catch {
+      await this.recover(generation, dependencies.enabled);
+    }
+  }
+
+  private async recover(generation: number, enabled: () => boolean): Promise<void> {
+    if (generation !== this.generation) return;
+    const clearing = this.stop(); const stoppedGeneration = this.generation;
+    await clearing;
+    if (stoppedGeneration !== this.generation || !enabled() || this.getStoreValue('dualCtEnergyConsent') !== 1) return;
+    this.retry = this.homey.setTimeout(() => {
+      this.retry = null; this.connect().catch(() => {});
+    }, this.retryDelay);
+    this.retryDelay = Math.min(300000, this.retryDelay * 2);
+  }
+
+  private async stop(): Promise<void> {
+    const generation = ++this.generation;
+    if (this.retry) this.homey.clearTimeout(this.retry);
+    this.retry = null;
+    if (this.ticker) this.homey.clearInterval(this.ticker);
+    this.ticker = null;
+    if (this.handler) (this.homey.app as any).unsubscribeAppRealtime(this.getData().sn, this.handler);
+    this.handler = null; this.context?.close(); this.context = null;
+    const { adapter } = this; this.adapter = null;
+    await adapter?.close();
+    if (generation !== this.generation) return;
+    await this.setUnavailable(this.homey.__('dual_ct_energy.unavailable')).catch(() => {});
+    if (generation !== this.generation) return;
+    await this.setCapabilityValue('measure_power', null).catch(() => {});
+    // Retain cumulative totals/checkpoints, paired identity, Insights and other devices.
+  }
+
+  async resumeAppAccountAfterRepair(): Promise<void> {
+    await this.connect();
+  }
+
+  async onUninit(): Promise<void> {
+    this.homey.settings.removeListener('set', this.accountChanged);
+    this.homey.settings.removeListener('unset', this.accountChanged);
+    await this.stop();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- finish checkpoint IO before clearing shared credentials.
+  async onDeleted(): Promise<void> {
+    await this.onUninit();
+    if (!hasOtherAppAuthDevices(this.homey, this)) clearSavedAppAuthCreds(this.homey);
+  }
+};

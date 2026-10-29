@@ -8,20 +8,19 @@ on the final accepted candidate, not from an older installation or a software re
 
 ## Sprint 4 — qualified source and adoption
 
-The source-bound adoption workflow is implemented independently of any driver.
-It requires fresh owned model/firmware readback, a developer-qualified contract,
-a complete account-matched contributor inventory and no included same-grid meter.
-The review expires after 90 seconds; confirmation rereads identity and inventory,
-rejects changed selections, is one-shot and requires separate explicit source
-consent and external overlap review. Cancellation and activation withdrawal fence
-late callbacks. No incoming device/store object is trusted, no existing device is
-converted, and neither the preview nor other meters are modified.
+Diagnostic 1.10.59 wires a separate CT1 Energy driver, adoption UI, Homey
+contributor inventory and owned subscription lifecycle around the persistent
+session. Review/confirmation require fresh owned identity, firmware and complete
+inventory; final Add rechecks the approved source before saving credentials.
+The new driver stays hidden from Add Device, runtime false and contract registry
+empty. A demonstrated supported firmware readback and physical W/sign/timing
+qualification remain required. No client flag or native screenshot substitutes
+for the provider. Code-owned synthetic injections prove wiring, not hardware.
 
-The production resolver remains empty and the activation switch false. A new
-driver, actual authenticated readback provider, adoption UI and subscription
-integration are NOT yet registered. A native firmware screen does not implement
-the fresh runtime identity provider. That is a real remaining dependency, not a
-setting that an owner or test fixture can override.
+Account Repair now supports existing app-connected devices without deletion or
+new pairing; it preserves source identity and prior consent and verifies shared
+credential writes. Native account Repair, failed/cancelled recovery and unchanged
+counter/Flow/device readback are part of the final-candidate native workflow.
 
 Finish qualification with existing transport evidence and near-time native /
 independent grid comparisons. Establish direction in both directions, zero,
@@ -53,15 +52,14 @@ scope must be reviewed explicitly rather than marking unavailable hardware passe
 
 ### Current read-only checkpoint
 
-Installed Development 1.10.56 reports an active 5000 subscription, one attempt,
-no reconnects and recent configuration/empty task reports. Physical scope is
-`linked_power_unverified`; numeric battery flow/state remain unknown while grid
-telemetry continues. Dual CT accepted data is again stale in the new observation.
-This does not establish cause, failure of the freshness fences or transport loss.
-Native computer-control calls timed out, so no fresh native battery comparison
-was completed in this continuation. No hardware gate is promoted.
+Owner installation remains Development 1.10.58 / da1da009…5baee1. Latest private
+verification preserves 12 full device definitions, 99 complete Flows, app-setting
+hashes and six nondecreasing cumulative sequences. Only ES21 identity and one
+single-unit idle point are accepted for that runtime. New diagnostic 1.10.59
+source, account Repair and CT1 driver are not installed or physically accepted.
+No new hardware gate is promoted by source tests or cached readbacks.
 
-### First bounded deployment for review
+### Historical 1.10.58 deployment proposal — completed with separate approval
 
 Version 1.10.58 is a diagnostic candidate containing telemetry health and disabled
 adoption preparation, plus earlier original STREAM fixes. An approved non-clean
@@ -69,8 +67,8 @@ Development update may expose the new frame-versus-accepted diagnostics without
 activating Energy, pairing another device or issuing a battery command. Before
 that action: preserve private full device/settings/capability/Flow/counter baseline,
 review exact source/CI/archive/fingerprint and agree recovery. After: read back
-the package/version and preservation baseline. Owner approval is required before
-installation; native restart/rollback are separate test actions.
+the package/version and preservation baseline. That update was separately approved and completed. A new 1.10.59 update still
+requires a fresh review/approval; native restart/rollback are separate actions.
 
 Actual Energy adoption/exclusions and controlled charge/discharge require their
 own reviewed bounds. Do not reuse the historical 500 W schedule approval on the

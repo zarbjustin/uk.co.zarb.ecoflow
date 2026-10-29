@@ -21,7 +21,7 @@ export function loadReleaseInputs(root) {
     gridGate: fs.readFileSync(path.join(root, 'lib/dualCtGridEnergySource.ts'), 'utf8'),
     timeObserver: fs.readFileSync(path.join(root, 'lib/stream5000TimeObserver.ts'), 'utf8'),
     timeObserverRuntime: fs.readFileSync(path.join(root, 'lib/Stream5000UnitDevice.ts'), 'utf8'),
-    runtime: ['app.ts', 'api.ts', ...app.drivers.map(driver => `drivers/${driver.id}/device.ts`)]
+    runtime: ['app.ts', 'api.ts', ...app.drivers.filter(driver => driver.id !== 'smartmeter_dual_ct_energy').map(driver => `drivers/${driver.id}/device.ts`)]
       .filter(name => fs.existsSync(path.join(root, name))).map(name => fs.readFileSync(path.join(root, name), 'utf8')).join('\n'),
   };
 }
@@ -31,7 +31,7 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
   for (const version of [compose.version, pkg.version, lock.version, lock.packages[''].version]) assert.equal(version, app.version, 'version mismatch');
   assert.deepEqual([...app.permissions].sort(), ['homey:manager:api', 'homey:manager:geolocation']);
   assert.deepEqual([...compose.permissions].sort(), [...app.permissions].sort());
-  assert.deepEqual(app.drivers.map(driver => driver.id).sort(), ['smartmeter', 'smartmeter_dual_ct_preview', 'stream',
+  assert.deepEqual(app.drivers.map(driver => driver.id).sort(), ['smartmeter', 'smartmeter_dual_ct_energy', 'smartmeter_dual_ct_preview', 'stream',
     'stream_5000_system', 'stream_5000_unit', 'stream_ac5000', 'stream_micro', 'stream_socket', 'stream_solar', 'stream_unit']);
   for (const old of live.drivers) {
     const current = app.drivers.find(driver => driver.id === old.id);
@@ -55,6 +55,13 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
     assert.equal(preview.capabilitiesOptions[id].preventTag, true); assert.equal(preview.capabilitiesOptions[id].preventInsights, true);
   }
   assert.equal(preview.settings.find(setting => setting.id === 'preview_enabled').value, false);
+  const grid = app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_energy');
+  assert.equal(grid.class, 'sensor');
+  assert.equal(grid.deprecated, true, 'unqualified Energy driver must stay hidden from Add device');
+  assert.deepEqual(grid.capabilities, ['measure_power', 'meter_power.imported', 'meter_power.exported']);
+  assert.deepEqual(grid.energy, { cumulative: true, cumulativeImportedCapability: 'meter_power.imported', cumulativeExportedCapability: 'meter_power.exported' });
+  assert.equal(grid.pair[0].id, 'energy_setup');
+
   assert.equal(app.drivers.find(driver => driver.id === 'stream_5000_unit').pair[0].id, 'connection_info');
   assert.equal(app.drivers.find(driver => driver.id === 'stream_5000_system').pair[0].id, 'energy_access');
   const readingStatus = 'stream_5000_reading_status';

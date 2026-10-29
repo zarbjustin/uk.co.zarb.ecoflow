@@ -10,11 +10,11 @@ unchanged. No additional community capture requests are required for these sprin
 | 1 | Explain telemetry silence versus rejected candidates | Local preview frame/accept/reject counts and independent receipt ages, reset on scope teardown, numeric-free support projection; tested, not installed |
 | 2 | Exact-candidate hardware acceptance | Separate strict CT1 ledger/checker and physical protocol; native firmware observed, mapping/import comparison and natural recovery partial; no hardware gate passed |
 | 3 | Homey write lifecycle | Separate device adapter using real persistent session; committed totals before projection, consent/contract rechecks after async writes, failure/expiry/teardown and coalesced refresh tests; local, unwired/default off |
-| 4 | Qualified source and new-device adoption | Source-bound review/confirmation implemented and tested, unwired/default off. Physical W/sign/timing contract, trustworthy fresh firmware readback and separate driver/UI/subscription integration remain pending. No preview conversion |
+| 4 | Qualified source and new-device adoption | Separate driver/UI/inventory/subscription path wired in 1.10.59, hidden/default off. Physical W/sign/timing contract and trustworthy fresh firmware readback remain pending. No preview conversion |
 | 5 | Native candidate acceptance | Pending separately approved preservation baseline, non-clean installation, explicit source adoption/exclusions, native persistence/restart/rollback and physical energy comparisons; then exact-candidate 48-hour soak |
 | 6 | Release delivery | Pending exact final source review/CI/archive, approved Test delivery and readback, reviewed Mainline integration and certification/Live decision |
 
-## Source and channels
+## Historical source and channels — see newest STATUS for current candidate
 
 Base e469c37 is pushed and exact CI 40781605070 passed. That source is version
 1.10.57, but fresh portal review on 29 October confirms Test is still 1.10.56 /
@@ -88,3 +88,14 @@ preservation readback matches 12 device definitions/settings/capability metadata
 This is a diagnostic installation, not Energy adoption or completion of sprint 5.
 Mainline/Test/Live remain unchanged. See newest STATUS/monitoring RC for limits;
 earlier local/not-installed wording above is historical preparation.
+
+## Diagnostic 1.10.59 engineering follow-up
+
+The separate CT1 Energy driver, native pairing review, Homey contributor reader
+and shared subscription lifecycle are wired and source-tested. The new driver
+is hidden/default off, with no registered contract or firmware reader; no Energy
+activation or preview conversion occurs. Account Repair for existing app consumers
+is source-tested without deletion/re-pairing, and release readiness rejects
+unqualified source admission. 1156 tests pass; native acceptance remains open.
+See newest STATUS and ENERGY_RELEASE_COMPLETION.md. This is engineering progress,
+not completion of sprints 4–6, owner installation or store delivery.

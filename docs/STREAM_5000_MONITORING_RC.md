@@ -674,6 +674,15 @@ as an acceptance shortcut.
 
 ## Candidate upgrade
 
+Diagnostic 1.10.59 adds source-preserving account Repair. Before accepting the
+native workflow, verify successful/cancelled/failed shared sign-in on the exact
+candidate, all owned consumers, retained IDs/custom titles/Flows/counters and
+prior preview/Energy consent. A credential update must not enable a previously
+disabled preview or a new Energy/control path. No real Repair has been performed
+or accepted by the synthetic/browser tests. The historical delivery below is
+separate evidence for its recorded fingerprint.
+
+
 Delivered follow-up: diagnostic commit `2119122` separates normal unit monitoring
 from default-off Home Battery Energy pairing. Exact-commit CI passed and it was
 directly installed non-clean; store Test/Live remain unchanged.

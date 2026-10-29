@@ -325,3 +325,25 @@ test('clearSavedAppAuthCreds removes every credential key', () => {
   assert.deepStrictEqual(storedKeys(homey), []);
   assert.strictEqual(hasSavedAppAuthCreds(homey), false);
 });
+
+test('a sign-in completing after cancellation cannot restore pending credentials or commit them', async () => {
+  let release; const pending = new Promise(resolve => { release = resolve; });
+  const homey = fakeHomey(); const session = fakeSession();
+  const transport = okTransport();
+  const controller = registerAppAuthHandlers(fakeDriver(homey), session, { transport: async req => { if (req.url.endsWith('/auth/login')) await pending; return transport(req); } });
+  const signingIn = login(session); await new Promise(setImmediate); await session.call('disconnect'); release();
+  await assert.rejects(signingIn, /session changed/); controller.commit();
+  assert.strictEqual(controller.getClient(), null); assert.deepStrictEqual(storedKeys(homey), []);
+});
+test('an older overlapping sign-in cannot replace the newer validated account credentials', async () => {
+  let release; const pending = new Promise(resolve => { release = resolve; }); let requests = 0;
+  const homey = fakeHomey(); const session = fakeSession(); const transport = okTransport();
+  registerAppAuthHandlers(fakeDriver(homey), session, { transport: async req => {
+    if (req.url.endsWith('/auth/login') && ++requests === 1) await pending;
+    return transport(req);
+  } });
+  const old = login(session); await new Promise(setImmediate);
+  await session.call('app_login', { email: EMAIL, password: 'new-synthetic-password', host: 'https://api.ecoflow.com' });
+  release(); await assert.rejects(old, /session changed/); await session.call('add_device', {});
+  assert.strictEqual(homey.values.get(APP_AUTH_PASSWORD_SETTING), 'new-synthetic-password');
+});
