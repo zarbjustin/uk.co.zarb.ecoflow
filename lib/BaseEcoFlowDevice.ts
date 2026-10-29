@@ -302,6 +302,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       return;
     }
 
+    await this.beforeFirstPoll();
+    if (this.stopping) return;
     await this.poll();
     if (this.stopping) return;
     this.startPollTimer();
@@ -352,6 +354,10 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.pollTimer = this.homey.setInterval(() => {
       this.poll().catch((e) => this.error('poll failed', e));
     }, interval);
+  }
+
+  protected async beforeFirstPoll(): Promise<void> {
+    // Optional source binding before the first REST read and realtime subscription.
   }
 
   protected async poll(): Promise<void> {
@@ -492,7 +498,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     return localized && localized !== messageKey ? localized : fallback;
   }
 
-  private assertDeveloperApiSupported(targetSn?: string): void {
+  protected assertDeveloperApiSupported(targetSn?: string): void {
     const reason = this.getDeveloperApiQuarantineReason() || this.getSerialQuarantineReason(targetSn);
     if (reason) throw new DeveloperApiQuarantineError(reason);
   }

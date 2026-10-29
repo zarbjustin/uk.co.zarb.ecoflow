@@ -43,6 +43,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private mainSn = '';
+  private aggregateBound = false;
+  private bindingAttempted = false;
+  private energySourceSn = '';
+
   private reportingObservations: Record<string, ReportingObservation> = {};
   private limitObservations = new StreamLimitObservations();
   private legacyFlowReadings = new LegacyFlowReadings();
@@ -126,6 +130,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** A cache value alone is not a receipt; unknown must reject, never become invertible false. */
   assertFlowReadings(scope: 'core' | 'installation', caps: string[], coherent = false): void {
+    if (this.bindingAttempted && !this.aggregateBound && !this.monitoringEnabled) throw this.legacyFlowError('readings');
     this.assertMonitoringCondition(scope);
     if (this.isShuttingDown() || this.controlStopped) throw this.legacyFlowError('readings');
     if (this.monitoringEnabled) {
@@ -435,13 +440,81 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private counterContinuity = new StreamCounterContinuity();
 
   protected getReadSn(): string {
-    return this.getData().sn;
+    return this.aggregateBound && !this.monitoringEnabled ? this.mainSn : this.getData().sn;
+  }
+
+  protected async beforeFirstPoll(): Promise<void> {
+    const generation = this.controlGeneration;
+    this.bindingAttempted = true;
+    this.energySourceSn = (this.getStoreValue('energySourceSn') as string) || this.mainSn;
+    this.aggregateBound = false;
+    if (this.client && !this.monitoringEnabled && !this.monitoringRollbackPending) {
+      try {
+        this.mainSn = await this.resolveAggregateMain();
+        if (this.energySourceSn !== this.mainSn) {
+          // Rebase new reporter lifetime counters without importing history or bridging power gaps.
+          this.chargedRawWh = undefined;
+          this.dischargedRawWh = undefined;
+          this.lastEnergyTs = 0;
+        }
+        this.energySourceSn = this.mainSn;
+        await this.persistBatteryStore();
+        if (generation === this.controlGeneration && !this.controlStopped) {
+          this.aggregateBound = true;
+          if (this.getSetting('enable_history') !== false) this.startHistory();
+        }
+      } catch {
+        if (generation === this.controlGeneration) this.aggregateBound = false;
+      }
+    }
+  }
+
+  private async resolveAggregateMain(): Promise<string> {
+    const generation = this.controlGeneration;
+    const main = await this.client.getMainSn(this.getData().sn, { fresh: true, signal: AbortSignal.timeout(10000) });
+    if (this.isShuttingDown() || generation !== this.controlGeneration
+      || streamTopologyFamily(main) !== 'original_stream') throw Error('Original aggregate main unavailable or unsupported');
+    return main.toUpperCase();
+  }
+
+  private async requireAggregateMain(): Promise<string> {
+    const generation = this.controlGeneration;
+    try {
+      const main = await this.resolveAggregateMain();
+      if (!this.aggregateBound || main !== this.mainSn) throw Error('Aggregate main changed; reinitialization required');
+      return main;
+    } catch {
+      if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) throw Error('Aggregate lookup interrupted');
+      this.aggregateBound = false;
+      this.lastEnergyTs = 0;
+      this.legacyFlowReadings = new LegacyFlowReadings();
+      for (const cap of ['measure_battery', 'measure_power', 'measure_power.grid', 'measure_power.load',
+        'measure_power.pv', 'battery_charging_state', 'feed_in_control', 'backup_reserve_soc',
+        'charge_limit', 'discharge_limit', 'operating_mode']) {
+        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+      }
+      throw Error('Aggregate main unverified; no controls or legacy readings allowed');
+    }
+  }
+
+  protected async poll(): Promise<void> {
+    if (!this.monitoringEnabled && !this.monitoringRollbackPending) {
+      try {
+        await this.requireAggregateMain();
+      } catch {
+        return;
+      }
+    }
+    await super.poll();
   }
 
   /** Session-only receipts, not device timestamps or verified installation membership. */
   getReportingDiagnostics() {
+    let aggregateBinding = 'not_checked';
+    if (this.bindingAttempted) aggregateBinding = this.aggregateBound ? 'verified_original_main' : 'blocked';
     return {
-      readAddressMatchesSavedMain: this.mainSn ? this.getReadSn() === this.mainSn : null,
+      readAddressMatchesSavedMain: this.getStoreValue('mainSn') ? this.getReadSn() === this.getStoreValue('mainSn') : null,
+      aggregateBinding,
       observations: this.reportingObservations,
       lastControlFailure: this.lastControlFailure,
       mainResolution: this.mainResolution,
@@ -489,6 +562,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (this.monitoringTimer) this.homey.clearInterval(this.monitoringTimer);
     this.monitoringTimer = null;
     this.controlGeneration += 1;
+    this.aggregateBound = false;
+    this.bindingAttempted = false;
     this.controlStopped = false;
     this.priceUpdatedAt = 0;
     this.reportingObservations = {};
@@ -527,7 +602,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
     await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
 
-    if (this.getSetting('enable_history') !== false) this.startHistory();
+    if ((this.monitoringEnabled || this.monitoringRollbackPending) && this.getSetting('enable_history') !== false) this.startHistory();
     if (this.getSetting('solar_forecast') !== false) this.startSolarForecast();
     if (this.monitoringEnabled) {
       await this.applyMonitoringTrial(); // Clear cached readings before startup's first legacy poll.
@@ -671,6 +746,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private async refreshHistory(): Promise<void> {
     if (this.isShuttingDown()) return;
+    if (this.bindingAttempted && !this.monitoringEnabled) await this.requireAggregateMain();
     const generation = this.controlGeneration;
     // On a calendar-day rollover, clear the existing daily tiles so a broken/empty
     // history feed can't keep showing yesterday's totals as "today"; fresh data
@@ -732,18 +808,23 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
       throw new Error(this.monitoringMessage('blocked'));
     }
-    const target = this.mainSn || this.getData().sn;
+    this.assertDeveloperApiSupported();
+    const target = await this.requireAggregateMain();
     const generation = this.controlGeneration;
     const active = () => !this.controlStopped && !this.isShuttingDown()
       && !this.monitoringEnabled && !this.monitoringRollbackPending
       && this.monitoringSettingsCount === 0
-      && generation === this.controlGeneration
+      && this.aggregateBound && generation === this.controlGeneration
       && target === (this.mainSn || this.getData().sn);
     try {
       await executeStreamControl(target, intent, {
         active,
-        read: async () => readStreamControlState(await this.readControlQuota(target)),
-        write: (payload) => this.writeQuota(payload),
+        read: async () => {
+          await this.requireAggregateMain(); return readStreamControlState(await this.readControlQuota(target));
+        },
+        write: async (payload) => {
+          await this.requireAggregateMain(); await this.writeQuota(payload);
+        },
         wait: () => this.waitForControlReadback(),
         observed: async (state) => {
           const receipts = this.legacyFlowReadings;
@@ -809,6 +890,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    if (this.bindingAttempted && !this.monitoringEnabled && !this.monitoringRollbackPending && !this.aggregateBound) return;
     const flowReceipts = this.legacyFlowReadings;
     this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
     if (!this.monitoringEnabled && !this.monitoringRollbackPending) await this.applyRemainingTime(quota, context);
@@ -973,11 +1055,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       chargedRawWh: this.chargedRawWh,
       dischargedRawWh: this.dischargedRawWh,
       countersAvailable: this.countersAvailable,
+      energySourceSn: this.energySourceSn,
     };
     await this.setStoreValue('chargedWh', snapshot.chargedWh);
     await this.setStoreValue('dischargedWh', snapshot.dischargedWh);
-    if (snapshot.chargedRawWh !== undefined) await this.setStoreValue('chargedRawWh', snapshot.chargedRawWh);
-    if (snapshot.dischargedRawWh !== undefined) await this.setStoreValue('dischargedRawWh', snapshot.dischargedRawWh);
+    await this.setStoreValue('chargedRawWh', snapshot.chargedRawWh ?? null);
+    await this.setStoreValue('dischargedRawWh', snapshot.dischargedRawWh ?? null);
+    if (snapshot.energySourceSn) await this.setStoreValue('energySourceSn', snapshot.energySourceSn);
     if (snapshot.countersAvailable) await this.setStoreValue('countersAvailable', true);
   }
 

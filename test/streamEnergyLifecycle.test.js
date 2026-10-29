@@ -116,9 +116,12 @@ test('legacy startup/reinitialization preserves blank daily-history capabilities
       d.values.energy_grid_import_today = 0;
       d.values.energy_savings_today = 1.25;
     });
+    device.client = { getMainSn: async () => device.getData().sn };
+    await device.beforeFirstPoll();
     const before = structuredClone(state.options);
     await device.onTeardown();
     await device.onReady();
+    await device.beforeFirstPoll();
     assert.deepEqual([...state.capabilities], historyCaps);
     assert.deepEqual(state.removed, []);
     assert.deepEqual(state.added, []);
@@ -467,4 +470,63 @@ test('real original STREAM driver opts into field reconciliation and preserves m
   assert.equal(device.getEnergyDiagnostics().chargedKWh, 0.05);
   assert.equal(device.getEnergyDiagnostics().dischargedKWh, 0.06);
   await device.onTeardown();
+});
+
+test('relinked original aggregate reads and subscribes to verified main without changing paired identity or counters', async () => {
+  const old = 'BK61TEST00000001', main = 'BK61NEWMAIN00001';
+  const device = await harness({ mainSn: old, chargedWh: 12000, dischargedWh: 34000,
+    chargedRawWh: 500, dischargedRawWh: 600, countersAvailable: true, ownerMarker: 'keep' });
+  const paired = device.getData();
+  device.client = { getMainSn: async (sn, options) => { assert.equal(sn, old);assert.equal(options.fresh,true);return main; } };
+  await device.beforeFirstPoll();
+  assert.equal(device.getReadSn(),main);assert.equal(device.getRealtimeSn(),main);
+  assert.deepEqual(device.getData(),paired);assert.equal(device.store.mainSn,old);assert.equal(device.store.ownerMarker,'keep');
+  await device.applyQuota({cmsBattSoc:39,powGetBpCms:-157,accuChgEnergy:90000,accuDsgEnergy:80000},{source:'mqtt',receivedAt:1000});
+  assert.equal(device.getEnergyDiagnostics().chargedKWh,12);assert.equal(device.getEnergyDiagnostics().dischargedKWh,34);
+  await device.applyQuota({accuChgEnergy:90002,accuDsgEnergy:80003},{source:'mqtt',receivedAt:2000});
+  assert.equal(device.getEnergyDiagnostics().chargedKWh,12.002);assert.equal(device.getEnergyDiagnostics().dischargedKWh,34.003);
+  await device.onTeardown();
+  const restarted=await harness(structuredClone(device.store));restarted.client={getMainSn:async()=>main};await restarted.beforeFirstPoll();
+  await restarted.applyQuota({accuChgEnergy:90005,accuDsgEnergy:80007},{source:'rest',receivedAt:3000});
+  assert.equal(restarted.getEnergyDiagnostics().chargedKWh,12.005);assert.equal(restarted.getEnergyDiagnostics().dischargedKWh,34.007);
+  await restarted.onTeardown();
+});
+
+test('aggregate lookup failure or foreign-family main suppresses old zeros without touching totals', async () => {
+ for(const main of [null,'ES21SYNTHETIC','ES22SYNTHETIC','UNKNOWN']) {
+  const device=await harness({chargedWh:12000,dischargedWh:34000});
+  device.client={getMainSn:async()=>{if(main===null)throw Error('offline');return main;}};
+  await device.beforeFirstPoll();
+  await device.applyQuota({cmsBattSoc:0,accuChgEnergy:999999,powGetBpCms:0},{source:'mqtt',receivedAt:1000});
+  assert.equal(device.getReportingDiagnostics().observations.measure_battery,undefined);
+  assert.equal(device.getEnergyDiagnostics().chargedKWh,12);assert.equal(device.aggregateBound,false);
+  await assert.rejects(device.flowSetFeedIn(false),/unverified/);await device.onTeardown();
+ }
+});
+
+test('late aggregate binding cannot invalidate a newer initialized session', async () => {
+ const d=await harness();let resolve;
+ d.client={getMainSn:()=>new Promise(yes=>{resolve=yes;})};const pending=d.beforeFirstPoll();
+ await d.onTeardown();await d.onReady();d.client={getMainSn:async()=> 'BK61NEWMAIN00001'};
+ await d.beforeFirstPoll();resolve('BK61OLDMAIN00001');await pending;
+ assert.equal(d.getReadSn(),'BK61NEWMAIN00001');assert.equal(d.aggregateBound,true);await d.onTeardown();
+});
+
+test('restart after source change before any new counter sample never imports lifetime energy', async () => {
+ const d=await harness({mainSn:'BK61TEST00000001',chargedWh:12000,dischargedWh:34000,chargedRawWh:500,dischargedRawWh:600,countersAvailable:true});
+ d.client={getMainSn:async()=> 'BK61NEWMAIN00001'};await d.beforeFirstPoll();await d.onTeardown();
+ assert.equal(d.store.chargedRawWh,null);assert.equal(d.store.dischargedRawWh,null);
+ const next=await harness(structuredClone(d.store));next.client={getMainSn:async()=> 'BK61NEWMAIN00001'};await next.beforeFirstPoll();
+ await next.applyQuota({accuChgEnergy:999999,accuDsgEnergy:888888},{source:'mqtt',receivedAt:1000});
+ assert.equal(next.getEnergyDiagnostics().chargedKWh,12);assert.equal(next.getEnergyDiagnostics().dischargedKWh,34);await next.onTeardown();
+});
+
+test('counter persistence snapshots the reporter identity with the raw baselines', async () => {
+ const d=await harness({chargedWh:12000,dischargedWh:34000});d.energySourceSn='BK61SOURCEA00001';
+ const save=d.setStoreValue.bind(d);let release;let entered;
+ const started=new Promise(yes=>{entered=yes;});
+ d.setStoreValue=async(key,value)=>{if(key==='chargedWh'){entered();await new Promise(yes=>{release=yes;});}await save(key,value);};
+ const pending=d.persistBatteryStore();await started;d.energySourceSn='BK61SOURCEB00001';release();await pending;
+ assert.equal(d.store.energySourceSn,'BK61SOURCEA00001');
+ d.setStoreValue=save;await d.onTeardown();
 });

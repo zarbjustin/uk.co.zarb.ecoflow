@@ -522,6 +522,9 @@ test('rollback capability failure cannot revive cached trial readings, condition
 test('enabling trial cancels an in-flight original control before it writes', async (t) => {
   const h = await deviceHarness(t);
   await h.legacy();
+  const reporterLookup = h.device.client.getMainSn;
+  h.device.client.getMainSn = async () => oldSn;
+  await h.device.beforeFirstPoll();
   let finishRead;
   let writes = 0;
   let started;
@@ -532,6 +535,7 @@ test('enabling trial cancels an in-flight original control before it writes', as
   const rejected = assert.rejects(command);
   await readStarted;
   assert.equal(typeof finishRead, 'function');
+  h.device.client.getMainSn = reporterLookup;
   await h.enable();
   finishRead({ maxChgSoc: 90, minDsgSoc: 5, backupReserveSoc: 10 });
   await rejected;

@@ -1,5 +1,37 @@
 # Codex cross-machine handover
 
+## Aggregate relinking correction — 29 October 2026, SOURCE ONLY / NOT INSTALLED
+
+Owner requested a source-only fix after read-only evidence showed an original
+aggregate still reading its paired former main while fresh system-main resolution
+selected another original unit. The candidate keeps the Homey data identity,
+capability/Insights identities, custom titles, Flows and accumulated totals intact.
+It resolves an original-family main before the first poll/MQTT subscription and
+uses that address for aggregate telemetry, history and control readback/writes.
+Controls revalidate the main before reads and before each command. Lookup failure,
+unsupported families and an in-session main change block controls and clear live
+system readings; no old-address or 5000 fallback. Reinitialization is required to
+bind again after such a block. No automatic cross-generation merging or migration.
+
+Reporter changes retain accumulated charged/discharged energy, invalidate the old
+raw baselines, and re-anchor to the new reporter without importing lifetime totals
+or integrating downtime. Raw-baseline nulls and their source identity persist so
+restart before the first new counter sample remains safe. Existing counters are
+not rewritten to correct past reporting. A small default-no-op base startup hook
+binds the source before REST/MQTT starts; other drivers retain existing behaviour.
+Daily history starts only after a successful original binding. Late lookup results
+cannot overwrite a newer initialized session. Diagnostic checks remain read-only.
+
+Validation: locked npm ci; 1175 tests pass (seven new relinking/source/command/restart
+regressions); lint passes; release:check passes with hardware gates still pending;
+npm audit reports zero vulnerabilities; pinned Homey CLI 4.5.3 verified-level local
+validation passes. No installation, restart, pairing, Homey setting/Flow/device
+command or store publication. Codex tasks remain paused. This is
+source on the diagnostic branch; installed Development 1.10.60 remains the
+last documented runtime and was not contacted or altered during implementation.
+Physical acceptance and controlled power-flow tests remain separate approval gates.
+
+
 Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
