@@ -7,7 +7,30 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
-## Sprint 4 adoption and combined battery readiness — 29 October 2026, NOT INSTALLED
+## Owner-approved 1.10.58 diagnostic installation — 29 October 2026
+
+After the owner completed normal CLI consent, authenticated private readback
+captured all 12 EcoFlow device definitions and all 99 complete Flow definitions.
+Owner then specifically approved the reviewed non-clean Development 1.10.58
+update and read-only preservation checks. Exact source `85c5cad`, CI `40913604866`
+green, delivered at 16:50:07 UTC; running 1.10.58 read back independently.
+All paired IDs/data/settings/capability metadata, 99 Flow definitions and app
+setting hashes match; all six cumulative counters are comparable/nondecreasing.
+Archive SHA256:
+`11112d1a8d583a47990e3c4e2eebef4dceb1846499782130b694494ecf7f8315`.
+Runtime fingerprint remains `da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+
+Fresh Dual CT transport/accepted diagnostics and a live ES21 reading are present.
+Scope/native comparison, actual sparse expiry, charging/discharging, aggregate
+Energy, persistence/rollback and 48-hour soak are not passed by this short window.
+No battery setting/task, Flow execution, pairing/activation, forced reconnect or
+Mainline/Test/Live publication. Adoption/driver qualification remains incomplete.
+See [owner diagnostic installation](STREAM_5000_MONITORING_RC.md#owner-diagnostic-installation).
+Private evidence stays outside Git; recovered historical source is not a native
+store backup or accepted rollback. Earlier unauthenticated/not-installed statements
+below describe preparation, not current delivery.
+
+## Sprint 4 adoption and combined battery readiness — 29 October 2026, HISTORICAL PREPARATION
 
 Prepared diagnostic version 1.10.58. Added a source-bound, one-shot adoption
 review/confirmation workflow with 90-second expiry, fresh owned identity/firmware,

@@ -1,5 +1,49 @@
 # STREAM 5000 monitoring release candidate
 
+## Owner diagnostic installation
+
+29 October 2026, 16:50:07 UTC: owner specifically approved a non-clean
+Development 1.10.58 diagnostic update and read-only preservation checks. Source
+`85c5cad7cb7fb780842e9d47532a212bcdc8e137` passed exact CI `40913604866`.
+Runtime fingerprint:
+`da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+The exact reviewed archive was delivered through the official SDK devkit runApp
+path with clean=false/debug=false. Readback confirms running Development 1.10.58.
+This establishes delivery provenance and new-session fields, not an independent
+hash of filesystem contents fetched back from Homey.
+
+Authenticated private baseline/readback preserves all 12 current EcoFlow device
+IDs/data, settings, capability identities/custom metadata, names/zones and Energy
+configuration; all 99 full saved Flow definitions (55 standard, 44 advanced)
+match. Global app-setting hashes match without saving raw credentials. Six
+cumulative counter sequences are comparable and nondecreasing. The extra device
+relative to the historical 11-device baseline is the owner-added Dual CT preview;
+no re-pair or deletion was performed. Counts alone were not used for preservation.
+
+Fresh installed diagnostics show an active ES21 subscription with one attempt,
+no reconnects and coherent live battery readings. Initial new-session topology
+has one source record and no observed peers; physical pack scope remains
+unverified. Neither old peer history nor its absence in a new session establishes
+native membership. Configuration/empty task reports arrive, but this does not
+verify electrical enforcement or actual charge/discharge. Native computer-control
+timed out, so no new native state/firmware comparison or idle gate is claimed.
+
+Dual CT's new frame/accept/reject age fields are present and fresh frames return;
+they establish observation at the preview handler, not a broker/network diagnosis.
+The candidate adds no registered Energy device or runtime adoption path. Aggregate
+5000 pairing remains off, no aggregate is paired, and controls/timer observer
+remain disabled. No battery task/setting, Flow execution, forced silence/reconnect,
+Mainline or store channel change. The approved update itself restarted integration
+readings; no additional restart or rollback test was performed.
+
+Recovery source was rebuilt from handover `63b229c`, independently matches the
+historical f1234365…9ba2 source fingerprint and passes verified validation. It is
+not a fresh copy of the previously installed files or a Homey store backup; no
+rollback is performed or accepted. Private baseline, upload receipt and observations
+remain outside Git. Native upgrade is still partial; charge/discharge/idle,
+actual sparse expiry/recovery/hint horizon, accessories, model/role accounting,
+rollback and 48-hour exact-candidate soak remain separate gates.
+
 ## Owner bounded charge test
 
 27 October: owner approved a revised attended manual-stop test after the native

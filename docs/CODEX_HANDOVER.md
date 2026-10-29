@@ -4,7 +4,20 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
-## Latest candidate — diagnostic 1.10.58, not installed or published
+## Current owner installation — Development 1.10.58
+
+Owner completed CLI consent and separately approved the reviewed non-clean
+diagnostic update. Source `85c5cad`, exact CI `40913604866` green, delivered
+29 October 16:50:07 UTC; running 1.10.58 independently read back. Runtime fingerprint
+`da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+All 12 current EcoFlow device definitions/settings/capability metadata, all 99
+complete Flow definitions and global app-setting hashes match private baseline;
+six cumulative sequences are nondecreasing. No store publication or Energy/control
+activation. Native comparison/sparse expiry/charge/discharge/accessories/rollback/
+soak remain open. See newest STATUS and RC owner-diagnostic-installation checkpoint.
+CLI is authenticated now; earlier failed login and not-installed notes are history.
+
+## Latest candidate preparation — diagnostic 1.10.58, historical pre-install notes
 
 Sprint 4 adds an unwired, source-bound adoption review/confirmation workflow;
 Sprint 5/6 readiness combines the separate meter and all battery model/role gates.

@@ -78,3 +78,13 @@ release:full meter/battery readiness command. 1126 tests and locked Node 22 chec
 lint/release/audit/verified validation pass. It is not installed or published.
 See SPRINT_4_6_ACCEPTANCE_PLAN.md for the battery matrix and approval boundaries.
 No production contract is registered and no Energy driver or pairing UI exists.
+
+## Owner diagnostic update follow-up
+
+Owner-approved non-clean Development 1.10.58 update completed on 29 October at
+16:50:07 UTC from exact source 85c5cad (CI 40913604866 passed). Full private
+preservation readback matches 12 device definitions/settings/capability metadata,
+99 Flow definitions and app-setting hashes; six counters are nondecreasing.
+This is a diagnostic installation, not Energy adoption or completion of sprint 5.
+Mainline/Test/Live remain unchanged. See newest STATUS/monitoring RC for limits;
+earlier local/not-installed wording above is historical preparation.
