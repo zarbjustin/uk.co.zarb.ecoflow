@@ -7,6 +7,47 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Owner-approved Development 1.10.59 installation — 29 October 2026
+
+Owner explicitly approved the reviewed non-clean update and read-only preservation/UI
+checks. The exact archive was delivered at **21:19:16 UTC**, with clean=false and
+debug=false; independent SDK and Homey UI readback confirm **1.10.59 Development,
+enabled/running**. Implementation c745ee63a536abe303bf6d2718e88c4f6ca46e05 and
+pre-install documentation tip 9e6afb3f3f6ffc2cd4e1ee19f55663f3cd92b233 had green
+exact CI (40934944955 and 40935985448). Runtime fingerprint:
+`e0216df13cb1fc67ab11f1ccdef7ac94dc7b9e10b258bf4b3dc1ad7706bc2d7b`.
+Reviewed archive SHA256:
+`5b36d4895dc8e140e04e68a57f51f9762232a73b3a00128c61f780800c3beaee`.
+Fingerprint attribution follows the verified archive/delivery provenance; the
+installed filesystem was not independently rehashed.
+
+All 12 paired identities, capability semantics/metadata, settings, fixed Energy
+configuration, 55 standard and 44 advanced complete Flows and global app-setting
+hashes were preserved. Six comparable cumulative counters did not decrease; no
+newly broken Flows were observed. Immediate readback matched; later original
+Smart Meter note and zone differences were confirmed by the owner as their edits
+and retained. Latest comparison has zero unexpected differences. Live watts and
+session-specific icon transport URLs are excluded from fixed-configuration
+comparison; semantic icon IDs remain checked. Private evidence stays outside Git.
+
+Installed settings and the blank account Repair entry rendered successfully;
+aggregate Energy pairing remains unchecked. Repair sign-in was not submitted.
+Seven passive cached observations from 21:32:21 to 21:35:22 UTC showed recent
+Dual CT traffic and live STREAM 5000 battery readings. Fresh battery reports
+prevented the three-minute expiry condition: fast expiry is still unverified.
+This short window is not native EcoFlow comparison, counter qualification or a
+48-hour soak. Rejected preview frames were observed; transport activity alone
+is not firmware/sign/replay or accounting acceptance.
+
+No store publication, Mainline change, Energy adoption/exclusion, new pairing,
+account credential change, battery setting/task, Flow execution, forced silence
+or reconnect was performed. Mainline/Test/Live remain unchanged by this work;
+store channel state was not freshly reverified. Existing hardware passes retain
+their recorded older fingerprints. Native Repair, charge/discharge/accessories,
+expiry/recovery, qualified Dual CT contract/accounting, 5000 solar scope and final
+candidate soak remain open. Next bounded release step is a separately reviewed
+limited Test publication; full Energy production readiness is not claimed.
+
 ## Dual CT driver and account Repair — 29 October 2026
 
 Prepared diagnostic **1.10.59** on the active branch. New `smartmeter_dual_ct_energy`

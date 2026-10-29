@@ -4,7 +4,7 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
-## Current source — diagnostic 1.10.59, not installed
+## Current source and installation — diagnostic 1.10.59
 
 New separate Dual CT CT1 Energy driver is wired through owned discovery, Homey
 contributor inventory, review/confirmation, persistent session and shared MQTT
@@ -22,13 +22,20 @@ Late/cancelled/superseded sign-ins cannot overwrite the selected pending account
 
 1156 tests, locked Node 22 dependencies, lint/release/diff/audit and pinned Homey
 verified checks pass. New source fingerprint `e0216df13cb1fc67ab11f1ccdef7ac94dc7b9e10b258bf4b3dc1ad7706bc2d7b`.
-Fresh private readback confirms owner still running Development 1.10.58, all 12
-device definitions/settings, 99 full Flows and global setting hashes unchanged;
-six cumulative sequences nondecreasing. No install, Repair, pairing, source change,
-hardware operation or publication performed. Mainline/Test/Live unchanged.
-Implementation c745ee63a536abe303bf6d2718e88c4f6ca46e05 is pushed; exact CI
-40934944955 passed. See newest STATUS for archive/delivery and ENERGY_RELEASE_COMPLETION.md
-for firmware qualification, 5000 solar, native tests and final-candidate soak.
+Owner approved the exact non-clean archive update, completed 29 October at
+21:19:16 UTC. Independent SDK/UI readback confirms Development 1.10.59 running.
+All 12 identities, 99 full Flows, settings/fixed Energy configuration and six
+checked cumulative counters were preserved. Later original Smart Meter note and
+zone changes were owner edits, explicitly confirmed and retained; zero unexpected
+differences remain. Settings and blank Repair entry render; no Repair was submitted.
+Seven passive samples over three minutes show fresh traffic, not expiry or soak
+acceptance. Fingerprint attribution is verified archive delivery provenance,
+not an independent installed-filesystem hash. See newest STATUS and RC for the
+archive SHA256, exact CI, observation limits and private preservation record.
+Mainline/Test/Live and Energy permissions stay unchanged; no store publication.
+Limited Test publication needs separate review/approval; full Energy gates remain
+open. Implementation c745ee63a536abe303bf6d2718e88c4f6ca46e05 and pre-install
+documentation tip 9e6afb3f3f6ffc2cd4e1ee19f55663f3cd92b233 had green exact CI.
 
 ## Previous source checkpoint — production settings and complete Energy scope
 
@@ -45,7 +52,7 @@ sprints 4–6 complete. New source is not the installed runtime; installation an
 all channels remain unchanged. Hardware results below retain their exact older
 fingerprints. See newest STATUS for source verification outcome.
 
-## Current owner installation — Development 1.10.58
+## Previous owner installation — Development 1.10.58
 
 Latest read-only native comparison on 29 October accepts ES21 identity and the
 single-unit idle operating point for this exact runtime. Full serial matched
