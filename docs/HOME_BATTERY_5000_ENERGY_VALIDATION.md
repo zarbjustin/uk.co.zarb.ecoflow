@@ -3,6 +3,17 @@
 29 October 2026. Diagnostic source 1.10.60; not installed or published.
 Runtime fingerprint `a4e8e24c39d77037971706359e8848680e4fed92a3aa01e4c985ba6e028a42fc`.
 
+## Subsequent approved installation outcome
+
+The owner approved 1.10.60 and one ES21 aggregate. Installation completed at
+22:00:49 UTC; preservation then triggered the stop condition before the pairing
+gate was enabled. No aggregate was added. An original-unit role/capability change
+is consistent with the owner's reported relinking and current main-identity API;
+the office meter also decreased about 1 Wh. See newest STATUS/monitoring RC.
+Source 1.10.61 fixes the confirmed meter startup floor defect and is not installed.
+The next bounded step below now needs that candidate's own reviewed archive and
+approval; the original 1.10.60 approval is not permission to install 1.10.61.
+
 ## Work completed
 
 Nine added lifecycle regressions exercise the real device class: rejected future/

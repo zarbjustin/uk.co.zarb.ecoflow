@@ -7,6 +7,30 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Development 1.10.60 installed; Energy pairing held — 29 October 2026
+
+Owner-approved archive delivered at 22:00:49 UTC; SDK/UI confirm running/enabled
+Development **1.10.60**, fingerprint a4e8e24c…028a42fc. Preservation found a
+relinked original-unit role change and an approximately 1 Wh original Smart Meter
+imported-counter decrease. All 12 identities and 99 full Flows remain, with no
+newly broken Flows; app-setting hashes match. This is NOT a full preservation
+pass. Owner reports recent relinking, consistent with a fresh API result naming
+a different original BK61 as main. No native topology/control change was sent.
+Expected 5000 monitoring status wording also updated. See monitoring RC owner
+development 11060 preservation findings for the full sanitised record.
+
+Pairing stopped before enabling the gate: no aggregate was added. Mainline,
+Test/Live, grid-meter settings, hardware tasks and Flows remain unchanged. Source
+**1.10.61**, NOT installed, now restores original Smart Meter counters from the
+higher valid checkpoint/projected floor and persists recovery without downtime
+fill. A regression reproduces a 1 Wh rollback before the fix and passes afterward.
+**1166 tests**, lint/release/diff and pinned Homey verified validation pass;
+locked dependencies retained. Fingerprint `b81b964b252d645100d08aae60303bc6d5ab6720102b7c20abad0d5e48cb53f1`.
+Archive SHA256 `0200d26abecdf9b68eb7f0724a553698df323f3e659b264a7d0068494eb482c8`. This prevents subsequent startup rollback; it does not
+rewrite the already-recorded 1 Wh decrease or restore removed capabilities.
+A fresh exact-candidate installation approval is needed before continuing the
+previously reviewed one-aggregate validation. No hardware gate is promoted.
+
 ## Home Battery 5000 Energy qualification started — 29 October 2026
 
 Diagnostic **1.10.60** fixes confirmed aggregate accounting defects before native

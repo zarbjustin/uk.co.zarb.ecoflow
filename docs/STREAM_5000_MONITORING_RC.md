@@ -37,6 +37,43 @@ Raw native views, exact identity comparison and timestamped Homey readbacks stay
 private outside Git. Charge/discharge, sparse expiry/recovery/hint horizon,
 accessories, model/role accounting, rollback and normal-use soak remain open.
 
+## Owner development 11060 preservation findings
+
+Owner approved the exact 1.10.60 archive non-clean, enabling the existing Energy
+pairing gate and adding one house ES21 aggregate, followed by readback. Delivery
+completed 29 October 2026 at **22:00:49 UTC**, clean=false/debug=false. Independent
+SDK and native Homey UI confirm running/enabled **1.10.60 Development**.
+Runtime fingerprint `a4e8e24c39d77037971706359e8848680e4fed92a3aa01e4c985ba6e028a42fc`;
+archive SHA256 `6a4ccf09037faf4e8c43e11cfdf2600dc290f29412894f2154b58028aed20e50`.
+This is archive delivery provenance, not an installed-filesystem rehash. Exact
+implementation CI 40961975322 for 3ea0a3d passed before delivery.
+
+The approved stop condition triggered during preservation. All 12 device IDs,
+99 complete Flows and global setting hashes match; no newly broken Flow was
+observed. However, after startup settled one original Ultra X changed from
+System main unit to Member unit and lost nine system-level capabilities. A
+fresh bounded Developer API main-identity lookup resolves it to a different
+original BK61 Ultra X. Owner says the units had to be relinked the other day and
+this may explain the change. That explanation is consistent with the API result;
+it is not proof of full installation membership or permission to restore old
+controls/roles. The source's existing role-tailoring behaviour removed the
+capabilities; no battery control command or native linking action was sent.
+
+The STREAM 5000 status label changed as expected by the reviewed wording update.
+Five of six checked cumulative counters are nondecreasing; the original office
+Smart Meter imported total read approximately **1 Wh lower** than the private
+pre-update baseline. Do not call this a complete preservation pass. A synthetic
+regression confirms its startup can overwrite a higher projected counter with
+an older coalesced checkpoint. This is a confirmed source defect consistent with
+the observed decrease; the interrupted checkpoint timing itself was not traced.
+The original immutable baseline/readbacks and all exact identifiers remain private.
+
+**Pairing was not reached:** the Energy gate remains off, no 5000 aggregate was
+added, and account/global settings match the baseline. No automatic rollback,
+manual counter rewrite, re-pair, additional restart, hardware task, Flow execution,
+grid-source change or publication ran. Mainline/Test/Live are unchanged. Native
+upgrade remains partial; aggregate Energy and final-candidate soak remain open.
+
 ## Owner development candidate installation
 
 Owner explicitly approved the reviewed non-clean update and read-only preservation/UI

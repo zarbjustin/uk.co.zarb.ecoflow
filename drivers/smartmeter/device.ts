@@ -67,18 +67,31 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     return (direction === 'import' ? grid : -grid) > watts;
   }
 
+  private restoreEnergyWh(storeKey: string, capability: string): number {
+    const saved = this.getStoreValue(storeKey);
+    const projected = this.getCapabilityValue(capability);
+    const savedWh = typeof saved === 'number' && Number.isFinite(saved) && saved >= 0 ? saved : 0;
+    const projectedWh = typeof projected === 'number' && Number.isFinite(projected)
+      && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : 0;
+    return Math.max(savedWh, projectedWh);
+  }
+
   protected async onReady(): Promise<void> {
     this.telemetry = new SmartMeterTelemetry();
     this.lastTs = 0;
     this.powerSource = null;
     this.lastLoadAt = 0;
     this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
-    this.importWh = (this.getStoreValue('importWh') as number) || 0;
-    this.exportWh = (this.getStoreValue('exportWh') as number) || 0;
+    this.importWh = this.restoreEnergyWh('importWh', 'meter_power.imported');
+    this.exportWh = this.restoreEnergyWh('exportWh', 'meter_power.exported');
     this.energyCheckpoint = new EnergyCheckpoint(this.homey, async () => {
       await this.setStoreValue('importWh', this.importWh);
       await this.setStoreValue('exportWh', this.exportWh);
     });
+    // An interrupted update can leave the coalesced store behind Homey's
+    // already-published total. Persist the recovered floor without downtime fill.
+    if ((this.importWh > 0 && this.importWh !== this.getStoreValue('importWh'))
+      || (this.exportWh > 0 && this.exportWh !== this.getStoreValue('exportWh'))) this.energyCheckpoint.mark();
     await this.ensureCapabilities(SmartMeterDevice.LIVE_POWER_CAPS);
     await this.removeCapabilities(SmartMeterDevice.LEGACY_LIVE_POWER_CAPS);
     await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});

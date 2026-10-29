@@ -4,7 +4,28 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
-## Current source — diagnostic 1.10.60, not installed
+## Current source — diagnostic 1.10.61, not installed
+
+Original Smart Meter startup now retains the greater valid checkpoint/projected
+counter and checkpoints the recovered floor; a failing 1 Wh-tail regression now
+passes. 1166 tests and documented software checks pass; source fingerprint
+`b81b964b252d645100d08aae60303bc6d5ab6720102b7c20abad0d5e48cb53f1`. It does not rewrite the observed historical decrease.
+
+## Current installation — Development 1.10.60; pairing paused
+
+Owner-approved delivery completed 29 October 22:00:49 UTC; SDK/UI confirm
+running/enabled, archive-provenance fingerprint a4e8e24c…028a42fc. All 12 identities,
+99 complete Flows and app-setting hashes remain, but preservation is NOT fully
+passed: one original unit's role/capabilities changed, and the office meter's
+imported total decreased about 1 Wh. Owner reports recent relinking; fresh API
+lookup names another original BK61 as main, consistent with the role change.
+Do not restore old roles/controls automatically. See newest STATUS and monitoring
+RC for exact delivery, differences and evidence limits. No 5000 aggregate was
+added, Energy pairing gate remains off, and Mainline/Test/Live are unchanged.
+Further installation/pairing must use a newly reviewed candidate and approval;
+no automatic retry or rollback. All aggregate/hardware/soak gates remain open.
+
+## Previous source preparation — diagnostic 1.10.60
 
 Home Battery 5000 Energy qualification now has nine additional regressions and
 confirmed fixes for rejected/unapplied power accounting, expired/missing gaps,
@@ -17,7 +38,7 @@ native step. Installed app remains Development 1.10.59; checkbox and channels
 are unchanged. No native gates transfer to this candidate. Owner confirms no
 direct PV on the ES21; that limits this test scope, not general PV support.
 
-## Current installation — diagnostic 1.10.59
+## Previous installation — diagnostic 1.10.59
 
 New separate Dual CT CT1 Energy driver is wired through owned discovery, Homey
 contributor inventory, review/confirmation, persistent session and shared MQTT

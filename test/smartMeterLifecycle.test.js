@@ -165,3 +165,16 @@ test('same-source outage does not integrate unobserved time and stale home load 
   assert.equal(d.getCapabilityValue('measure_power.home_load'), null);
   await d.onUninit();
 });
+
+test('meter upgrade retains a projected counter above the last checkpoint, including a one Wh tail', async () => {
+  const meter = new TestMeter();
+  Object.assign(meter.store, { importWh: 999, exportWh: 498 });
+  meter.values.set('meter_power.imported', 1);
+  meter.values.set('meter_power.exported', 0.5);
+  await meter.onReady();
+  assert.equal(meter.getCapabilityValue('meter_power.imported'), 1);
+  assert.equal(meter.getCapabilityValue('meter_power.exported'), 0.5);
+  await meter.onUninit();
+  assert.equal(meter.store.importWh, 1000);
+  assert.equal(meter.store.exportWh, 500);
+});
