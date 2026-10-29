@@ -37,6 +37,47 @@ Raw native views, exact identity comparison and timestamped Homey readbacks stay
 private outside Git. Charge/discharge, sparse expiry/recovery/hint horizon,
 accessories, model/role accounting, rollback and normal-use soak remain open.
 
+## Owner development 11062 readback
+
+Non-clean delivery completed **23:01:53.660 UTC**, clean=false/debug=false.
+Independent SDK and Homey UI confirm running/enabled Development **1.10.62**.
+Reviewed implementation b31eacb, exact CI 40969235537 green; archive-provenance
+runtime fingerprint `31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545`.
+SHA256 `ac83f47fbdd8093965a4c43699c07a774c7d16804062f8eb7e51813a1cf2e99f`.
+No independent installed-filesystem rehash is claimed.
+
+Fresh baseline/final readback preserves all **13 EcoFlow device identities/data,
+settings, capability identities/custom metadata**, all **99 full Flow definitions**
+(55 standard, 44 advanced), all **1201 Insights log IDs** and global app-setting
+hashes. Energy declarations/settings across **276 Homey devices** match; no grid
+source or house/CT1 setting changed. Eight comparable cumulative counters show no
+decrease; zero newly broken Flows and zero unexpected definition changes. The
+historical 1.10.60 1 Wh decrease remains recorded, not rewritten.
+
+Original aggregate reporter diagnostics are **matched / original_stream**. An
+independent fresh EcoFlow GET resolves a paired original unit with the main role;
+SOC matches Homey, signed-power readings differ by less than 0.01 W in that sample.
+The paired former-main identity remains intact, so the old saved-address comparison
+is still false as expected. This is read-only target/reporting evidence, not a
+physical control-command or electrical-delivery test. No control command was sent.
+
+Five passive samples from **23:02:49 to 23:04:50 UTC** show fresh battery **0 W /
+idle** throughout and unchanged zero charged/discharged counters. Aggregate SOC
+initially remains unknown, then a real **0%** receipt appears by the third sample
+(about 23:03:20 from its age), with no extra restart or reconnect. The final
+snapshot has 88 accepted power samples, one subscription attempt and zero
+reconnects. Missing SOC was not inferred from zero watts or temperature. This
+observes startup receipt timing/zero handling, not independent native 5000
+comparison, nonzero accounting or a final-candidate soak.
+
+Test/Live/Mainline unchanged. No re-pairing, native linking, battery setting/task,
+Energy permission/source change, Flow execution, account Repair, manual counter
+rewrite, forced silence/reconnect, rollback or additional restart. Native upgrade,
+pairing and recovery ledgers remain partial; exact peer-triggered SOC clearing is
+covered synthetically without deliberately linking hardware. Nonzero sign/interval
+accuracy, capacity/role coverage, recovery/rollback, Dual CT qualification and the
+48-hour final-candidate soak remain open. Full-release readiness is not claimed.
+
 ## Owner development 11061 recovered battery data
 
 A separate, explicitly owner-approved HomeyPro deployment installed a1391f0 at

@@ -1,6 +1,34 @@
 # Codex cross-machine handover
 
-## Current candidate 1.10.62 and reconciled installed 1.10.61
+## Current installed/source runtime — Development 1.10.62
+
+Owner approved the exact archive, non-clean, plus preservation/read-only validation.
+Delivery **29 October 23:01:53.660 UTC**, SDK/UI confirm running/enabled 1.10.62.
+Implementation b31eacb / exact CI 40969235537 passed before delivery. Runtime
+fingerprint (archive provenance, not installed-file rehash):
+`31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545`.
+Archive SHA256 `ac83f47fbdd8093965a4c43699c07a774c7d16804062f8eb7e51813a1cf2e99f`.
+All 13 identities/settings/capability metadata, 99 complete Flows, 1201 Insights IDs,
+app-setting hashes and all 276 device Energy configurations preserved. Eight
+sampled counters nondecreasing; no unexpected changes/newly broken Flows.
+
+Original aggregate main resolution is matched/original_stream, with a fresh
+read-only EcoFlow comparison agreeing on SOC and power to under 0.01 W. No battery
+write was used. The 5000 reports fresh zero power/idle; SOC waits for its own
+receipt, then reaches real 0%. Five samples over two minutes keep both new
+counters at zero with accepted power samples. Source/telemetry/short idle checks
+pass within scope; native sign/energy accuracy, capacity, recovery/rollback,
+Dual CT qualification and final-candidate soak remain open. No hardware gate is
+promoted merely from software tests or this short zero window.
+
+Test/Live/Mainline, grid/CT1 and battery settings/tasks, Flows and pairing unchanged.
+No extra restart, forced reconnect/silence, Energy activation or Repair. Existing
+pairing gate remains as approved previously. See newest STATUS and monitoring RC
+owner development 11062 readback for evidence and exact limits. The candidate
+preparation and earlier deployment records below are historical.
+
+
+## Previous candidate preparation and installed 1.10.61 reconciliation
 
 29 October: the original aggregate relinking fix a1391f0 was separately approved
 and installed by the coordinating HomeyPro task at 22:37:59.909 UTC. Its reviewed

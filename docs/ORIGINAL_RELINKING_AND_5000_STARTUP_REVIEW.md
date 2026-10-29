@@ -4,6 +4,16 @@
 No installation, restart, pairing, Homey setting/Flow or store-channel action was
 performed by this investigation. Mainline, Test and Live are unchanged.
 
+## Subsequent approved deployment
+
+Owner approved the reviewed 1.10.62 archive, non-clean, with preservation and
+read-only checks. Completed 29 October 23:01:53.660 UTC; all 13 EcoFlow identities,
+99 full Flows, 1201 Insights IDs, all-device Energy settings and eight sampled
+counters preserved. Matched original main and fresh zero/idle 5000 readings;
+SOC remained unknown until its own report, then real zero applied. No re-pair,
+battery setting/task, Test/Live action or extra restart. See latest STATUS/RC for
+the authoritative installed state; the preparation/investigation below is history.
+
 ## Reconciled installed state
 
 The HomeyPro task contains a direct owner request to deploy reviewed source
