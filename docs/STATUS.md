@@ -39,6 +39,41 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Development 1.10.61 installed and one Energy battery paired — 29 October 2026
+
+Owner-approved exact archive delivered non-clean at **22:20:18 UTC**; SDK/UI show
+running/enabled Development 1.10.61. Source 224ad5f, exact CI 40964207952 green;
+runtime fingerprint `0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+All 12 existing IDs, 99 complete Flows and six checked counter sequences survived
+without a decrease. Original-unit main/member role and nine added system tiles
+match the reviewed fresh-identity correction; no existing capability removed.
+
+The approved pairing gate was enabled and exactly one installation Home Battery
+5000 added; full serial matches the existing house ES21. Homey Energy battery
+metadata enabled/not excluded, physical monitor has no second contribution, and
+original reporter trial stays off. There are now **13 EcoFlow devices**. Pre-pair
+versus post-pair comparison preserves all original device definitions/settings/
+capability metadata, complete Flows and global setting hashes with no decreases.
+Across the operation the only global change is the approved pairing gate.
+
+Seven samples over three minutes show the new aggregate receiving grid/temperature/
+health but no battery SOC/power/state; counters stay zero with zero accepted power
+samples. This is **waiting for battery data**, not an idle-accounting pass. Desktop
+pairing/device panel render; owner confirms the mobile Energy → Batteries listing; fresh native comparison
+and mobile reading accuracy remain pending. Native EcoFlow access timed out. Owner's 0%-explains-state suggestion is
+not treated as observation or permission to invent missing zero/standby readings.
+Natural physical expiry is observed coarsely: battery numeric fields clear despite
+fresh temperature, with last-reported standby at battery age 212 s. Five-second
+expiry latency, hint horizon and recovery are not accepted from this sampling.
+
+No Mainline/Test/Live publication, grid-source change, Dual CT Energy activation,
+native relink, battery command/task, Flow execution, Repair, further restart or
+rollback. Historical 1.10.60 1 Wh decrease remains recorded, not manually rewritten.
+Owner asked whether re-adding a Home Battery would fix missing data; keep both
+paired devices and histories. New 5000 identity is verified; missing reports need
+source investigation, not a second pairing. Native upgrade/pairing/freshness remain partial. See RC owner development 11061
+pairing readback for exact archive/evidence and remaining accounting/soak gates.
+
 ## Development 1.10.60 installed; Energy pairing held — 29 October 2026
 
 Owner-approved archive delivered at 22:00:49 UTC; SDK/UI confirm running/enabled

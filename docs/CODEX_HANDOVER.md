@@ -36,23 +36,40 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
-## Current source — diagnostic 1.10.61, not installed
+## Current source and installation — Development 1.10.61
 
-Relinking follow-up also fixes cached original-unit main roles: resolve each
-unit's current main at startup, retain existing system capability IDs on lookup
-failure, clear unknown system readings and block system controls until confirmed.
-A private check found the API-selected new main still labelled Member in Homey;
-zero original units were labelled main. Two failing regressions now pass. This
-candidate sends no linking/control command, but normal role-specific Homey tiles
-will follow verified current membership. That expected layout change must be
-included in the next candidate's review, alongside meter counter preservation.
+Owner approved the corrective archive and resuming one ES21 aggregate pairing.
+Delivery completed 29 October 22:20:18 UTC, clean=false/debug=false; SDK/UI confirm
+running/enabled Development 1.10.61. Source 224ad5f, exact CI 40964207952 green;
+archive-provenance runtime fingerprint
+`0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+1168 tests and documented software checks passed before deployment. Corrected
+original main role now matches the private API identity. All 12 existing device
+IDs, 99 full Flows and six counters preserved through this update; the expected
+role/nine-tile correction was reviewed. Historical 1.10.60 1 Wh drop is not erased.
 
-Original Smart Meter startup now retains the greater valid checkpoint/projected
-counter and checkpoints the recovered floor; a failing 1 Wh-tail regression now
-passes. 1168 tests and documented software checks pass; source fingerprint
-`0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`. It does not rewrite the observed historical decrease.
+Exactly one approved Home Battery 5000 is now paired, same full serial as the
+house ES21, enabled for Homey Energy; total EcoFlow devices 13. Pairing preserves
+all original definitions/settings/metadata/Flows/counters; the sole global setting
+change is the approved gate. Physical monitor has no second Energy contribution;
+original reporter trial stays off. No grid-meter source or battery command changed.
 
-## Current installation — Development 1.10.60; pairing paused
+New aggregate receives fresh grid/temperature/health but has not received battery
+SOC/flow/state in the three-minute observation. Zero counters with zero accepted
+power samples are waiting for data, NOT an idle/accounting pass. Desktop pairing
+and device-panel UI render. Owner confirms the new battery is visible in mobile Energy → Batteries. Fresh
+native comparison and mobile reading accuracy remain pending; native computer
+access timed out. Do not infer zero/standby from
+empty SOC. Natural physical numeric expiry is observed while temperature remains
+fresh, but five-second latency/hint horizon/recovery are not accepted. See newest
+STATUS and monitoring RC owner development 11061 pairing readback. Mainline/Test/
+Live, Dual CT Energy, hardware tasks/controls, native linking and Flows unchanged.
+All aggregate accuracy/recovery/final-candidate soak gates stay open. Checkbox
+removal and ordinary pairing are not complete.
+
+## Previous source preparation — diagnostic 1.10.61
+
+## Previous installation — Development 1.10.60; pairing paused
 
 Owner-approved delivery completed 29 October 22:00:49 UTC; SDK/UI confirm
 running/enabled, archive-provenance fingerprint a4e8e24c…028a42fc. All 12 identities,

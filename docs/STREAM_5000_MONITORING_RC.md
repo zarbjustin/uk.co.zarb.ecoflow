@@ -37,6 +37,70 @@ Raw native views, exact identity comparison and timestamped Homey readbacks stay
 private outside Git. Charge/discharge, sparse expiry/recovery/hint horizon,
 accessories, model/role accounting, rollback and normal-use soak remain open.
 
+## Owner development 11061 pairing readback
+
+Owner explicitly approved the corrective 1.10.61 archive and continuing the one
+house ES21 Home Battery pairing after preservation. Non-clean delivery completed
+29 October 2026 at **22:20:18 UTC**, clean=false/debug=false. SDK and Homey web UI
+confirm running/enabled **1.10.61 Development**. Exact source 224ad5f / CI
+40964207952 passed before delivery; runtime fingerprint
+`0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+Archive SHA256 `9d4555a171b56e4bd3dc3dcc8a01555d634b55c39fcf540b5c1da4d48abfdf91`.
+This is archive delivery provenance, not an installed-filesystem hash readback.
+
+Pre-pair preservation retains all 12 existing IDs and 99 complete Flow definitions,
+global settings and six nondecreasing checked cumulative counters. The sole
+reviewed difference is the API-identified original main changing from Member to
+System main with nine expected system capabilities added and none removed. Its
+full serial matches the earlier private role probe; exactly one original unit
+is now labelled main. Existing capability semantics/custom metadata remain.
+The historical 1 Wh decrease on 1.10.60 is retained in evidence, not rewritten.
+
+The existing aggregate pairing gate was enabled through native Homey settings
+and the approved warning confirmed. Discovery offered one installation battery;
+exactly one `stream_5000_system` device was added. Independent full-serial readback
+matches the approved physical ES21. Homey battery Energy metadata is enabled,
+not excluded; the physical unit contributes no second battery. The original
+battery reporter trial remains off. No native Link/Unlink or battery command ran.
+
+Post-pair comparison against the distinct pre-pair snapshot has zero changes to
+the original 12 device definitions/settings/capability metadata, complete Flows,
+global settings or downward counters. There are now 13 EcoFlow devices. Across
+the whole operation, the only global setting change is the approved pairing gate.
+Original office/grid-meter Energy flags remain unchanged. Existing devices were
+not deleted or re-paired. Private immutable snapshots and identities stay outside Git.
+
+Desktop Add device and the new device panel rendered successfully. Owner independently
+confirms the new battery is visible in the mobile Energy → Batteries overview.
+This is owner-reported UI evidence, not an agent-inspected mobile pairing flow or
+proof of battery power/counter accuracy. Native EcoFlow access
+timed out; the owner's explanation that 0% may explain standby is a hypothesis,
+not a fresh battery-state comparison. Empty SOC does not authorise substituting
+zero or standby for missing battery reports.
+
+Seven passive samples at 30-second intervals, **22:25:49–22:28:50 UTC**, show an
+active aggregate subscription (one attempt, no reconnect), fresh grid/temperature/
+health data, but no battery SOC, signed flow or state applied. Both new counters
+remain zero; accounting is explicitly waiting with zero accepted power samples.
+That is correct missing-data presentation, NOT accepted zero/idle accounting.
+The new battery can be registered in Energy without its power being qualified.
+No field mapping, unit/system scope or snapshot/replay policy was relaxed to fill
+these gaps. Opening the Homey tile did not request an EcoFlow snapshot or command.
+
+The physical monitor was live at zero/idle at 22:20:45, 22:22:38 and 22:24:27 UTC.
+At **22:27:04 UTC** battery numeric readings had cleared with battery age 212 s,
+while temperature age was 1 s and the status was last-reported standby. This is a
+natural sparse-expiry observation on this exact unit/runtime. Sampling does not
+prove clearing within the five-second tick boundary, the full standby-hint horizon
+or recovery; none is promoted to a hardware pass. No forced silence/reconnect.
+
+Mainline/Test/Live, grid-meter inclusion/exclusion, Dual CT Energy, native topology,
+battery settings/tasks, saved Flows and credentials remain unchanged. No extra
+restart, rollback or manual counter rewrite ran. Native upgrade and pairing stay
+partial; live aggregate battery data/native comparison, nonzero interval accounting,
+recovery/persistence, full mobile Energy reading verification and final-candidate soak
+remain open. Keep the checkbox until qualification supports ordinary pairing.
+
 ## Owner development 11060 preservation findings
 
 Owner approved the exact 1.10.60 archive non-clean, enabling the existing Energy

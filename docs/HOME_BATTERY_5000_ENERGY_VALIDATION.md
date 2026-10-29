@@ -3,6 +3,17 @@
 29 October 2026. Diagnostic source 1.10.60; not installed or published.
 Runtime fingerprint `a4e8e24c39d77037971706359e8848680e4fed92a3aa01e4c985ba6e028a42fc`.
 
+## Latest corrective update and pairing
+
+Owner approved the reviewed 1.10.61 archive and resuming the single-battery step.
+Delivered 29 October 22:20:18 UTC; exactly one house ES21 aggregate is now paired
+with enabled Homey battery Energy metadata. All original devices/Flows/counters
+preserved, including the reviewed main-role UI correction. Native aggregate power
+acceptance is still open: the new listener receives grid/temperature/health but
+no battery SOC/power/state in seven samples; zero counters have no accepted power
+samples behind them. See latest monitoring RC/STATUS for the complete record and
+private evidence limits. Mainline/Test/Live and grid-source settings unchanged.
+
 ## Subsequent approved installation outcome
 
 The owner approved 1.10.60 and one ES21 aggregate. Installation completed at
