@@ -1,5 +1,26 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Current source and installed archive are different
+
+29 October reconciliation: a separate source-only correction a1391f0 was added at
+22:32 UTC after the approved archive was prepared and installed. It fixes the
+original aggregate's post-relinking reporter binding; exact CI 40966605948 passes.
+Current source runtime fingerprint is
+`82f0120b20fcea1033117aee3f81b51308a4631b731e615ef32610634b1521e6`.
+This newer work was preserved and is NOT installed. Version metadata still reads
+1.10.61, so do not infer package identity from the version alone.
+
+The installed Development 1.10.61 is the approved 224ad5f archive delivered at
+22:20:18 UTC, fingerprint
+`0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+It includes the physical-unit main-role and Smart Meter floor fixes, but not
+that later original-aggregate correction. No re-add is recommended: retain both
+Home Battery identities/Flows/history, review a separately versioned candidate
+for the original reporter binding, and investigate missing initial battery data
+for the new 5000 aggregate. No further install or publication is authorised by
+this alignment record. Mainline/Test/Live remain unchanged.
+
+
 ## Aggregate relinking correction — 29 October 2026, SOURCE ONLY / NOT INSTALLED
 
 Owner requested a source-only fix after read-only evidence showed an original
@@ -27,8 +48,8 @@ regressions); lint passes; release:check passes with hardware gates still pendin
 npm audit reports zero vulnerabilities; pinned Homey CLI 4.5.3 verified-level local
 validation passes. No installation, restart, pairing, Homey setting/Flow/device
 command or store publication. Codex tasks remain paused. This is
-source on the diagnostic branch; installed Development 1.10.60 remains the
-last documented runtime and was not contacted or altered during implementation.
+source on the diagnostic branch and was not deployed by that source-only work.
+The separate approved 224ad5f installation is recorded above; a1391f0 remains uninstalled.
 Physical acceptance and controlled power-flow tests remain separate approval gates.
 
 
