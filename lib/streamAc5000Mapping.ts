@@ -93,12 +93,13 @@ export function createStreamAc5000Mapper(serialNumber: string, scope: 'system' |
   const serial = serialNumber.toUpperCase();
   let systemSocSeen = false;
   let peersSeen = false;
+  let singletonSocApplied = false;
   return (telemetry) => {
     if (telemetry.socPct !== undefined && Number.isFinite(telemetry.socPct)
       && telemetry.socPct >= 0 && telemetry.socPct <= 100) systemSocSeen = true;
     if ((telemetry.unitRecordCount ?? 0) > 1
       || Object.keys(telemetry.unitsBySn || {}).some((sn) => sn !== serial)) peersSeen = true;
-    return mapStreamAc5000(telemetry, {
+    const values = mapStreamAc5000(telemetry, {
       scope,
       serialNumber: serial,
       allowSystemSocFallback: !systemSocSeen && !peersSeen,
@@ -106,5 +107,16 @@ export function createStreamAc5000Mapper(serialNumber: string, scope: 'system' |
       // only until peer evidence appears; never copy aggregate power to a linked unit.
       allowSystemPowerForUnit: !peersSeen,
     });
+    if (scope === 'system') {
+      // A previously admitted singleton percentage is no longer installation
+      // evidence once a peer appears. Emit an explicit clear, not an absent
+      // delta that would leave the old unit percentage displayed until expiry.
+      if (systemSocSeen) singletonSocApplied = false;
+      else if (peersSeen && singletonSocApplied) {
+        values.measure_battery = null;
+        singletonSocApplied = false;
+      } else if (typeof values.measure_battery === 'number') singletonSocApplied = true;
+    }
+    return values;
   };
 }

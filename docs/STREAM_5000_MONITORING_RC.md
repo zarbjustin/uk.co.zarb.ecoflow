@@ -37,6 +37,32 @@ Raw native views, exact identity comparison and timestamped Homey readbacks stay
 private outside Git. Charge/discharge, sparse expiry/recovery/hint horizon,
 accessories, model/role accounting, rollback and normal-use soak remain open.
 
+## Owner development 11061 recovered battery data
+
+A separate, explicitly owner-approved HomeyPro deployment installed a1391f0 at
+22:37:59.909 UTC. Archive SHA256 f09d165586e6e8f93d579cd019ee3e252dec21f175add9128625dbc49fea2e3a
+was rechecked; archive-provenance runtime fingerprint is
+`82f0120b20fcea1033117aee3f81b51308a4631b731e615ef32610634b1521e6`.
+The same version number does not make it the earlier 224ad5f archive. The direct
+owner approval and private preservation receipt were reviewed; no repeat install
+or hardware command was run by this investigation.
+
+Fresh read-only snapshot at 22:41:03 UTC shows the aggregate at real zero SOC,
+zero signed battery watts and idle. Accounting has 87 accepted power samples,
+unchanged zero totals, one subscription attempt and no in-session reconnect.
+SOC comes from the existing matching singleton-record fallback; system SOC and
+installation membership are not independently established by that observation.
+Five read-only samples from 22:48:32 to 22:50:34 UTC remain at zero SOC, zero signed battery watts and idle; battery power ages are 0–2 seconds. Both counters remain zero with 372 accepted power samples by the final snapshot. No in-session reconnect was reported. This is source telemetry/short idle-counter evidence, not independent native or nonzero interval signoff.
+The earlier listener had no accepted core battery data. No missing field was
+converted to zero. Recovery followed an approved restart; native-app opening at
+around 22:39 is unresolved (owner unsure). The exact cause of when the full
+report arrived is not established. Do not claim spontaneous/no-restart recovery.
+
+See ORIGINAL_RELINKING_AND_5000_STARTUP_REVIEW.md for current/candidate separation,
+late-listener regression, and a separate SOC-scope correction in uninstalled
+1.10.62. Fresh data is progress, not native charge/discharge or interval-accuracy
+signoff. All monitoring/aggregate hardware gates retain their recorded status.
+
 ## Owner development 11061 pairing readback
 
 Owner explicitly approved the corrective 1.10.61 archive and continuing the one

@@ -1365,3 +1365,66 @@ test('aggregate retries a failed counter projection even when subsequent accepte
   await device.onUninit();
   assert.equal(device.store.chargedWh, 105);
 });
+
+test('a late-joining ES21 aggregate waits through unrelated deltas then accepts explicit zero without backfill', async (t) => {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  const sn = 'ES21TESTUNITAAAA';
+  const callbacks = new Set();
+  const setup = device => {
+    device.capabilities.add('measure_power.grid');
+    device.homey.app = {
+      subscribeAppRealtime: async (address, callback) => { assert.equal(address, sn); callbacks.add(callback); return true; },
+      unsubscribeAppRealtime: (_address, callback) => callbacks.delete(callback),
+    };
+  };
+  const broadcast = async payload => {
+    for (const callback of callbacks) callback(payload, `/app/device/property/${sn}`);
+    await Promise.all([unit.device.applyChain, system?.device.applyChain]);
+  };
+  const ownSocZero = frame(group(54, group(1, Buffer.concat([group(1, Buffer.from(sn)), varint(16), varint(0)]))));
+  const emptyFlow = frame(group(12, Buffer.alloc(0)));
+  const tempOnly = group(1, Buffer.concat([group(1, Buffer.concat([varint(72), varint(21), varint(120), varint(100)])), varint(64), varint(32), varint(72), varint(50)]));
+  const grid = Buffer.alloc(4); grid.writeFloatLE(900);
+  const gridOnly = frame(group(15, Buffer.concat([varint(29), grid])));
+  const unit = await harness(classes.Stream5000PhysicalUnitDevice, {}, sn, {}, setup);
+  let system;
+  await broadcast(ownSocZero); await broadcast(emptyFlow);
+  assert.equal(unit.device.values.measure_battery, 0);
+  assert.equal(unit.device.values.stream_unit_power_battery_flow, 0);
+  now += 600_000;
+  system = await harness(classes.Stream5000UnitDevice, { chargedWh: 100, dischargedWh: 200 }, sn, {}, setup);
+  await broadcast(tempOnly); await broadcast(gridOnly);
+  assert.equal(system.device.values.measure_temperature, 21);
+  assert.equal(system.device.values['measure_power.grid'], 900);
+  assert.equal(system.device.values.measure_battery ?? null, null);
+  assert.equal(system.device.values.measure_power ?? null, null);
+  assert.equal(system.device.values.battery_charging_state ?? null, null);
+  assert.equal(system.device.getEnergyDiagnostics().samples, 0);
+  assert.equal(system.device.getEnergyDiagnostics().source, 'waiting');
+  await broadcast(ownSocZero); await broadcast(emptyFlow);
+  assert.equal(system.device.values.measure_battery, 0);
+  assert.equal(system.device.values.measure_power, 0);
+  assert.equal(system.device.values.battery_charging_state, 'idle');
+  assert.equal(system.device.getEnergyDiagnostics().samples, 1);
+  now += 60_000; await broadcast(tempOnly); await broadcast(emptyFlow);
+  assert.equal(system.device.values['meter_power.charged'], 0.1);
+  assert.equal(system.device.values['meter_power.discharged'], 0.2);
+  assert.equal(system.device.getConnectionDiagnostics().subscriptionAttempts, 1);
+  assert.equal(system.device.getConnectionDiagnostics().reconnectCount, 0);
+  assert.equal(unit.device.hasCapability('meter_power.charged'), false);
+  const peerRecord = frame(group(54, group(1, Buffer.concat([
+    group(1, Buffer.from('ES21TESTPEERBBBB')), varint(16), varint(80),
+  ]))));
+  now += 1000; await broadcast(peerRecord);
+  assert.equal(system.device.values.measure_battery, null, 'new peer invalidates a singleton SOC fallback');
+  const explicitSystemSoc = frame(group(11, Buffer.concat([varint(40), varint(0)])));
+  now += 1000; await broadcast(explicitSystemSoc);
+  assert.equal(system.device.values.measure_battery, 0, 'explicit system zero is valid even with peers');
+  now += 1000; await broadcast(peerRecord);
+  assert.equal(system.device.values.measure_battery, 0, 'a peer delta cannot clear verified system zero');
+  assert.equal(system.device.values['meter_power.charged'], 0.1);
+  assert.equal(system.device.values['meter_power.discharged'], 0.2);
+  await system.device.onUninit(); await unit.device.onUninit();
+  assert.equal(callbacks.size, 0);
+});

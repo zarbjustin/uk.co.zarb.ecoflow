@@ -1,6 +1,66 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
-## Current source and installed archive are different
+## Current candidate 1.10.62 and reconciled installed 1.10.61
+
+29 October: the original aggregate relinking fix a1391f0 was separately approved
+and installed by the coordinating HomeyPro task at 22:37:59.909 UTC. Its reviewed
+archive hash f09d1655…fea2e3a was rechecked; installed source fingerprint is
+`82f0120b20fcea1033117aee3f81b51308a4631b731e615ef32610634b1521e6`.
+This supersedes the earlier 224ad5f/0b32aa19 archive despite the same 1.10.61 version.
+Preserve the concurrent deployment record below; do not install that fix again
+merely because an earlier handover called it source-only. Test/Live unchanged.
+
+Fresh read-only evidence at 22:41 shows the 5000 aggregate now receiving **0% SOC,
+0 W and idle**, with accepted power samples and unchanged zero counters. This
+followed the separately approved restart, so recovery must not be described as
+spontaneous or as proof of native-app triggering. Owner is unsure about opening
+the native overview. Singleton-record SOC and derived battery flow remain distinct
+from independently verified installation scope. See
+ORIGINAL_RELINKING_AND_5000_STARTUP_REVIEW.md for the evidence and limits.
+
+Prepared source **1.10.62**, NOT installed, carries the relinking correction and
+a confirmed SOC scope guard: peer discovery explicitly clears a prior singleton
+SOC fallback, while explicit system SOC (including zero) remains authoritative.
+Two added tests cover that transition and late-listener zero recovery without
+inventing readings or energy. **1177 tests**, locked Node 22 tooling, lint,
+release/diff/audit and pinned Homey verified validation pass. Candidate fingerprint:
+`31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545`; archive SHA256 `ac83f47fbdd8093965a4c43699c07a774c7d16804062f8eb7e51813a1cf2e99f`.
+No install, reconnect, Homey setting/Flow/device action or publication ran in this
+investigation. Current installation is a1391f0, not this candidate. Hardware gates
+are unchanged; review a new exact archive before any further Development update.
+
+
+## Reviewed aggregate fix deployed — 29 October 2026, 22:38 UTC
+
+Owner approved non-clean Development deployment of source a1391f0. Built from an
+isolated Git export with locked dependencies and pinned CLI 4.5.3 verified-level
+validation; source CI 40966605948 passed. Archive SHA256:
+`f09d165586e6e8f93d579cd019ee3e252dec21f175add9128625dbc49fea2e3a`.
+Homey accepted clean=false/debug=false; running Development remains version
+1.10.61, now with this aggregate fix. Runtime attribution is exact archive/upload
+provenance plus corrected readback, not an installed-filesystem rehash.
+
+Read-only verification at 22:39:41: current original main is Ultra X Left; a fresh EcoFlow Developer API read
+and Homey agree at 38% and approximately -162 W (reported discharging). Runtime
+reporter resolution is matched/original_stream. Paired device data and saved old
+main identity stay preserved; the false saved-address comparison is expected.
+Control target verified from deployed code, runtime resolution and native GETs;
+no battery write, outlet command, forced mode/limit, native relink or extra restart.
+
+All 13 EcoFlow IDs/data/settings/capability metadata and semantic icon IDs, all
+99 complete Flows, all 1201 Insights log IDs and global app settings preserved.
+Eight sampled cumulative readings across six devices did not decrease. House
+5000 physical/aggregate and Dual CT settings preserved; native-reported limits,
+reserve and mode returned to the same values after startup unknowns. Signed icon
+transport URLs changed on reinstall; this is not an Insights/capability migration.
+Private before/after/archive/target evidence is retained in the coordinating
+HomeyPro chat's ignored .private-transfer/ecoflow-aggregate-a1391f0 directory.
+Original private transfer and watcher cursor hash remain exact. Codex tasks were
+not resumed. No store/Test/Live publication or Energy/source/pairing change.
+This is aggregate reporting and preservation verification, not physical
+office-to-house delivery, anti-export enforcement or a new 5000 hardware gate.
+
+## Historical alignment before the separate 22:38 installation
 
 29 October reconciliation: a separate source-only correction a1391f0 was added at
 22:32 UTC after the approved archive was prepared and installed. It fixes the

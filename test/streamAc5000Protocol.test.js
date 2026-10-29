@@ -499,3 +499,12 @@ test('aggregate power supports larger installations without relaxing unit sanity
     assert.equal(mapStreamAc5000({ battW: value }).measure_power, undefined);
   }
 });
+
+test('system SOC singleton fallback clears on peer discovery until explicit system SOC arrives', () => {
+  const mapper = createStreamAc5000Mapper(SN, 'system');
+  assert.strictEqual(mapper({ unitRecordCount: 1, singleUnitSn: SN, singleUnitSocPct: 0 }).measure_battery, 0);
+  assert.strictEqual(mapper({ unitRecordCount: 2, unitsBySn: { [SN]: { socPct: 0 }, ES22TESTPEERAAAA: { socPct: 80 } } }).measure_battery, null);
+  assert.strictEqual(mapper({ unitRecordCount: 1, singleUnitSn: SN, singleUnitSocPct: 90 }).measure_battery, undefined, 'a later singleton delta cannot undo observed linkage');
+  assert.strictEqual(mapper({ socPct: 40 }).measure_battery, 40);
+  assert.strictEqual(mapper({ unitRecordCount: 2 }).measure_battery, undefined, 'peer delta cannot clear an explicit system SOC');
+});
