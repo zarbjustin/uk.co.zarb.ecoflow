@@ -266,7 +266,7 @@ test('Homey projection uses kWh cumulative import/export proposal, remains unwir
   const root = path.join(__dirname, '..');
   const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
   for (const file of [...walk(path.join(root, 'drivers')).filter(f => f.endsWith('.ts')), path.join(root, 'app.ts'), path.join(root, 'lib/dualCtMonitor.ts')]) {
-    assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption|dualCtEnergyCheckpoint/);
+    assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /dualCtGridEnergyDeviceAdapter|dualCtGridEnergySession|dualCtGridEnergySource|dualCtEnergyAdoption|dualCtEnergyCheckpoint/);
   }
 });
 

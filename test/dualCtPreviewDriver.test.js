@@ -365,12 +365,36 @@ test('ordinary support export contains preview health but never preview numbers,
   const report = createSupportSnapshot({ manifest: { version: '1.10.51' }, drivers: { getDriver: id => {
     if (id !== 'smartmeter_dual_ct_preview') throw new Error('absent');
     return { getDevices: () => [{ getDualCtPreviewDiagnostics: () => ({ enabled: true, status: 'recent', acceptedPackets: 59,
-      lastReceiptAgeSec: 1, value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
+      lastReceiptAgeSec: 1, receivedFrames: 60, rejectedFrames: 1, lastFrameAgeSec: 0,
+      value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
   } } });
   assert.equal(report.schemaVersion, 19); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
+  assert.equal(report.dualCtPreviews[0].receivedFrames, 60);
+  assert.equal(report.dualCtPreviews[0].rejectedFrames, 1);
+  assert.equal(report.dualCtPreviews[0].lastFrameAgeSec, 0);
   assert.equal(report.dualCtPreviews[0].valuesIncluded, false);
   assert.equal(report.dualCtPreviews[0].contributesToEnergy, false);
   assert.doesNotMatch(JSON.stringify(report), /PRIVATE|1234567/);
+});
+
+test('rejected preview frames advance transport health but cannot renew accepted readings; teardown fences late frames', async () => {
+  const original = auth.appAuthClientFromSettings; const clock = Date.now; let now = 100000;
+  Date.now = () => now;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  try {
+    await h.device.onInit(); const handler = [...h.handlers][0];
+    handler(frame(), topic); await h.device.chain;
+    now += 95000; handler(Buffer.from('invalid'), topic); await h.device.chain;
+    const health = h.device.getDualCtPreviewDiagnostics();
+    assert.equal(health.receivedFrames, 2); assert.equal(health.rejectedFrames, 1);
+    assert.equal(health.acceptedPackets, 1); assert.equal(health.lastFrameAgeSec, 0);
+    assert.equal(health.lastReceiptAgeSec, 95);
+    assert.doesNotMatch(JSON.stringify(health), /invalid|SYNTHETIC|account|payload/);
+    await h.device.onUninit(); handler(frame(), topic);
+    assert.equal(h.device.getDualCtPreviewDiagnostics().receivedFrames, 0);
+    assert.equal(h.device.getDualCtPreviewDiagnostics().lastFrameAgeSec, null);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; Date.now = clock; }
 });
 
 test('pairing consent screen is explicit and responsive on desktop/mobile, with no discovery before consent', async () => {

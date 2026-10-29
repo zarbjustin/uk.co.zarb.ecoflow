@@ -1,8 +1,25 @@
 # Codex cross-machine handover
 
-Updated 28 October 2026. This is the portable starting point for the active
+Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
+
+## Current continuation — Dual CT property Energy release work
+
+Owner confirms Dual CT installed/paired, CT1 at the single-phase property incomer
+including the office/shed submeter, CT2 disconnected. Original batteries are in
+the office; the electrically connected microinverter has its own reported EcoFlow
+space. The target is Dual CT CT1 as the future authoritative property Energy
+meter, not an interim switch to another source. See DUAL_CT_RELEASE_SPRINTS.md,
+DUAL_CT_ENERGY_RC.md and the new exact-candidate acceptance ledger.
+
+Fresh 29 October portal: Test 1.10.56 / Build 70, Live 1.10.3; installed enabled
+Development 1.10.56 (package not rehashed). Source e469c37 / 1.10.57 is pushed,
+exact CI 40781605070 passed. The earlier local-only paragraphs below are history.
+The new diagnostics/acceptance/device-adapter sprint is checkpointed on the diagnostic branch and unwired/default
+off for Energy. No install/publish, source transition or hardware operation.
+Native Dual CT firmware V1.0.0.41 and approximate import-point agreement are
+partial older-runtime observations, not qualification of the new source.
 
 ## Current release preparation — 1.10.57
 

@@ -19,6 +19,9 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   private enabled = false;
   private renderQueuedGeneration: number | null = null;
   private acceptedPackets = 0;
+  private receivedFrames = 0;
+  private rejectedFrames = 0;
+  private lastFrameAt: number | null = null;
   private lastAcceptedAt: number | null = null;
   private state = 'waiting';
   private displayRoles: DualCtDisplayRoles = {};
@@ -106,10 +109,14 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       const handler = (payload: Buffer, topic: string) => {
         if (!this.enabled || generation !== this.generation || this.handler !== handler) return;
         const now = Date.now();
+        this.receivedFrames = Math.min(65535, this.receivedFrames + 1);
+        this.lastFrameAt = now;
         if (this.monitor?.observe(payload, topic, now)) {
           this.acceptedPackets = Math.min(65535, this.acceptedPackets + 1);
           this.lastAcceptedAt = now;
           this.render(generation);
+        } else {
+          this.rejectedFrames = Math.min(65535, this.rejectedFrames + 1);
         }
       };
       this.handler = handler;
@@ -172,6 +179,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     this.enabled = false;
     this.state = reason;
     this.acceptedPackets = 0; this.lastAcceptedAt = null;
+    this.receivedFrames = 0; this.rejectedFrames = 0; this.lastFrameAt = null;
     const generation = ++this.generation;
     if (this.handler) (this.homey.app as any).unsubscribeAppRealtime(this.getData().sn, this.handler);
     this.handler = null; this.monitor?.clear(); this.monitor = null;
@@ -237,10 +245,14 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   /** Numeric-free ordinary support evidence; never capability values, IDs or packets. */
   getDualCtPreviewDiagnostics() {
     const age = this.lastAcceptedAt === null ? null : (Date.now() - this.lastAcceptedAt) / 1000;
+    const frameAge = this.lastFrameAt === null ? null : (Date.now() - this.lastFrameAt) / 1000;
     return {
       enabled: this.enabled,
       status: this.state,
       acceptedPackets: this.acceptedPackets,
+      receivedFrames: this.receivedFrames,
+      rejectedFrames: this.rejectedFrames,
+      lastFrameAgeSec: frameAge !== null && Number.isFinite(frameAge) && frameAge >= 0 ? frameAge : null,
       lastReceiptAgeSec: age !== null && Number.isFinite(age) && age >= 0 ? age : null,
       valuesIncluded: false,
       contributesToEnergy: false,

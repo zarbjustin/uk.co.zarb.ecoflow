@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "scope": "ct1_property_grid_power_energy",
+  "productType": 421,
+  "wiring": "single_phase",
+  "firmware": "1.0.0.41",
+  "timing": null,
+  "gates": [
+    {
+      "id": "identity_firmware",
+      "status": "partial",
+      "evidence": "owner_observation",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#identity-firmware"
+    },
+    {
+      "id": "ct1_property_scope",
+      "status": "partial",
+      "evidence": "owner_observation",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#ct1-property-scope"
+    },
+    {
+      "id": "phase_units_direction",
+      "status": "partial",
+      "evidence": "owner_observation",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#phase-units-direction"
+    },
+    {
+      "id": "measurement_freshness",
+      "status": "partial",
+      "evidence": "owner_observation",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#measurement-freshness"
+    },
+    {
+      "id": "physical_import_export_zero",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#physical-import-export-zero"
+    },
+    {
+      "id": "energy_intervals",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#energy-intervals"
+    },
+    {
+      "id": "source_overlap",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#source-overlap"
+    },
+    {
+      "id": "native_storage_restart",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#native-storage-restart"
+    },
+    {
+      "id": "upgrade_rollback_backup",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#upgrade-rollback-backup"
+    },
+    {
+      "id": "normal_use_48h",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#normal-use-48h"
+    },
+    {
+      "id": "native_desktop_mobile",
+      "status": "open",
+      "evidence": "none",
+      "candidateFingerprint": null,
+      "reference": "docs/DUAL_CT_ENERGY_RC.md#native-desktop-mobile"
+    }
+  ]
+}

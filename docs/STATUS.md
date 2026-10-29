@@ -7,6 +7,38 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Dual CT CT1 release sprints — 29 October 2026, DIAGNOSTIC SOURCE / NOT INSTALLED
+
+Owner authorizes diagnostic-branch release engineering with CT1 as the future
+property Energy meter. Current source base e469c37 matches fetched origin; its
+exact CI 40781605070 passed. Fresh portal readback still shows Test 1.10.56 /
+Build 70 and Live 1.10.3; owner is running Development 1.10.56. Earlier Test
+preparation below did not complete publication. Mainline/installed/channels stay
+unchanged in this continuation.
+
+Added independent received/rejected frame counts and transport age to the preview
+and numeric-free support projection; rejected traffic cannot renew accepted data.
+A separate Dual CT hardware ledger/checker is now part of release:check, while
+release:dual-ct intentionally fails pending hardware gates. Added an unwired,
+production-default-off Homey write adapter around the existing persistent session.
+It rechecks consent/qualification around async SDK writes, keeps failed/partial
+projections unavailable, clears stale power without resetting committed totals,
+serializes teardown and coalesces refresh ticks. No new driver, permission,
+capability or Energy activation is introduced. Full scope/dependencies are in
+[the sprint record](DUAL_CT_RELEASE_SPRINTS.md).
+
+Read-only native Dual CT firmware V1.0.0.41 and approximate Phase A/import-point
+agreement support partial evidence only. Existing direct-meter/preview data
+recovered naturally after a stale interval, and sampled existing counters are
+nondecreasing. Original meter remains configured as a property Energy meter
+despite reported downstream relocation; no settings corrected without a reviewed
+source transition. Firmware readback/timing contract, export/zero/energy intervals,
+native storage/upgrade/rollback and 48-hour soak remain open. Validation: 1113
+tests, lint, release/diff checks and Homey CLI 4.5.3 verified validation pass.
+Runtime fingerprint: `e233b419adb13d665591f8c5629e9a9f0d99d681610149577379a13e5f3e0f22`.
+Private UI evidence
+and household numbers stay outside Git; no tester capture requested.
+
 ## Consolidated 1.10.57 Test preparation — 28 October 2026
 
 Owner authorized diagnostic commit/push and one new Test release, keeping Mainline,
