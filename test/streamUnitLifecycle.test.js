@@ -448,3 +448,32 @@ test('teardown cancels a pending unit control readback and no later command is s
   await assert.rejects(pending, /incomplete/);
   timerFn(); assert.equal(h.writes.length, 1);
 });
+
+test('relinked unit refreshes a cached former main before assigning the system role', async () => {
+  const sn = 'BK61NEWMAINSYNTH';
+  let resolves = 0;
+  const h = await harness(sn, sn, undefined, d => {
+    d.getStoreValue = key => key === 'mainSn' ? 'BK61OLDMAINSYNTH' : undefined;
+    d.client.getMainSn = async queried => { assert.equal(queried, sn); resolves++; return sn; };
+  });
+  assert.equal(resolves, 1, 'a stored former main is not current membership evidence');
+  assert.equal(h.caps.has('operating_mode'), true);
+  assert.equal(typeof h.listeners.operating_mode, 'function');
+  assert.equal(h.writes.length, 0, 'role discovery sends no control command');
+  await h.d.onTeardown();
+});
+
+test('failed role refresh keeps existing system capability identities but blocks system controls', async () => {
+  const h = await harness('BK61SYNTHETICUNIT', null, undefined, (d, caps, values) => {
+    d.getStoreValue = key => key === 'mainSn' ? 'BK61FORMERMAINSYNTH' : undefined;
+    caps.add('operating_mode'); values.operating_mode = 'self_powered';
+  });
+  assert.equal(h.caps.has('operating_mode'), true, 'a failed lookup must not delete an existing capability');
+  assert.equal(h.values.operating_mode, null, 'unknown role cannot display old system mode as current');
+  await assert.rejects(h.listeners.operating_mode('ai'), /system main/i);
+  await h.d.applyQuota({ cmsSelfUsedMode: 1 }, { source: 'rest', receivedAt: Date.now() });
+  assert.equal(h.values.operating_mode, null);
+  assert.equal(h.reads.length, 0);
+  assert.equal(h.writes.length, 0);
+  await h.d.onTeardown();
+});

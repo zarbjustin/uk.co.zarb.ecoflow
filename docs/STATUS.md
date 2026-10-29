@@ -24,10 +24,18 @@ Test/Live, grid-meter settings, hardware tasks and Flows remain unchanged. Sourc
 **1.10.61**, NOT installed, now restores original Smart Meter counters from the
 higher valid checkpoint/projected floor and persists recovery without downtime
 fill. A regression reproduces a 1 Wh rollback before the fix and passes afterward.
-**1166 tests**, lint/release/diff and pinned Homey verified validation pass;
-locked dependencies retained. Fingerprint `b81b964b252d645100d08aae60303bc6d5ab6720102b7c20abad0d5e48cb53f1`.
-Archive SHA256 `0200d26abecdf9b68eb7f0724a553698df323f3e659b264a7d0068494eb482c8`. This prevents subsequent startup rollback; it does not
+**1168 tests**, lint/release/diff and pinned Homey verified validation pass;
+locked dependencies retained. Fingerprint `0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+Archive SHA256 `9d4555a171b56e4bd3dc3dcc8a01555d634b55c39fcf540b5c1da4d48abfdf91`. This prevents subsequent startup rollback; it does not
 rewrite the already-recorded 1 Wh decrease or restore removed capabilities.
+Relinking investigation also found zero original Homey units labelled main even
+though the API-selected new main is paired. A cached `mainSn` bypassed role
+refresh for former members. Source 1.10.61 now resolves each unit at startup,
+without changing polling cadence, retains existing system capability IDs and
+clears their values when the lookup fails, and blocks unverified system controls.
+Two additional failing regressions now pass (1168 total tests). Existing control
+writers/Flow identities are unchanged; current main/member tile layout is an
+expected readback item for the next reviewed installation, not a native relink.
 A fresh exact-candidate installation approval is needed before continuing the
 previously reviewed one-aggregate validation. No hardware gate is promoted.
 

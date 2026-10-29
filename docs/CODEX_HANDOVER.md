@@ -6,10 +6,19 @@ commands. See STATUS for the dated evidence behind each statement.
 
 ## Current source — diagnostic 1.10.61, not installed
 
+Relinking follow-up also fixes cached original-unit main roles: resolve each
+unit's current main at startup, retain existing system capability IDs on lookup
+failure, clear unknown system readings and block system controls until confirmed.
+A private check found the API-selected new main still labelled Member in Homey;
+zero original units were labelled main. Two failing regressions now pass. This
+candidate sends no linking/control command, but normal role-specific Homey tiles
+will follow verified current membership. That expected layout change must be
+included in the next candidate's review, alongside meter counter preservation.
+
 Original Smart Meter startup now retains the greater valid checkpoint/projected
 counter and checkpoints the recovered floor; a failing 1 Wh-tail regression now
-passes. 1166 tests and documented software checks pass; source fingerprint
-`b81b964b252d645100d08aae60303bc6d5ab6720102b7c20abad0d5e48cb53f1`. It does not rewrite the observed historical decrease.
+passes. 1168 tests and documented software checks pass; source fingerprint
+`0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`. It does not rewrite the observed historical decrease.
 
 ## Current installation — Development 1.10.60; pairing paused
 

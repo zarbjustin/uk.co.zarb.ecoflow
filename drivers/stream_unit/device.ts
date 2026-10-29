@@ -216,13 +216,13 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     await this.startRemainingTime('unit');
     const sn = this.getData().sn as string;
     const spec = streamModelFromSn(sn);
-    this.mainSn = (this.getStoreValue('mainSn') as string) || sn;
-    let roleResolved = !!this.getStoreValue('mainSn');
+    this.mainSn = '';
+    let roleResolved = false;
     try {
-      if (this.mainSn === sn) {
-        this.mainSn = await this.client.getMainSn(sn);
-        roleResolved = true;
-      }
+      // Relinking can change the main unit while the paired serial stays the
+      // same. A stored former parent must never grant or suppress current role.
+      this.mainSn = await this.client.getMainSn(sn, { fresh: true });
+      roleResolved = true;
     } catch (e) {
       this.mainSn = '';
       roleResolved = false;
@@ -249,7 +249,17 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
     // Whole-home controls/tiles only on the system main unit.
     if (isMain) await this.ensureCapabilities(StreamUnitDevice.SYSTEM_CAPS);
-    else await this.removeCapabilities(StreamUnitDevice.SYSTEM_CAPS);
+    else if (roleResolved) await this.removeCapabilities(StreamUnitDevice.SYSTEM_CAPS);
+    else {
+      // Unknown is not a confirmed member. Preserve existing tile/history IDs,
+      // clear unverified system values and leave system control listeners blocked.
+      for (const cap of StreamUnitDevice.SYSTEM_CAPS) {
+        if (this.hasCapability(cap)) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.setCapabilityValue(cap, null).catch((e) => this.error(`clear ${cap}`, e));
+        }
+      }
+    }
     await this.removeCapabilities(StreamUnitDevice.LEGACY_SYSTEM_CAPS);
     await this.startLiveReadings('unit');
 
@@ -310,7 +320,16 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     if (this.hasCapability('onoff.ac2')) {
       this.registerCapabilityListener('onoff.ac2', async (v: boolean) => this.runControl({ kind: 'ac2', value: v }));
     }
-    if (!isMain) return;
+    if (!isMain) {
+      for (const cap of ['operating_mode', 'backup_reserve_soc', 'charge_limit', 'discharge_limit', 'feed_in_control']) {
+        if (this.hasCapability(cap)) {
+          this.registerCapabilityListener(cap, async () => {
+            throw new Error('A verified system main role is required for this control.');
+          });
+        }
+      }
+      return;
+    }
     this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.runControl({ kind: 'mode', value: v }));
     this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.runControl({ kind: 'reserve', value: v }));
     this.registerCapabilityListener('charge_limit', async (v: number) => this.runControl({ kind: 'charge', value: v }));
@@ -409,6 +428,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       await this.addCapability('self_heating').catch((e) => this.error('add self_heating', e));
     }
     for (const [cap, value] of Object.entries(values)) {
+      if (StreamUnitDevice.SYSTEM_CAPS.includes(cap) && this.mainSn !== this.getData().sn) continue;
       if (!this.hasCapability(cap)) continue;
       try {
         if (this.isLiveReading(cap)) {

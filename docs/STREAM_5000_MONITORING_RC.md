@@ -68,6 +68,14 @@ an older coalesced checkpoint. This is a confirmed source defect consistent with
 the observed decrease; the interrupted checkpoint timing itself was not traced.
 The original immutable baseline/readbacks and all exact identifiers remain private.
 
+Further private comparison finds the API-selected new original main still labelled
+Member in Homey, with zero original units labelled main. The cached-parent startup
+shortcut explains why a relinked former member is not reclassified. Follow-up
+1.10.61 source refreshes current main identity for each unit at startup. If the
+lookup fails, existing system capability IDs remain, stale system values clear
+and control attempts reject without requests. This is source/synthetic evidence;
+no follow-up installation, native linking or control test has run.
+
 **Pairing was not reached:** the Energy gate remains off, no 5000 aggregate was
 added, and account/global settings match the baseline. No automatic rollback,
 manual counter rewrite, re-pair, additional restart, hardware task, Flow execution,
