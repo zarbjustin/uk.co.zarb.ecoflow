@@ -191,7 +191,7 @@
       "energySetupTitle": "Homey Energy",
       "energyGridHelp": "Use one whole-property grid meter in Homey Energy. A meter on a downstream circuit must not also count as the whole-property meter. Review each meter’s Energy settings before changing sources.",
       "energyBatteryHelp": "Add one Home Battery per separate installation. Physical unit monitors provide device readings without contributing a second battery to Homey Energy. Capacity entered for app widgets does not set Homey Energy capacity.",
-      "energyAvailability": "Dual CT currently provides read-only monitoring. CT1 property Energy accounting and STREAM 5000 installation Energy are still being validated.",
+      "energyAvailability": "Dual CT monitoring is available; its CT1 property Energy contribution is still being validated. STREAM 5000 battery monitoring is available; installation-level Homey Energy accounting is still being validated. Battery settings are managed in EcoFlow.",
       "aggregatePairingLabel": "Allow Home Battery (5000) Energy pairing",
       "aggregatePairingHelp": "Off by default while installation Energy validation is in progress. This permits adding a new installation-level Home Battery only. Turning it off does not remove existing devices or stop their accounting. Check for overlap before adding a battery.",
       "stream5000PairingHelp": "In Add device, choose STREAM 5000 Series Unit for monitoring or STREAM Home Battery (5000) for a separately reviewed installation. Keep existing devices that represent other installations; deleting a device can affect its Flows and history.",
@@ -441,7 +441,7 @@
       "reserve_enabled": "Enabled",
       "reserve_disabled": "Disabled",
       "reserve_target": "Stored reserve target",
-      "configuration_scope": "Configuration tiles are read-only EcoFlow reports from the subscribed device. Some settings apply to the system rather than an individual unit; system scope is not independently verified. Max Power from Grid limits grid draw, not total charging power or a charge-task target, and is not approval of your circuit capacity.",
+      "configuration_scope": "These tiles display settings reported by the subscribed EcoFlow device; manage battery settings in EcoFlow. Some settings apply to the system rather than an individual unit; system scope is not independently verified. Max Power from Grid limits grid draw, not total charging power or a charge-task target, and does not establish your circuit capacity.",
       "reserve_scope": "The stored percentage does not mean backup reserve is enabled. State and target have independent freshness. These are subscription-source observations, not verified system-wide protection or a command to charge. No settings were changed.",
       "request_timeout": "The report request timed out. Try again, or use Show integration support report for a local-only report. No automatic retry is made; an earlier reporter check may still be finishing.",
       "capture_version": "App version at capture",
@@ -509,11 +509,11 @@
   },
   "device": {
     "stream_5000_system": {
-      "monitoring_only": "Monitoring only · controls intentionally disabled",
+      "monitoring_only": "Homey Energy monitoring · manage battery settings in EcoFlow",
       "application_failed": "Fresh EcoFlow readings could not be applied in Homey. Check the integration report."
     },
     "stream_5000_unit": {
-      "monitoring_only": "Monitoring only · controls intentionally disabled",
+      "monitoring_only": "Battery monitoring · manage battery settings in EcoFlow",
       "linked_power_unverified": "Linked installation: individual battery power and direction are not verified. Use Home Battery for combined readings.",
       "reading_scope": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy."
     },

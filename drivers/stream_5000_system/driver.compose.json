@@ -235,7 +235,7 @@
             "de": "Status",
             "nl": "Status"
           },
-          "value": "Monitoring only · controls intentionally disabled",
+          "value": "Homey Energy monitoring · manage battery settings in EcoFlow",
           "hint": {
             "en": "This verified STREAM 5000 installation is not available through EcoFlow's supported public API. This Home Battery signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
             "de": "Diese verifizierte STREAM-5000-Anlage ist nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Hausbatterie meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",

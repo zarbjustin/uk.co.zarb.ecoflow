@@ -191,7 +191,7 @@
       "energySetupTitle": "Homey Energy",
       "energyGridHelp": "Gebruik in Homey Energy één netmeter voor het hele terrein. Een meter op een achterliggende groep mag niet ook als hoofdmeter meetellen. Controleer de Energy-instellingen van elke meter voordat je van bron wisselt.",
       "energyBatteryHelp": "Voeg per afzonderlijke installatie één thuisbatterij toe. Monitoren voor afzonderlijke apparaten leveren metingen zonder een tweede batterij aan Homey Energy toe te voegen. Capaciteit voor app-widgets stelt niet de capaciteit in Homey Energy in.",
-      "energyAvailability": "Dual CT biedt momenteel alleen monitoring. De CT1-energiebalans voor het terrein en de installatie-energiebalans voor STREAM 5000 worden nog gevalideerd.",
+      "energyAvailability": "Dual CT-monitoring is beschikbaar; de CT1-bijdrage aan Homey Energy voor het hele terrein wordt nog gevalideerd. STREAM 5000-batterijmonitoring is beschikbaar; de energiebalans op installatieniveau in Homey Energy wordt nog gevalideerd. Beheer batterijinstellingen in EcoFlow.",
       "aggregatePairingLabel": "Energy-koppeling voor Home Battery (5000) toestaan",
       "aggregatePairingHelp": "Standaard uit tijdens de validatie van de installatie-energiebalans. Staat alleen het toevoegen van een nieuwe thuisbatterij op installatieniveau toe. Uitschakelen verwijdert geen bestaande apparaten en stopt hun energiebalans niet. Controleer op overlap voordat je een batterij toevoegt.",
       "stream5000PairingHelp": "Kies bij Apparaat toevoegen STREAM 5000 Series Unit voor monitoring of STREAM Home Battery (5000) voor een afzonderlijk beoordeelde installatie. Behoud apparaten van andere installaties; verwijderen kan Flows en historie beïnvloeden.",
@@ -440,7 +440,7 @@
       "reserve_enabled": "Ingeschakeld",
       "reserve_disabled": "Uitgeschakeld",
       "reserve_target": "Opgeslagen reservedoel",
-      "configuration_scope": "Configuratietegels tonen alleen-lezen EcoFlow-meldingen van het geabonneerde apparaat. Sommige instellingen gelden voor het systeem in plaats van een losse unit; het systeembereik is niet onafhankelijk bevestigd. Max. vermogen uit het net begrenst de netafname, niet het totale laadvermogen of een laadtaak, en bevestigt niet de capaciteit van uw stroomkring.",
+      "configuration_scope": "Deze tegels tonen instellingen die door het geabonneerde EcoFlow-apparaat zijn gemeld; beheer batterijinstellingen in EcoFlow. Sommige instellingen gelden voor het systeem in plaats van één apparaat; de systeemomvang is niet onafhankelijk geverifieerd. Max Power from Grid begrenst de netafname, niet het totale laadvermogen of het doel van een laadtaak, en bevestigt niet de capaciteit van uw stroomkring.",
       "reserve_scope": "Het opgeslagen percentage betekent niet dat de back-upreserve is ingeschakeld. Status en doel hebben afzonderlijke actualiteit. Dit zijn waarnemingen van de abonnementsbron, geen bevestigde systeembrede bescherming of laadopdracht. Er zijn geen instellingen gewijzigd.",
       "request_timeout": "Het rapportverzoek duurde te lang. Probeer opnieuw of toon het lokale integratierapport. Geen automatische herhaling; een eerdere broncontrole kan nog lopen.",
       "capture_version": "App-versie bij vastlegging",
@@ -508,11 +508,11 @@
   },
   "device": {
     "stream_5000_system": {
-      "monitoring_only": "Alleen monitoring · bediening bewust uitgeschakeld",
+      "monitoring_only": "Homey Energy-monitoring · beheer batterijinstellingen in EcoFlow",
       "application_failed": "Nieuwe EcoFlow-waarden konden niet in Homey worden toegepast. Controleer het integratierapport."
     },
     "stream_5000_unit": {
-      "monitoring_only": "Alleen monitoring · bediening bewust uitgeschakeld",
+      "monitoring_only": "Batterijmonitoring · beheer batterijinstellingen in EcoFlow",
       "linked_power_unverified": "Gekoppelde installatie: individueel batterijvermogen en richting zijn niet bevestigd. Gebruik Home Battery voor gecombineerde metingen.",
       "reading_scope": "Unit-batterijwaarden beschrijven dit apparaat. Huis- en netwaarden beschrijven het systeem, niet de afzonderlijke batterij. Lege stroom-/statuswaarden betekenen niet geverifieerd, niet nul. Netmeter en stroomgebaseerde afname/teruglevering zijn aparte bronnen. Gebruik Home Battery voor gezamenlijke energie."
     },

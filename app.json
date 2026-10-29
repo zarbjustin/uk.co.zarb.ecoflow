@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.59",
+  "version": "1.10.60",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -3249,7 +3249,7 @@
                 "de": "Status",
                 "nl": "Status"
               },
-              "value": "Monitoring only · controls intentionally disabled",
+              "value": "Homey Energy monitoring · manage battery settings in EcoFlow",
               "hint": {
                 "en": "This verified STREAM 5000 installation is not available through EcoFlow's supported public API. This Home Battery signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
                 "de": "Diese verifizierte STREAM-5000-Anlage ist nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Hausbatterie meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
@@ -3493,7 +3493,7 @@
                 "de": "Status",
                 "nl": "Status"
               },
-              "value": "Monitoring only · controls intentionally disabled",
+              "value": "Battery monitoring · manage battery settings in EcoFlow",
               "hint": {
                 "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit shows unit battery telemetry and separate system house/grid context and does not contribute to Homey Energy. Pair STREAM Home Battery (5000) for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
                 "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit zeigt Batteriewerte der Einheit und getrennte Haus-/Netzwerte des Systems und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM Home Battery (5000) für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",

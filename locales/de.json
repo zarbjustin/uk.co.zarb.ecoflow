@@ -191,7 +191,7 @@
       "energySetupTitle": "Homey Energy",
       "energyGridHelp": "Verwenden Sie in Homey Energy einen Netzstromzähler für das gesamte Grundstück. Ein Zähler an einem nachgelagerten Stromkreis darf nicht zusätzlich als Gesamtzähler zählen. Prüfen Sie vor einem Wechsel die Energy-Einstellungen jedes Zählers.",
       "energyBatteryHelp": "Fügen Sie pro eigenständiger Anlage eine Hausbatterie hinzu. Einzelgeräte-Monitore liefern Messwerte, ohne eine zweite Batterie zu Homey Energy beizutragen. Kapazitätsangaben für App-Widgets stellen nicht die Kapazität in Homey Energy ein.",
-      "energyAvailability": "Dual CT bietet derzeit nur Überwachung. Die CT1-Energiebilanz für das Grundstück und die Anlagen-Energiebilanz für STREAM 5000 werden noch validiert.",
+      "energyAvailability": "Dual-CT-Überwachung ist verfügbar; der CT1-Beitrag zu Homey Energy für das gesamte Grundstück wird noch validiert. STREAM-5000-Batterieüberwachung ist verfügbar; die Anlagenbilanzierung in Homey Energy wird noch validiert. Batterieeinstellungen werden in EcoFlow verwaltet.",
       "aggregatePairingLabel": "Energy-Kopplung für Home Battery (5000) zulassen",
       "aggregatePairingHelp": "Während der Validierung der Anlagen-Energiebilanz standardmäßig deaktiviert. Erlaubt nur das Hinzufügen einer neuen Hausbatterie auf Anlagenebene. Das Deaktivieren entfernt keine vorhandenen Geräte und beendet deren Bilanzierung nicht. Prüfen Sie vor dem Hinzufügen mögliche Überschneidungen.",
       "stream5000PairingHelp": "Wählen Sie unter Gerät hinzufügen STREAM 5000 Series Unit zur Überwachung oder STREAM Home Battery (5000) für eine separat geprüfte Anlage. Behalten Sie Geräte anderer Anlagen; das Löschen kann Flows und Verlauf beeinträchtigen.",
@@ -440,7 +440,7 @@
       "reserve_enabled": "Aktiviert",
       "reserve_disabled": "Deaktiviert",
       "reserve_target": "Gespeicherter Reserve-Zielwert",
-      "configuration_scope": "Konfigurationskacheln zeigen schreibgeschützte EcoFlow-Meldungen des abonnierten Geräts. Manche Einstellungen gelten für das System statt für eine einzelne Einheit; der Systemumfang ist nicht unabhängig bestätigt. Max. Leistung aus dem Netz begrenzt den Netzbezug, nicht die gesamte Ladeleistung oder einen Ladeauftrag, und bestätigt nicht die Belastbarkeit Ihres Stromkreises.",
+      "configuration_scope": "Diese Kacheln zeigen vom abonnierten EcoFlow-Gerät gemeldete Einstellungen; verwalten Sie Batterieeinstellungen in EcoFlow. Einige Einstellungen gelten für das System statt für ein einzelnes Gerät; der Systemumfang ist nicht unabhängig verifiziert. Max Power from Grid begrenzt den Netzbezug, nicht die gesamte Ladeleistung oder das Ziel einer Ladeaufgabe, und bestätigt nicht die Belastbarkeit Ihres Stromkreises.",
       "reserve_scope": "Der gespeicherte Prozentsatz bedeutet nicht, dass die Notstromreserve aktiviert ist. Status und Zielwert haben unabhängige Aktualität. Es sind Beobachtungen der abonnierten Quelle, kein bestätigter anlagenweiter Schutz oder Ladebefehl. Keine Einstellung wurde geändert.",
       "request_timeout": "Zeitüberschreitung beim Bericht. Erneut versuchen oder den lokalen Integrationsbericht anzeigen. Kein automatischer Wiederholungsversuch; eine frühere Melderprüfung kann noch laufen.",
       "capture_version": "App-Version bei Erfassung",
@@ -508,11 +508,11 @@
   },
   "device": {
     "stream_5000_system": {
-      "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert",
+      "monitoring_only": "Homey-Energy-Überwachung · Batterieeinstellungen in EcoFlow verwalten",
       "application_failed": "Neue EcoFlow-Messwerte konnten in Homey nicht übernommen werden. Prüfen Sie den Integrationsbericht."
     },
     "stream_5000_unit": {
-      "monitoring_only": "Nur Überwachung · Steuerung bewusst deaktiviert",
+      "monitoring_only": "Batterieüberwachung · Batterieeinstellungen in EcoFlow verwalten",
       "linked_power_unverified": "Verknüpfte Anlage: Individuelle Batterieleistung und Richtung sind nicht bestätigt. Die Hausbatterie zeigt Gesamtwerte.",
       "reading_scope": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie."
     },

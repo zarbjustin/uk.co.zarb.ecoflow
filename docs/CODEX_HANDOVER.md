@@ -4,7 +4,20 @@ Updated 29 October 2026. This is the portable starting point for the active
 EcoFlow STREAM integration work. It does not grant permission to deploy or send
 commands. See STATUS for the dated evidence behind each statement.
 
-## Current source and installation — diagnostic 1.10.59
+## Current source — diagnostic 1.10.60, not installed
+
+Home Battery 5000 Energy qualification now has nine additional regressions and
+confirmed fixes for rejected/unapplied power accounting, expired/missing gaps,
+projected counter restoration and retry at zero power. EN/DE/NL copy distinguishes
+monitoring from Energy contribution and battery settings managed in EcoFlow.
+1165 tests and documented software checks pass. Runtime fingerprint:
+`a4e8e24c39d77037971706359e8848680e4fed92a3aa01e4c985ba6e028a42fc`.
+See HOME_BATTERY_5000_ENERGY_VALIDATION.md for the exact archive and bounded next
+native step. Installed app remains Development 1.10.59; checkbox and channels
+are unchanged. No native gates transfer to this candidate. Owner confirms no
+direct PV on the ES21; that limits this test scope, not general PV support.
+
+## Current installation — diagnostic 1.10.59
 
 New separate Dual CT CT1 Energy driver is wired through owned discovery, Homey
 contributor inventory, review/confirmation, persistent session and shared MQTT

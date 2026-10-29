@@ -1239,3 +1239,129 @@ test('pairing opt-out cannot disable already-paired unit or aggregate telemetry 
     await target.device.onUninit();
   }
 });
+
+
+test('aggregate counters cannot advance from rejected stale, future or older power packets', async (t) => {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100 });
+  await device.queueTelemetry({ measure_power: 300 }, now, true);
+  now += 60_000;
+  await device.queueTelemetry({ measure_power: 300 }, now + 1, true);
+  assert.equal(device.values['meter_power.charged'], 0.1, 'future power must not update accounting');
+  await device.queueTelemetry({ measure_power: 300 }, now - 240_000, true);
+  await device.queueTelemetry({ measure_power: 300 }, now - 90_000, true);
+  assert.equal(device.values['meter_power.charged'], 0.1, 'stale and older packets must not update accounting');
+  await device.queueTelemetry({ measure_power: 300 }, now, true);
+  assert.equal(device.values['meter_power.charged'], 0.105, 'rejected packets cannot move the accepted anchor');
+  await device.onUninit();
+});
+
+test('aggregate accounting never bridges a three-minute expired power interval', async (t) => {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100 });
+  await device.queueTelemetry({ measure_power: 300 }, now, true);
+  now += 240_000;
+  await device.queueTelemetry({ measure_temperature: 22 }, now, true);
+  await device.queueTelemetry({ measure_power: 600 }, now, true);
+  assert.equal(device.values['meter_power.charged'], 0.1, 'fresh temperature cannot authorise filling expired power');
+  now += 60_000;
+  await device.queueTelemetry({ measure_power: 600 }, now, true);
+  assert.equal(device.values['meter_power.charged'], 0.11);
+  await device.onUninit();
+});
+
+for (const failure of ['missing', 'write_failed', 'slow_write']) {
+  test(`aggregate accounting re-anchors after ${failure} battery power`, async (t) => {
+    let now = 1_000_000;
+    t.mock.method(Date, 'now', () => now);
+    const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100 });
+    await device.queueTelemetry({ measure_power: 300 }, now, true);
+    now += 30_000;
+    const write = device.setCapabilityValue.bind(device);
+    let fail = true;
+    t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+      if (fail && key === 'measure_power' && value === 600) {
+        fail = false;
+        if (failure === 'write_failed') throw new Error('synthetic power write failure');
+        if (failure === 'slow_write') now += 180_001;
+      }
+      await write(key, value);
+    });
+    await device.queueTelemetry({ measure_power: failure === 'missing' ? null : 600 }, now, true);
+    assert.equal(device.values['meter_power.charged'], 0.1, 'unapplied power cannot add energy');
+    now += 30_000;
+    await device.queueTelemetry({ measure_power: 300 }, now, true);
+    assert.equal(device.values['meter_power.charged'], 0.1, 'first recovery anchors without filling unknown power');
+    now += 60_000;
+    await device.queueTelemetry({ measure_power: 300 }, now, true);
+    assert.equal(device.values['meter_power.charged'], 0.105);
+    await device.onUninit();
+  });
+}
+
+test('aggregate restart preserves higher projected Homey counters over an older or missing checkpoint', async () => {
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100 }, undefined, {}, device => {
+    device.values['meter_power.charged'] = 1.25;
+    device.values['meter_power.discharged'] = 0.5;
+  });
+  assert.equal(device.values['meter_power.charged'], 1.25);
+  assert.equal(device.values['meter_power.discharged'], 0.5);
+  await device.onUninit();
+  assert.equal(device.store.chargedWh, 1250);
+  assert.equal(device.store.dischargedWh, 500);
+});
+
+
+test('aggregate keeps accepted power accounting independent of an unrelated failed reading', async (t) => {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100 });
+  await device.queueTelemetry({ measure_power: 300 }, now, true);
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'measure_temperature') throw new Error('synthetic temperature write failure');
+    await write(key, value);
+  });
+  now += 60_000;
+  await device.queueTelemetry({ measure_power: 300, measure_temperature: 22 }, now, true);
+  assert.equal(device.values['meter_power.charged'], 0.105);
+  assert.equal(device.values.measure_power, 300);
+  assert.equal(device.getAvailable(), false, 'unrelated write failure remains visible');
+  await device.onUninit();
+});
+
+test('aggregate restoration rejects invalid projected totals without losing the saved floor', async () => {
+  for (const invalid of [NaN, Infinity, -5, '12', null]) {
+    const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 1250, dischargedWh: 500 }, undefined, {}, device => {
+      device.values['meter_power.charged'] = invalid;
+      device.values['meter_power.discharged'] = invalid;
+    });
+    assert.equal(device.values['meter_power.charged'], 1.25);
+    assert.equal(device.values['meter_power.discharged'], 0.5);
+    await device.onUninit();
+  }
+});
+
+test('aggregate retries a failed counter projection even when subsequent accepted power is zero', async (t) => {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 100 });
+  await device.queueTelemetry({ measure_power: 300 }, now, true);
+  const write = device.setCapabilityValue.bind(device);
+  let reject = true;
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (reject && key === 'meter_power.charged') throw new Error('synthetic counter write failure');
+    await write(key, value);
+  });
+  now += 60_000;
+  await device.queueTelemetry({ measure_power: 300 }, now, true);
+  assert.equal(device.values['meter_power.charged'], 0.1);
+  reject = false;
+  now += 60_000;
+  await device.queueTelemetry({ measure_power: 0 }, now, true);
+  assert.equal(device.values['meter_power.charged'], 0.105, 'idle recovery must publish the previously accumulated total');
+  await device.onUninit();
+  assert.equal(device.store.chargedWh, 105);
+});

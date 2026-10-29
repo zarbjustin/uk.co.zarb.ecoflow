@@ -5,7 +5,7 @@
   "roles": ["unit", "system"],
   "excluded": ["new_5000_controls", "remaining_time", "dual_ct_energy", "automatic_mixed_generation_merge", "new_product_admission"],
   "gates": [
-    {"id":"native_upgrade","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11059-installation"},
+    {"id":"native_upgrade","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-candidate-installation"},
     {"id":"pairing_workflow","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#candidate-upgrade"},
     {"id":"normal_use_soak","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#normal-use"},
     {"id":"es21.identity","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1","observedAt":"2026-10-29T17:16:56.087Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-native-idle-comparison"},

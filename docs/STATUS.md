@@ -7,6 +7,29 @@ and the repository-root AGENTS.md before the dated history below. They identify
 the active branch, installed fingerprint, open gates and private transfer limits.
 The latest handover-only commit does not alter the installed runtime or channels.
 
+## Home Battery 5000 Energy qualification started — 29 October 2026
+
+Diagnostic **1.10.60** fixes confirmed aggregate accounting defects before native
+Energy pairing: rejected or unapplied power cannot advance/re-anchor counters,
+unknown/expired power cannot be bridged, higher valid Homey totals survive older
+checkpoints, and failed counter projections retry even at zero power. Nine new
+lifecycle regressions; **1165 tests**, locked Node 22 tooling, lint/release/diff,
+audit zero and pinned Homey verified validation pass. Clearer EN/DE/NL wording
+separates monitoring, Energy contribution and managing settings in EcoFlow.
+Runtime fingerprint `a4e8e24c39d77037971706359e8848680e4fed92a3aa01e4c985ba6e028a42fc`.
+Archive SHA256 `6a4ccf09037faf4e8c43e11cfdf2600dc290f29412894f2154b58028aed20e50`.
+
+Installed Development remains **1.10.59**. Fresh native/SDK comparison agrees at
+0% and zero battery watts; private exact serial matches the house ES21. Native
+membership remains ES21 plus Dual CT with originals separate. Owner confirms no
+direct PV connected. This is an older-runtime unit idle/identity observation,
+not 1.10.60 system Energy acceptance. Checkbox stays gated pending validation.
+No new pairing, installation, Energy setting, hardware task or store action.
+Mainline/Test/Live unchanged. See HOME_BATTERY_5000_ENERGY_VALIDATION.md for the
+bounded Development-plus-one-aggregate step and subsequent physical, grouping,
+recovery and final-candidate soak gates. Prior dotted-heading ledger reference
+is repaired; no hardware gate is promoted.
+
 ## Owner-approved Development 1.10.59 installation — 29 October 2026
 
 Owner explicitly approved the reviewed non-clean update and read-only preservation/UI

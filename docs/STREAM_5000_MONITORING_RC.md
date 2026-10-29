@@ -37,7 +37,7 @@ Raw native views, exact identity comparison and timestamped Homey readbacks stay
 private outside Git. Charge/discharge, sparse expiry/recovery/hint horizon,
 accessories, model/role accounting, rollback and normal-use soak remain open.
 
-## Owner Development 1.10.59 installation
+## Owner development candidate installation
 
 Owner explicitly approved the reviewed non-clean update and read-only preservation/UI
 checks. The exact archive was delivered at **21:19:16 UTC**, with clean=false and

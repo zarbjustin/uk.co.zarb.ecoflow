@@ -189,7 +189,7 @@ test('pairing clearly explains the monitoring-only app connection', () => {
       'utf8',
     );
     assert.doesNotMatch(pairHtml, /check_stream_5000_beta_access|STREAM 5000 Beta/);
-    assert.match(pairHtml, /read-only/i);
+    assert.match(pairHtml, /Manage battery settings in EcoFlow/i);
     if (driverId === 'stream_5000_system') assert.match(pairHtml, /check_stream_5000_aggregate_access/);
     else assert.doesNotMatch(pairHtml, /Homey\.emit/);
   }
@@ -203,7 +203,8 @@ test('wrong-device and monitoring-only copy is localized without driver terminol
     assert.ok(messages.errors.developer_api_unsupported_device);
     assert.ok(messages.device.stream_ac5000.monitoring_only);
     assert.ok(messages.device.stream_5000_unit.monitoring_only);
-    assert.ok(messages.device.stream_5000_system.monitoring_only);
+    assert.ok(messages.device.stream_5000_system.monitoring_only.includes('Homey'), 'aggregate status explains its Homey Energy role');
+    assert.ok(!messages.device.stream_5000_unit.monitoring_only.includes('Homey'), 'unit status must not advertise an Energy contribution');
   }
 });
 
@@ -216,7 +217,6 @@ test('aggregate and physical drivers use the shared STREAM 5000 lifecycle with d
   assert.match(source, /experimental_notice:\s*localizedStatus/);
   assert.match(source, /class Stream5000PhysicalUnitDevice/);
   assert.match(source, /if \(this\.isEnergyAggregate\(\)\)/);
-  assert.match(source, /if \(this\.isEnergyAggregate\(\) && typeof batteryPowerW === 'number'\)/);
   assert.match(source, /\['measure_power', \.\.\.ENERGY_CAPABILITIES\]/);
   for (const driverId of ['stream_ac5000', 'stream_5000_unit']) {
     const wrapper = fs.readFileSync(path.join(root, 'drivers', driverId, 'device.ts'), 'utf8');

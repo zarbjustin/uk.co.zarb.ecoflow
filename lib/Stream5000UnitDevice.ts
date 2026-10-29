@@ -26,7 +26,7 @@ import { Stream5000BatteryPresentation, STREAM_5000_PRESENTATION_CAPABILITY } fr
 import { migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_5000_CONFIGURATION_TITLES } from './streamReadingScopes';
 import {
   STREAM_5000_CONFIGURATION_CAPABILITIES, STREAM_5000_LIVE_CAPABILITIES,
-  Stream5000ReadingAges, stream5000ConfigurationValues,
+  Stream5000ReadingAges, stream5000ConfigurationValues, stream5000ReadingLimitMs,
 } from './stream5000Readings';
 
 /**
@@ -92,6 +92,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private lastEnergySampleAt = 0;
   private energyCheckpoint?: EnergyCheckpoint;
   private energySamples = 0;
+  private skippedEnergySamples = 0;
   private ignoredEnergyGaps = 0;
   private topologyTracker?: Stream5000TopologyTracker;
   private configurationTracker?: Stream5000ConfigurationTracker;
@@ -142,6 +143,10 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.dischargedWh = this.storedEnergyWh('dischargedWh');
       this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
       await this.initialiseEnergyCapabilities();
+      // Homey may have projected a newer total than the coalesced checkpoint.
+      // Keep that floor across upgrades/recovery; never reset existing history.
+      if ((this.chargedWh > 0 && this.chargedWh !== this.getStoreValue('chargedWh'))
+        || (this.dischargedWh > 0 && this.dischargedWh !== this.getStoreValue('dischargedWh'))) this.energyCheckpoint.mark();
     } else {
       await this.initialisePhysicalUnitCapabilities();
       try {
@@ -327,6 +332,8 @@ export class Stream5000UnitDevice extends Homey.Device {
   private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<boolean> {
     if (this.isStopped()) return false;
     const roleValues = this.capabilityValuesForRole(values);
+    const powerEligible = this.isEnergyAggregate() && Object.prototype.hasOwnProperty.call(values, 'measure_power')
+      && this.readingAges.canApply('measure_power', receivedAt, Date.now(), this.unavailableAfterMs());
     if (!this.isEnergyAggregate() && values.measure_power === null && values.battery_charging_state === null
       && !this.linkedPowerWarning) {
       this.linkedPowerWarning = true;
@@ -352,8 +359,18 @@ export class Stream5000UnitDevice extends Homey.Device {
       else this.batteryPresentation.reset();
     }
     const batteryPowerW = values.measure_power;
-    if (this.isEnergyAggregate() && typeof batteryPowerW === 'number') {
-      await this.updateEnergy(batteryPowerW, receivedAt);
+    if (this.isEnergyAggregate() && Object.prototype.hasOwnProperty.call(values, 'measure_power')) {
+      // Account only successfully applied, still-fresh battery power. Rejected
+      // old/future packets must not move the accepted anchor. An eligible missing
+      // or failed power reading breaks continuity rather than filling recovery.
+      if (powerEligible && typeof batteryPowerW === 'number' && Number.isFinite(batteryPowerW)
+        && appliedValues.measure_power === batteryPowerW
+        && this.readingAges.canApply('measure_power', receivedAt, Date.now(), this.unavailableAfterMs())) {
+        await this.updateEnergy(batteryPowerW, receivedAt);
+      } else {
+        this.skippedEnergySamples += 1;
+        if (powerEligible) this.lastEnergySampleAt = 0;
+      }
     }
     return applied;
   }
@@ -544,7 +561,12 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private storedEnergyWh(key: string): number {
     const value = this.getStoreValue(key);
-    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+    const capability = key === 'chargedWh' ? 'meter_power.charged' : 'meter_power.discharged';
+    const projected = this.getCapabilityValue(capability);
+    const savedWh = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+    const projectedWh = typeof projected === 'number' && Number.isFinite(projected)
+      && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : 0;
+    return Math.max(savedWh, projectedWh);
   }
 
   /** Add the meters defensively so devices paired with an older manifest migrate in place. */
@@ -554,12 +576,7 @@ export class Stream5000UnitDevice extends Homey.Device {
         await this.addCapability(capability).catch((e) => this.error(`add ${capability}`, e));
       }
     }
-    if (this.hasCapability('meter_power.charged')) {
-      await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-    }
-    if (this.hasCapability('meter_power.discharged')) {
-      await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
-    }
+    await this.projectEnergyCapabilities();
   }
 
   /** Keep all standard Energy capabilities off optional physical-unit monitors. */
@@ -579,7 +596,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private async updateEnergy(batteryPowerW: number, sampleAt: number): Promise<void> {
     this.energySamples += 1;
     if (this.lastEnergySampleAt > 0
-      && sampleAt - this.lastEnergySampleAt > Math.min(MAX_GAP_MS, this.unavailableAfterMs())) {
+      && sampleAt - this.lastEnergySampleAt > Math.min(MAX_GAP_MS, stream5000ReadingLimitMs('measure_power', this.unavailableAfterMs()))) {
       this.ignoredEnergyGaps += 1;
       this.lastEnergySampleAt = 0; // Re-anchor, never backfill power that was already considered stale.
     }
@@ -589,15 +606,24 @@ export class Stream5000UnitDevice extends Homey.Device {
       lastSampleAt: this.lastEnergySampleAt,
     }, batteryPowerW, sampleAt);
     this.lastEnergySampleAt = next.lastSampleAt;
-    if (next.posWh === this.chargedWh && next.negWh === this.dischargedWh) return;
-    this.chargedWh = next.posWh;
-    this.dischargedWh = next.negWh;
-    this.energyCheckpoint?.mark();
-    if (this.hasCapability('meter_power.charged')) {
-      await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
+    if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
+      this.chargedWh = next.posWh;
+      this.dischargedWh = next.negWh;
+      this.energyCheckpoint?.mark();
     }
-    if (this.hasCapability('meter_power.discharged')) {
-      await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+    // Retry an earlier failed SDK projection even at zero power. Never add
+    // energy merely to make a failed capability write eligible for retry.
+    await this.projectEnergyCapabilities();
+  }
+
+  private async projectEnergyCapabilities(): Promise<void> {
+    for (const [capability, kWh] of [
+      ['meter_power.charged', this.chargedWh / 1000],
+      ['meter_power.discharged', this.dischargedWh / 1000],
+    ] as const) {
+      if (!this.hasCapability(capability) || this.getCapabilityValue(capability) === kWh) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await this.setCapabilityValue(capability, kWh).catch((error) => this.error(capability, error));
     }
   }
 
@@ -622,7 +648,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     return {
       source: this.lastEnergySampleAt > 0 ? 'integrated_power' : 'waiting',
       samples: this.energySamples,
-      skippedSamples: 0,
+      skippedSamples: this.skippedEnergySamples,
       ignoredGaps: this.ignoredEnergyGaps,
       counterResets: 0,
       chargedCounterSeen: false,

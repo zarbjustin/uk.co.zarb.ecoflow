@@ -66,7 +66,7 @@
     <summary id="energySetupTitle">Homey Energy</summary>
     <p class="help" id="energyGridHelp">Use one whole-property grid meter in Homey Energy. A meter on a downstream circuit must not also count as the whole-property meter. Review each meter’s Energy settings before changing sources.</p>
     <p class="help" id="energyBatteryHelp">Add one Home Battery per separate installation. Physical unit monitors provide device readings without contributing a second battery to Homey Energy. Capacity entered for app widgets does not set Homey Energy capacity.</p>
-    <div class="connection-notice" id="energyAvailability">Dual CT currently provides read-only monitoring. CT1 property Energy accounting and STREAM 5000 installation Energy are still being validated.</div>
+    <div class="connection-notice" id="energyAvailability">Dual CT monitoring is available; its CT1 property Energy contribution is still being validated. STREAM 5000 battery monitoring is available; installation-level Homey Energy accounting is still being validated. Battery settings are managed in EcoFlow.</div>
     <label class="setting-toggle" for="stream5000AggregatePairingEnabled">
       <input id="stream5000AggregatePairingEnabled" type="checkbox" />
       <span id="aggregatePairingLabel">Allow Home Battery (5000) Energy pairing</span>
@@ -193,8 +193,8 @@
     It does not change devices, controls, counters or grouping. A match is not proof of installation-wide reporting.
     Do not delete or re-pair devices while investigating. Homey's Create diagnostic report button supplies a separate app-log ID; please send both.</p>
   <p class="help" id="reporterCheckHelp"></p>
-  <p class="help">STREAM 5000 configuration tiles are read-only and refer to the subscribed unit's
-    reported settings, not verified installation-wide limits. Stale readings clear rather than showing
+  <p class="help">STREAM 5000 configuration tiles display the subscribed unit's reported settings.
+    Manage battery settings in EcoFlow; installation-wide limits are not verified. Stale readings clear rather than showing
     zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
     accessories have produced a positive reading; these do not add another Homey Energy source.</p>
   <h2 id="meterStatusTitle" style="font-size:17px;">Smart Meter readings</h2>
