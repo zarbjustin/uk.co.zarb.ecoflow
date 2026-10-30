@@ -1,5 +1,37 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 1.11.0 Test build 71 published — 30 October 2026
+
+Owner-approved Test build **71 / 1.11.0** is active; portal and API both confirm
+Test. Live remains **build 18 / 1.10.3**; no certification submission or Live
+publication was performed. Mainline was not changed. Test archive source is
+`9a367a8274112777e83fa5459ad3c13980fd9c75`, exact
+[CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40992143771).
+Archive SHA-256: `e9c7695a70a54032ee80907e9907781bcee5e010c773356e4de94636e7ffc8db`.
+It differs from the approved Development archive only in documentation/listing
+metadata: runtime fingerprint remains
+`6fe3db750e6492e21a7028e3666df1105e2a39e0c58b128a5a59a90b52e44b94`.
+
+Local Development 1.11.0 and the one CT1 property Energy meter remain running.
+Final read-only Energy report includes the new device and its cumulative property
+power matches the meter; import estimate continued to 0.037 kWh. All original
+13 EcoFlow definitions, 101 Flows, 1,201 Insights identities and eight cumulative
+counters remain preserved/nondecreasing. Added device/logs are intentional; later
+reserve-gate changes belong to concurrent commissioning and were not overwritten.
+The existing detailed monitor's persistent warning is cleared.
+
+Test supports single-phase CT1 / model 421 / firmware 1.0.0.41 only. Pair one
+separate property Energy device and review overlapping property meters; the
+existing detailed monitor is not automatically converted. Totals are estimates
+from observed power, not migrated vendor counters. CT2 and three-phase Energy
+remain excluded. Local import/adoption observations do not close calibrated
+accuracy, export/zero, native persistence/recovery/mobile or 48-hour-soak gates.
+No battery settings/tasks/commands or Flow execution were performed by this task.
+No final soak automation is running.
+
+Test link: https://homey.app/a/uk.co.zarb.ecoflow/test/
+
+
 ## 1.11.0 approved Development and CT1 Energy adoption — 30 October 2026
 
 Owner approved the non-clean combined candidate and one CT1 property Energy
