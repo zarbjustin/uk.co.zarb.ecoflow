@@ -19,6 +19,7 @@ test('release check rejects accidental Energy, actions, public routes, permissio
     value => { value.app.flow.conditions.find(card => card.id === 'battery_soc').args[1].name = 'changed'; },
     value => { value.gridGate = value.gridGate.replace('RUNTIME_ENABLED = true', 'RUNTIME_ENABLED = false'); },
     value => { value.gridProfiles.profiles[0].firmware = '*'; },
+    value => { value.threePhaseGridProfiles.profiles.push({ wiring: 'three_phase' }); },
     value => { value.gridProfiles.profiles[0].freshnessMs = 90000; },
     value => { value.gridProfiles.profiles[0].singlePhaseOnly = false; },
     value => { value.gridProfiles.hardwareAcceptanceComplete = true; },

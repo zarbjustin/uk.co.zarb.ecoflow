@@ -19,6 +19,7 @@ export function loadReleaseInputs(root) {
     definitions: app.capabilities,
     pairingAccess: fs.readFileSync(path.join(root, 'lib/stream5000PairingAccess.ts'), 'utf8'),
     gridProfiles: json('settings/dual-ct-grid-profiles.json'),
+    threePhaseGridProfiles: json('settings/dual-ct-three-phase-grid-profiles.json'),
     gridGate: fs.readFileSync(path.join(root, 'lib/dualCtGridEnergySource.ts'), 'utf8'),
     timeObserver: fs.readFileSync(path.join(root, 'lib/stream5000TimeObserver.ts'), 'utf8'),
     timeObserverRuntime: fs.readFileSync(path.join(root, 'lib/Stream5000UnitDevice.ts'), 'utf8'),
@@ -26,8 +27,9 @@ export function loadReleaseInputs(root) {
       .filter(name => fs.existsSync(path.join(root, name))).map(name => fs.readFileSync(path.join(root, name), 'utf8')).join('\n'),
   };
 }
-export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, gridProfiles, runtime,
+export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, gridProfiles, threePhaseGridProfiles, runtime,
   timeObserver, timeObserverRuntime }) {
+  assert.deepEqual(threePhaseGridProfiles, { schemaVersion: 1, profiles: [] }, 'Three-phase admission is not approved');
   assert.equal(app.id, 'uk.co.zarb.ecoflow');
   for (const version of [compose.version, pkg.version, lock.version, lock.packages[''].version]) assert.equal(version, app.version, 'version mismatch');
   assert.deepEqual([...app.permissions].sort(), ['homey:manager:api', 'homey:manager:geolocation']);

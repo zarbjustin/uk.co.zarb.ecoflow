@@ -1,5 +1,29 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Three-phase qualification and binding prepared — 30 October 2026
+
+Added an internal trusted-source qualification seam and a separate V2 binding
+namespace for explicitly qualified three-phase CT1 signed-net contracts. The new
+production registry is empty and release-boundary checks enforce that state.
+No driver/settings/pairing path invokes the seam; no hardware gate is promoted.
+The future runtime reader/renewal lifecycle remains to be integrated after source
+qualification and hardware evidence are reviewed.
+
+The existing single-phase registry, default resolver and binding serialization
+remain unchanged. Regression tests pin its pre-change binding and restore a real
+production-profile exact-Wh checkpoint through session restart without migration
+or downtime backfill. Three-phase tests cover ownership/scope, opaque authority,
+expiry/cancellation/late reads, complete CT1 totals, CT2 exclusion and overlap guards.
+All 1,246 tests, lint, release checks and pinned Homey CLI 4.5.3 verified
+validation pass with locked Node 22 tooling. Full-release hardware readiness
+remains blocked as expected. Read-only channel/app checks confirm Test 1.11.5
+build 72, Live 1.10.3 build 18 and running Development 1.11.5, unchanged.
+
+See `docs/DUAL_CT_SOURCE_QUALIFICATION.md`. No installation, restart, publication,
+Energy/settings/battery/Flow change or tester contact. Test/Live/installed app stay
+unchanged; three-phase evidence remains eight partial and six open gates.
+
+
 ## Existing three-phase evidence reconciled — 30 October 2026
 
 Primary historical posts were reopened in fourteen relevant private topics,

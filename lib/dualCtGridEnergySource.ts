@@ -6,6 +6,7 @@ import { decodeDualCtCandidates } from './dualCtDecoder';
 import { DUAL_CT_BANK_DEFINITIONS, dualCtFreshAge } from './dualCtContract';
 import { dualCtContainsFields } from './dualCtLiveDelivery';
 import registry = require('../settings/dual-ct-grid-profiles.json');
+import { isQualifiedDualCtThreePhaseContract, qualifiedDualCtThreePhaseBinding } from './dualCtSourceQualification';
 
 export type DualCtEnergyTiming = 'device_measurement' | 'verified_live_receipt_estimate';
 export interface DualCtGridIdentity { productType: number; firmware: string }
@@ -23,6 +24,8 @@ export interface DualCtGridEnergyContract {
   encoding: DualCtEncodingBasis;
   liveFreshnessValidated: true;
   singlePhaseOnly?: true;
+  wiring?: 'three_phase';
+  nettingPolicy?: 'signed_phase_sum';
   freshnessMs?: number;
 }
 
@@ -41,7 +44,9 @@ export function dualCtGridContractValid(contract: DualCtGridEnergyContract | nul
     && ['device_measurement', 'verified_live_receipt_estimate'].includes(contract.timing)
     && ['explicit_zero', 'omitted_zero_candidate'].includes(contract.encoding)
     && contract.liveFreshnessValidated === true
-    && (contract.singlePhaseOnly === undefined || contract.singlePhaseOnly === true)
+    && (contract.wiring === undefined && contract.nettingPolicy === undefined
+      ? (contract.singlePhaseOnly === undefined || contract.singlePhaseOnly === true)
+      : isQualifiedDualCtThreePhaseContract(contract, identity))
     && (contract.freshnessMs === undefined || (Number.isSafeInteger(contract.freshnessMs) && contract.freshnessMs > 0 && contract.freshnessMs <= 90000));
 }
 
@@ -57,6 +62,7 @@ export const DUAL_CT_ENERGY_RUNTIME_ENABLED = true;
 /** Stable across sessions, not across account/meter/grid/contract/direction/timing changes. No raw identity in stores. */
 export function dualCtGridBinding(scope: DualCtGridScope, contract: DualCtGridEnergyContract): string | null {
   if (!dualCtGridScopeValid(scope) || !dualCtGridContractValid(contract, { productType: 421, firmware: contract?.firmware })) return null;
+  if (contract.wiring === 'three_phase') return qualifiedDualCtThreePhaseBinding(scope, contract);
   return createHash('sha256').update(JSON.stringify([scope.account, scope.device, scope.grid, contract.id,
     contract.firmware, contract.channel, contract.bank, contract.unit, contract.importSign, contract.timing, contract.encoding,
     contract.singlePhaseOnly ?? false, contract.freshnessMs ?? 90000])).digest('hex');
@@ -77,6 +83,8 @@ export function adaptDualCtGridEnergyPacket(scope: DualCtGridScope, identity: Du
   receivedAt: number, measuredAt: number | null, now: number): { status: string; observation: DualCtGridEnergyObservation | null } {
   const reject = (status: string) => ({ status, observation: null });
   if (!dualCtGridScopeValid(scope) || !dualCtGridContractValid(contract, identity)) return reject('contract_blocked');
+  const sourceBinding = contract.wiring === 'three_phase' ? dualCtGridBinding(scope, contract) : null;
+  if (contract.wiring === 'three_phase' && !sourceBinding) return reject('source_qualification_mismatch');
   if (topic !== `/app/device/property/${scope.device}` || !Buffer.isBuffer(payload) || !payload.length || payload.length > 65536
     || !Number.isFinite(receivedAt) || receivedAt <= 0 || !Number.isFinite(now) || !dualCtFreshAge(now - receivedAt)) return reject('transport_rejected');
   if (now - receivedAt >= (contract.freshnessMs ?? 90000)) return reject('receipt_expired');
@@ -111,13 +119,14 @@ export function adaptDualCtGridEnergyPacket(scope: DualCtGridScope, identity: Du
     const phases = bank.power.map((field) => decoded.readings.find((row) => row.field === field));
     if (phases.some((row) => !row)) return reject('incomplete_grid_phases');
     if (contract.singlePhaseOnly && (phases[1]!.value !== 0 || phases[2]!.value !== 0)) return reject('wiring_outside_qualification');
+    if (contract.wiring === 'three_phase' && decoded.bankChecks.find((row) => row.bank === contract.bank)?.status !== 'consistent') return reject('complete_grid_total_required');
     if (decoded.bankChecks.find((row) => row.bank === contract.bank)?.status === 'mismatch') return reject('grid_total_mismatch');
     const watts = phases.reduce((sum, row) => sum + row!.value, 0) * (contract.importSign === 'positive' ? 1 : -1);
     if (!Number.isFinite(watts) || Math.abs(watts) > 100000) return reject('power_rejected');
     return {
       status: 'accepted_for_preparation',
       observation: {
-        binding: dualCtGridBinding(scope, contract)!,
+        binding: sourceBinding || dualCtGridBinding(scope, contract)!,
         session: scope.session,
         signedImportW: Object.is(watts, -0) ? 0 : watts,
         receivedAt,
