@@ -404,3 +404,18 @@ test('five-second candidate expiry retains totals and reanchors without backfill
   now = 10000; await session.observe(f, topic, now); near(session.view().candidateCapabilities['meter_power.imported'], 0.002);
   await session.close();
 });
+
+test('three-phase lab netting integrates the signed CT1 sum, not gross opposing flows, while live profile remains single-phase', async () => {
+  const h = harness(); await h.session.start();
+  const mixed = frame(rows([[962, 1800], [963, -600], [772, -600], [515, 600], [991, 9000], [992, 9000], [993, 9000], [998, 27000]]));
+  await h.session.observe(mixed, topic, 1000, null); h.at(2000);
+  await h.session.observe(mixed, topic, 2000, null);
+  near(h.session.view().candidateCapabilities['meter_power.imported'], (600 / 3600) / 1000);
+  near(h.session.view().candidateCapabilities['meter_power.exported'], 0);
+  const liveIdentity = { productType: 421, firmware: '1.0.0.41' };
+  const live = resolve(liveIdentity);
+  assert.equal(live.singlePhaseOnly, true);
+  const sameWire = frame(rows([[962, 1800], [963, -600], [772, -600], [515, 600]]), { omitted: true });
+  assert.equal(adapt(scope, liveIdentity, live, sameWire, topic, 2000, null, 2000).status, 'wiring_outside_qualification');
+  await h.session.close();
+});

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "scope": "three_phase_ct1_preparation_only",
+  "admissionAllowed": false,
+  "registeredProfile": null,
+  "candidateRuntimeFingerprint": null,
+  "accountingPolicy": "unresolved",
+  "reference": "docs/DUAL_CT_THREE_PHASE_PREPARATION.md",
+  "gates": [
+    {
+      "id": "identity_firmware",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "wiring_phase_assignment",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "active_power_units",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "ct1_coherence",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "mixed_phase_netting",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "partial_zero_phases",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "timing_coverage",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "energy_intervals",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "ct2_isolation",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "native_projection",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "storage_recovery",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "upgrade_backup",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
+      "id": "normal_use_48h",
+      "status": "open",
+      "evidence": "none"
+    }
+  ]
+}

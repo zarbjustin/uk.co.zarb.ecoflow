@@ -1,5 +1,33 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Three-phase Dual CT source preparation — 30 October 2026
+
+Owner requested investigation/preparation while keeping installed Development,
+Test and Live unchanged. Manufacturer specification confirms two three-phase
+circuits/six CTs, but current live admission remains single-phase CT1 only.
+The existing generic wire/session path already sums three phases in lab tests;
+no firmware profile, binding, pairing setting or runtime guard was broadened.
+
+New offline one-payload review compares signed-net and per-phase import/export
+hypotheses, always Energy-ineligible. It requires all CT1 powers and a matching
+total, rejects partial/duplicate/nonfinite input, never fills missing phases with
+zero and excludes CT2. Added regression cases cover opposing phases/zero net and
+show that the real profile still rejects nonzero phase 2/3 even when lab netting
+can be integrated. Native phase order/sign/netting/timing remain unverified.
+
+See `docs/DUAL_CT_THREE_PHASE_PREPARATION.md` and its all-open planning ledger:
+a real three-phase installation/reference is needed, particularly simultaneous
+opposing phase flows. Justin's single-phase site cannot qualify those gates.
+No request was sent to any community tester. Proposed quantitative criteria and
+candidate selection/binding migration are for review, not hardware acceptance.
+No installation, pairing, Energy/settings/Flow/battery action, restart/reconnect,
+publication or soak was performed. No three-phase pairing claim/version bump.
+
+Locked Node 22 install, all 1,233 tests, lint, release checks and pinned Homey
+CLI 4.5.3 verified validation pass. These are preparation/software checks,
+not three-phase hardware acceptance.
+
+
 ## Corrective Test 1.11.5 build 72 published — 30 October 2026
 
 Owner explicitly approved publishing the reviewed corrective Test archive while
