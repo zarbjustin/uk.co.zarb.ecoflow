@@ -1,5 +1,14 @@
 # Release candidate acceptance — diagnostic hardening wave
 
+## Current release preparation
+
+For 1.11.7, use [the current readiness and delivery checklist](RELEASE_1_11_7_READINESS.md)
+and the newest handover/status checkpoint. The remaining sections below describe
+the October 25 hardening wave and its then-current admission/deployment state;
+they are historical evidence, not current 1.11.7 channel or installation claims.
+
+## Historical October 25 checklist
+
 This is an acceptance checklist, not certification or physical acceptance.
 Current 25 October monitoring-candidate work is local preparation and read-only
 owner validation only. The earlier passive observer remains disabled. Do not

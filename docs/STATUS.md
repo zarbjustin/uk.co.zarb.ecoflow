@@ -1,5 +1,68 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.7 / build 74 published; Development unchanged — 30 October 2026
+
+The owner explicitly authorised publishing the combined candidate to Test before
+the pending Development maintenance validation, then replying to the tester.
+Exact runtime source `5a59e97aefb9aae2445809028a0b4c4dff2569ea` was freshly checked
+against successful CI 41123399129. The approved archive SHA-256
+`f41f5d4b35a476e8440d7327936333338ac7ef814023921cb5657a024a8414e1` was uploaded,
+and **Test 1.11.7/build 74** was activated and verified through API and portal.
+Live remains **1.10.3/build 18**; no Mainline change, certification or local install.
+The native display/widget, recovery, independent accounting and soak gates remain
+open. Publication is opt-in Test delivery, not full-release hardware acceptance.
+
+The build-specific store metadata now includes the reviewed English/German/Dutch
+Dual CT community-trial wording and 1.11.7 changelog. Other listing paragraphs were
+retained. Packaged README files and the approved maintenance archive are unchanged.
+Homey's downloadable repack has SHA-256
+`4c361ba7b15f9f0004d6e22a5b6add81187ee01bf12d786dc25f5107b5d9099d`.
+All 2,018 file paths were compared: 2,017 file bytes match, with only Homey's removal
+of the author email from `app.json`. No other manifest field differs. Keep this
+server packaging distinction separate from the source runtime fingerprint.
+
+Before/after readbacks confirm running Development **1.11.5**, unchanged devkit
+session, all 14 EcoFlow device definitions/settings, 101 Flows and 1,204 Insights
+identities; all 10 comparable cumulative counters are nondecreasing and remain
+numeric. App settings differ only in the concurrently renewed reserve lease;
+one unrelated integration's device settings changed during observation. Do not
+claim an all-app/all-device byte-equal snapshot. No Homey setting/Flow/control was
+written by this publication operation. Private evidence remains outside Git.
+
+The authorised reply was posted and reopened in the existing private tester
+conversation, signed JZ, with the Test link, separate new-device three-phase
+accounting choice, optional display layout, CT2 exclusion and bounded first
+feedback request. No private message content or household data is copied here.
+
+The conditional 31 October 17:05–17:25 GMT maintenance window remains unchanged.
+Its existing heartbeat's expected Test baseline was updated to 1.11.7/build 74;
+archive/source/CI, natural-release checks, approved runner pause/resumption and
+no-battery-changes conditions are unchanged. Use fresh baselines at execution;
+do not treat the pre-publication Test 73 snapshot as the current channel guard.
+
+
+## 1.11.7 release preparation reconciled — 30 October 2026
+
+Added `docs/RELEASE_1_11_7_READINESS.md` as the current Test/native/production
+checklist; the October 25 checklist is explicitly historical. Fresh dependency
+audit reports zero known vulnerabilities and release-boundary checks pass.
+The approved archive hash and runtime fingerprint remain unchanged. Full hardware
+readiness still deliberately fails; no acceptance ledger or gate was weakened.
+No runtime change or repeat of the already-passing 1,279-test suite is claimed.
+
+Prepared Test changelog, conditional delivery checklist and a not-started soak
+plan. The packaged store description predates the opt-in three-phase trial;
+replacement English/German/Dutch text is prepared privately for review, not applied.
+Changing packaged copy requires a separately reviewed archive; the approved
+maintenance archive is frozen. Robert's approved invitation was sent and reopened
+in the existing private thread; correspondence remains outside Git.
+
+No Homey/portal mutation, installation, restart, re-pairing, Energy/battery setting,
+Flow execution, publication or new automation. Existing conditional maintenance
+approval/window below remains unchanged. Last verified channel/install states
+are historical readbacks, not newly polled by this documentation preparation.
+
+
 ## Development 1.11.7 installation deferred to approved conditional window — 30 October 2026
 
 The owner approved one non-clean installation of the exact combined candidate and
