@@ -73,3 +73,64 @@ test('three-phase community selection requires a separate acknowledgement and de
     assert.equal(await page.locator('#trialConsent').isChecked(),false);
   } finally {await browser.close();}
 });
+
+test('mobile review shows bounded progress, times out safely and rejects late confirmation', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await pageFor(browser, {width:390,height:844}, 'en', true);
+    await page.evaluate(() => {
+      const emit = Homey.emit;
+      Homey.emit = (name,input) => name === 'dual_ct_energy_review'
+        ? new Promise(resolve => { window.finishReview = resolve; }) : emit(name,input);
+    });
+    await page.locator('#find').click(); await page.locator('#review').click();
+    assert.equal(await page.locator('#reviewStatus').innerText(), require('../locales/en.json').dual_ct_energy.reviewing);
+    assert.equal(await page.locator('#reviewStatus').evaluate(e => {const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),true);
+    await page.clock.runFor(30001);
+    assert.equal(await page.locator('#reviewStatus').innerText(),require('../locales/en.json').dual_ct_energy.reviewTimeout);
+    assert.equal(await page.locator('#review').isEnabled(),true);
+    await page.evaluate(() => window.finishReview({token:'late',expiresAt:Date.now()+90000,sourceLabel:'Late'}));
+    assert.equal(await page.locator('#confirmation').isHidden(),true);
+    assert.equal(await page.locator('#approve').isDisabled(),true);
+    assert.deepEqual(await page.evaluate(()=>window.views),[]);
+  } finally {await browser.close();}
+});
+
+test('mobile review failures are visible beside the action without exposing backend errors', async () => {
+  const browser = await chromium.launch();
+  try {
+    for(const language of ['en','de','nl']) {
+      const page=await pageFor(browser,{width:390,height:600},language,true);
+      await page.evaluate(()=>{const emit=Homey.emit;Homey.emit=(name,input)=>name==='dual_ct_energy_review'?Promise.reject(new Error('PRIVATE_BACKEND_DETAILS')):emit(name,input);});
+      await page.locator('#find').click(); await page.locator('#review').click();
+      assert.equal(await page.locator('#reviewStatus').innerText(),require(`../locales/${language}.json`).dual_ct_energy.reviewFailed);
+      assert.equal(await page.locator('#reviewStatus').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),true);
+      assert.equal(await page.locator('body').innerText().then(s=>s.includes('PRIVATE_BACKEND_DETAILS')),false);
+      assert.equal(await page.locator('#review').isEnabled(),true); await page.close();
+    }
+  } finally {await browser.close();}
+});
+
+test('three-phase confirmation describes three phases rather than asking for single-phase consent', async () => {
+  const browser=await chromium.launch();
+  try {
+    const page=await pageFor(browser,{width:390,height:844},'en',true);
+    await page.locator('#find').click();await page.locator('#wiring').selectOption('three_phase_community');
+    await page.locator('#trialConsent').check();await page.locator('#review').click();
+    assert.equal(await page.locator('#scopeText').innerText(),require('../locales/en.json').dual_ct_energy.threePhaseScopeText);
+    assert.equal(await page.locator('#confirmation').isVisible(),true);
+  }finally{await browser.close();}
+});
+
+test('review displays only allowlisted translated failure classifications',async()=>{
+ const browser=await chromium.launch();
+ try{
+  for(const [reason,key] of [['source_read_failed','reviewSourceFailed'],['inventory_unknown','reviewInventoryFailed'],['grid_source_overlap','reviewOverlap'],['contract_blocked','reviewContractFailed'],['PRIVATE_ERROR','reviewFailed']]){
+   const page=await pageFor(browser,{width:390,height:844},'en',true);
+   await page.evaluate(reason=>{const emit=Homey.emit;Homey.emit=(name,input)=>name==='dual_ct_energy_review'?Promise.reject(new Error('DUAL_CT_REVIEW:'+reason)):emit(name,input);},reason);
+   await page.locator('#find').click();await page.locator('#review').click();
+   assert.equal(await page.locator('#reviewStatus').innerText(),require('../locales/en.json').dual_ct_energy[key]);
+   assert.equal(await page.locator('#confirmation').isHidden(),true);await page.close();
+  }
+ }finally{await browser.close();}
+});

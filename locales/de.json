@@ -15,6 +15,15 @@
     "saved": "Anmeldung gespeichert. Geräte verbinden sich neu; prüfen Sie die Messwerte. Geräteidentitäten und Energy-Freigaben bleiben erhalten."
   },
   "dual_ct_energy": {
+    "reviewSourceFailed": "Konto, Zähleridentität oder aktuelle Firmware konnten nicht gelesen werden. Prüfe EcoFlow-Konto und Region. Es wurde nichts hinzugefügt.",
+    "reviewContractFailed": "Die aktuelle Zählerfirmware konnte für diesen Energy-Modus nicht bestätigt werden. Es wurde nichts hinzugefügt; ändere die Firmware nicht, um diese Prüfung zu umgehen.",
+    "reviewInventoryFailed": "Andere Homey-Energy-Quellen konnten nicht vollständig geprüft werden. Es wurde nichts hinzugefügt.",
+    "reviewOverlap": "Ein anderer einbezogener Stromzähler erfasst bereits den Hausanschluss. Prüfe die Energy-Quellen vor dem Hinzufügen; keine Einstellungen wurden geändert.",
+    "reviewExpired": "Die Quellen- oder Geräteprüfung ist abgelaufen. Öffne die Einrichtung für eine neue Prüfung erneut; es wurde nichts hinzugefügt.",
+    "reviewing": "Zähler und andere Homey-Energy-Quellen werden geprüft…",
+    "reviewTimeout": "Die Zählerprüfung hat zu lange gedauert. Es wurde nichts hinzugefügt oder geändert. Öffne die Einrichtung vor einem weiteren Versuch erneut.",
+    "reviewFailed": "Der Zähler konnte nicht verifiziert werden. Prüfe Konto, aktuelle Firmware und andere einbezogene Hauszähler. Es wurde nichts hinzugefügt oder geändert.",
+    "threePhaseScopeText": "CT1 misst alle drei Phasen dieses Hausanschlusses einschließlich nachgelagerter Stromkreise. Ich möchte diesen Zähler als Energy-Quelle des Hauses verwenden.",
     "wiringLabel": "Installation",
     "singlePhase": "Einphasig",
     "threePhase": "Dreiphasig — Community-Test",

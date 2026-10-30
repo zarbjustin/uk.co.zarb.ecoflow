@@ -74,3 +74,11 @@ test('legacy pairing cannot inject trial mode; trial firmware drift cannot commi
   const trial=(await h.call('list_devices'))[0];h.firmware('unknown');await assert.rejects(h.call('add_device',trial));
   assert.equal(h.counters().committed,0);
 });
+
+test('review failures expose only bounded source and overlap classifications', async t => {
+  const h=harness(t,false,true);await h.call('dual_ct_energy_candidates');h.firmware('unsupported.1');
+  await assert.rejects(h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true}),/^Error: DUAL_CT_REVIEW:contract_blocked$/);
+  h.firmware('1.0.0.41');h.devices({other:{id:'other',capabilities:['measure_power'],energyObj:{cumulative:true},settings:{}}});
+  await assert.rejects(h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true}),/^Error: DUAL_CT_REVIEW:grid_source_overlap$/);
+  assert.equal(h.counters().committed,0);
+});

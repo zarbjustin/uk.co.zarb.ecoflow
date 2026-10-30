@@ -1,5 +1,44 @@
 # Codex cross-machine handover
 
+## Corrective Test 1.11.8 prepared for authorised delivery — 30 October 2026
+
+The owner authorised preparing, committing/pushing and publishing the pairing-review
+correction to Test, then replying in the existing private tester conversation.
+Live and installed Development must remain unchanged. No installation, runner
+pause, reserve release, re-pairing or Energy change is included in this delivery.
+
+Version 1.11.8 adds visible/bounded review feedback, fixed translated failure-stage
+messages and mode-correct three-phase scope consent. Existing firmware/source/
+overlap checks and single-phase/counter behaviour remain unchanged. Packaged
+English/German/Dutch Dual CT store text now matches the reviewed build-74 listing;
+this corrects the older packaged three-phase exclusion without changing the trial
+scope. It does not complete hardware acceptance or identify the field backend
+blocker. Exact CI/archive/publication and preservation results will be recorded
+separately after delivery. The old 1.11.7 maintenance installation remains held;
+publication approval is not permission to install 1.11.8 locally.
+
+
+## Dual CT pairing review correction prepared; local installation held — 30 October 2026
+
+The owner interrupted expedited maintenance to review new pairing feedback.
+No runner pause, reserve release or installation had yet occurred. Test remains
+1.11.7/build 74, Live 1.10.3/build 18 and installed Development 1.11.5.
+
+Confirmed mobile review feedback/timeout defects and single-phase wording on the
+three-phase confirmation. Added visible progress and a 30-second fail-closed
+review deadline, bounded translated failure classifications and mode-correct
+scope consent. Three new regressions fail before the change; all 1,284 tests,
+lint, release checks and pinned Homey verified validation pass afterward. The exact field backend blocker is still
+unidentified; do not claim a firmware/wiring fault or a completed field fix.
+See `docs/DUAL_CT_PAIRING_REVIEW_FEEDBACK.md` for scope and evidence boundaries.
+
+Changes are local, unversioned and not committed/published/installed. The old
+approved archive is unchanged; do not substitute this tree or install 1.11.7
+while the corrective review is pending. The scheduled maintenance must defer
+until the candidate/issue is reviewed. No battery, Flow, Energy or portal setting
+changed and no reply or further capture request was sent during investigation.
+
+
 ## Test 1.11.7 / build 74 published; Development unchanged — 30 October 2026
 
 The owner explicitly authorised publishing the combined candidate to Test before

@@ -22,6 +22,7 @@
       <label for="wiring" id="wiringLabel"></label><select id="wiring"><option value="single_phase" id="singlePhase"></option><option value="three_phase_community" id="threePhase"></option></select>
       <label id="trialChoice" hidden><input id="trialConsent" type="checkbox"><span id="trialText"></span></label>
       <button id="review" type="button"></button>
+      <p id="reviewStatus" role="status" aria-live="polite"></p>
     </div>
     <div id="confirmation" hidden>
       <p id="reviewSource"></p><p id="totals"></p>
@@ -42,6 +43,7 @@
     if (expiry) clearTimeout(expiry); expiry = null;
     element('scopeConsent').checked = false; element('overlapConsent').checked = false;
     element('approve').disabled = true; element('confirmation').hidden = true;
+    element('review').disabled = false; element('reviewStatus').textContent = '';
   }
   function updateConsent() {
     element('approve').disabled = !token || Date.now() >= expiresAt || !element('scopeConsent').checked || !element('overlapConsent').checked;
@@ -81,6 +83,16 @@
   });
   element('review').addEventListener('click', async function () {
     invalidate(); const generation = operation; this.disabled = true;
+    const feedback = key => {
+      element('reviewStatus').textContent = text(key);
+      element('reviewStatus').scrollIntoView({ block: 'nearest' });
+    };
+    feedback('reviewing');
+    const deadline = setTimeout(() => {
+      if (generation !== operation) return;
+      invalidate(); feedback('reviewTimeout');
+      Homey.emit('dual_ct_energy_cancel').catch(() => {});
+    }, 30000);
     try {
       const mode = element('wiring').value;
       if (mode === 'three_phase_community' && !element('trialConsent').checked) throw new Error('consent');
@@ -89,10 +101,21 @@
       if (!review || typeof review.token !== 'string' || !Number.isFinite(review.expiresAt) || review.expiresAt <= Date.now()) throw new Error('review');
       token = review.token; expiresAt = review.expiresAt;
       element('reviewSource').textContent = review.sourceLabel;
+      element('scopeText').textContent = text(mode === 'three_phase_community' ? 'threePhaseScopeText' : 'scopeText');
+      element('reviewStatus').textContent = '';
       element('confirmation').hidden = false; element('status').textContent = '';
+      element('confirmation').scrollIntoView({ block: 'nearest' });
       expiry = setTimeout(() => { invalidate(); element('status').textContent = text('expired'); Homey.emit('dual_ct_energy_cancel').catch(() => {}); }, Math.min(90000, expiresAt - Date.now()));
-    } catch { if (generation === operation) element('status').textContent = text('unavailable'); }
-    finally { this.disabled = false; }
+    } catch (error) {
+      const reasons = {
+        source_read_failed: 'reviewSourceFailed', contract_blocked: 'reviewContractFailed',
+        inventory_read_failed: 'reviewInventoryFailed', inventory_unknown: 'reviewInventoryFailed',
+        grid_source_overlap: 'reviewOverlap', identity_stale: 'reviewExpired', inventory_stale: 'reviewExpired',
+      };
+      const match = /^DUAL_CT_REVIEW:([a-z_]+)$/.exec(error && error.message || '');
+      if (generation === operation) feedback(match && reasons[match[1]] || 'reviewFailed');
+    }
+    finally { clearTimeout(deadline); if (generation === operation) this.disabled = false; }
   });
   element('approve').addEventListener('click', async function () {
     updateConsent(); if (this.disabled) return;

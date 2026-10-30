@@ -79,8 +79,12 @@ export function registerDualCtEnergyPairing(driver: any, session: any, dependenc
       const review = await workflow.prepare();
       if (operation !== generation || !dependencies.enabled()) throw new Error('cancelled');
       return { ...review, communityTrial: community };
-    } catch {
-      throw new Error(text());
+    } catch (error: any) {
+      const allowed = ['source_read_failed', 'inventory_read_failed', 'inventory_unknown', 'grid_source_overlap',
+        'contract_blocked', 'identity_stale', 'inventory_stale'];
+      const reason = allowed.includes(error?.message) ? error.message : 'verification_failed';
+      // Only fixed classifications cross the pairing bridge; never relay upstream errors.
+      throw new Error(`DUAL_CT_REVIEW:${reason}`);
     }
   });
   session.setHandler('dual_ct_energy_approve', async (input: any) => {

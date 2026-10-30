@@ -15,6 +15,15 @@
     "saved": "Sign-in saved. Devices will reconnect; check their readings. Device identities and Energy permissions were kept."
   },
   "dual_ct_energy": {
+    "reviewSourceFailed": "The account, meter identity or current firmware could not be read. Check the EcoFlow account and region. Nothing was added.",
+    "reviewContractFailed": "The current meter firmware could not be qualified for this Energy mode. Nothing was added; do not change firmware to bypass this check.",
+    "reviewInventoryFailed": "Other Homey Energy sources could not be checked completely. Nothing was added.",
+    "reviewOverlap": "Another included electricity meter already covers the property boundary. Review the Energy sources before adding this meter; no settings were changed.",
+    "reviewExpired": "The source or inventory check expired. Reopen setup to obtain a fresh review; nothing was added.",
+    "reviewing": "Checking the meter and other Homey Energy sources…",
+    "reviewTimeout": "The meter check timed out. Nothing was added or changed. Reopen setup before trying again.",
+    "reviewFailed": "The meter could not be verified. Check the account, current firmware and other included property meters. Nothing was added or changed.",
+    "threePhaseScopeText": "CT1 measures all three phases of this property incomer, including downstream circuits. I want this meter to be the property Energy source.",
     "wiringLabel": "Installation",
     "singlePhase": "Single phase",
     "threePhase": "Three phase — community trial",

@@ -15,6 +15,15 @@
     "saved": "Aanmelding opgeslagen. Apparaten verbinden opnieuw; controleer hun metingen. Apparaatidentiteiten en Energy-toestemmingen zijn behouden."
   },
   "dual_ct_energy": {
+    "reviewSourceFailed": "Het account, de meteridentiteit of de huidige firmware kon niet worden gelezen. Controleer het EcoFlow-account en de regio. Er is niets toegevoegd.",
+    "reviewContractFailed": "De huidige meterfirmware kon niet worden bevestigd voor deze Energy-modus. Er is niets toegevoegd; wijzig de firmware niet om deze controle te omzeilen.",
+    "reviewInventoryFailed": "Andere Homey Energy-bronnen konden niet volledig worden gecontroleerd. Er is niets toegevoegd.",
+    "reviewOverlap": "Een andere opgenomen elektriciteitsmeter meet al de woninggrens. Controleer de Energy-bronnen voordat je deze meter toevoegt; er zijn geen instellingen gewijzigd.",
+    "reviewExpired": "De bron- of apparatencontrole is verlopen. Open het instellen opnieuw voor een actuele controle; er is niets toegevoegd.",
+    "reviewing": "De meter en andere Homey Energy-bronnen worden gecontroleerd…",
+    "reviewTimeout": "De metercontrole duurde te lang. Er is niets toegevoegd of gewijzigd. Open het instellen opnieuw voordat je het nogmaals probeert.",
+    "reviewFailed": "De meter kon niet worden geverifieerd. Controleer het account, de huidige firmware en andere opgenomen woningmeters. Er is niets toegevoegd of gewijzigd.",
+    "threePhaseScopeText": "CT1 meet alle drie fasen van deze hoofdaansluiting, inclusief achterliggende groepen. Ik wil deze meter als Energy-bron voor de woning gebruiken.",
     "wiringLabel": "Installatie",
     "singlePhase": "Eenfase",
     "threePhase": "Driefase — communitytest",
