@@ -1,5 +1,28 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Retained three-phase evidence assessed offline — 30 October 2026
+
+Reopened the historical complete snapshot, pruned indexed export and concluding
+assignment replies. Privately assessed exact power-field excerpts without
+reconstructing missing values or generating wire packets. Complete older CT1
+arithmetic is consistent but lacks packet provenance; the later CT1 is incomplete,
+while CT2 retains a complete consistent reported packet. Neither supplies current
+firmware qualification, reference intervals or eligible-time coverage.
+
+Added an offline expanded-report assessor with classification-only output and
+five synthetic regressions. It cannot issue source authority or enable Energy.
+All 1,251 tests, project lint, release checks and pinned Homey CLI 4.5.3
+verified validation pass; the working single-phase binding/checkpoint regressions
+remain green. No runtime driver/profile/binding
+change in this follow-up. Planning gates remain eight partial / six open.
+
+See `docs/DUAL_CT_THREE_PHASE_VALIDATION_PROGRESS.md` for completed work and the
+ordered current-identity, interval, native-recovery and soak requirements. No
+capture request or tester message. Test, Live and installed Development unchanged.
+The preceding source-qualification commit's GitHub CI remains queued at review;
+local checks are not presented as remote CI completion.
+
+
 ## Three-phase qualification and binding prepared — 30 October 2026
 
 Added an internal trusted-source qualification seam and a separate V2 binding

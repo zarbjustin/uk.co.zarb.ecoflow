@@ -78,5 +78,6 @@
       "evidence": "none"
     }
   ],
-  "evidenceReview": "docs/DUAL_CT_THREE_PHASE_EVIDENCE_REVIEW.md"
+  "evidenceReview": "docs/DUAL_CT_THREE_PHASE_EVIDENCE_REVIEW.md",
+  "evidenceFollowup": "docs/DUAL_CT_THREE_PHASE_VALIDATION_PROGRESS.md"
 }
