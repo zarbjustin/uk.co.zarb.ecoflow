@@ -2,6 +2,7 @@
 
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { houseReserveFrame, freshReserveSnapshot, assertHouseNoDischarge } from './lib/houseReserveControl';
 import { EcoFlowMqtt, QuotaHandler, StatusHandler } from './lib/EcoFlowMqtt';
 import { AppFrameHandler, EcoFlowAppMqtt } from './lib/EcoFlowAppMqtt';
 import { StreamDiscoveryInventory } from './lib/streamDiscovery';
@@ -55,6 +56,7 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onInit(): Promise<void> {
     this.stopping = false;
+    if (this.homey.settings.get('houseReserveControl')?.enabled === true) this.ensureHouseReserveWatchdog();
     this.streamDiscovery.clear();
     if (this.homey.flow) {
       this.homey.flow.getConditionCard('smartmeter_grid_power_above').registerRunListener(
@@ -137,6 +139,8 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onUninit(): Promise<void> {
     this.stopping = true;
+    if (this.houseReserveTimer) this.homey.clearInterval(this.houseReserveTimer);
+    this.houseReserveTimer = null;
     this.coordinationFlowRevision += 1;
     this.coordinationFlowMonitor?.shutdown();
     this.coordinationWorkspace?.stop();
@@ -405,6 +409,207 @@ module.exports = class EcoFlowApp extends Homey.App {
    * Returns null when no EcoFlow account is configured or the connect failed —
    * there is no REST fallback for this path, so devices simply stay stale.
    */
+  private houseReserveBusy = false;
+  private coordinatedReserveBusy = false;
+  private houseReserveTimer: NodeJS.Timeout | null = null;
+
+  private ensureHouseReserveWatchdog(): void {
+    if (!this.houseReserveTimer && typeof this.homey.setInterval === 'function') {
+      this.houseReserveTimer = this.homey.setInterval(() => {
+        this.expireHouseReserveLease().catch(() => this.error('Coordinated reserve watchdog requires attention'));
+      }, 5000);
+    }
+  }
+
+  private async expireHouseReserveLease(): Promise<void> {
+    const lease = this.homey.settings.get('houseReserveLease');
+    if (!lease || lease.completed || lease.fault || this.houseReserveBusy || this.coordinatedReserveBusy) return;
+    let guardLost = false;
+    if (lease.officeExpectedReserve > lease.officeRestoreReserve) {
+      try {
+        const house = (this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[]).find((d) => d.getId() === lease.houseDeviceId && d.getData()?.sn === lease.serial);
+        const gate = this.homey.settings.get('houseReserveControl');
+        if (gate?.enabled !== true || gate.mode !== 'routine') throw new Error('Coordinator disabled');
+        assertHouseNoDischarge(house, Math.max(0, (gate.siteChargeKw - gate.officeNativeChargeKw) * 1000));
+      } catch {
+        guardLost = true;
+      }
+    }
+    if (lease.until > Date.now() && !guardLost) return;
+    this.houseReserveBusy = true;
+    try {
+      const offices = this.homey.drivers.getDriver('stream').getDevices() as any[];
+      const office = offices.find((d) => d.getId() === lease.officeDeviceId);
+      if (!office || !office.getAvailable()) throw new Error('Office unavailable for expiry stop');
+      const reserve = office.getCapabilityValue('backup_reserve_soc');
+      if (reserve !== lease.officeRestoreReserve) {
+        if (reserve !== lease.officeExpectedReserve) throw new Error('Office manual ownership changed');
+        await office.flowSetBackupReserve(lease.officeRestoreReserve);
+      }
+      const houses = this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[];
+      const house = houses.find((d) => d.getId() === lease.houseDeviceId && d.getData()?.sn === lease.serial);
+      if (!house || !house.getAvailable()) throw new Error('House unavailable for expiry restoration');
+      const current = freshReserveSnapshot(house.getConfigurationDiagnostics());
+      if (current.enabled !== lease.restoreEnabled || current.percent !== lease.restorePercent) {
+        if (current.enabled !== lease.expectedEnabled || current.percent !== lease.expectedPercent) throw new Error('House manual ownership changed');
+        if (!this.appMqtt?.connected) throw new Error('House restoration transport unavailable');
+        await this.appMqtt.publishHouseReserve(lease.serial, houseReserveFrame(lease.serial, lease.restoreEnabled, lease.restorePercent, (Date.now() & 0x7fffffff) || 1));
+        let verified = false;
+        for (let i = 0; i < 90; i++) {
+          await new Promise<void>((resolve) => {
+            this.homey.setTimeout(resolve, 500);
+          });
+          const after = freshReserveSnapshot(house.getConfigurationDiagnostics());
+          if (after.enabled === lease.restoreEnabled && after.percent === lease.restorePercent) {
+            verified = true; break;
+          }
+        }
+        if (!verified) throw new Error('House restoration unverified');
+      }
+      this.homey.settings.set('houseReserveLease', { ...lease, completed: true, restoredAt: Date.now() });
+    } catch (error: any) {
+      this.homey.settings.set('houseReserveLease', { ...lease, fault: error.message });
+      throw error;
+    } finally {
+      this.houseReserveBusy = false;
+    }
+  }
+
+  /** Single scoped coordinator: stop office before house changes; never touch feed-in/CT. */
+  async requestCoordinatedReserve(body: any): Promise<Record<string, unknown>> {
+    if (this.coordinatedReserveBusy || this.houseReserveBusy) throw new Error('Coordinated command pending');
+    const gate = this.homey.settings.get('houseReserveControl');
+    if (gate?.enabled !== true || gate.mode !== 'routine' || gate.expiresAt !== null
+      || !Number.isFinite(gate.siteChargeKw) || !Number.isFinite(gate.officeNativeChargeKw)
+      || gate.officeNativeChargeKw <= 0 || gate.siteChargeKw < gate.officeNativeChargeKw) throw new Error('Routine coordinator disabled/unconfigured');
+    if (!body || Object.keys(body).some((k) => !['housePercent', 'expectedHousePercent', 'officePercent', 'expectedOfficePercent', 'leaseUntil', 'releaseOfficeOnly'].includes(k))
+      || !Number.isFinite(body.leaseUntil) || body.leaseUntil <= Date.now() || body.leaseUntil > Date.now() + 180000
+      || ![body.officePercent, body.expectedOfficePercent].every((v) => Number.isSafeInteger(v) && v >= gate.officeRestoreReserve && v <= 100)) throw new Error('Invalid coordinated target');
+    const office = (this.homey.drivers.getDriver('stream').getDevices() as any[]).find((d) => d.getId() === gate.officeDeviceId);
+    const house = (this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[]).find((d) => d.getId() === gate.deviceId && d.getData()?.sn === gate.serial);
+    if (!office?.getAvailable() || (body.releaseOfficeOnly !== true && !house?.getAvailable())) throw new Error('Coordinated device unavailable');
+    if (office.getCapabilityValue('backup_reserve_soc') !== body.expectedOfficePercent) throw new Error('Office manual ownership changed');
+    if (body.releaseOfficeOnly === true) {
+      if (body.officePercent !== gate.officeRestoreReserve) throw new Error('Office-only action must stop charging');
+      this.coordinatedReserveBusy = true;
+      try {
+        if (body.expectedOfficePercent !== gate.officeRestoreReserve) await office.flowSetBackupReserve(gate.officeRestoreReserve);
+        const lease = this.homey.settings.get('houseReserveLease');
+        if (lease) this.homey.settings.set('houseReserveLease', { ...lease, completed: true, fault: 'Manual house ownership preserved; office stopped' });
+        return {
+          verified: true, officePercent: gate.officeRestoreReserve, housePercent: body.expectedHousePercent, leaseUntil: body.leaseUntil,
+        };
+      } finally {
+        this.coordinatedReserveBusy = false;
+      }
+    }
+    const oldHouse = freshReserveSnapshot(house.getConfigurationDiagnostics());
+    if (!oldHouse.enabled || oldHouse.percent !== body.expectedHousePercent) throw new Error('House manual ownership changed');
+    this.coordinatedReserveBusy = true;
+    try {
+      // Existing office action includes its native fleet readback verification.
+      if (body.expectedOfficePercent !== gate.officeRestoreReserve && oldHouse.percent !== body.housePercent) {
+        await office.flowSetBackupReserve(gate.officeRestoreReserve);
+      }
+      const officeCurrent = office.getCapabilityValue('backup_reserve_soc');
+      await this.requestHouseReserve({
+        deviceId: gate.deviceId,
+        enabled: true,
+        percent: body.housePercent,
+        expectedEnabled: true,
+        expectedPercent: oldHouse.percent,
+        leaseUntil: body.leaseUntil,
+        officeExpectedReserve: Math.max(officeCurrent, body.officePercent),
+      });
+      if (body.officePercent > gate.officeRestoreReserve) {
+        assertHouseNoDischarge(house, Math.max(0, (gate.siteChargeKw - gate.officeNativeChargeKw) * 1000));
+      }
+      if (office.getCapabilityValue('backup_reserve_soc') !== body.officePercent) await office.flowSetBackupReserve(body.officePercent);
+      if (body.officePercent > gate.officeRestoreReserve) assertHouseNoDischarge(house, Math.max(0, (gate.siteChargeKw - gate.officeNativeChargeKw) * 1000));
+      const lease = this.homey.settings.get('houseReserveLease');
+      this.homey.settings.set('houseReserveLease', { ...lease, officeExpectedReserve: body.officePercent });
+      return {
+        verified: true, housePercent: body.housePercent, officePercent: body.officePercent, leaseUntil: body.leaseUntil,
+      };
+    } catch (error) {
+      // A failed start cannot keep a lease alive. The watchdog stops office first.
+      const lease = this.homey.settings.get('houseReserveLease');
+      if (lease && !lease.completed) this.homey.settings.set('houseReserveLease', { ...lease, until: Date.now() - 1 });
+      throw error;
+    } finally {
+      this.coordinatedReserveBusy = false;
+    }
+  }
+
+  async requestHouseReserve(body: any): Promise<Record<string, unknown>> {
+    if (this.houseReserveBusy) throw new Error('House reserve command already pending');
+    this.houseReserveBusy = true;
+    try {
+      const gate = this.homey.settings.get('houseReserveControl');
+      if (gate?.enabled !== true || (gate.mode !== 'routine' && (!Number.isFinite(gate.expiresAt) || gate.expiresAt <= Date.now()))
+        || (gate.mode === 'routine' && gate.expiresAt !== null)
+        || !Number.isSafeInteger(gate.minPercent) || !Number.isSafeInteger(gate.maxPercent)
+        || gate.minPercent < 0 || gate.maxPercent > 100 || gate.minPercent > gate.maxPercent) throw new Error('House reserve bridge disabled/expired');
+      if (!body || Object.keys(body).some((k) => !['deviceId', 'enabled', 'percent', 'expectedEnabled', 'expectedPercent', 'leaseUntil', 'officeExpectedReserve'].includes(k))
+        || body.deviceId !== gate.deviceId || typeof body.enabled !== 'boolean'
+        || !Number.isSafeInteger(body.percent) || body.percent < gate.minPercent || body.percent > gate.maxPercent) throw new Error('House reserve scope/target rejected');
+      const devices = this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[];
+      const matches = devices.filter((d) => d.getId() === gate.deviceId && d.getData()?.sn === gate.serial);
+      if (matches.length !== 1 || !/^ES21[A-Z0-9]{4,60}$/.test(gate.serial)) throw new Error('House reserve identity changed');
+      const device = matches[0];
+      if (!device.getAvailable()) throw new Error('House device unavailable');
+      const read = () => freshReserveSnapshot(device.getConfigurationDiagnostics());
+      const before = read();
+      if (before.enabled !== body.expectedEnabled || before.percent !== body.expectedPercent) throw new Error('House reserve changed; preserve manual ownership');
+      if (body.leaseUntil !== undefined) {
+        if (!Number.isFinite(body.leaseUntil) || body.leaseUntil <= Date.now() || body.leaseUntil > Date.now() + 180000
+          || !Number.isSafeInteger(body.officeExpectedReserve) || body.officeExpectedReserve < 3 || body.officeExpectedReserve > 100
+          || typeof gate.officeDeviceId !== 'string' || typeof gate.restoreEnabled !== 'boolean'
+          || !Number.isSafeInteger(gate.restorePercent) || gate.restorePercent < 0 || gate.restorePercent > 100
+          || !Number.isSafeInteger(gate.officeRestoreReserve) || gate.officeRestoreReserve < 3 || gate.officeRestoreReserve > 100) throw new Error('Invalid coordinated reserve lease');
+        const previousLease = this.homey.settings.get('houseReserveLease');
+        if (previousLease?.fault) throw new Error('Prior coordinated reserve fault requires review');
+        this.homey.settings.set('houseReserveLease', {
+          until: body.leaseUntil,
+          houseDeviceId: gate.deviceId,
+          serial: gate.serial,
+          officeDeviceId: gate.officeDeviceId,
+          officeRestoreReserve: gate.officeRestoreReserve,
+          officeExpectedReserve: body.officeExpectedReserve,
+          restoreEnabled: gate.restoreEnabled,
+          restorePercent: gate.restorePercent,
+          expectedEnabled: body.enabled,
+          expectedPercent: body.percent,
+        });
+        this.ensureHouseReserveWatchdog();
+      }
+      if (before.enabled === body.enabled && before.percent === body.percent) {
+        return {
+          verified: true, changed: false, enabled: before.enabled, percent: before.percent,
+        };
+      }
+      const mqtt = this.appMqtt;
+      if (!mqtt?.connected) throw new Error('House reserve transport not connected');
+      const started = Date.now();
+      await mqtt.publishHouseReserve(gate.serial, houseReserveFrame(gate.serial, body.enabled, body.percent, (started & 0x7fffffff) || 1));
+      for (let i = 0; i < 90; i++) {
+        await new Promise<void>((resolve) => {
+          this.homey.setTimeout(resolve, 500);
+        });
+        const after = read();
+        if (after.enabled === body.enabled && after.percent === body.percent && (before.enabled === body.enabled || after.enabledAgeSec <= (Date.now() - started) / 1000 + 1)
+          && (before.percent === body.percent || after.percentAgeSec <= (Date.now() - started) / 1000 + 1)) {
+          return {
+            verified: true, changed: true, enabled: after.enabled, percent: after.percent,
+          };
+        }
+      }
+      throw new Error('House reserve command unverified; no blind retry');
+    } finally {
+      this.houseReserveBusy = false;
+    }
+  }
+
   private async getAppMqtt(): Promise<EcoFlowAppMqtt | null> {
     if (this.stopping) return null;
     const credsKey = this.appAuthCredsKey();

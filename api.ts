@@ -5,6 +5,12 @@ import { createSupportSnapshot } from './lib/supportSnapshot';
 import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
+  async coordinatedReserveControl({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
+    return homey.app.requestCoordinatedReserve(body);
+  },
+  async houseReserveControl({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
+    return homey.app.requestHouseReserve(body);
+  },
   async coordinationFlowMonitor({ homey, body }: { homey: any; body: any }): Promise<Record<string, any>> {
     return homey.app.requestCoordinationFlowMonitor(body);
   },

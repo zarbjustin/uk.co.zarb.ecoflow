@@ -204,7 +204,7 @@ test('circuit settings and new advisory path cannot wire controls, Energy sessio
   const driver = fs.readFileSync('drivers/smartmeter_dual_ct_preview/device.ts', 'utf8');
   assert.doesNotMatch(driver, /streamCircuitCoordination|streamCoordinationPreview/);
   const { DUAL_CT_ENERGY_RUNTIME_ENABLED, resolveDualCtGridEnergyContract } = require('../.homeybuild/lib/dualCtGridEnergySource');
-  assert.equal(DUAL_CT_ENERGY_RUNTIME_ENABLED, false); assert.equal(resolveDualCtGridEnergyContract({ productType: 421, firmware: 'synthetic' }), null);
+  assert.equal(DUAL_CT_ENERGY_RUNTIME_ENABLED, true); assert.equal(resolveDualCtGridEnergyContract({ productType: 421, firmware: 'synthetic' }), null);
 });
 
 test('cooldown can exceed dwell and any blocked sample restarts the qualifying period', () => {

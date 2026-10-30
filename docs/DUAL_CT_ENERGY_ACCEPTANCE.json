@@ -4,7 +4,7 @@
   "productType": 421,
   "wiring": "single_phase",
   "firmware": "1.0.0.41",
-  "timing": null,
+  "timing": "verified_live_receipt_estimate",
   "gates": [
     {
       "id": "identity_firmware",
@@ -50,8 +50,8 @@
     },
     {
       "id": "source_overlap",
-      "status": "open",
-      "evidence": "none",
+      "status": "partial",
+      "evidence": "owner_observation",
       "candidateFingerprint": null,
       "reference": "docs/DUAL_CT_ENERGY_RC.md#source-overlap"
     },

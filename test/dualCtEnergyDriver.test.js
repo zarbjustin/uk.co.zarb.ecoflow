@@ -13,8 +13,9 @@ const contract = { id: 'synthetic_contract', ...identity, channel: 'ct1', bank: 
 const binding = dualCtGridBinding({ account: dualCtAccountBinding(account), device: sn, grid: 'homey_property_grid', session: 'one' }, contract);
 const nested = (f, bytes) => Buffer.concat([varint(f * 8 + 2), varint(bytes.length), bytes]);
 const int = (f, n) => Buffer.concat([varint(f * 8), varint(n)]);
+let sequence = 0;
 const payload = watts => nested(1, Buffer.concat([nested(1, Buffer.concat([[962, watts], [963, 0], [772, 0], [515, watts],
-  [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), int(6, 0), int(8, 254), int(9, 21)]));
+  [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), int(6, 0), int(8, 254), int(9, 21), int(14, ++sequence)]));
 class Device {
   constructor() {
     this.values = new Map([['measure_power', 99], ['meter_power.imported', null], ['meter_power.exported', null]]);
@@ -22,9 +23,10 @@ class Device {
       dualCtEnergyAccountBinding: dualCtAccountBinding(account), dualCtEnergyGrid: 'homey_property_grid' }));
     this.writes = []; this.timers = new Map(); this.subscriptions = []; this.detached = [];
     const settings = new EventEmitter(); settings.get = () => null;
+    const deliveries = new Map();
     this.homey = { settings, __: () => 'Energy source unavailable',
-      app: { subscribeAppRealtime: async (_sn, handler) => { this.subscriptions.push(handler); return true; },
-        unsubscribeAppRealtime: (_sn, handler) => this.detached.push(handler) },
+      app: { subscribeAppRealtime: async (_sn, handler) => { const delivered = (payload, topic, metadata = { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: false }) => handler(payload, topic, metadata); deliveries.set(handler, delivered); this.subscriptions.push(delivered); return true; },
+        unsubscribeAppRealtime: (_sn, handler) => this.detached.push(deliveries.get(handler) || handler) },
       setInterval: (fn, ms) => { const id = Symbol(); this.timers.set(id, { fn, ms, interval: true }); return id; },
       clearInterval: id => this.timers.delete(id), setTimeout: (fn, ms) => { const id = Symbol(); this.timers.set(id, { fn, ms, interval: false }); return id; },
       clearTimeout: id => this.timers.delete(id) };
@@ -51,8 +53,8 @@ function enabled(device) {
       client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }] }),
       readFirmware: async () => identity.firmware, reader: async () => ({ list: async () => ({}), close() {} }) }) });
 }
-test('registered Energy driver stays unavailable by default without auth, subscriptions, timers, store writes or resets', async () => {
-  const d = new Driver(); d.values.set('meter_power.imported', 9); d.values.set('meter_power.exported', 8); await d.onInit();
+test('unadopted Energy driver stays unavailable without auth, subscriptions, timers, store writes or resets', async () => {
+  const d = new Driver(); d.store.delete('dualCtEnergyConsent'); d.values.set('meter_power.imported', 9); d.values.set('meter_power.exported', 8); await d.onInit();
   assert.equal(d.available, false); assert.equal(d.values.get('measure_power'), null);
   assert.equal(d.values.get('meter_power.imported'), 9); assert.equal(d.values.get('meter_power.exported'), 8);
   assert.equal(d.subscriptions.length, 0); assert.equal(d.timers.size, 0);
@@ -124,4 +126,36 @@ test('a queued old expiry tick cannot call an adapter or reader after teardown',
   const adapter = d.adapter; await d.onUninit();
   let calls = 0; adapter.refresh = async () => { calls++; };
   tick(); await settle(); assert.equal(calls, 0); assert.equal(d.timers.size, 0);
+});
+
+
+test('registered driver cannot project retained, duplicate or unknown-delivery power into the Energy session', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d); await d.onInit();
+  const handler = d.subscriptions[0]; const topic = `/app/device/property/${sn}`;
+  handler(payload(3600), topic); await settle();
+  now = 2000; handler(payload(3600), topic); await settle();
+  const total = d.values.get('meter_power.imported'); const saved = d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY);
+  for (const flags of [null, { retained: true, duplicate: false }, { retained: false, duplicate: true }]) {
+    now += 100; handler(payload(99000), topic, flags && { receivedAt: now, receivedMonoMs: now, ...flags }); await settle();
+    assert.equal(d.values.get('measure_power'), 3600);
+    assert.equal(d.values.get('meter_power.imported'), total); assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+  }
+  await d.onUninit();
+});
+
+test('receipt gaps re-anchor a new session without filling missing time or resetting committed energy', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d); await d.onInit(); const topic = `/app/device/property/${sn}`;
+  d.subscriptions[0](payload(3600), topic); await settle();
+  now = 2000; d.subscriptions[0](payload(3600), topic); await settle();
+  const total = d.values.get('meter_power.imported');
+  now = 8000; d.subscriptions[0](payload(99000), topic); await settle();
+  assert.equal(d.values.get('meter_power.imported'), total); assert.equal(d.values.get('measure_power'), null);
+  const retry = [...d.timers.values()].find(timer => !timer.interval); assert.ok(retry); retry.fn(); await settle();
+  now = 9000; d.subscriptions.at(-1)(payload(3600), topic); await settle();
+  assert.equal(d.values.get('meter_power.imported'), total, 'first fresh delivery is an anchor only');
+  now = 10000; d.subscriptions.at(-1)(payload(3600), topic); await settle();
+  assert.ok(Math.abs(d.values.get('meter_power.imported') - total - 0.001) < 1e-9);
+  await d.onUninit();
 });

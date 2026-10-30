@@ -1,5 +1,35 @@
 # Dual CT CT1 property Energy release candidate
 
+## Combined 1.11.0 candidate admission — 30 October 2026
+
+See [source qualification, evidence and remaining native gates](CT1_ENERGY_CANDIDATE_VALIDATION.md).
+Normal explicit CT1 adoption is enabled in the review source for one pinned,
+single-phase, guarded receipt-estimate profile. The temporary disabled/empty
+engineering invariant in older notes below is superseded. No native gate is
+passed by that change; installed Energy, physical export/zero, accuracy, recovery
+and soak remain pending. No installation or store channel change occurred here.
+
+## Firmware reader follow-up — 30 October 2026
+
+The missing-reader claim in earlier engineering notes is superseded by
+[the read-only current-package lookup](DUAL_CT_FIRMWARE_READBACK.md). Normal context
+wiring and strict rejection rules are implemented locally and real-source tested.
+The response is cloud firmware metadata without a hardware timestamp, not proof of
+measurement freshness. The production contract remains empty and Energy is disabled;
+no hardware acceptance gate is promoted. Installation/adoption still require review.
+
+
+## Current owner review — 30 October 2026
+
+See [completion review](DUAL_CT_COMPLETION_REVIEW.md). UI cleanup is local and
+uninstalled. Native firmware V1.0.0.41 was re-observed. App discovery has no
+firmware field, and Developer quota returns 1006. Normal production admission
+remains blocked. Read-only independent-property-meter import corroboration is
+partial; no accuracy/export/true-zero/timing/interval or adopted-runtime pass.
+Office meter exclusion is already present in the current readback; old included-
+source descriptions below are historical. No Energy or installed settings changed.
+
+
 Release work targets a new, explicitly adopted CT1 property-grid Energy device.
 The existing preview stays read-only and is not converted or replaced. CT2 is
 excluded from accounting, including when an unused channel reports zero.

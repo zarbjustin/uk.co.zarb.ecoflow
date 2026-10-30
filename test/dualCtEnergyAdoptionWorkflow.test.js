@@ -35,8 +35,8 @@ test('confirmation requires all consents and cannot convert an existing preview 
     data: { sn: 'FOREIGN' }, store: { verified: true }, target: 'existing_preview' });
   assert.equal(result.data.sn, h.selected.device); assert.equal(result.store.verified, undefined);
 });
-test('default runtime gate rejects confirmation before repeating discovery', async () => {
-  const h = harness({ runtimeEnabled: undefined }); const review = await h.workflow.prepare(); const reads = h.reads();
+test('withdrawn runtime gate rejects confirmation before repeating discovery', async () => {
+  const h = harness({ runtimeEnabled: () => false }); const review = await h.workflow.prepare(); const reads = h.reads();
   await assert.rejects(h.confirm(review), /runtime_blocked/); assert.equal(h.reads(), reads);
 });
 test('review age is bounded and clock reversal cannot confirm an old selection', async () => {

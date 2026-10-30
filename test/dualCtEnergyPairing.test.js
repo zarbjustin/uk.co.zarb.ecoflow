@@ -27,8 +27,8 @@ function harness(t, production = false) {
       await call('dual_ct_energy_candidates'); return call('dual_ct_energy_review', { sn });
     }, async prepared() { const review = await this.review(); await call('dual_ct_energy_approve', { token: review.token, consent: true, externalOverlapReviewed: true }); return (await call('list_devices'))[0]; } };
 }
-test('production entry blocks login/discovery/adoption before any network request or credential commit', async t => {
-  const h = harness(t, true); assert.deepEqual(await h.call('dual_ct_energy_access'), { enabled: false });
+test('withdrawn entry blocks login/discovery/adoption before any network request or credential commit', async t => {
+  const h = harness(t); h.disable(); assert.deepEqual(await h.call('dual_ct_energy_access'), { enabled: false });
   for (const event of ['app_login', 'dual_ct_energy_candidates', 'dual_ct_energy_review', 'list_devices', 'add_device']) await assert.rejects(h.call(event, { sn }), /unavailable/);
   assert.deepEqual(h.counters(), { committed: 0, network: 0, disposed: 0 });
 });

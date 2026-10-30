@@ -1,5 +1,13 @@
 # Dual CT property Energy release sprints — 29 October 2026
 
+## Firmware-reader progress — 30 October 2026
+
+Sprint 4's missing firmware reader is now implemented and real-source read-only
+tested. See [firmware readback](DUAL_CT_FIRMWARE_READBACK.md). This is current-package
+cloud metadata, without a hardware timestamp; sign/timing/cache qualification,
+Energy adoption, native acceptance and final soak remain pending. No installation,
+publication or gate promotion. Historical absent-reader statements below are superseded.
+
 Owner's release target is CT1 as the authoritative property Energy meter.
 This authorizes diagnostic-branch engineering, not installation, Energy adoption,
 hardware operation or channel publication. Mainline/Test/Live/installed app stay

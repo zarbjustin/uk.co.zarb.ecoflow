@@ -6,7 +6,7 @@ const sn = 'DUALCTSYNTHETIC01';
 const source = { sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] };
 function fixture(options = {}) {
   let now = 1000, closes = 0, lists = 0; let devices = [source]; let firmware = 'synthetic.1';
-  const client = { getSession: async () => ({ host: 'https://api.ecoflow.com', userId: 'synthetic' }), getDeviceList: async () => devices };
+  const client = { getSession: async () => ({ host: 'https://api.ecoflow.com', userId: 'synthetic' }), getDeviceList: async () => devices, getDualCtCurrentFirmware: async () => null };
   const context = new DualCtHomeyEnergyContext({ homey: {}, sn, client: () => client, now: () => now,
     readFirmware: async () => firmware, reader: async () => ({ list: async () => { lists++; return {}; }, close() { closes++; } }), ...options });
   return { context, client, now: n => { now = n; }, devices: d => { devices = d; }, firmware: f => { firmware = f; }, counts: () => ({ closes, lists }) };
@@ -53,4 +53,28 @@ test('a hanging local inventory read times out and closes its reader without aut
   const h = fixture({ readTimeoutMs: 5, reader: async () => ({ list: () => new Promise(() => {}), close() { closed = true; } }) });
   await assert.rejects(h.context.refresh(), /energy_source_unavailable/);
   assert.equal(closed, true); assert.equal(h.context.snapshot(), null);
+});
+
+
+test('normal context reads current firmware metadata only after owned-source discovery, without injected qualification', async () => {
+  const h = fixture({ readFirmware: undefined }); const calls = [];
+  h.client.getDualCtCurrentFirmware = async selected => {
+    calls.push(selected); return { version: '1.0.0.41', basis: 'cloud_current_package', hardwareReportedAt: null };
+  };
+  await h.context.refresh();
+  assert.deepEqual(calls, [sn]);
+  assert.equal(h.context.snapshot().source.identity.firmware, '1.0.0.41');
+  assert.equal(h.context.snapshot().source.identityObservedAt, 1000, 'lookup receipt time, not a hardware measurement timestamp');
+  assert.deepEqual(h.counts(), { lists: 1, closes: 1 });
+  h.devices([{ ...source, shared: true }]);
+  await assert.rejects(h.context.refresh()); assert.equal(h.context.snapshot(), null);
+  assert.equal(calls.length, 1, 'ownership failure must not query another source or its firmware');
+});
+
+test('a failed subsequent firmware lookup invalidates source and inventory rather than retaining earlier eligibility', async () => {
+  const h = fixture({ readFirmware: undefined }); let valid = true;
+  h.client.getDualCtCurrentFirmware = async () => valid ? { version: '1.0.0.41' } : null;
+  await h.context.refresh(); assert.ok(h.context.snapshot());
+  valid = false; await assert.rejects(h.context.refresh()); assert.equal(h.context.snapshot(), null);
+  assert.equal(h.counts().lists, 1, 'no new inventory or accounting admission after firmware loss');
 });

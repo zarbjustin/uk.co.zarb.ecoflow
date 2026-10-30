@@ -182,6 +182,9 @@ export class DualCtGridEnergySession {
       const result = adaptDualCtGridEnergyPacket(this.options.scope, this.options.identity, this.contract,
         owned, topic, receivedAt, measuredAt, now);
       const sample = result.observation;
+      // Non-power traffic is neither a new power measurement nor evidence that
+      // an otherwise valid power interval was lost. Do not renew its timestamp.
+      if (!sample && result.status === 'unrelated_grid_packet') return;
       if (!sample || sample.binding !== this.binding || sample.session !== this.options.scope.session) {
         this.baseline = null; this.status = result.status; return;
       }
@@ -195,7 +198,7 @@ export class DualCtGridEnergySession {
         this.status = 'out_of_order'; return;
       }
       const interval = dualCtPowerIntervalWh(previous.signedImportW, sample.signedImportW, at - before);
-      if (!interval || !dualCtFreshAge(sample.receivedAt - previous.receivedAt)) {
+      if (!interval || !dualCtFreshAge(sample.receivedAt - previous.receivedAt) || at - before >= (this.contract!.freshnessMs ?? 90000)) {
         this.baseline = sample; this.status = 'gap_anchor'; return;
       }
       const next = makeDualCtEnergyCheckpoint(this.binding!, this.contract!.timing, this.checkpoint.revision + 1,
@@ -249,7 +252,8 @@ export class DualCtGridEnergySession {
     }
     const previous = this.baseline;
     let fresh = this.enabled && this.checkpoint !== null && previous !== null && Number.isFinite(now)
-      && (this.lastNow === null || now >= this.lastNow) && dualCtFreshAge(now - previous.receivedAt);
+      && (this.lastNow === null || now >= this.lastNow) && dualCtFreshAge(now - previous.receivedAt)
+      && now - previous.receivedAt < (this.contract?.freshnessMs ?? 90000);
     if (fresh && previous!.timing === 'device_measurement') fresh = dualCtFreshAge(now - previous!.measuredAt!);
     return {
       status: this.status,

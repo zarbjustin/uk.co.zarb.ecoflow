@@ -1,5 +1,223 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 1.11.0 combined CT1 Energy review candidate — 30 October 2026
+
+Normal CT1 Energy candidate admission is prepared for model 421 / firmware
+1.0.0.41 / single-phase CT1 only, using guarded receipt-time estimates, a 5 s
+logical power TTL and explicit new-device adoption. Unknown firmware, absent
+phase values, nonzero phases 2/3, retained/duplicate/old sequence/late deliveries
+cannot qualify. The existing monitor retains identity/capabilities and gains no
+Energy. No device is paired automatically. See
+[the candidate qualification and limits](CT1_ENERGY_CANDIDATE_VALIDATION.md).
+
+Confirmed accounting fix: unrelated CT2/voltage packets no longer erase CT1's
+power anchor or renew freshness. Partial CT1 still clears the anchor. The bounded
+01:20–01:35 UTC passive stream revealed a roughly 14 s gap and out-of-order burst;
+no MQTT/hardware command was sent. Offline replay uses the real candidate resolver
+and private lab storage only. Import estimates are corroborated, not calibrated;
+physical export/zero, native Energy adoption/recovery and final soak remain open.
+No hardware ledger gate is marked passed. Source admission does not replace full
+release acceptance; hardware-required commands must still return nonzero.
+
+Another active owner task installed Development 1.10.63 during this investigation,
+adding reserve control in a separate checkout. This task did not install it or
+change battery settings. The combined review snapshot preserves that bridge and
+newer source edits. Coordinate a fresh idle/lease checkpoint and verify latest
+bridge provenance before any later approved installation. Do not overwrite it
+with a meter-only archive or silently pause its coordinator.
+
+This is local source preparation, not an installation, activation, Test or Live
+publication. Keep raw captures/identities/settings and private review evidence out
+of Git. Preserve older ES21/ES22 evidence with its original runtime; no transfer
+to this candidate. Readiness, exact CI, delivery and physical acceptance stay separate.
+
+## Dual CT firmware lookup found and validated read-only — 30 October 2026
+
+The native app's GET /iot-service/device/latestPackInfo, with native lang/version
+headers, returns same-source model-421 cpackInfo.version=1.0.0.41. Current-package
+metadata is distinct from latestPackInfo (an offered update). Two new guarded GETs
+and the default DualCtHomeyEnergyContext lookup succeeded with real owned discovery
+and complete inventory; no injected firmware or Energy session. See
+[firmware readback review](DUAL_CT_FIRMWARE_READBACK.md).
+
+Local source now includes a strict current-package reader and wires normal context
+discovery to it. Wrong identity/model, offline, malformed, offered-only, upgrading,
+loader and unknown status fail closed. Native version-report PUT and upgrade writes
+were explicitly excluded. This resolves the missing-reader engineering dependency;
+old assertions below that no firmware reader exists are superseded.
+
+The cloud metadata has no device-report timestamp: hardwareReportedAt stays null.
+API receipt time cannot prove live hardware or CT1 measurement freshness. No
+firmware-change/recovery, sign/timing or accounting gate is passed by this finding.
+Resolver remains empty, Energy runtime hidden/off. Finish measurement qualification,
+then review a concrete installation/adoption candidate before any native write.
+
+Final readback retains 13 EcoFlow definitions/settings, Energy configuration,
+1201 Insights and eight nondecreasing counters. Existing 99 Flow definitions are
+unchanged, with one additional Advanced Flow now present (100 total); its author
+is not established, and it was not modified or executed here.
+
+All 1185 tests, locked Node 22 install, lint/release/diff checks and pinned Homey
+4.5.3 verified validation pass. Prior local UI cleanup/docs are preserved. Installed
+Development 1.10.62, Mainline/Test/Live and all Energy settings remain untouched;
+no install, restart/reconnect, hardware command, pairing, battery/Flow operation,
+version bump, push/publication, new CI or soak. Raw evidence stays private.
+
+## Dual CT completion review and UI cleanup — 30 October 2026
+
+Owner prioritized normal CT1 property Energy with preview/banner cleanup; any
+installation or Energy change remains subject to review. Current source clears
+the persistent research warning and uses normal EN/DE/NL product/monitoring wording.
+Existing IDs, consent, custom names, expiry and Energy/Flow/Insights boundaries
+are retained; no automatic paired-device rename or Energy conversion.
+
+Fresh native firmware remains V1.0.0.41. Owned app discovery exposes model 421 but
+no firmware; Developer quota GET returns 1006. Runtime source qualification is
+therefore still blocked. A bounded read-only 25-pair comparison with an owner-
+confirmed property meter supports import corroboration only; do not mark physical
+accuracy/export/zero/timing or final-candidate gates passed. See
+[the concrete completion review](DUAL_CT_COMPLETION_REVIEW.md) for the finite route.
+
+Fresh readback: 13 EcoFlow IDs, 99 Flows, 1201 Insights, eight nondecreasing counters,
+no new broken Flow. Energy/settings are unchanged during this review. Office meter
+exclusion and CT1 grid-description changes predate the first readback this turn;
+compared with the prior restart baseline these are differences, not a clean equal
+preservation claim. Do not restore them or attribute them to this agent.
+
+All 1178 tests, locked Node 22 install, lint/release/diff checks and pinned Homey
+4.5.3 verified validation pass. Cleanup remains local/uninstalled, no version bump,
+commit/push/new CI. Installed Development 1.10.62 unchanged; Test/Live/Mainline
+unchanged. Energy driver hidden/off, resolver empty, no soak started. No hardware
+command, restart/reconnect, installation, pairing, battery setting or Energy write.
+
+## 1.10.62 approved idle restart passed — 30 October 2026
+
+Owner's single graceful restart ran **00:31:39.146–00:31:40.788 UTC** after two
+passing idle/checkpoint preflights. Running observed by **00:31:42**, fresh 0 W/idle
+by **00:31:44**, and real 0% SOC in both roles by **00:33:29**. Initial readings
+were unknown; zero SOC was not inferred. Precise pre-restart charged/discharged
+totals and projected meters remain exactly unchanged throughout observed startup.
+One restart only; no battery/task/settings write, install or forced reconnect.
+
+Fresh native idle comparison **00:36:19** agrees. Final **00:36:32** full readback
+preserves 13 EcoFlow identities/settings/capabilities, 99 complete Flows, 1201
+Insights IDs, app-setting hashes, all 276 Energy configurations and eight comparable
+nondecreasing counters. No new broken Flow/definition change. Original reporter
+matched/original_stream; independent native GET/main/SOC matches and power differs
+under 0.003 W. Self-powered, no tasks, clean checkpoint and zero new-session
+reconnects. Observer stopped; raw evidence private outside Git.
+
+ES21 idle is refreshed to runtime 31c31c48…1545; current charge/discharge passes
+remain. Full freshness/recovery and Energy continuity remain partial: nonzero
+outage, precise expiry/hint horizon and absolute energy accuracy were not proved
+by an idle restart. Older identity/ES22 passes are not transferred. See monitoring
+RC owner-development-11062-idle-restart. Test/Live/Mainline and runtime unchanged.
+No 48-hour soak or automation started; review the separate start/scope next.
+
+
+## 1.10.62 startup investigation/recovery proposal — 30 October 2026
+
+No confirmed runtime defect found for the 575 W startup snapshot. Both decoded
+paths reported it; source scaling, role separation and accounting checks pass.
+Missing original MQTT bytes/simultaneous native peak leave the physical cause
+unresolved. No clamp, runtime patch or repeat charging task is recommended.
+See [the investigation and recovery review](STREAM_5000_11062_STARTUP_RECOVERY_REVIEW.md).
+
+Existing natural-gap evidence is partial: ignoredGaps=1, no reconnect/reset,
+discharged counter flat 77 Wh at 00:06:55–00:10:45 then increasing. Insights power
+is carried/interpolated and cannot prove tile expiry. A six-minute cached-read
+observation ended at 00:23:16: 343 fresh-zero/live samples, age at most 3 seconds,
+no expiry event. Fresh 00:24:36 readback preserves 13 devices/99 Flows/1201 Insights,
+all Energy configuration/settings and counters. Observer stopped normally.
+
+Recovery proposal is **one graceful app restart after fresh idle/checkpoint
+preflight**, followed by startup/counter/preservation checks, with no battery
+setting changes. No restart, task, install, re-pair, forced silence/reconnect,
+new capture flag, Flow execution, control/Energy activation, publication or soak
+ran. Test/Live/Mainline and fingerprint 31c31c48…1545 unchanged. Freshness/recovery
+and Energy continuity remain partial; no new gate passes. Owner review precedes
+any restart or battery change and the later qualifying soak start.
+
+All 1177 tests, lint, release/diff checks and private synthetic examples pass;
+no runtime change. Review records remain local and private evidence stays outside Git.
+
+
+## 1.10.62 attended charge/discharge completed — 29–30 October 2026
+
+Owner amended the approved 500 W test to start immediately and finish midnight,
+then saved/started the native one-off task. Persisted Never/date/time/power were
+verified. Observed charge **23:33:37–00:00:08 UTC**, approximately 26.5 minutes,
+SOC **0→4%**, about **219.4 Wh** internally integrated. Steady **493–502 W** agrees
+with near-time native comparisons; retain one unresolved **575 W startup** sample.
+No power-limit, calibrated energy, capacity or efficiency signoff is implied.
+
+Discharge appeared **00:00:13 UTC** before deletion confirmation **00:00:22**;
+task list empty by **00:00:28**, Self-powered restored **00:01:03**. Native discharge
+690 W / 4% agrees with Homey -671 W / discharging / 4% about two seconds later.
+Fresh **00:03:37 UTC** readback passes preservation versus the actual pre-test
+baseline: 13 devices, 99 complete Flows, 1201 Insights identities, app-setting
+hashes, all Energy configuration and eight nondecreasing comparable counters.
+No unexpected changes/newly broken Flows; zero reconnects. Collector stopped.
+
+Only ES21 charge/discharge reporting gates are refreshed to fingerprint
+31c31c48…1545; see the new monitoring RC section and ledger. Historical identity/
+idle fingerprints, system/energy-accuracy, startup transient, freshness/recovery,
+rollback, temperature, ES22/accessories, Dual CT Energy and final-candidate soak
+remain separate/open. No 48-hour soak, publish, install, re-pair, extra restart,
+forced reconnect/silence, Flow execution, new controls or Energy migration.
+Test/Live/Mainline unchanged. Raw household evidence remains private outside Git.
+
+All 1177 tests, lint, release-boundary/ledger checks and diff check pass. Runtime
+fingerprint remains unchanged. Documentation/ledger updates remain local for review.
+
+
+## 1.10.62 preflight and approved editor inspection — 29 October 2026
+
+Read-only preflight confirmed running 1.10.62 and preservation against the prior
+post-install baseline: 13 EcoFlow identities/settings, 99 complete Flows, 1201
+Insights identities, global app-setting hashes and all Energy configuration match;
+no sampled counter decrease or newly broken Flow. Native House battery and
+Homey agree on fresh 0%/0 W/standby. Firmware remains V1.1.6.18. This is idle
+comparison, not nonzero Energy, physical capacity or final hardware signoff.
+
+Owner then explicitly approved a temporary Custom-mode editor inspection and
+restoration only. Current editor confirms half-hour timing and a Never/date
+option, but defaults to 2500 W/Daily. The task-power slider did not accept tool
+input; no 500 W selection or saved charge is claimed. The unsaved card was removed,
+all edits discarded through Don't save, and Self-powered restored. Fresh
+23:25:38 UTC readback confirms empty tasks, original configuration, zero power
+and unchanged zero charged/discharged counters; preservation still matches.
+
+The private dated charge/stop proposal remains outside Git for owner review.
+No charging test, saved task, additional restart/reconnect, Energy migration,
+re-pair, Flow execution, acceptance promotion, soak or publication. Test/Live/
+Mainline unchanged. Executing a charge still needs explicit approval, owner
+attendance/local stop and verified 500 W, one-off date/time and removal route.
+A 10-minute manual stop inside a 30-minute task window is not a hard cutoff.
+
+
+## 1.10.62 charge/recovery/48-hour plan prepared — 29 October 2026
+
+Owner requested a plan with battery setting changes reviewed before execution.
+See [the review plan](STREAM_5000_11062_VALIDATION_PLAN.md). It covers an attended
+500 W charge, conditional native-editor cutoff, natural discharge, independent
+energy-reference requirements, natural recovery, separately approved restart
+and a 48-hour soak after restoration. The historical half-hour task-editor limit
+is explicit: a ten-minute manual stop is not a ten-minute hardware cutoff.
+
+Planning only: no task/setting, restart, reconnect, pairing, Energy/source or
+Flow operation; no soak/monitor started, acceptance gate promoted or Test/Live/
+Mainline publication. Installed 1.10.62 attribution and prior hardware limits
+below remain unchanged. Fresh execution baseline and exact dated native task/
+stop parameters must be reviewed before any battery write. A later runtime or
+Energy change requires final-candidate requalification; ES21 cannot qualify ES22
+or Dual CT by itself.
+
+Plan validation: locked dependencies on Node 22, all 1177 tests, lint,
+release-boundary/ledger checks and diff check pass. Runtime fingerprint unchanged;
+hardware readiness remains pending. Documentation remains local for owner review.
+
+
 ## Owner-approved Development 1.10.62 installed — 29 October 2026
 
 Non-clean delivery completed **23:01:53.660 UTC**, clean=false/debug=false.

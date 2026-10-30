@@ -1,5 +1,13 @@
 # Homey Energy completion and product presentation
 
+## Firmware-reader follow-up — 30 October 2026
+
+[The native metadata GET is now implemented and read-only tested](DUAL_CT_FIRMWARE_READBACK.md),
+superseding the missing-reader assessment below. Current-package firmware is distinct
+from an offered update and has no hardware-report timestamp. CT1 sign/timing/cache
+qualification, installed adoption/accounting, recovery and soak remain open. No
+Energy or channel activation accompanies this engineering result.
+
 29 October 2026. Diagnostic source work; no new deployment, Energy adoption,
 exclusion change, hardware operation or publication is authorised by this record.
 

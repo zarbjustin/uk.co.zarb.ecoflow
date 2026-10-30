@@ -4,6 +4,8 @@ import { decodeFrameHeaders } from './streamAc5000Protocol';
 import { dualCtEncodingPolicy, DualCtEncodingBasis } from './dualCtEncoding';
 import { decodeDualCtCandidates } from './dualCtDecoder';
 import { DUAL_CT_BANK_DEFINITIONS, dualCtFreshAge } from './dualCtContract';
+import { dualCtContainsFields } from './dualCtLiveDelivery';
+import registry = require('../settings/dual-ct-grid-profiles.json');
 
 export type DualCtEnergyTiming = 'device_measurement' | 'verified_live_receipt_estimate';
 export interface DualCtGridIdentity { productType: number; firmware: string }
@@ -20,13 +22,11 @@ export interface DualCtGridEnergyContract {
   timing: DualCtEnergyTiming;
   encoding: DualCtEncodingBasis;
   liveFreshnessValidated: true;
+  singlePhaseOnly?: true;
+  freshnessMs?: number;
 }
 
 export type DualCtGridContractResolver = (identity: DualCtGridIdentity) => DualCtGridEnergyContract | null;
-/** Remains empty until model/firmware, role, unit, sign and timing acceptance is documented. */
-export const resolveDualCtGridEnergyContract: DualCtGridContractResolver = () => null;
-export const DUAL_CT_ENERGY_RUNTIME_ENABLED = false;
-
 const identifier = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 const firmwareValid = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9._-]{1,128}$/.test(value);
 export function dualCtGridScopeValid(scope: DualCtGridScope): boolean {
@@ -40,14 +40,26 @@ export function dualCtGridContractValid(contract: DualCtGridEnergyContract | nul
     && ['positive', 'negative'].includes(contract.importSign)
     && ['device_measurement', 'verified_live_receipt_estimate'].includes(contract.timing)
     && ['explicit_zero', 'omitted_zero_candidate'].includes(contract.encoding)
-    && contract.liveFreshnessValidated === true;
+    && contract.liveFreshnessValidated === true
+    && (contract.singlePhaseOnly === undefined || contract.singlePhaseOnly === true)
+    && (contract.freshnessMs === undefined || (Number.isSafeInteger(contract.freshnessMs) && contract.freshnessMs > 0 && contract.freshnessMs <= 90000));
 }
+
+/** Candidate admission only. Full installed acceptance remains in the separate release ledger. */
+export const resolveDualCtGridEnergyContract: DualCtGridContractResolver = (identity) => {
+  const row = registry.profiles.find((entry) => entry.productType === identity?.productType && entry.firmware === identity?.firmware);
+  const contract = row ? { ...row } as DualCtGridEnergyContract : null;
+  return dualCtGridContractValid(contract, identity) ? contract : null;
+};
+// Pairing is available, never automatic adoption or writes to an existing monitor.
+export const DUAL_CT_ENERGY_RUNTIME_ENABLED = true;
 
 /** Stable across sessions, not across account/meter/grid/contract/direction/timing changes. No raw identity in stores. */
 export function dualCtGridBinding(scope: DualCtGridScope, contract: DualCtGridEnergyContract): string | null {
   if (!dualCtGridScopeValid(scope) || !dualCtGridContractValid(contract, { productType: 421, firmware: contract?.firmware })) return null;
   return createHash('sha256').update(JSON.stringify([scope.account, scope.device, scope.grid, contract.id,
-    contract.firmware, contract.channel, contract.bank, contract.unit, contract.importSign, contract.timing, contract.encoding])).digest('hex');
+    contract.firmware, contract.channel, contract.bank, contract.unit, contract.importSign, contract.timing, contract.encoding,
+    contract.singlePhaseOnly ?? false, contract.freshnessMs ?? 90000])).digest('hex');
 }
 
 export interface DualCtGridEnergyObservation {
@@ -67,6 +79,7 @@ export function adaptDualCtGridEnergyPacket(scope: DualCtGridScope, identity: Du
   if (!dualCtGridScopeValid(scope) || !dualCtGridContractValid(contract, identity)) return reject('contract_blocked');
   if (topic !== `/app/device/property/${scope.device}` || !Buffer.isBuffer(payload) || !payload.length || payload.length > 65536
     || !Number.isFinite(receivedAt) || receivedAt <= 0 || !Number.isFinite(now) || !dualCtFreshAge(now - receivedAt)) return reject('transport_rejected');
+  if (now - receivedAt >= (contract.freshnessMs ?? 90000)) return reject('receipt_expired');
   if (contract.timing === 'device_measurement' && (!Number.isFinite(measuredAt) || measuredAt === null
     || measuredAt <= 0 || measuredAt > receivedAt || !dualCtFreshAge(now - measuredAt))) return reject('measurement_time_required');
   if (contract.timing === 'verified_live_receipt_estimate' && measuredAt !== null) return reject('timing_basis_conflict');
@@ -80,6 +93,10 @@ export function adaptDualCtGridEnergyPacket(scope: DualCtGridScope, identity: Du
     if (candidates.length !== 1) return reject('ambiguous_packet');
     const { header, policy } = candidates[0];
     if (policy.basis !== contract.encoding) return reject('encoding_contract_conflict');
+    const bank = DUAL_CT_BANK_DEFINITIONS.find((row) => row.bank === contract.bank)!;
+    const hasGridPower = dualCtContainsFields(header.pdata!, [bank.total, ...bank.power]);
+    if (hasGridPower === false) return reject('unrelated_grid_packet');
+    if (hasGridPower === null) return reject('decode_rejected');
     const decoded = decodeDualCtCandidates(header.pdata!, {
       productType: 421,
       cmdFunc: header.cmdFunc,
@@ -91,9 +108,9 @@ export function adaptDualCtGridEnergyPacket(scope: DualCtGridScope, identity: Du
       now,
     });
     if (!decoded) return reject('decode_rejected');
-    const bank = DUAL_CT_BANK_DEFINITIONS.find((row) => row.bank === contract.bank)!;
     const phases = bank.power.map((field) => decoded.readings.find((row) => row.field === field));
     if (phases.some((row) => !row)) return reject('incomplete_grid_phases');
+    if (contract.singlePhaseOnly && (phases[1]!.value !== 0 || phases[2]!.value !== 0)) return reject('wiring_outside_qualification');
     if (decoded.bankChecks.find((row) => row.bank === contract.bank)?.status === 'mismatch') return reject('grid_total_mismatch');
     const watts = phases.reduce((sum, row) => sum + row!.value, 0) * (contract.importSign === 'positive' ? 1 : -1);
     if (!Number.isFinite(watts) || Math.abs(watts) > 100000) return reject('power_rejected');

@@ -164,6 +164,29 @@ function harness(options = {}) {
   return { device, values, timers, handlers, writes, settings, settingValues };
 }
 
+test('a healthy existing meter clears the persisted research banner without adopting Energy or changing consent', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  h.device.warning = wording.warning; // Homey persists warnings across app upgrades.
+  const before = [...h.values.keys()];
+  const settingsBefore = { ...h.settingValues };
+  h.device.setEnergy = async () => assert.fail('UI cleanup must not activate Energy');
+  h.device.setStoreValue = async () => assert.fail('UI cleanup must not rewrite source/consent');
+  try {
+    await h.device.onInit();
+    assert.equal(h.device.warning, null);
+    assert.deepEqual([...h.values.keys()], before);
+    assert.deepEqual(h.settingValues, settingsBefore);
+    assert.equal(h.handlers.size, 1);
+    const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    assert.equal(h.device.available, true);
+    await h.device.onUninit();
+    assert.equal(h.handlers.size, 0);
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
 test('existing preview upgrades additively without re-pairing, lost identifiers or persisted numeric reuse', async () => {
   const original = auth.appAuthClientFromSettings;
   auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
@@ -255,7 +278,7 @@ test('paired preview clears persisted values, renders telemetry, expires per fie
     assert.equal(h.values.get('dual_ct_preview_total.a'), null);
     handler(frame(packet(99)), topic); await h.device.chain;
     assert.equal(h.values.get('dual_ct_preview_total.a'), null, 'late old-account frames cannot restore readings');
-    assert.match(h.device.unavailable, /Account changed/);
+    assert.match(h.device.unavailable, /sign-in changed/);
     await h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: false } });
     await h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: true } });
     await h.device.chain;
@@ -412,8 +435,10 @@ test('pairing consent screen is explicit and responsive on desktop/mobile, with 
       await page.goto(pathToFileURL(path.join(root, 'drivers/smartmeter_dual_ct_preview/pair/preview_consent.html')).href);
       assert.equal(await page.locator('#continue').isDisabled(), true);
       assert.equal(await page.evaluate(() => window.calls.length), 0);
-      assert.match(await page.locator('#privacy').innerText(), /continuous read-only monitoring/);
-      assert.match(await page.locator('#warning').innerText(), /not verified measurements/);
+      assert.match(await page.locator('#privacy').innerText(), /Continuous monitoring uses the shared EcoFlow connection/);
+      assert.match(await page.locator('#warning').innerText(), /Homey Energy accounting is not enabled/);
+      assert.match(await page.locator('#warning').innerText(), /Do not use these readings for automation/);
+      assert.equal(await page.locator('#title').innerText(), 'Connect Smart Meter Dual CT');
       await page.locator('#consent').check();
       await page.screenshot({ path: `/tmp/ecoflow-dualct-preview-pair-${width}.png` });
       await page.locator('#continue').click();

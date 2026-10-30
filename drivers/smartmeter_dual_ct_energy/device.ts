@@ -8,6 +8,8 @@ import { DualCtGridEnergyDeviceAdapter } from '../../lib/dualCtGridEnergyDeviceA
 import { DualCtEnergyAuthority } from '../../lib/dualCtEnergyAdoption';
 import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint } from '../../lib/dualCtEnergyCheckpoint';
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED, dualCtGridBinding, resolveDualCtGridEnergyContract } from '../../lib/dualCtGridEnergySource';
+import { AppFrameDelivery } from '../../lib/EcoFlowAppMqtt';
+import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
 
 // Shared by every instance in this app process; never one authority per device.
 const authority = new DualCtEnergyAuthority();
@@ -107,9 +109,15 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         await adapter.close(); return;
       }
       if (!adapter.diagnostics().active) throw new Error('blocked');
-      const handler = (payload: Buffer, topic: string) => {
+      const deliveryGuard = new DualCtLiveDelivery();
+      const handler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => {
         if (generation === this.generation && this.handler === handler) {
-          adapter.observe(payload, topic, Date.now()).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
+          const result = deliveryGuard.inspect(payload, topic, `/app/device/property/${source.device}`, delivery, Date.now());
+          if (result.restartAnchor) {
+            this.recover(generation, dependencies.enabled).catch(() => {}); return;
+          }
+          if (!result.accepted || !delivery) return;
+          adapter.observe(payload, topic, delivery.receivedAt).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
         }
       };
       this.handler = handler;
@@ -135,7 +143,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
             });
           this.identityRefresh = refresh;
         }
-      }, 5000);
+      }, 1000);
     } catch {
       await this.recover(generation, dependencies.enabled);
     }

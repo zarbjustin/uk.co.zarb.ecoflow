@@ -5,6 +5,7 @@ import { URL } from 'url';
 import { ECOFLOW_API_HOSTS, normalizeApiHost } from './apiHost';
 import { decryptCertification } from './appAuthCrypto';
 import { AppDevice, normalizeAppDeviceList } from './appDevices';
+import { DualCtFirmwareReadback, readDualCtCurrentFirmware } from './dualCtFirmware';
 
 /**
  * EXPERIMENTAL — EcoFlow **app** (mobile/portal) authentication client.
@@ -249,6 +250,22 @@ export class EcoFlowAppAuthClient {
       headers: { Authorization: `Bearer ${session.token}` },
     }));
     return normalizeAppDeviceList(data);
+  }
+
+  /**
+   * Read the meter's cloud current-package record. Native DualCt.bundle uses
+   * this GET with lang/version headers; the headerless request returned 400.
+   * No update, version-report PUT, package download or MQTT command is sent.
+   * This metadata has no hardware timestamp and cannot qualify measurement timing.
+   */
+  async getDualCtCurrentFirmware(sn: string): Promise<DualCtFirmwareReadback | null> {
+    if (typeof sn !== 'string' || !/^[A-Z0-9]{8,64}$/.test(sn)) return null;
+    const data = await this.authorized((session) => ({
+      method: 'GET' as const,
+      url: `${session.host}/iot-service/device/latestPackInfo?sn=${encodeURIComponent(sn)}&supportSelfRD=1`,
+      headers: { Authorization: `Bearer ${session.token}`, lang: 'en-us', version: '6.17.5' },
+    }));
+    return readDualCtCurrentFirmware(data, sn);
   }
 
   /** Broker credentials for the app (WSS) MQTT session. */

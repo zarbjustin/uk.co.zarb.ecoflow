@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.62",
+  "version": "1.11.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -122,6 +122,14 @@
     "validateCredentials": {
       "method": "POST",
       "path": "/validate-credentials"
+    },
+    "houseReserveControl": {
+      "method": "POST",
+      "path": "/house-reserve-control"
+    },
+    "coordinatedReserveControl": {
+      "method": "POST",
+      "path": "/coordinated-reserve-control"
     }
   },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",

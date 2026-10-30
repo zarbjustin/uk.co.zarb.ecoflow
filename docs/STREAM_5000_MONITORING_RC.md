@@ -1,5 +1,202 @@
 # STREAM 5000 monitoring release candidate
 
+## Owner development 11062 idle restart
+
+30 October 2026: owner explicitly approved **one graceful EcoFlow app restart**
+after idle/checkpoint checks, followed by startup/counter/preservation validation.
+Installed Development **1.10.62** and archive-provenance fingerprint
+`31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545` remain unchanged.
+No new archive, independent installed-filesystem rehash or publication is claimed.
+
+Preflight required native Standby/0 W and fresh idle power/state in both 5000
+roles, empty tasks, Self-powered, unchanged limits/reserve/socket and a clean
+energy checkpoint. Two passing readbacks **00:30:01.056 / 00:30:17.549 UTC** were
+more than fifteen seconds apart. Full definitions matched the previous verified
+baseline; there were no direct saved Flow references to either 5000 role.
+SOC retained its separate configured freshness window, not power's three-minute
+limit. An initially over-strict private preflight guard was corrected before any
+restart; the held capture is retained. No product code or device setting changed.
+A final immutable baseline was taken at **00:31:39.070 UTC** immediately before
+execution. Native/physical SOC was zero while the aggregate retained an older
+valid 1% observation; the new session was required to obtain SOC independently.
+
+The only mutation was one `apps.restartApp` call for `uk.co.zarb.ecoflow`.
+It was requested **00:31:39.146** and returned accepted **00:31:40.788 UTC**.
+No second restart or stop/start sequence was sent.
+
+| Observation | UTC |
+| --- | --- |
+| App starting; support temporarily unavailable | 00:31:40.053 |
+| Running 1.10.62; battery fields explicitly unknown | 00:31:42.092 |
+| Fresh 0 W / idle observed in both roles | 00:31:44.254 |
+| Fresh actual 0% SOC observed in both roles | 00:33:29.857 |
+| Native Standby / 0 W / 0% comparison | 00:36:19.887 |
+| Final full preservation and configuration readback | 00:36:32.455 |
+
+SOC was not inferred from watts or temperature, and prior numeric/standby
+presentation did not survive as a fresh observation. The first running snapshot
+had no system-reporter fields and zero accepted power samples; the next captured
+samples numbered one and two. Precise charged/discharged totals restored exactly:
+**0.2224846869444445 / 0.10414560249999995 kWh**, with projected meters remaining
+**0.222 / 0.104 kWh**. They stayed exactly equal to the fresh pre-restart baseline
+in every available post-restart accounting snapshot. No startup zero/reset or
+energy increment was observed. The brief starting-state sample omitted device
+values; this is availability loss, not evidence of a numeric counter decrease.
+Per-session sample/gap metrics restarted as expected; lifetime meters did not.
+
+Read-only reporter diagnostics resolve **matched / original_stream** after startup.
+An independent fresh native GET resolves an existing paired main, with unchanged
+aggregate identity, matching main role and SOC. Power differs from Homey by under
+**0.003 W** in that comparison. The paired former-main address comparison stays
+false as expected after in-place rebinding. No battery-control command was used.
+
+At the final readback, more than two minutes after full 5000 recovery, all **13
+EcoFlow identities/data/settings/capability metadata**, **99 complete Flows**,
+**1201 Insights log identities**, global app-setting hashes and all **276 device
+Energy configurations** match the actual immediate pre-restart baseline. Eight
+comparable cumulative counters are nondecreasing in before/after checks, with no
+new broken Flow or unexpected definition change. The continuously observed 5000
+meters also show no numeric rollback. Native configuration is Self-powered,
+empty tasks and the original limits/reserve/socket state. The 5000 checkpoint is
+pending=false/writing=false/failures=0, with one subscription attempt and zero
+reconnects in the new session. No extra Energy contributor or physical-unit
+accounting appeared. The bounded observer ended after 82 samples; raw captures,
+restart intent/receipt and preservation comparisons remain private outside Git.
+
+**Accepted:** this candidate's standalone ES21 idle comparison, graceful app
+restart/startup receipt behaviour, preservation and idle counter persistence.
+The idle gate now references this runtime. Freshness/recovery and Energy
+continuity remain partial: an idle restart cannot physically prove nonzero-outage
+accounting; natural five-second expiry/hint horizon, forced-session/rollback,
+absolute interval-energy accuracy, installation scope, temperature, the startup
+575 W transient, other models/accessories and final-candidate soak remain separate.
+No older identity/ES22 result is transferred to this candidate. A source/CI/check
+pass or this restart is not store/full-release acceptance.
+
+No battery task/setting change, install, re-pair, Repair, Flow execution, forced
+battery silence/network reconnect, new control/Energy activation, counter rewrite
+or Test/Live/Mainline publication. No 48-hour soak or automation was started.
+Review this result before agreeing the separate soak start and its exact scope.
+
+
+## Owner development 11062 startup recovery preparation
+
+30 October investigation found **no confirmed Homey runtime defect** behind the
+single captured 575 W startup observation. Flow-derived battery power and the
+separate unit-record diagnostic agree on that value; the source uses scale 1 for
+the flow edge and a separate half-watt conversion once for the unit diagnostic.
+The mapper does not add household load or the unit magnitude to battery flow,
+and this 5000 lifecycle does not run the original STREAM REST/MQTT poll path.
+A one-second receipt-age difference and -79 W grid-flow residual prevent treating
+the linked-meter comparison as simultaneous calibrated battery power. Original
+incident MQTT bytes and a simultaneous native peak reading are absent. Retain
+upstream ramping/reporting/skew as hypotheses; do not clip, smooth or silently
+replace the observed watts. No runtime change or extra charging test is justified
+by this evidence. See STREAM_5000_11062_STARTUP_RECOVERY_REVIEW.md for boundaries.
+
+Fresh diagnostics at **00:13:04 UTC** show one ignored accounting gap and zero
+reconnects/resets. Five-second Insights history has a discharged-counter plateau
+at **77 Wh, 00:06:55–00:10:45**, then resumes increasing. This supports gap-skipping
+without an obvious counter jump. Insights carries/interpolates power, so it cannot
+prove physical tile expiry or exact recovery timing. The original charge collector
+had already stopped; no diagnostic receipt/expiry trace covers that earlier gap.
+The aggregate measure_power log was not present in the retrieved log inventory.
+No unsupported chart-based freshness pass is claimed.
+
+A bounded cached-read observation **00:17:16.987–00:23:16.975 UTC** collected **343
+samples**: fresh 0 W/live throughout, maximum physical-power age **3 seconds**,
+no null-power sample, one ignored gap unchanged and zero reconnects. Fresh receipts
+prevented expiry; the five-second hardware timing gate stays unobserved. The
+observer ended normally; no monitor or soak remains active from this work.
+
+**00:24:36 UTC** full readback still shows running Development 1.10.62, matching
+13 EcoFlow identities/settings, 99 complete Flows, 1201 Insights IDs, global
+app-setting hashes and all Energy configurations; no counter decrease or new
+broken Flow. The bounded observation ended Self-powered, empty tasks and a clean
+5000 energy checkpoint. No restart, battery change, extra native-app navigation,
+forced silence/reconnect, install, Repair, re-pair, Flow execution or publication.
+
+Recommended for owner review: **one graceful EcoFlow app restart after fresh idle
+and checkpoint preflight**, then bounded startup, counter and full preservation
+readbacks. No battery setting change is proposed. It has not run. An idle restart
+cannot physically prove nonzero-outage accounting; any stronger operating-point
+or extra charge proposal needs separate review. Full freshness recovery and Energy
+continuity remain partial, with no new passed gate. Do not begin/schedule the
+48-hour soak before the recovery result and its remaining scope are reviewed.
+Test/Live/Mainline and the runtime fingerprint remain unchanged.
+
+
+## Owner development 11062 charge discharge
+
+29–30 October 2026, installed Development **1.10.62**, archive-provenance
+fingerprint `31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545`.
+This is the existing b31eacb implementation, not a new installation or installed
+filesystem rehash. Scope is the owner's standalone ES21 and its existing physical
+monitor plus installation Home Battery, with no direct PV at the owner-confirmed
+configuration. No ES22, linked-pack, accessory, mixed-space or capacity acceptance
+is inferred.
+
+Owner first approved an attended ten-minute manual-stop plan, then explicitly
+changed it to the full half-hour and finally to **start now / finish midnight**.
+Owner set the native power slider to 500 W, confirmed attendance/local stop access
+and an independent alarm, and saved/started the task. Persisted native readback
+verified **500 W, 23:30–00:00 (+1), Never / 29 Oct 2026**, target SOC 100%.
+No recurring schedule was introduced. Global grid-input/output limits, SOC limits,
+reserve, socket, Homey controls/Energy permissions and pairing configuration were
+unchanged. All task/mode operations used native UI; no undocumented writer or
+additional MQTT subscription was introduced.
+
+First positive sample was **23:33:37.773 UTC**; last positive sample **00:00:08.048**,
+then discharge **00:00:13.256 UTC**. This is approximately **26.5 minutes of observed
+charging**, not a completed thirty-minute physical-duration test. Steady readings
+after the first twenty seconds and before the scheduled finish were **493–502 W**.
+Startup included 77 W and one **575 W** sample; the finish included a 137 W ramp.
+All are retained privately. The startup outlier is unresolved; it is not clipped,
+a verified limit-enforcement pass, or a confirmed Homey mapper defect. Native and
+Homey measurement smoothing/timing and the underlying report need separate review.
+
+Near-time native charging comparisons at **23:36:05, 23:53:47 and 23:56:05 UTC**
+show **497 / 499 / 498 W** and SOC **0 / 3 / 4%**; nearest Homey samples agree exactly
+on displayed watts/SOC, with skews below one second. Charged energy reached about
+**219.4 Wh** in the internal integrator (the projected capability is rounded to
+0.219 kWh); discharged energy stayed zero throughout charging. Integrating the
+sampled watts is a consistency check only, not an independent energy reference,
+usable-capacity measurement, calibrated DC result or efficiency proof.
+
+At the finish, deletion was requested **00:00:09.276**, and its native confirmation
+was applied **00:00:22.227 UTC**. Discharge therefore appeared before confirmation;
+the scheduled transition was observed, but no instantaneous-cutoff guarantee is
+claimed. Fresh protocol task list was empty by **00:00:28.884**. Original
+**Self-powered** was restored at **00:01:03.165 UTC**. The native battery overview
+at **00:01:51.749** showed **Discharge, 690 W, 4%**; Homey about two seconds later
+showed **-671 W / discharging / 4%**, within the declared steady-comparison tolerance
+of max(20 W, 5%). Ordinary demand caused this discharge; no discharge task, added
+load, outlet operation, export override or lowered SOC/reserve was used.
+
+Fresh **00:03:37.766 UTC** readback, more than two minutes after restoration,
+confirms original mode/settings and no tasks. Against the fresh **23:28:27 UTC**
+test baseline, all **13 EcoFlow identities/data/settings/capability metadata**,
+**99 full Flows**, **1201 Insights log identities**, global app-setting hashes
+and Energy configuration across **276 devices** match. All **eight comparable
+cumulative counters** are nondecreasing; no new broken Flow or definition change.
+Charged counter remains at its completed value while discharged energy increases
+normally. One subscription attempt, zero reconnects and fresh field ages persist.
+Private raw samples, UI evidence, action times and full preservation comparisons
+remain outside Git; the bounded read-only collector was stopped after restoration.
+
+**Accepted:** charge and natural-discharge sign/state, SOC comparison and observed
+counter direction/continuity for this exact ES21/runtime and standalone setup.
+The two model charge/discharge ledger entries now reference this candidate. This
+does not close installation membership/system scope, independent interval-energy
+accuracy, the startup transient, sparse expiry/hint horizon, communication/session
+recovery, rollback, temperature alignment, other model/accessory roles, Dual CT
+Energy or the final-candidate 48-hour soak. Existing earlier identity/idle passes
+retain their older fingerprints and are not silently transferred. No full-release
+readiness is claimed. No Test/Live/Mainline, app installation or source-runtime
+change; no extra restart, forced silence/reconnect, re-pair, Flow execution,
+new control/Energy activation or 48-hour soak was performed.
+
+
 ## Owner native idle comparison
 
 29 October 2026, read-only, on installed Development 1.10.58 / runtime

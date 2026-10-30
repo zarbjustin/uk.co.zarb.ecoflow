@@ -58,7 +58,7 @@ export class DualCtGridEnergyDeviceAdapter {
       try {
         if (wasActive) {
           await this.session.close();
-          await this.port.setUnavailable('Restarting qualified CT1 session');
+          await this.port.setUnavailable('Restarting CT1 meter readings');
           await this.port.setCapabilityValue('measure_power', null);
           if (generation !== this.generation) return;
         }
@@ -73,7 +73,7 @@ export class DualCtGridEnergyDeviceAdapter {
         }
         this.active = true;
         // Fail unavailable through configuration/partial SDK writes. Never publish an old persisted watt value.
-        await this.port.setUnavailable('Waiting for fresh qualified CT1 power');
+        await this.port.setUnavailable('Waiting for fresh CT1 power');
         if (!await this.guard(generation)) return;
         await this.port.setCapabilityValue('measure_power', null);
         if (!await this.guard(generation)) return;
@@ -128,7 +128,7 @@ export class DualCtGridEnergyDeviceAdapter {
     if (values['meter_power.imported'] === null || values['meter_power.exported'] === null) {
       await this.fail(view.status); return;
     }
-    await this.port.setUnavailable('Applying qualified CT1 reading');
+    await this.port.setUnavailable('Updating CT1 readings');
     // Requalify after EVERY awaited write; consent/firmware/inventory can change while SDK IO is pending.
     for (const id of ['meter_power.imported', 'meter_power.exported', 'measure_power'] as const) {
       // eslint-disable-next-line no-await-in-loop

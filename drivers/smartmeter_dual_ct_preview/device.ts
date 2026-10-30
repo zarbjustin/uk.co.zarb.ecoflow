@@ -54,7 +54,10 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       return; // A failed capability upgrade must not start or renew a subscription.
     }
     if (generation !== this.generation) return;
-    await this.setWarning(this.text('warning'));
+    // Older releases persisted a long research disclaimer as a device warning.
+    // Explain monitoring limits in pairing/settings; warnings must describe an
+    // actionable fault. Explicitly clear the persisted warning on upgrade.
+    await this.setWarning(null);
     if (generation !== this.generation) return;
     if (consented) {
       this.enabled = true;

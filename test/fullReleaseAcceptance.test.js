@@ -28,14 +28,14 @@ test('actual full-release readiness command remains nonzero and read-only with o
   assert.deepEqual(files.map(f => fs.readFileSync(path.join(root, 'docs', f), 'utf8')), before);
 });
 
-test('hardware ledgers cannot declare release ready when source engineering is disabled or unassessed', async () => {
+test('candidate admission cannot replace native hardware acceptance or an explicit engineering assessment', async () => {
   const { assessFullRelease, assessEnergyEngineering } = await load();
   const dual = passAll(read('DUAL_CT_ENERGY_ACCEPTANCE.json')); dual.firmware = 'synthetic.1'; dual.timing = 'verified_live_receipt_estimate';
   const batteries = passAll(read('STREAM_5000_MONITORING_ACCEPTANCE.json'));
   const engineering = assessEnergyEngineering(root);
-  assert.equal(engineering.ready, false); assert.ok(engineering.pending.includes('dual_ct_runtime_qualification'));
-  assert.ok(engineering.pending.includes('dual_ct_source_contract')); assert.ok(engineering.pending.includes('dual_ct_pairing_admission'));
+  assert.equal(engineering.ready, true);
+  assert.equal(assessFullRelease(read('DUAL_CT_ENERGY_ACCEPTANCE.json'), read('STREAM_5000_MONITORING_ACCEPTANCE.json'), fp, engineering).ready, false);
   assert.equal(assessFullRelease(dual, batteries, fp).ready, false);
-  const result = assessFullRelease(dual, batteries, fp, engineering);
+  const result = assessFullRelease(dual, batteries, fp, { ready: false, pending: ['explicit_review_hold'] });
   assert.equal(result.hardwareReady, true); assert.equal(result.ready, false);
 });

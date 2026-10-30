@@ -41,13 +41,13 @@ function harness(options = {}) {
     async sample(at, watts = 3600, measuredAt = null) { now = at; await session.observe(payload(watts), topic, at, measuredAt); return session.view(); } };
 }
 
-test('no contract is registered; ordinary candidate flags cannot start storage, Energy or existing-device adoption', async () => {
+test('unknown firmware and ordinary candidate flags cannot start storage, Energy or existing-device adoption', async () => {
   assert.equal(resolve({ ...identity, verified: true, ct1_role: 'grid' }), null);
   const storage = memory();
   const session = new DualCtGridEnergySession({ scope, identity, readIdentity: () => identity, storage, authority: new DualCtEnergyAuthority(), review: () => request() });
   await session.start(); assert.equal(session.view().status, 'contract_blocked');
   assert.equal(storage.reads, 0); assert.equal(storage.writes.length, 0);
-  assert.equal(DUAL_CT_ENERGY_RUNTIME_ENABLED, false); assert.equal(session.view().contributesToEnergy, false);
+  assert.equal(DUAL_CT_ENERGY_RUNTIME_ENABLED, true); assert.equal(session.view().contributesToEnergy, false);
   assert.equal(plan(request({ target: 'existing_preview' })).status, 'existing_device_conversion_blocked');
   await session.close();
 });
@@ -370,4 +370,37 @@ test('clock rollback observed while a write is pending cannot restore an active 
   assert.equal(h.session.view().candidateCapabilities['meter_power.imported'], null);
   h.storage.write = write; await h.session.start(); await h.sample(3000); assert.equal(h.storage.data.importedWh, 1);
   await h.session.close();
+});
+
+test('candidate registry is firmware-pinned, single-phase only and cannot be broadened by settings or a mutated returned object', () => {
+  const selected = { productType: 421, firmware: '1.0.0.41' }; const c = resolve(selected);
+  assert.equal(c.singlePhaseOnly, true); assert.equal(c.freshnessMs, 5000);
+  for (const identity of [{ ...selected, productType: 420 }, { ...selected, firmware: '1.0.0.42' }, { ...selected, firmware: '' }]) {
+    assert.equal(resolve({ ...identity, verified: true, preview_enabled: true }), null);
+  }
+  c.freshnessMs = 90000; assert.equal(resolve(selected).freshnessMs, 5000);
+  const pinned = resolve(selected);
+  const f = rows => frame(Buffer.concat(rows.map(([id, value]) => scalar(id, value))), { omitted: true });
+  const good = f([[962, 3600], [963, 0], [772, 0], [515, 3600]]);
+  assert.equal(adapt(scope, selected, pinned, good, topic, 1000, null, 5999).observation.signedImportW, 3600);
+  assert.equal(adapt(scope, selected, pinned, good, topic, 1000, null, 6000).status, 'receipt_expired');
+  const threePhase = f([[962, 3600], [963, 100], [772, 0], [515, 3700]]);
+  assert.equal(adapt(scope, selected, pinned, threePhase, topic, 1000, null, 1000).status, 'wiring_outside_qualification');
+  const partial = f([[962, 3600], [515, 3600]]);
+  assert.equal(adapt(scope, selected, pinned, partial, topic, 1000, null, 1000).observation, null);
+});
+
+test('five-second candidate expiry retains totals and reanchors without backfilling an unseen power interval', async () => {
+  const selected = { productType: 421, firmware: '1.0.0.41' }; const pinned = resolve(selected);
+  const store = memory(); let now = 1000; const key = binding(scope, pinned);
+  const session = new DualCtGridEnergySession({ scope, identity: selected, readIdentity: () => selected, storage: store,
+    authority: new DualCtEnergyAuthority(), now: () => now, review: () => request({ binding: key }) });
+  const f = frame(rows([[962, 3600], [963, 0], [772, 0], [515, 3600]]), { omitted: true });
+  await session.start(); await session.observe(f, topic, now); now = 2000; await session.observe(f, topic, now);
+  near(session.view().candidateCapabilities['meter_power.imported'], 0.001);
+  now = 7000; assert.equal(session.view().candidateCapabilities.measure_power, null);
+  near(session.view().candidateCapabilities['meter_power.imported'], 0.001);
+  now = 9000; await session.observe(f, topic, now); near(session.view().candidateCapabilities['meter_power.imported'], 0.001);
+  now = 10000; await session.observe(f, topic, now); near(session.view().candidateCapabilities['meter_power.imported'], 0.002);
+  await session.close();
 });

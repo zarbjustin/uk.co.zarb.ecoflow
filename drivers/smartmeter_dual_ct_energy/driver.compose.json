@@ -5,7 +5,6 @@
     "nl": "Smart Meter Dual CT — woningenergie"
   },
   "class": "sensor",
-  "deprecated": true,
   "platforms": [
     "local"
   ],

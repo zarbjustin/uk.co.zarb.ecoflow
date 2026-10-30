@@ -1,25 +1,32 @@
 'use strict';
 
 import mqtt, { MqttClient } from 'mqtt';
+import { performance } from 'perf_hooks';
 import { EcoFlowAppAuthClient, EcoFlowAppAuthError } from './EcoFlowAppAuthClient';
 import { appMqttClientId } from './appMqttClientId';
 
 /**
- * EXPERIMENTAL — listen-only MQTT session against EcoFlow's **app** broker.
+ * Shared MQTT session against EcoFlow's **app** broker.
  *
  * Deliberately a separate class from {@link EcoFlowMqtt}: the app broker uses a
  * different transport (WSS/8084), a different ClientID scheme, different topics
  * (`/app/...`) and a binary protobuf payload. Keeping it apart means the
  * supported `/open` MQTT path used by every other device cannot regress.
  *
- * This client NEVER publishes. Control writes for STREAM 5000-family adapters
- * remain out of scope until verified independently on each product.
+ * Ordinary subscriptions remain listen-only. A separately gated, app-owned
+ * ES21 reserve bridge is the only write surface; no other setting/task is sent.
  *
  * Topic/transport details adapted from the MIT-licensed
  * https://github.com/shuette42/ecoflow-energy-ha (`ecoflow/cloud_mqtt.py`).
  */
 
-export type AppFrameHandler = (payload: Buffer, topic: string) => void;
+export interface AppFrameDelivery {
+  receivedAt: number;
+  receivedMonoMs: number;
+  retained: boolean;
+  duplicate: boolean;
+}
+export type AppFrameHandler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => void;
 
 const DEFAULT_BROKER_HOST = 'mqtt-e.ecoflow.com';
 /** Only EcoFlow's own brokers are ever contacted. */
@@ -127,9 +134,10 @@ export class EcoFlowAppMqtt {
       protocolVersion: 5,
       keepalive: KEEPALIVE_S,
       clean: true,
+      queueQoSZero: false, // never replay an expired reserve intent after reconnect
     });
     this.client = client;
-    client.on('message', (topic, payload) => this.onMessage(topic, payload as Buffer));
+    client.on('message', (topic, payload, packet) => this.onMessage(topic, payload as Buffer, packet));
     client.on('close', () => this.onDisconnect('close'));
     client.on('offline', () => this.onDisconnect('offline'));
 
@@ -229,19 +237,37 @@ export class EcoFlowAppMqtt {
     }
   }
 
-  private onMessage(topic: string, payload: Buffer): void {
+  private onMessage(topic: string, payload: Buffer, packet?: { retain?: boolean; dup?: boolean }): void {
     // Topics are either /app/device/property/{sn} or /app/{userId}/{sn}/thing/...
     const parts = topic.split('/');
     const sn = parts[2] === 'device' ? parts[4] : parts[3];
     const set = sn ? this.handlers.get(sn) : undefined;
     if (!set) return;
+    // Optional third argument preserves existing consumers. Missing transport
+    // metadata stays unknown; a future Energy consumer must not assume live.
+    const delivery = packet && typeof packet.retain === 'boolean' && typeof packet.dup === 'boolean'
+      ? Object.freeze({
+        receivedAt: Date.now(), receivedMonoMs: performance.now(), retained: packet.retain, duplicate: packet.dup,
+      }) : undefined;
     for (const handler of set) {
       try {
-        handler(payload, topic);
+        handler(payload, topic, delivery);
       } catch (e: any) {
         this.log('frame handler error', e?.message || 'unknown error');
       }
     }
+  }
+
+  /** Narrow app-owned reserve bridge; never opens a second MQTT connection. */
+  async publishHouseReserve(sn: string, frame: Buffer): Promise<void> {
+    if (!/^ES21[A-Z0-9]{4,60}$/.test(sn) || !this.handlers.has(sn)
+      || !this.client?.connected || !this.userId || this.ended) throw new Error('House reserve transport unavailable');
+    const { client } = this;
+    await new Promise<void>((resolve, reject) => {
+      client.publish(`/app/${this.userId}/${sn}/thing/property/set`, frame, { qos: 0, retain: false }, (error) => {
+        if (error) reject(new Error('House reserve publish failed')); else resolve();
+      });
+    });
   }
 
   async end(): Promise<void> {

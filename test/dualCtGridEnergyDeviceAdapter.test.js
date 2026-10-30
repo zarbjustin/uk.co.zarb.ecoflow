@@ -29,7 +29,7 @@ function harness(defaultGate = false) {
     setEnergy: async config => { events.push(['energy', config]); },
     setUnavailable: async status => { events.push(['unavailable', status]); },
     setAvailable: async () => { events.push(['available']); } };
-  const adapter = defaultGate ? new DualCtGridEnergyDeviceAdapter(session, port) : new DualCtGridEnergyDeviceAdapter(session, port, () => enabled);
+  const adapter = defaultGate ? new DualCtGridEnergyDeviceAdapter(session, port, () => false) : new DualCtGridEnergyDeviceAdapter(session, port, () => enabled);
   return { adapter, session, port, events, caps, now: x => { now = x; }, revoke: () => { consent = false; },
     disable: () => { enabled = false; }, saved: () => saved, storeWrites: () => storeWrites,
     async sample(at, watts) { now = at; await adapter.observe(payload(watts), topic, at); } };
@@ -142,4 +142,20 @@ test('expiry ticks coalesce behind slow SDK IO; newer checkpoint cannot be publi
   assert.equal(h.caps.get('measure_power'), null); assert.equal(h.adapter.diagnostics().status, 'projection_superseded');
   await h.adapter.refresh(); assert.equal(h.caps.get('measure_power'), 7200);
   assert.equal(h.caps.get('meter_power.imported'), h.saved().importedWh / 1000); await h.adapter.close();
+});
+
+test('unrelated CT2/voltage packets preserve CT1 intervals without renewing power freshness; partial CT1 still breaks the anchor', async () => {
+  const packet = rows => msg(1, Buffer.concat([msg(1, Buffer.concat(rows.map(([f, n]) => scalar(f, n)))), int(6, 0), int(8, 254), int(9, 21)]));
+  for (const watts of [3600, -3600]) {
+    const h = harness(); await h.adapter.start(); await h.sample(1000, watts);
+    h.now(2000); await h.adapter.observe(packet([[991, 90000], [992, 90000], [993, 90000], [956, 230]]), topic, 2000);
+    await h.sample(3000, watts);
+    const cap = watts > 0 ? 'meter_power.imported' : 'meter_power.exported';
+    assert.ok(Math.abs(h.caps.get(cap) - 0.002) < 1e-12, 'unrelated traffic must not discard the two-second CT1 interval');
+    h.now(4000); await h.adapter.observe(packet([[962, watts]]), topic, 4000);
+    await h.sample(5000, watts); assert.ok(Math.abs(h.caps.get(cap) - 0.002) < 1e-12, 'partial CT1 must not mix cached phases');
+    h.now(95000); await h.adapter.observe(packet([[956, 230], [991, 1000]]), topic, 95000);
+    assert.equal(h.caps.get('measure_power'), null, 'unrelated packets cannot keep old power fresh');
+    await h.adapter.close();
+  }
 });

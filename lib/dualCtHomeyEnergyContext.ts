@@ -84,8 +84,10 @@ export class DualCtHomeyEnergyContext {
     const account = dualCtAccountBinding(await client.getSession());
     const owned = dualCtPreviewDevices(await client.getDeviceList()).find((d) => d.sn === this.options.sn);
     if (!owned) throw new Error('owned_source_required');
-    // Discovery does not currently supply a verified firmware field. This fails closed until a supported reader exists.
-    const firmware = this.options.readFirmware ? await this.options.readFirmware(client, owned) : null;
+    // Read current-package metadata, never a prospective OTA version. Its receipt
+    // age qualifies this API lookup only; it is not a hardware measurement time.
+    const firmware = this.options.readFirmware ? await this.options.readFirmware(client, owned)
+      : (await client.getDualCtCurrentFirmware(owned.sn))?.version ?? null;
     if (typeof firmware !== 'string' || !/^[A-Za-z0-9._-]{1,128}$/.test(firmware)) {
       this.source = null; throw new Error('firmware_readback_unavailable');
     }
