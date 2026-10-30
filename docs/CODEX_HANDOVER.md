@@ -1,5 +1,41 @@
 # Codex cross-machine handover
 
+## Corrective Test 1.11.5 build 72 published — 30 October 2026
+
+Owner explicitly approved publishing the reviewed corrective Test archive while
+preserving Live, Mainline and installed Development. Test **1.11.5 / build 72**
+is active, independently verified through the build/channel API after activation.
+The published manifest declares the Dual CT cumulative Energy driver. Test build
+71 / 1.11.0 was superseded; Live remains **1.10.3 / build 18**. No certification
+submission or Live publication ran. Remote Mainline reference is unchanged.
+
+The exact archive already installed locally was uploaded without rebuilding:
+SHA-256 `63498f527eed6272207739ae3f3b3fce29908c12e7fe1dc1a1ba043f6e796307`,
+runtime `14642252c61416221a632f402ec2a9e5308e50ffa5017bf71dd4d03524e353d3`,
+source `e76725844ff0d21145872a4330ce8823f9e0d949`.
+[Exact source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41028099564),
+with 1,221 tests and the reviewed local lint/release/pinned validation evidence.
+Only the approved corrective changelog was supplied; the store description was
+reused unchanged and env is empty. No private household evidence was uploaded.
+
+Before/after readback confirms installed **Development 1.11.5**, origin
+`devkit_install`, still running with CT1 available. All 14 EcoFlow definitions,
+app-setting hashes, 101 Flows, 1,204 Insights identities and all property Energy
+flags match. Two diagnostic fields in unrelated apps refreshed naturally; they
+are not EcoFlow definition changes and were not written here. No local install,
+restart, pairing/Repair, settings or battery operation, Flow execution, source
+reset or forced reconnect was performed for publication.
+
+The supported Test scope remains single-phase CT1 / firmware 1.0.0.41 with
+estimated power-derived totals; CT2 and three-phase Energy remain excluded.
+Production acceptance, coverage/availability flicker, the original STREAM one-Wh
+startup finding, native mobile/accuracy/backup checks and final soak remain
+open/partial. Test activation is not a hardware gate pass or a soak start.
+
+Test: https://homey.app/a/uk.co.zarb.ecoflow/test/
+Build: https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/72
+
+
 ## 1.11.5 approved Development correction and native recovery — 30 October 2026
 
 Owner approved the reviewed non-clean 1.11.5 archive after exact CI and idle

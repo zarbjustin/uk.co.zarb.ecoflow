@@ -289,5 +289,8 @@
   },
   "1.11.0": {
     "en": "Adds Homey Energy setup for single-phase CT1 on Smart Meter Dual CT firmware 1.0.0.41, with approximate power and estimated import/export totals. Improves reporting-gap and accounting handling, clears the persistent research warning, and preserves existing devices and history. Add the property Energy meter separately; CT2 and three-phase accounting are excluded. Test validation continues before production."
+  },
+  "1.11.5": {
+    "en": "Fixes Smart Meter Dual CT Energy recovery when Homey’s rounded counters are restored after a restart or reporting interruption. Keeps accumulated totals and precise internal accounting, and shows a reconnecting message instead of an unsupported-meter error. Preserves the existing reserve-control bridge. Supported Energy scope remains single-phase CT1 on firmware 1.0.0.41; CT2 and three-phase Energy remain excluded. Existing paired Energy meters recover without re-pairing."
   }
 }
