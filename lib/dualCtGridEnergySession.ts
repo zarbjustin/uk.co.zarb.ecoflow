@@ -267,6 +267,9 @@ export class DualCtGridEnergySession {
     if (fresh && previous!.timing === 'device_measurement') fresh = dualCtFreshAge(now - previous!.measuredAt!);
     return {
       status: this.status,
+      projectionNow: now,
+      powerFreshUntil: fresh ? Math.min(previous!.receivedAt + (this.contract?.freshnessMs ?? 90000),
+        previous!.timing === 'device_measurement' ? previous!.measuredAt! + 90000 : Infinity) : null,
       timingBasis: this.contract?.timing || null,
       measurementTimestampKnown: previous?.measuredAt != null,
       totalsBasis: 'derived_from_observed_power',

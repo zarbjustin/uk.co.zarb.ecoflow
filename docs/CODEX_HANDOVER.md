@@ -1,5 +1,28 @@
 # Codex cross-machine handover
 
+## Combined 1.11.7 display and availability candidate — 30 October 2026
+
+Owner authorised adding the availability fix with regression tests while keeping
+Test, Live and installed Development unchanged. Normal projections no longer mark
+a healthy meter unavailable. Newer committed checkpoints trigger bounded immediate
+catch-up instead of blanking fresh power until the next tick. Source/consent/runtime
+checks remain after asynchronous SDK work. The last projected power retains its
+own receipt deadline; an independent coalesced expiry clear can run while an SDK
+counter write is stalled. Late callbacks and failed clears cannot silently revive
+stale power. No checkpoint format, counter arithmetic/rounding, binding, delivery
+threshold, reconnect policy or capability identity is changed.
+
+Locked Node 22 install, all 1,279 tests, lint, release checks and pinned Homey CLI
+4.5.3 verified validation pass. Regression coverage includes display settings, both
+wiring paths, precise counter
+continuity, overlapping SDK updates, five-second expiry, stalled writes/late callbacks
+and clear retries. See `docs/DUAL_CT_AVAILABILITY_CANDIDATE.md` and the display review
+for implementation, limits and native acceptance needs. The combined archive replaces
+the earlier display-only 1.11.7 review artifact; neither has been installed/published.
+Widget/client behaviour remains hardware-unverified until an approved installation.
+No battery/settings/Flow/paired-device operation or forced gap/reconnect occurred.
+
+
 ## Dual CT display candidate 1.11.7 prepared — 30 October 2026
 
 Owner requested source implementation for review, keeping installed Development,

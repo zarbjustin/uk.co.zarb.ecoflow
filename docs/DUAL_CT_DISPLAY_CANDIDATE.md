@@ -2,7 +2,8 @@
 
 Source-only candidate on the diagnostic branch, 30 October 2026. Not installed
 or published. Test 1.11.6/build 73, Live and installed Development remain separate.
-This work does not implement the separately proposed reconnect/status-flicker fix.
+The combined candidate now also includes the availability fix documented in
+`DUAL_CT_AVAILABILITY_CANDIDATE.md`; its transport reconnect policy is unchanged.
 
 ## Per-device settings
 
@@ -83,7 +84,7 @@ reversible show/hide, custom-title preservation, no writes to core counters,
 unchanged accounting/consent/binding/subscriptions, stale/delayed/CT2-only packets,
 retained/duplicate rejection, optional SDK failures and cancellation on shutdown.
 Existing single-phase and three-phase accounting tests still run unchanged.
-Locked Node 22 install, all 1,271 tests, lint, release checks and pinned Homey CLI
+Locked Node 22 install, all 1,279 tests, lint, release checks and pinned Homey CLI
 4.5.3 verified validation pass. Full hardware readiness remains blocked.
 
 After review, any Development installation needs fresh approval and a private
