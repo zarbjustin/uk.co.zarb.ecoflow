@@ -4,33 +4,33 @@
   "admissionAllowed": false,
   "registeredProfile": null,
   "candidateRuntimeFingerprint": null,
-  "accountingPolicy": "unresolved",
+  "accountingPolicy": "signed_phase_sum_provisional",
   "reference": "docs/DUAL_CT_THREE_PHASE_PREPARATION.md",
   "gates": [
     {
       "id": "identity_firmware",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "wiring_phase_assignment",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "active_power_units",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "ct1_coherence",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "mixed_phase_netting",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "partial_zero_phases",
@@ -39,8 +39,8 @@
     },
     {
       "id": "timing_coverage",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "energy_intervals",
@@ -49,13 +49,13 @@
     },
     {
       "id": "ct2_isolation",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "native_projection",
-      "status": "open",
-      "evidence": "none"
+      "status": "partial",
+      "evidence": "historical_evidence"
     },
     {
       "id": "storage_recovery",
@@ -68,9 +68,15 @@
       "evidence": "none"
     },
     {
+      "id": "source_overlap",
+      "status": "open",
+      "evidence": "none"
+    },
+    {
       "id": "normal_use_48h",
       "status": "open",
       "evidence": "none"
     }
-  ]
+  ],
+  "evidenceReview": "docs/DUAL_CT_THREE_PHASE_EVIDENCE_REVIEW.md"
 }

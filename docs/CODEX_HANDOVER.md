@@ -1,5 +1,34 @@
 # Codex cross-machine handover
 
+## Existing three-phase evidence reconciled — 30 October 2026
+
+Primary historical posts were reopened in fourteen relevant private topics,
+with four original native screenshots inspected, alongside indexed history and
+repository records. Earlier summaries alone were not used as current proof.
+Private raw data/images/measurements/correspondence remain outside Git; the
+public evidence review is sanitized. No community message/request was sent.
+
+Existing field evidence establishes a three-phase participant, CT1 property-grid
+scope, separate hybrid-inverter CT2, signed native phase summation and historical
+W/V/A comparisons. Owner description supports utility-equivalent netting for that
+site. The planning ledger now records eight partial and six open gates, with
+provisional signed-phase-sum policy. No passed gate, runtime/profile admission,
+firmware exception or binding migration results from historical observations.
+
+Still missing: current firmware/qualified source and phase association; complete
+time/provenance-qualified CT1 observations; independent reference intervals and
+coverage; current three-phase Homey Energy overlap/native recovery/upgrade checks;
+and final exact-runtime soak. Native cumulative arithmetic is not interval
+accuracy; unknown vendor 773 semantics are optional to the power-derived path.
+Current export retention has already improved; historical trimming is not treated
+as a fresh defect or grounds for another generic capture request.
+
+See `docs/DUAL_CT_THREE_PHASE_EVIDENCE_REVIEW.md`. No runtime code, installed app,
+Test/Live/Mainline, settings, Energy, battery/Flow operations or restarts changed.
+Individual mapping crops and all unrelated inbox attachments were not exhaustively
+re-read; the detailed private report identifies reviewed sources and limits.
+
+
 ## Three-phase Dual CT source preparation — 30 October 2026
 
 Owner requested investigation/preparation while keeping installed Development,
@@ -18,6 +47,10 @@ can be integrated. Native phase order/sign/netting/timing remain unverified.
 See `docs/DUAL_CT_THREE_PHASE_PREPARATION.md` and its all-open planning ledger:
 a real three-phase installation/reference is needed, particularly simultaneous
 opposing phase flows. Justin's single-phase site cannot qualify those gates.
+Historical three-phase community comparisons already exist in the recorded
+October exchanges. Reconcile those screenshots/packet reports with the matrix
+first; do not assume a new volunteer or another generic capture is necessary.
+They are historical candidate evidence, not current-runtime acceptance passes.
 No request was sent to any community tester. Proposed quantitative criteria and
 candidate selection/binding migration are for review, not hardware acceptance.
 No installation, pairing, Energy/settings/Flow/battery action, restart/reconnect,

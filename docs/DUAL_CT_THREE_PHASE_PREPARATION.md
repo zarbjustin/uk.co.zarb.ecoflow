@@ -13,7 +13,8 @@ phase assignment, sign, measurement timing or cumulative accounting policy.
 
 The existing candidate mapping is CT1 power fields 962/963/772, total 515; CT2
 power fields 991/992/993, total 998. Its basis is the previously examined native
-schema and single-phase evidence, not a physical three-phase validation. The
+schema and historical candidate observations, including three-phase community
+comparisons, not current three-phase hardware acceptance. The
 existing generic wire adapter already sums three CT1 phases in synthetic tests.
 Actual production resolution still returns only firmware 1.0.0.41's single-phase
 profile and rejects nonzero phase 2/3. That restriction is not removed here.
@@ -35,7 +36,11 @@ With phase powers +2000, -1500, -1000 W, positive-import convention:
 | Signed phase sum, then split by sign | 0 W | 500 W |
 | Split each phase, then sum | 2000 W | 2500 W |
 
-Both yield the same net balance but different import/export counters. A balanced
+The reviewed historical installation supports signed phase-sum power through
+owner description and native screenshots. The remaining policy question is a
+matched independent check of interval import/export register accumulation.
+
+Both hypotheses yield the same net balance but different import/export counters. A balanced
 +1000/-500/-500 W case has zero signed net while power still flows on each phase.
 Do not count only phase 1, sum magnitudes, discard negative phases or assume the
 reference meter's accounting policy. Agreement during all-import operation does
@@ -49,6 +54,17 @@ an explicitly supported reference/accounting policy. If site/meter policy differ
 it needs an explicit separately qualified contract, not a hidden automatic switch.
 
 ## Hardware and volunteer requirement
+
+Historical three-phase community evidence already exists. The recorded October
+exchanges and earlier Dual CT plan describe per-phase grid/inverter screenshots,
+mixed-sign CT1 power and candidate packet comparisons. Review and inventory that
+material against this matrix **before** requesting a new site or repeat capture.
+See `SMART_METER_DUAL_CT_PLAN.md` for the historical same-payload/timing caveats.
+These observations can narrow the hypotheses; they do not establish current
+firmware/runtime qualification, billing netting policy, aligned interval accuracy,
+native recovery or the final soak. Original private correspondence/images remain
+private and are not reproduced here. Treat a new tester as optional, not as a
+prerequisite assumed from an absence of previous three-phase work.
 
 One existing, correctly commissioned **true three-phase** Dual CT installation is
 the minimum useful next test site. Obtain owner consent; do not repeatedly ask
@@ -75,8 +91,9 @@ Required evidence/equipment:
 
 ## Proposed hardware matrix
 
-All entries are **open** in the separate planning ledger. Thresholds below are
-proposals for review with the instrument specification, not existing passes.
+The [historical evidence review](DUAL_CT_THREE_PHASE_EVIDENCE_REVIEW.md) records
+**eight partial gates and six open gates**, with no passed gate or admission.
+Thresholds below are proposals for review, not existing passes.
 
 | Gate | Required observation | Pass condition / rejection |
 | --- | --- | --- |
@@ -92,6 +109,7 @@ proposals for review with the instrument specification, not existing passes.
 | Native projection | Homey Energy and detailed device on desktop/mobile | One property source with correct sign/totals; per-phase monitor values preserved; no duplicate solar/battery contribution |
 | Storage/recovery | Natural gap, separately approved restart/non-clean update | Native three-decimal kWh and precise Wh retained; first new sample is anchor only; no downtime backfill; stale checkpoint cannot lower totals |
 | Upgrade/backup | Reviewed preservation baseline and separate backup/rollback test | Identities/Flows/Insights/settings retained; no manual counter correction; original STREAM startup dip tracked separately |
+| Source overlap | Existing Homey electricity contributor inventory at adoption | One property source; a physical utility reference is not automatically a Homey contributor |
 | Normal use | ≥48 hours on exact final runtime/firmware/wiring/policy | Retained counters, no unexplained gaps or overlap, acceptable coverage/error and native UI; any candidate change requires scope reassessment |
 
 A proposed 99% coverage criterion is not met simply because a few power samples
