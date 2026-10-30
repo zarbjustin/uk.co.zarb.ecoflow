@@ -1,5 +1,37 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Development 1.11.7 installation deferred to approved conditional window — 30 October 2026
+
+The owner approved one non-clean installation of the exact combined candidate and
+widget/display/counter validation, with Test/Live unchanged and no re-pairing or
+battery changes. Fresh preflight verified the archive/CI and captured 14 EcoFlow
+devices, 101 Flows and 1,204 Insights identities. Installation has **not occurred**:
+the live reserve coordinator is renewing an active preservation lease, and startup
+could invoke the unchanged watchdog's guard-loss/restoration branch.
+
+The owner authorised a coordination request to the HomeyPro task. Its read-only
+review confirmed no safe current window under the no-battery-changes restriction.
+The owner then approved one conditional maintenance window on **31 October 2026,
+17:05–17:25 Europe/London (GMT)**. A single current-thread heartbeat is active:
+`ecoflow-1-11-7-conditional-maintenance`. The forecasted slot is not a guarantee.
+
+Proceed only after fresh natural-release, completed/nonfaulted lease, empty-intent,
+clear-run-lock, native ownership and whole-window policy checks. Approval additionally
+covers temporarily disabling only the dedicated execution Flow/configuration after
+natural release, then restoring its previous enablement only after successful native
+validation. Preserve gate, lease/fault history and expected ownership. Do not force
+release, edit/renew leases, command batteries or clear faults to create a window.
+If unsafe or drifted, defer without changes and report; no automatic retry window.
+
+Use only source `5a59e97aefb9aae2445809028a0b4c4dff2569ea`, exact successful CI
+41123399129 and archive SHA-256
+`f41f5d4b35a476e8440d7327936333338ac7ef814023921cb5657a024a8414e1`.
+Do not rebuild/substitute a later working tree or repeat an uncertain install.
+Private review/validation instructions and baseline remain outside Git. Installed
+Development remains 1.11.5; Test 1.11.6/build 73 and Live 1.10.3/build 18 were unchanged
+at preflight. No runner/Flow/settings/lease/battery mutation has been performed here.
+
+
 ## Combined 1.11.7 display and availability candidate — 30 October 2026
 
 Owner authorised adding the availability fix with regression tests while keeping
