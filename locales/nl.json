@@ -15,6 +15,7 @@
     "saved": "Aanmelding opgeslagen. Apparaten verbinden opnieuw; controleer hun metingen. Apparaatidentiteiten en Energy-toestemmingen zijn behouden."
   },
   "dual_ct_energy": {
+    "recovering": "Metergegevens onderbroken. De verbinding wordt automatisch hersteld; opgebouwde energietotalen blijven behouden.",
     "title": "Dual CT woningenergie",
     "intro": "Gebruik CT1 als netmeter voor het hele terrein. CT2-metingen tellen niet mee in de woningtotalen.",
     "unavailable": "Deze meter wordt nog niet ondersteund voor Homey Energy. Bestaande meters en Energy-instellingen blijven ongewijzigd.",

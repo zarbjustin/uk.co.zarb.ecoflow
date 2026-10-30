@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.11.0",
+  "version": "1.11.5",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -130,6 +130,10 @@
     "coordinatedReserveControl": {
       "method": "POST",
       "path": "/coordinated-reserve-control"
+    },
+    "coordinatedReadings": {
+      "method": "POST",
+      "path": "/coordinated-readings"
     }
   },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",

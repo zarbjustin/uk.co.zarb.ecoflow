@@ -136,3 +136,11 @@ test('clock rollback invalidates old applied values but admits a new-epoch recei
   ages.observe({ measure_power: 0 }, 5000);
   assert.equal(ages.snapshot(5001, 180000).measure_power.stale, false);
 });
+
+test('exact applied receipt is field specific and does not advance on failed writes or other telemetry', () => {
+ const ages = new Stream5000ReadingAges(); const key = 'stream_unit_power_battery_flow';
+ assert.equal(ages.appliedReceiptAt(key), null); ages.observe({ [key]: -100 }, 1000);
+ ages.observe({ measure_temperature: 30 }, 2000); ages.failed(key, 3000);
+ assert.equal(ages.appliedReceiptAt(key), 1000); ages.observe({ [key]: 0 }, 4000); assert.equal(ages.appliedReceiptAt(key), 4000);
+ ages.observe({ [key]: null }, 5000); assert.equal(ages.appliedReceiptAt(key), null);
+});

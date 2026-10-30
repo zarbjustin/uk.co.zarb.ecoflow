@@ -159,3 +159,55 @@ test('receipt gaps re-anchor a new session without filling missing time or reset
   assert.ok(Math.abs(d.values.get('meter_power.imported') - total - 0.001) < 1e-9);
   await d.onUninit();
 });
+
+test('native rounded import and export counters survive a reporting gap and runtime restart', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  for (const watts of [5760, -5760]) {
+    now = 1000;
+    const first = new Driver(); enabled(first);
+    const set = first.setCapabilityValue.bind(first);
+    first.setCapabilityValue = (id, value) => set(id, typeof value === 'number' && id.startsWith('meter_power.') ? Math.round(value * 1000) / 1000 : value);
+    const cap = watts > 0 ? 'meter_power.imported' : 'meter_power.exported';
+    try {
+      await first.onInit();
+      first.subscriptions[0](payload(watts), `/app/device/property/${sn}`); await settle();
+      now = 2000; first.subscriptions[0](payload(watts), `/app/device/property/${sn}`); await settle();
+      assert.equal(first.values.get(cap), 0.002, 'Homey projects 1.6 Wh to 0.002 kWh');
+      const checkpoint = first.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY);
+      assert.ok(Math.abs((watts > 0 ? checkpoint.importedWh : checkpoint.exportedWh) - 1.6) < 1e-9);
+      now = 8000; first.subscriptions[0](payload(watts), `/app/device/property/${sn}`); await settle();
+      const retry = [...first.timers.values()].find(timer => !timer.interval); assert.ok(retry);
+      retry.fn(); await settle();
+      assert.equal(first.subscriptions.length, 2, 'rounded native projection is not a rollback');
+      assert.equal(first.values.get(cap), 0.002, 'recovery never lowers the native counter');
+      first.subscriptions.at(-1)(payload(watts), `/app/device/property/${sn}`); await settle();
+      assert.equal(first.values.get(cap), 0.002, 'new epoch does not backfill the gap');
+      await first.onUninit();
+      const second = new Driver(); enabled(second); second.store = new Map(first.store); second.values = new Map(first.values);
+      try {
+        now = 108000; await second.onInit();
+        assert.equal(second.subscriptions.length, 1, 'native precision also survives a process restart');
+        assert.equal(second.values.get(cap), 0.002);
+      } finally { await second.onUninit(); }
+    } finally { await first.onUninit(); }
+  }
+});
+
+test('native precision still rejects a genuinely older checkpoint in either counter', async t => {
+  t.mock.method(Date, 'now', () => 1000);
+  for (const cap of ['meter_power.imported', 'meter_power.exported']) {
+    for (const [wh, previous, admitted] of [[1.4, 0.001, true], [1.4, 0.002, false], [1.6, 0.003, false]]) {
+      const d = new Driver(); enabled(d); d.values.set(cap, previous);
+      const imported = cap === 'meter_power.imported' ? wh : 0;
+      const exported = cap === 'meter_power.exported' ? wh : 0;
+      const saved = makeDualCtEnergyCheckpoint(binding, contract.timing, 1, imported, exported);
+      d.store.set(DUAL_CT_ENERGY_CHECKPOINT_KEY, saved);
+      try {
+        await d.onInit();
+        assert.equal(d.subscriptions.length, admitted ? 1 : 0);
+        assert.equal(d.values.get(cap), previous, 'no native counter rollback');
+        assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved, 'restore never rewrites precision or resets totals');
+      } finally { await d.onUninit(); }
+    }
+  }
+});

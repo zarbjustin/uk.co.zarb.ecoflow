@@ -79,7 +79,24 @@ test('known mode/reserve/socket and authoritative 32/2 SOC limits decode indepen
   assert.deepEqual(parse(frame(group(1, Buffer.concat([scalar(7, 95), scalar(21, 10)])), 32, 2), SN),
     [{ maxChargeSocPct: 95, minDischargeSocPct: 10 }]);
   assert.deepEqual(parse(frame(Buffer.concat([scalar(25, 99), group(19, Buffer.alloc(0)), group(30, Buffer.alloc(0))])), SN),
-    [{ mode: null, backupSocketEnabled: false, backupReserveEnabled: false }]);
+    [{ mode: null, backupSocketEnabled: false }]);
+});
+
+test('percentage-only reserve delta preserves enable value and original enable receipt age', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(group(30, Buffer.concat([scalar(1, 1), scalar(2, 100)]))), 1000);
+  tracker.observe(frame(group(30, scalar(2, 47))), 11000);
+  const values = tracker.snapshot(11000).values;
+  assert.equal(values.backupReserveEnabled.value, true);
+  assert.equal(values.backupReserveEnabled.ageSec, 10);
+  assert.equal(values.backupReservePct.value, 47);
+  assert.equal(values.backupReservePct.ageSec, 0);
+});
+
+test('reserve disabled must be explicitly reported; absent delta does not invent a flag', () => {
+  assert.deepEqual(parse(frame(group(30, scalar(2, 47))), SN), [{ backupReservePct: 47 }]);
+  assert.deepEqual(parse(frame(group(30, scalar(1, 0))), SN), [{ backupReserveEnabled: false }]);
+  assert.deepEqual(parse(frame(group(30, Buffer.alloc(0))), SN), []);
 });
 
 test('configuration deltas preserve unrelated fields and age per field; restart has no restored settings', () => {

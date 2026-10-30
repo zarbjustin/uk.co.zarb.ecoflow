@@ -6,7 +6,7 @@ import { DualCtHomeyEnergyContext, dualCtCredentialsRevision } from '../../lib/d
 import { DualCtGridEnergySession } from '../../lib/dualCtGridEnergySession';
 import { DualCtGridEnergyDeviceAdapter } from '../../lib/dualCtGridEnergyDeviceAdapter';
 import { DualCtEnergyAuthority } from '../../lib/dualCtEnergyAdoption';
-import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint } from '../../lib/dualCtEnergyCheckpoint';
+import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint, dualCtHomeyEnergyKwh } from '../../lib/dualCtEnergyCheckpoint';
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED, dualCtGridBinding, resolveDualCtGridEnergyContract } from '../../lib/dualCtGridEnergySource';
 import { AppFrameDelivery } from '../../lib/EcoFlowAppMqtt';
 import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
@@ -79,7 +79,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         for (const [capability, wh] of [['meter_power.imported', checkpoint?.importedWh], ['meter_power.exported', checkpoint?.exportedWh]] as const) {
           const previous = this.getCapabilityValue(capability);
           if (previous !== null && previous !== undefined && (typeof previous !== 'number' || !Number.isFinite(previous) || previous < 0)) throw new Error('counter_invalid');
-          if (typeof previous === 'number' && previous > 0 && (wh === undefined || previous > wh / 1000 + 1e-9)) throw new Error('counter_rollback');
+          if (typeof previous === 'number' && previous > 0 && (wh === undefined || previous > dualCtHomeyEnergyKwh(wh) + 1e-9)) throw new Error('counter_rollback');
         }
         return saved;
       };
@@ -171,7 +171,8 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     const { adapter } = this; this.adapter = null;
     await adapter?.close();
     if (generation !== this.generation) return;
-    await this.setUnavailable(this.homey.__('dual_ct_energy.unavailable')).catch(() => {});
+    await this.setUnavailable(this.homey.__(this.getStoreValue('dualCtEnergyConsent') === 1
+      ? 'dual_ct_energy.recovering' : 'dual_ct_energy.unavailable')).catch(() => {});
     if (generation !== this.generation) return;
     await this.setCapabilityValue('measure_power', null).catch(() => {});
     // Retain cumulative totals/checkpoints, paired identity, Insights and other devices.

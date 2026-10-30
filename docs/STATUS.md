@@ -1,5 +1,70 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## CT1 unavailable recovery investigation — 30 October 2026
+
+Owner's mobile screenshot showed the adopted CT1 Energy meter unavailable with
+an incorrect unsupported-meter message. Current read-only Homey check confirms
+Development 1.11.4, null power, retained imported/exported counters and a healthy
+detailed monitor. Fresh owned-source discovery/current-firmware GET still returns
+model 421 / firmware 1.0.0.41; normal contract qualifies, inventory is complete,
+and no other active property contributor is present. No Repair or re-pair ran.
+
+Confirmed software defect: native meter_power values have three decimal kWh,
+while the restore rollback check compared them with unrounded checkpoint Wh.
+An internal 1.6 Wh projects to 0.002 kWh and was wrongly rejected on a local
+reporting-gap retry or process restart. Synthetic native-rounding reproduction
+fails before the correction and passes after it, for both import and export.
+The correction quantises only native projection/restore comparison to one Wh;
+precise checkpoint Wh are unchanged. Older checkpoints remain blocked and no
+counter is rewritten/reset or downtime backfilled. The generic unsupported
+pairing message is replaced with an automatic-recovery message for adopted meters.
+
+The installed checkpoint is not exposed by the existing support API, so the
+exact live internal exception remains unobserved. This is a reproduced defect
+consistent with the field failure, not a claim that a generic message proves its
+cause. Initial installation/import readback was valid but did not prove sustained
+recovery. Mobile Energy still needs readback after an approved corrective update.
+Today’s historical balance is partial; missing grid hours are not reconstructed.
+
+Correction is local source only. All 1,221 tests, lint and release checks pass.
+Preserve the independently deployed 1.11.4 bridge and its uncommitted changes.
+Test build 71 / 1.11.0 and Live build 18 / 1.10.3 are unchanged by this investigation.
+No app restart/install, battery operation, Flow execution or Energy setting write
+was performed. Fresh approval is required for a corrective installation/publication.
+
+
+## Owner-authorized coordinated reserve execution — Development 1.11.4, 30 October
+
+The HomeyPro chat deployed the reserve-only bridge and coordinated house/office
+minute runner on the exact 1.11.0/8db8944 source baseline. Development 1.11.4 is
+installed; Test 1.11.0 build 71 / Live 1.10.3 build 18 remain separate. Preserve
+this bridge, watchdog, read-refresh API and configuration-delta correction in
+subsequent app builds. Do not reinstall 1.10.x or remove the adopted CT1 device.
+
+Owner explicitly authorized interrupting manual house 100% and handing over to
+the new schedule. House baseline enabled/18%, office 3%, feed-in OFF; house/CT1
+anti-export and native input/output limits unchanged. Office charged at 335 W
+under a verified house hold; independent watchdog confirmed office stopped
+(fresh -313 W) before house restoration. Automatic 04:43/04:44 UTC decisions
+are healthy Outside charging windows. Future tariff-window delivery remains
+unobserved. No Codex task resumed; private evidence and historical faults kept.
+
+The read-only header-only ES21 get-all uses the existing MQTT connection and no
+new subscription. A new applied battery-power field receipt is required; cloud
+cached quota, temperature-only updates and failed writes cannot renew power
+freshness. Concurrent reads coalesce; watchdog rechecks unchanged lease identity
+after awaiting reads. Preserve manual ownership and independently leased stop.
+Native Homey/cloud disconnection still limits physical stopping; this is not a
+native one-off task expiry. Full hardware/48h/accuracy qualification remains pending.
+
+Validation: 1,219 tests, lint, release boundary checks and Homey CLI 4.5.3 verified
+build passed. Fourteen EcoFlow device IDs/settings/capabilities, all existing
+Insights, ten sampled counters and the adopted CT1 Energy settings were retained.
+Delivered archive SHA-256:
+`d6117a4caad9869cccd7df37d79eb487f1400ea9a60afe1b211cc7fddf72040e`.
+Source changes are local and not yet committed/pushed in this deployment phase.
+Full private receipts remain in HomeyPro backups/review/house-reserve-control/.
+
 ## 1.11.0 Test build 71 published — 30 October 2026
 
 Owner-approved Test build **71 / 1.11.0** is active; portal and API both confirm

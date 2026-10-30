@@ -163,7 +163,10 @@ export function parseStream5000Configuration(frame: Buffer, expectedSerial: stri
           if (socket) result.backupSocketEnabled = (integer(socket, 1, 1) ?? 0) === 1;
           const reserve = child(list, 30);
           if (reserve) {
-            result.backupReserveEnabled = (integer(reserve, 1, 1) ?? 0) === 1;
+            // Configuration pushes are deltas. A percentage-only reply does
+            // not report the enable flag and cannot turn it off or renew it.
+            const enabled = integer(reserve, 1, 1);
+            if (enabled !== undefined) result.backupReserveEnabled = enabled === 1;
             put('backupReservePct', integer(reserve, 2, 100));
           }
           const tasks = taskList(list);

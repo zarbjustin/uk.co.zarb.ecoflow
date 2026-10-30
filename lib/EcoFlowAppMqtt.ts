@@ -4,6 +4,7 @@ import mqtt, { MqttClient } from 'mqtt';
 import { performance } from 'perf_hooks';
 import { EcoFlowAppAuthClient, EcoFlowAppAuthError } from './EcoFlowAppAuthClient';
 import { appMqttClientId } from './appMqttClientId';
+import { houseReadRequest } from './houseReadRequest';
 
 /**
  * Shared MQTT session against EcoFlow's **app** broker.
@@ -266,6 +267,19 @@ export class EcoFlowAppMqtt {
     await new Promise<void>((resolve, reject) => {
       client.publish(`/app/${this.userId}/${sn}/thing/property/set`, frame, { qos: 0, retain: false }, (error) => {
         if (error) reject(new Error('House reserve publish failed')); else resolve();
+      });
+    });
+  }
+
+  /** Explicit status request on the existing subscribed session; never a SET. */
+  async requestHouseRead(sn: string): Promise<void> {
+    const { client } = this;
+    if (!/^ES21[A-Z0-9]{4,60}$/.test(sn) || !this.handlers.has(sn) || !this.userId
+      || !client?.connected || client.disconnecting || this.ended) throw new Error('House read transport unavailable');
+    const frame = houseReadRequest((Date.now() & 0x7fffffff) || 1);
+    await new Promise<void>((resolve, reject) => {
+      client.publish(`/app/${this.userId}/${sn}/thing/property/get`, frame, { qos: 0, retain: false }, (error) => {
+        if (error) reject(new Error('House read request not sent')); else resolve();
       });
     });
   }

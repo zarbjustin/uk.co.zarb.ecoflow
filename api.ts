@@ -5,6 +5,10 @@ import { createSupportSnapshot } from './lib/supportSnapshot';
 import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
+  async coordinatedReadings({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
+    if (body && Object.keys(body).length) throw new Error('Read endpoint takes no targets or commands');
+    return homey.app.refreshCoordinatedReadings();
+  },
   async coordinatedReserveControl({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
     return homey.app.requestCoordinatedReserve(body);
   },

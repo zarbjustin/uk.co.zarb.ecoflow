@@ -463,6 +463,10 @@ export class Stream5000UnitDevice extends Homey.Device {
     return this.applyChain;
   }
 
+  getAppliedReadingAt(key: string): number | null {
+    return this.readingAges.appliedReceiptAt(key);
+  }
+
   getReadingDiagnostics(): Record<string, unknown> {
     return this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
   }

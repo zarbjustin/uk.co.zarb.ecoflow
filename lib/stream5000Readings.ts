@@ -114,6 +114,10 @@ export class Stream5000ReadingAges {
     this.writeFailures.delete(key);
   }
 
+  appliedReceiptAt(key: string): number | null {
+    return this.timestamps.get(key) ?? null;
+  }
+
   snapshot(now: number, limitMs: number): Record<string, unknown> {
     return Object.fromEntries([...this.received].map(([key, receivedAt]) => {
       const at = this.timestamps.get(key);

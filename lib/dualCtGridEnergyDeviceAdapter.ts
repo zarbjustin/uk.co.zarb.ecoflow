@@ -1,5 +1,6 @@
 /** Homey write boundary for a FUTURE separate Energy device. Not instantiated by any driver. */
 import { DualCtGridEnergySession } from './dualCtGridEnergySession';
+import { dualCtHomeyEnergyKwh } from './dualCtEnergyCheckpoint';
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED } from './dualCtGridEnergySource';
 
 interface DevicePort {
@@ -143,7 +144,7 @@ export class DualCtGridEnergyDeviceAdapter {
         this.status = 'projection_superseded'; return;
       }
       // eslint-disable-next-line no-await-in-loop
-      await this.port.setCapabilityValue(id, values[id]);
+      await this.port.setCapabilityValue(id, id === 'measure_power' ? values[id] : dualCtHomeyEnergyKwh(values[id]! * 1000));
     }
     if (!await this.guard(generation)) return;
     const after = this.session.view();

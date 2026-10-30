@@ -141,7 +141,8 @@ test('expiry ticks coalesce behind slow SDK IO; newer checkpoint cannot be publi
   released.resolve(); await Promise.all([pending, ...ticks]);
   assert.equal(h.caps.get('measure_power'), null); assert.equal(h.adapter.diagnostics().status, 'projection_superseded');
   await h.adapter.refresh(); assert.equal(h.caps.get('measure_power'), 7200);
-  assert.equal(h.caps.get('meter_power.imported'), h.saved().importedWh / 1000); await h.adapter.close();
+  assert.equal(h.saved().importedWh, 2.5, 'checkpoint retains sub-Wh precision');
+  assert.equal(h.caps.get('meter_power.imported'), 0.003, 'native projection uses three decimal kWh'); await h.adapter.close();
 });
 
 test('unrelated CT2/voltage packets preserve CT1 intervals without renewing power freshness; partial CT1 still breaks the anchor', async () => {

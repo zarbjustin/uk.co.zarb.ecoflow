@@ -15,6 +15,7 @@
     "saved": "Sign-in saved. Devices will reconnect; check their readings. Device identities and Energy permissions were kept."
   },
   "dual_ct_energy": {
+    "recovering": "Meter readings interrupted. Reconnecting automatically; accumulated energy totals are retained.",
     "title": "Dual CT property Energy",
     "intro": "Use CT1 as the grid meter for your whole property. CT2 readings are excluded from the property totals.",
     "unavailable": "This meter is not yet supported for Homey Energy. Your existing meters and Energy settings are unchanged.",

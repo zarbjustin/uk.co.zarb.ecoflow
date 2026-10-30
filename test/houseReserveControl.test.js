@@ -33,7 +33,7 @@ test('expired coordinated lease stops office before restoring house and records 
  const store = { houseReserveLease: { until: Date.now() - 1, officeDeviceId: 'office', officeRestoreReserve: 3, officeExpectedReserve: 100, houseDeviceId: h.gate.deviceId, serial: h.gate.serial, restoreEnabled: true, restorePercent: 18, expectedEnabled: true, expectedPercent: 19 } };
  h.app.homey.settings = { get: key => store[key], set: (key, val) => { store[key] = val; } };
  h.app.homey.drivers.getDriver = kind => ({ getDevices: () => kind === 'stream'
-   ? [{ getId: () => 'office', getAvailable: () => true, getCapabilityValue: () => 100, flowSetBackupReserve: async n => { assert.equal(n, 3); events.push('office-stop'); } }]
+   ? [{ getId: () => 'office', getAvailable: () => true, getCapabilityValue: () => 100, flowRefresh: async () => {}, getReportingDiagnostics: () => ({ observations: { measure_power: { value: -1, receivedAt: Date.now(), source: 'rest' } } }), flowSetBackupReserve: async n => { assert.equal(n, 3); events.push('office-stop'); } }]
    : [{ getId: () => h.gate.deviceId, getData: () => ({ sn: h.gate.serial }), getAvailable: () => true, getConfigurationDiagnostics: () => value }] });
  h.app.appMqtt.publishHouseReserve = async () => { events.push('house-restore'); value = snapshot(true, 18); };
  await h.app.expireHouseReserveLease(); assert.deepEqual(events, ['office-stop', 'house-restore']); assert.equal(store.houseReserveLease.completed, true);
@@ -57,23 +57,23 @@ test('house hold requires its own fresh nonnegative battery power and a reserve 
 });
 test('loss of house hold stops owned office before the unexpired lease ends', async () => {
  const h = harness(); const events = []; let value = snapshot(true, 19);
- const store = { houseReserveControl: { enabled: true, mode: 'routine', siteChargeKw: 2.8, officeNativeChargeKw: 2.3 }, houseReserveLease: { until: Date.now() + 60000, officeDeviceId: 'office', officeRestoreReserve: 3, officeExpectedReserve: 100, houseDeviceId: h.gate.deviceId, serial: h.gate.serial, restoreEnabled: true, restorePercent: 18, expectedEnabled: true, expectedPercent: 19 } };
+ const store = { houseReserveControl: { enabled: true, mode: 'routine', siteChargeKw: 2.8, houseNativeChargeKw: 2.5, officeNativeChargeKw: 2.3 }, houseReserveLease: { until: Date.now() + 60000, officeDeviceId: 'office', officeRestoreReserve: 3, officeExpectedReserve: 100, houseDeviceId: h.gate.deviceId, serial: h.gate.serial, restoreEnabled: true, restorePercent: 18, expectedEnabled: true, expectedPercent: 19 } };
  h.app.homey.settings = { get: key => store[key], set: (key, val) => { store[key] = val; } };
  h.app.homey.drivers.getDriver = kind => ({ getDevices: () => kind === 'stream'
-   ? [{ getId: () => 'office', getAvailable: () => true, getCapabilityValue: () => 100, flowSetBackupReserve: async () => { events.push('office-stop'); } }]
+   ? [{ getId: () => 'office', getAvailable: () => true, getCapabilityValue: () => 100, flowRefresh: async () => {}, getReportingDiagnostics: () => ({ observations: { measure_power: { value: -1, receivedAt: Date.now(), source: 'rest' } } }), flowSetBackupReserve: async () => { events.push('office-stop'); } }]
    : [{ getId: () => h.gate.deviceId, getData: () => ({ sn: h.gate.serial }), getAvailable: () => true, getConfigurationDiagnostics: () => value, getReadingDiagnostics: () => ({}) }] });
  h.app.appMqtt.publishHouseReserve = async () => { events.push('house-restore'); value = snapshot(true, 18); };
  await h.app.expireHouseReserveLease(); assert.deepEqual(events, ['office-stop', 'house-restore']);
 });
 function coordinatedHarness() {
  const h = harness(); let reserve = 3; let power = 0; let houseValue = snapshot(); const events = [];
- const store = { houseReserveControl: { ...h.gate, mode: 'routine', expiresAt: null, officeDeviceId: 'office', restoreEnabled: true, restorePercent: 18, officeRestoreReserve: 3, siteChargeKw: 2.8, officeNativeChargeKw: 2.3 } };
- const office = { getId: () => 'office', getAvailable: () => true, getCapabilityValue: () => reserve, flowSetBackupReserve: async n => { events.push('office:' + n); reserve = n; } };
+ const store = { houseReserveControl: { ...h.gate, mode: 'routine', expiresAt: null, officeDeviceId: 'office', restoreEnabled: true, restorePercent: 18, officeRestoreReserve: 3, siteChargeKw: 2.8, houseNativeChargeKw: 2.5, officeNativeChargeKw: 2.3 } };
+ const office = { getId: () => 'office', getAvailable: () => true, getCapabilityValue: key => key === 'operating_mode' ? 'self_powered' : key === 'alarm_generic' ? false : reserve, flowRefresh: async () => {}, getReportingDiagnostics: () => ({ observations: { measure_power: { value: -1, receivedAt: Date.now(), source: 'rest' } } }), flowSetBackupReserve: async n => { events.push('office:' + n); reserve = n; } };
  const house = { getId: () => h.gate.deviceId, getData: () => ({ sn: h.gate.serial }), getAvailable: () => true, getConfigurationDiagnostics: () => houseValue, getReadingDiagnostics: () => Object.fromEntries(['measure_battery', 'stream_unit_power_battery_flow'].map(k => [k, { ageSec: 0, stale: false, applicationStatus: 'applied' }])), getCapabilityValue: k => k === 'measure_battery' ? 18 : power };
  h.app.homey.settings = { get: key => store[key], set: (key, val) => { store[key] = val; } }; h.app.homey.setInterval = () => 1;
  h.app.homey.drivers.getDriver = kind => ({ getDevices: () => [kind === 'stream' ? office : house] });
  h.app.appMqtt.publishHouseReserve = async () => { events.push('house:20'); houseValue = snapshot(true, 20); };
- return { ...h, store, events, setPower: n => { power = n; }, setOffice: n => { reserve = n; } };
+ return { ...h, store, events, office, setPower: n => { power = n; }, setOffice: n => { reserve = n; } };
 }
 test('coordinated endpoint starts office only at verified house hold with a native lease', async () => {
  const h = coordinatedHarness();
@@ -89,4 +89,63 @@ test('coordinated change releases office before changing house reserve', async (
  const h = coordinatedHarness(); h.setOffice(22);
  await h.app.requestCoordinatedReserve({ housePercent: 20, expectedHousePercent: 18, officePercent: 3, expectedOfficePercent: 22, leaseUntil: Date.now() + 60000 });
  assert.deepEqual(h.events, ['office:3', 'house:20']);
+});
+test('office stop waits for fresh noncharging native power before house restoration', async () => {
+ const h = coordinatedHarness(); let watts = 2611; let refreshes = 0;
+ h.office.flowRefresh = async () => { refreshes++; watts = refreshes >= 3 ? -20 : 2611; };
+ h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: watts, receivedAt: Date.now(), source: 'rest' } } });
+ await h.app.verifyOfficeChargeStopped(h.office); assert.equal(refreshes, 3); assert.ok(watts <= 0);
+});
+test('old zero power cannot prove an office stop, and actual combined watts enforce allowance', async () => {
+ const h = coordinatedHarness(); h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: 0, receivedAt: Date.now() - 60000, source: 'rest' } } });
+ await assert.rejects(h.app.verifyOfficeChargeStopped(h.office), /stop unverified/);
+ h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: 3000, receivedAt: Date.now(), source: 'rest' } } });
+ const house = h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0];
+ assert.throws(() => h.app.assertCoordinatedPower(house, h.office, h.store.houseReserveControl), /exceeds allowance/);
+});
+test('a house reserve change cannot precede a fresh physical office stop', async () => {
+ const h = coordinatedHarness(); h.setOffice(22); let watts = 2611; let refreshes = 0;
+ h.office.flowRefresh = async () => { refreshes++; if (refreshes >= 3) watts = -10; };
+ h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: watts, receivedAt: Date.now(), source: 'rest' } } });
+ const publish = h.app.appMqtt.publishHouseReserve;
+ h.app.appMqtt.publishHouseReserve = async (...args) => { assert.ok(watts <= 0); assert.equal(refreshes, 3); return publish(...args); };
+ await h.app.requestCoordinatedReserve({ housePercent: 20, expectedHousePercent: 18, officePercent: 3, expectedOfficePercent: 22, leaseUntil: Date.now() + 60000 });
+ assert.deepEqual(h.events, ['office:3', 'house:20']);
+});
+test('office driver receipt timestamps are distinct from projected support ages', async () => {
+ const h = coordinatedHarness();
+ h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: 0, ageSec: 0 } } });
+ await assert.rejects(h.app.verifyOfficeChargeStopped(h.office), /stop unverified/);
+ h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: -10, receivedAt: Date.now(), source: 'rest' } } });
+ await assert.doesNotReject(h.app.verifyOfficeChargeStopped(h.office));
+});
+test('a zero power reading before a pending house charge cannot start office without full headroom', () => {
+ const h = coordinatedHarness(); const house = h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0];
+ house.getConfigurationDiagnostics = () => snapshot(true, 20);
+ assert.throws(() => h.app.assertCoordinatedPower(house, h.office, h.store.houseReserveControl), /charging pending/);
+});
+test('house reserve must be established in an earlier phase before office start', async () => {
+ const h = coordinatedHarness();
+ await assert.rejects(h.app.requestCoordinatedReserve({ housePercent: 20, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /Establish house reserve/);
+ assert.deepEqual(h.events, []);
+});
+test('office manual mode and native alarm retain their charging safety guard', async () => {
+ for (const fault of [false, true]) {
+  const h = coordinatedHarness();const old = h.office.getCapabilityValue;
+  h.office.getCapabilityValue = key => key === 'operating_mode' ? (fault ? 'self_powered' : 'custom') : key === 'alarm_generic' ? fault : old(key);
+  await assert.rejects(h.app.requestCoordinatedReserve({ housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /mode\/fault/);
+  assert.deepEqual(h.events, []);
+ }
+});
+
+test('read refresh coalesces, needs a new applied house packet, and makes no settings writes', async () => {
+ const h = harness(); const gate = { ...h.gate, officeDeviceId: 'office' }; let appliedAt = Date.now() - 1000; let sent = 0; let delay; let update = true;
+ const house = { getId: () => gate.deviceId, getData: () => ({ sn: gate.serial }), getAppliedReadingAt: () => appliedAt, getCapabilityValue: () => 20, getReadingDiagnostics: () => Object.fromEntries(['measure_battery', 'stream_unit_power_battery_flow'].map(k => [k, { ageSec: 0, stale: false, applicationStatus: 'applied' }])) };
+ const office = { getId: () => 'office', flowRefresh: async () => {}, getReportingDiagnostics: () => ({ observations: Object.fromEntries(['measure_battery', 'measure_power'].map(k => [k, { value: 20, receivedAt: Date.now() }])) }) };
+ h.app.homey.settings = { get: () => gate, set: () => assert.fail('Read must not write settings') };
+ h.app.homey.drivers.getDriver = kind => ({ getDevices: () => [kind === 'stream' ? office : house] });
+ h.app.appMqtt.requestHouseRead = async () => { sent++; await new Promise(resolve => { delay = resolve; }); if (update) appliedAt = Date.now(); };
+ const first = h.app.refreshCoordinatedReadings(); const second = h.app.refreshCoordinatedReadings(); await new Promise(resolve => setImmediate(resolve)); delay();
+ const [a, b] = await Promise.all([first, second]); assert.deepEqual(a, b); assert.equal(sent, 1); assert.equal(a.houseFresh, true); assert.equal(a.officeFresh, true); assert.equal(a.settingsWrites, 0);
+ update = false; const third = h.app.refreshCoordinatedReadings(); await new Promise(resolve => setImmediate(resolve)); delay(); assert.equal((await third).houseFresh, false); assert.equal(h.publishes(), 0);
 });

@@ -586,6 +586,9 @@ test('reconnect invalidates old configuration without guessing reserve state or 
   assert.equal(device.hasCapability('meter_power.charged'), false);
   now += 1000;
   await emit(frame(group(30, Buffer.alloc(0))));
+  await assert.rejects(device.configurationReserveEnabled(), /unavailable/);
+  assert.equal(device.values.stream_5000_backup_reserve_state, null);
+  await emit(frame(group(30, Buffer.concat([varint(1 * 8), varint(0)]))));
   assert.equal(await device.configurationReserveEnabled(), false);
   assert.equal(device.values.stream_5000_backup_reserve_state, 'disabled');
   assert.equal(device.values.stream_5000_backup_reserve, null);

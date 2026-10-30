@@ -31,6 +31,15 @@ export function makeDualCtEnergyCheckpoint(binding: string, timing: DualCtEnergy
   return { ...state, checksum: fingerprint(state) };
 }
 
+/** Homey meter_power uses three decimal kWh (one Wh). Keep precise Wh in
+ * the checkpoint; quantise only the native projection and its rollback check.
+ * Comparing rounded Homey values to raw Wh falsely rejects a healthy restore.
+ */
+export function dualCtHomeyEnergyKwh(wh: number): number {
+  if (!energy(wh)) throw new Error('counter_invalid');
+  return Math.round(wh) / 1000;
+}
+
 /** Unknown, mismatched or malformed state is NOT permission to start counting from zero. */
 export function readDualCtEnergyCheckpoint(input: unknown, binding: string, timing: DualCtEnergyTiming): DualCtEnergyCheckpoint | null {
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).sort().join() !== keys.join()) return null;

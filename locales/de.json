@@ -15,6 +15,7 @@
     "saved": "Anmeldung gespeichert. Geräte verbinden sich neu; prüfen Sie die Messwerte. Geräteidentitäten und Energy-Freigaben bleiben erhalten."
   },
   "dual_ct_energy": {
+    "recovering": "Zählerdaten unterbrochen. Die Verbindung wird automatisch wiederhergestellt; Energiezählerstände bleiben erhalten.",
     "title": "Dual CT Hausenergie",
     "intro": "Verwenden Sie CT1 als Netzstromzähler für das gesamte Grundstück. CT2-Messwerte werden nicht zu den Grundstückssummen addiert.",
     "unavailable": "Dieser Zähler wird noch nicht für Homey Energy unterstützt. Bestehende Zähler und Energy-Einstellungen bleiben unverändert.",
