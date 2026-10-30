@@ -15,6 +15,9 @@
     "saved": "Sign-in saved. Devices will reconnect; check their readings. Device identities and Energy permissions were kept."
   },
   "dual_ct_energy": {
+    "reviewOverlapNamed": "These included devices are being treated as property grid meters. Review their Energy role before adding this meter. No settings were changed.",
+    "unnamedOverlapDevice": "Unnamed electricity meter",
+    "moreOverlapDevices": "Additional included meters",
     "reviewSourceFailed": "The account, meter identity or current firmware could not be read. Check the EcoFlow account and region. Nothing was added.",
     "reviewContractFailed": "The current meter firmware could not be qualified for this Energy mode. Nothing was added; do not change firmware to bypass this check.",
     "reviewInventoryFailed": "Other Homey Energy sources could not be checked completely. Nothing was added.",

@@ -91,3 +91,24 @@ test('errors from discovery/inventory are scrubbed before reaching a pairing UI'
     await assert.rejects(h.workflow.prepare(), error => !error.message.includes('PRIVATE_TOKEN'));
   }
 });
+
+test('overlap details are bounded local labels from matching included sources only',async()=>{
+ const h=harness();h.inventory.contributors=[
+  {id:'meter_one',grid:'property',contributes:true,name:'  Grid\n\u202emeter  '},
+  {id:'excluded',grid:'property',contributes:false,name:'DO_NOT_REPORT_EXCLUDED'},
+  {id:'foreign',grid:'other_grid',contributes:true,name:'DO_NOT_REPORT_FOREIGN'},
+  ...Array.from({length:7},(_,i)=>({id:'other_'+i,grid:'property',contributes:true,...(i===0?{}:{name:'x'.repeat(100)})}))];
+ let failure;try{await h.workflow.prepare();}catch(e){failure=e;}
+ assert.equal(failure.message,'grid_source_overlap');assert.equal(failure.total,8);
+ assert.equal(failure.devices.length,5);assert.equal(failure.devices[0],'Grid meter');assert.equal(failure.devices[1],null);
+ assert.equal(Array.from(failure.devices[2]).length,80);
+ assert.doesNotMatch(JSON.stringify(failure.devices),/DO_NOT_REPORT|meter_one|synthetic_account|SYNTHETICDUAL/);
+ await assert.rejects(h.workflow.confirm({token:'forged',consent:true,externalOverlapReviewed:true}),/review_consent_required/);
+});
+
+test('changing a display name does not change source binding or inventory authority',async()=>{
+ const baseline=harness();const first=await baseline.workflow.prepare();const expected=await baseline.confirm(first);
+ const h=harness();h.inventory.contributors[0].name='Before';const review=await h.workflow.prepare();
+ h.inventory.contributors[0].name='After';const row=await h.confirm(review);
+ assert.equal(row.store.dualCtEnergySourceBinding,expected.store.dualCtEnergySourceBinding);assert.doesNotMatch(JSON.stringify(row),/Before|After/);
+});

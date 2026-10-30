@@ -78,3 +78,9 @@ test('a failed subsequent firmware lookup invalidates source and inventory rathe
   valid = false; await assert.rejects(h.context.refresh()); assert.equal(h.context.snapshot(), null);
   assert.equal(h.counts().lists, 1, 'no new inventory or accounting admission after firmware loss');
 });
+
+test('overlap inventory carries local names but detailed beta monitors remain non-contributors',()=>{
+ const fs=require('node:fs');const manifest=JSON.parse(fs.readFileSync(require('node:path').join(__dirname,'../drivers/smartmeter_dual_ct_preview/driver.compose.json'),'utf8'));
+ const rows={legacy:{...device('legacy'),name:'Earlier meter'},excluded:{...device('excluded',undefined,true,{energy_exclude:true}),name:'Excluded office'},preview:{...device('preview',manifest.capabilities),name:'Dual CT beta monitor'}};
+ assert.deepEqual(classify(rows),{complete:true,contributors:[{id:'legacy',grid,contributes:true,name:'Earlier meter'},{id:'excluded',grid,contributes:false,name:'Excluded office'}]});
+});

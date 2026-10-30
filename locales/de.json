@@ -15,6 +15,9 @@
     "saved": "Anmeldung gespeichert. Geräte verbinden sich neu; prüfen Sie die Messwerte. Geräteidentitäten und Energy-Freigaben bleiben erhalten."
   },
   "dual_ct_energy": {
+    "reviewOverlapNamed": "Diese einbezogenen Geräte werden als Hausanschlusszähler behandelt. Prüfe ihre Energy-Rolle, bevor du diesen Zähler hinzufügst. Es wurden keine Einstellungen geändert.",
+    "unnamedOverlapDevice": "Stromzähler ohne Namen",
+    "moreOverlapDevices": "Weitere einbezogene Zähler",
     "reviewSourceFailed": "Konto, Zähleridentität oder aktuelle Firmware konnten nicht gelesen werden. Prüfe EcoFlow-Konto und Region. Es wurde nichts hinzugefügt.",
     "reviewContractFailed": "Die aktuelle Zählerfirmware konnte für diesen Energy-Modus nicht bestätigt werden. Es wurde nichts hinzugefügt; ändere die Firmware nicht, um diese Prüfung zu umgehen.",
     "reviewInventoryFailed": "Andere Homey-Energy-Quellen konnten nicht vollständig geprüft werden. Es wurde nichts hinzugefügt.",

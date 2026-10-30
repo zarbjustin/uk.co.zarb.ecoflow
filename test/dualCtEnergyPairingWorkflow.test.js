@@ -134,3 +134,37 @@ test('review displays only allowlisted translated failure classifications',async
   }
  }finally{await browser.close();}
 });
+
+test('mobile overlap review shows local names as text, stays blocked and clears on selection changes',async()=>{
+ const browser=await chromium.launch();
+ try{
+  for(const language of ['en','de','nl']){
+   const page=await pageFor(browser,{width:390,height:600},language,true);
+   await page.evaluate(()=>{const emit=Homey.emit;Homey.emit=(name,input)=>name==='dual_ct_energy_review'?Promise.resolve({blocked:true,reason:'grid_source_overlap',devices:['Earlier meter','<img src=x onerror=alert(1)>',null,'x'.repeat(80),'Second meter'],total:8}):emit(name,input);});
+   await page.locator('#find').click();await page.locator('#review').click();
+   assert.deepEqual(await page.locator('#overlapDevices li').allTextContents(),['Earlier meter','<img src=x onerror=alert(1)>',require(`../locales/${language}.json`).dual_ct_energy.unnamedOverlapDevice,'x'.repeat(80),'Second meter']);
+   assert.equal(await page.locator('#overlapDevices img').count(),0);
+   assert.match(await page.locator('#overlapMore').innerText(),/: 3$/);
+   assert.equal(await page.locator('#confirmation').isHidden(),true);assert.equal(await page.locator('#approve').isDisabled(),true);
+   assert.deepEqual(await page.evaluate(()=>window.views),[]);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+   await page.locator('#wiring').selectOption('three_phase_community');
+   assert.equal(await page.locator('#overlapDetails').isHidden(),true);assert.equal(await page.locator('#overlapDevices li').count(),0);
+   await page.close();
+  }
+ }finally{await browser.close();}
+});
+
+test('malformed overlap responses cannot display arbitrary payloads or enable confirmation',async()=>{
+ const browser=await chromium.launch();
+ try{
+  for(const payload of [{devices:['x'],total:0},{devices:[{id:'PRIVATE'}],total:1},{devices:['x'.repeat(81)],total:1},{devices:['one','two','three','four','five','six'],total:6}]){
+   const page=await pageFor(browser,{width:390,height:844},'en',true);
+   await page.evaluate(payload=>{const emit=Homey.emit;Homey.emit=(name,input)=>name==='dual_ct_energy_review'?Promise.resolve({blocked:true,reason:'grid_source_overlap',...payload}):emit(name,input);},payload);
+   await page.locator('#find').click();await page.locator('#review').click();
+   assert.equal(await page.locator('#reviewStatus').innerText(),require('../locales/en.json').dual_ct_energy.reviewFailed);
+   assert.equal(await page.locator('#overlapDetails').isHidden(),true);assert.equal(await page.locator('#approve').isDisabled(),true);
+   assert.equal(await page.locator('body').innerText().then(t=>t.includes('PRIVATE')),false);await page.close();
+  }
+ }finally{await browser.close();}
+});

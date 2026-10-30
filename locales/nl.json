@@ -15,6 +15,9 @@
     "saved": "Aanmelding opgeslagen. Apparaten verbinden opnieuw; controleer hun metingen. Apparaatidentiteiten en Energy-toestemmingen zijn behouden."
   },
   "dual_ct_energy": {
+    "reviewOverlapNamed": "Deze opgenomen apparaten worden als woningnetmeters behandeld. Controleer hun Energy-rol voordat je deze meter toevoegt. Er zijn geen instellingen gewijzigd.",
+    "unnamedOverlapDevice": "Elektriciteitsmeter zonder naam",
+    "moreOverlapDevices": "Overige opgenomen meters",
     "reviewSourceFailed": "Het account, de meteridentiteit of de huidige firmware kon niet worden gelezen. Controleer het EcoFlow-account en de regio. Er is niets toegevoegd.",
     "reviewContractFailed": "De huidige meterfirmware kon niet worden bevestigd voor deze Energy-modus. Er is niets toegevoegd; wijzig de firmware niet om deze controle te omzeilen.",
     "reviewInventoryFailed": "Andere Homey Energy-bronnen konden niet volledig worden gecontroleerd. Er is niets toegevoegd.",

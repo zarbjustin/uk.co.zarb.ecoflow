@@ -1,7 +1,7 @@
 /** Explicit future adoption plan, not an applied Homey configuration or an existing-device migration. */
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED } from './dualCtGridEnergySource';
 
-export interface DualCtEnergyContributor { id: string; grid: string; contributes: boolean }
+export interface DualCtEnergyContributor { id: string; grid: string; contributes: boolean; name?: string }
 export interface DualCtEnergyAdoptionRequest {
   explicitConsent: boolean;
   target: 'new_energy_device' | 'existing_preview';

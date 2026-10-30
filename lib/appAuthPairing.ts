@@ -149,9 +149,16 @@ export function registerAppAuthHandlers(
     commit() {
       if (disposed || committed || !pending) return;
       const { email, password, host } = pending.creds;
-      driver.homey.settings.set(APP_AUTH_EMAIL_SETTING, email);
-      driver.homey.settings.set(APP_AUTH_PASSWORD_SETTING, password);
-      driver.homey.settings.set(APP_AUTH_HOST_SETTING, host);
+      // Homey emits settings events even for unchanged values. Existing
+      // telemetry consumers stop on account changes, so a same-account pairing
+      // must not interrupt their shared subscription.
+      for (const [key, value] of [
+        [APP_AUTH_EMAIL_SETTING, email],
+        [APP_AUTH_PASSWORD_SETTING, password],
+        [APP_AUTH_HOST_SETTING, host],
+      ]) {
+        if (driver.homey.settings.get(key) !== value) driver.homey.settings.set(key, value);
+      }
       committed = true;
       log('EcoFlow app account stored after confirmed pairing or repair');
     },

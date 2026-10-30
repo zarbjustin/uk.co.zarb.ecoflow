@@ -494,3 +494,31 @@ test('monitor display selection preserves all existing capability identities and
   assert.equal(options.get('dual_ct_preview_counters').uiComponent,'sensor');
   await h.device.onUninit();
 });
+
+test('same-account pairing keeps an existing Dual CT monitor live; changed credentials still stop it', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness(); h.settingValues.appAuthHost = sessionInfo.host;
+  h.settings.set = (key, value) => { h.settingValues[key] = value; h.settings.emit('set', key); };
+  const driver = { homey: h.device.homey, getDevices: () => [h.device], log() {} };
+  async function confirm(password) {
+    const handlers = new Map();
+    auth.registerAppAuthHandlers(driver, { setHandler: (key, handler) => handlers.set(key, handler) }, {
+      transport: async () => ({ status: 200, body: { code: '0', data: {
+        token: 'synthetic-token', user: { userId: sessionInfo.userId },
+      } } }),
+    });
+    await handlers.get('app_login')({ email: h.settingValues.appAuthEmail, password, host: sessionInfo.host });
+    await handlers.get('add_device')({});
+    await h.device.chain;
+  }
+  try {
+    await h.device.onInit(); const handler = [...h.handlers][0];
+    handler(frame(), topic); await h.device.chain; assert.equal(h.device.available, true);
+    await confirm(h.settingValues.appAuthPassword);
+    assert.equal(h.handlers.size, 1); assert.equal(h.device.available, true);
+    assert.equal(h.handlers.has(handler), true, 'original listener survives without a reconnect');
+    await confirm('different-synthetic-password');
+    assert.equal(h.handlers.size, 0); assert.equal(h.device.available, false);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});

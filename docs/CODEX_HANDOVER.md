@@ -1,5 +1,72 @@
 # Codex cross-machine handover
 
+## Test 1.11.9 preparation authorised — 30 October 2026
+
+Owner authorised deploying the combined named-overlap and shared-subscription
+fixes to Test. Version 1.11.9 and English/German/Dutch release notes are prepared.
+The diagnostic branch was fetched and was in sync before this release work;
+existing local fixes are preserved. Exact final checks, source commit/push, CI,
+archive and Test activation must each be verified before declaring publication.
+Do not promote hardware acceptance based on software checks. Live, Mainline and
+the installed Development app remain outside this publication approval. No
+installation, restart, device/account/Energy/Flow/battery change is authorised.
+
+
+## Shared Dual CT subscription/freshness fixes prepared — 30 October 2026
+
+Source-only investigation reproduced three defects: explicit same-account pairing
+rewrote credential settings and stopped listeners; adding another same-serial
+consumer repeated broker subscriptions; callbacks from replaced sockets could
+reach current listeners with a new receipt time or tear down the new connection.
+The fixes make credential commit idempotent, subscribe once per active serial,
+and fence old connection callbacks. Actual credential changes still stop
+consumers. Independent listener removal and reconnect restoration are preserved.
+
+All 1,295 tests pass after locked `npm ci` on Node 22.23.4, including the pending
+named-overlap work and an actual detailed-monitor driver/settings-event test.
+Lint, release checks, pinned Homey 4.5.3 verified validation and whitespace checks
+pass. Five-second Energy freshness, retained/duplicate rejection, phase/source
+qualification, no-gap-backfill accounting and persisted counters are unchanged.
+See `docs/DUAL_CT_SHARED_SUBSCRIPTION_REVIEW.md` for reproduced defects and scope.
+
+The community's latest report shows both monitor and Energy unavailable; its
+native phase sum is consistent, but fresh delivery into Homey is unproven. These
+software fixes are not a confirmed field root cause or hardware acceptance.
+The earlier overlap blocker was subsequently identified by the tester as another
+included Energy meter; the named-overlap source work remains intact.
+
+All pending changes remain local/uncommitted and unversioned after Test 1.11.8.
+No archive, source push/CI, publication, install/restart, re-pairing, counter
+rewrite, Energy/battery/Flow change or tester request was performed. Test, Live,
+Mainline and the installed app were not changed or freshly polled in this task;
+last verified states remain Test 1.11.8/build 75, Live 1.10.3/build 18 and installed
+Development 1.11.5. The maintenance installation remains held.
+
+
+## Named Dual CT overlap feedback prepared for review — 30 October 2026
+
+Owner requested identifying the blocking meter by name, regression coverage and
+source preparation only. The local pairing page now lists bounded device names
+from the same fresh overlap decision, with translated missing-name/additional-count
+handling. No exclusion, migration, re-pairing, qualification bypass or accounting
+change is made. Names are local UI feedback, rendered as text and excluded from
+source binding/inventory authority hashes. No device IDs/raw errors or automatic
+uploads are added. The detailed beta monitor remains non-contributing.
+
+All 1,291 tests, lint, release checks, pinned Homey 4.5.3 verified validation and
+whitespace checks pass. See `docs/DUAL_CT_OVERLAP_DEVICE_REVIEW.md` for the exact
+scope, synthetic mobile preview and remaining native evidence gap. The current
+field screenshot does not identify the actual blocker; do not invent it or ask
+for deletion based on the participant's earlier beta status alone.
+
+Changes remain local/uncommitted and unversioned after published Test 1.11.8.
+No archive rebuild, commit/push, CI run, publication, installation, Homey/Flow/
+battery/Energy mutation or tester message was performed. Last verified channel/
+installed states remain Test 1.11.8/build 75, Live 1.10.3/build 18, Development
+1.11.5; these are prior readbacks, not fresh live polling in this source-only work.
+The maintenance installation remains held under the owner's unchanged-app limit.
+
+
 ## Corrective Test 1.11.8 / build 75 active; local installation held — 30 October 2026
 
 Owner-authorised runtime source `752e3acebc7c5d30f455336a825deb1dfa7688ae` was committed/pushed on

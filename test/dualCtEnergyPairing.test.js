@@ -79,6 +79,25 @@ test('review failures expose only bounded source and overlap classifications', a
   const h=harness(t,false,true);await h.call('dual_ct_energy_candidates');h.firmware('unsupported.1');
   await assert.rejects(h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true}),/^Error: DUAL_CT_REVIEW:contract_blocked$/);
   h.firmware('1.0.0.41');h.devices({other:{id:'other',capabilities:['measure_power'],energyObj:{cumulative:true},settings:{}}});
-  await assert.rejects(h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true}),/^Error: DUAL_CT_REVIEW:grid_source_overlap$/);
+  assert.deepEqual(await h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true}),
+    {blocked:true,reason:'grid_source_overlap',devices:[null],total:1});
   assert.equal(h.counters().committed,0);
+});
+
+test('native overlap review identifies the named meter without IDs or admission, in both modes',async t=>{
+ for(const community of [false,true]){
+  const h=harness(t,false,community);await h.call('dual_ct_energy_candidates');
+  h.devices({legacy:{id:'legacy',name:'Earlier meter',capabilities:['measure_power'],energyObj:{cumulative:true},settings:{}}});
+  const result=await h.call('dual_ct_energy_review',{sn,mode:community?'three_phase_community':'single_phase',communityConsent:community});
+  assert.deepEqual(result,{blocked:true,reason:'grid_source_overlap',devices:['Earlier meter'],total:1});
+  assert.doesNotMatch(JSON.stringify(result),/legacy|synthetic_account|DUALCTSYNTHETIC|token|sourceBinding/);
+  await assert.rejects(h.call('list_devices'));assert.equal(h.counters().committed,0);
+ }
+});
+
+test('native Add retains authority across presentation-only name changes',async t=>{
+ const h=harness(t);const meter=name=>({other:{id:'other',name,capabilities:['measure_power'],energyObj:{cumulative:true},settings:{energy_exclude:true}}});
+ h.devices(meter('Before'));const row=await h.prepared();h.devices(meter('After'));
+ await h.call('add_device',row);assert.equal(h.counters().committed,1);
+ assert.doesNotMatch(JSON.stringify(row),/Before|After/);
 });

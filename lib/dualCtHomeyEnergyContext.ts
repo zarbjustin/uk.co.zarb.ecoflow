@@ -41,6 +41,7 @@ export function dualCtHomeyContributors(input: unknown, ownDevice?: { sn: string
       id: d.id,
       grid: DUAL_CT_PROPERTY_GRID,
       contributes: settings.energy_exclude !== true && settings.energy_cumulative_include !== false,
+      ...(typeof d.name === 'string' ? { name: d.name } : {}),
     });
     if (contributors.length > 256) return { complete: false, contributors: [] };
   }

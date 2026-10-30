@@ -38,6 +38,26 @@ interface Review {
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const fresh = (at: number, now: number) => Number.isFinite(at) && at > 0 && Number.isFinite(now) && now >= at && now - at < 90000;
 
+/** Local pairing feedback only. Names never enter bindings, checkpoints or error text. */
+export class DualCtEnergyOverlapError extends Error {
+  readonly devices: (string | null)[];
+  readonly total: number;
+
+  constructor(contributors: DualCtEnergyContributor[], grid: string) {
+    super('grid_source_overlap');
+    this.name = 'DualCtEnergyOverlapError';
+    const blockers = contributors.filter((row) => row.contributes && row.grid === grid);
+    this.total = blockers.length;
+    this.devices = blockers.slice(0, 5).map((row) => {
+      if (typeof row.name !== 'string') return null;
+      const name = row.name.replace(/[\p{Cc}\p{Cf}]/gu, ' ').replace(/\s+/g, ' ').trim();
+      if (!name) return null;
+      const characters = Array.from(name);
+      return characters.length > 80 ? `${characters.slice(0, 79).join('')}…` : name;
+    });
+  }
+}
+
 export class DualCtEnergyAdoptionWorkflow {
   private generation = 0;
   private review: Review | null = null;
@@ -91,6 +111,7 @@ export class DualCtEnergyAdoptionWorkflow {
       // This internal prerequisite check does not constitute the owner's separate confirmation below.
       externalOverlapReviewed: true,
     });
+    if (plan.status === 'grid_source_overlap') throw new DualCtEnergyOverlapError(inventory.contributors, selected.grid);
     if (!plan.preparationAllowed) throw new Error(plan.status);
     const contributors = inventory.contributors.map((row) => ({ id: row.id, grid: row.grid, contributes: row.contributes }))
       .sort((a, b) => a.id.localeCompare(b.id) || a.grid.localeCompare(b.grid));

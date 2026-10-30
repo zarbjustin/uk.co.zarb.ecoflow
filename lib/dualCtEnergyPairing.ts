@@ -2,11 +2,11 @@ import { createHash } from 'crypto';
 import { registerAppAuthHandlers } from './appAuthPairing';
 import { dualCtPreviewDevices } from './dualCtPreviewPairing';
 import { DualCtHomeyEnergyContext } from './dualCtHomeyEnergyContext';
-import { DualCtEnergyAdoptionWorkflow } from './dualCtEnergyAdoptionWorkflow';
+import { DualCtEnergyAdoptionWorkflow, DualCtEnergyOverlapError } from './dualCtEnergyAdoptionWorkflow';
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED, resolveDualCtGridEnergyContract } from './dualCtGridEnergySource';
 
 const inventoryKey = (context: DualCtHomeyEnergyContext) => createHash('sha256')
-  .update(JSON.stringify(context.snapshot()?.inventory.contributors.map((row) => ({ ...row })).sort((a, b) => a.id.localeCompare(b.id)))).digest('hex');
+  .update(JSON.stringify(context.snapshot()?.inventory.contributors.map(({ id, grid, contributes }) => ({ id, grid, contributes })).sort((a, b) => a.id.localeCompare(b.id)))).digest('hex');
 
 /** Separate new-device flow. No conversion, other-meter edits, controls or client-supplied verification. */
 export function registerDualCtEnergyPairing(driver: any, session: any, dependencies = {
@@ -80,6 +80,12 @@ export function registerDualCtEnergyPairing(driver: any, session: any, dependenc
       if (operation !== generation || !dependencies.enabled()) throw new Error('cancelled');
       return { ...review, communityTrial: community };
     } catch (error: any) {
+      if (error instanceof DualCtEnergyOverlapError && operation === generation && dependencies.enabled()) {
+        // Only the local pairing page receives bounded labels; no IDs or upstream error payloads.
+        return {
+          blocked: true, reason: 'grid_source_overlap', devices: [...error.devices], total: error.total,
+        };
+      }
       const allowed = ['source_read_failed', 'inventory_read_failed', 'inventory_unknown', 'grid_source_overlap',
         'contract_blocked', 'identity_stale', 'inventory_stale'];
       const reason = allowed.includes(error?.message) ? error.message : 'verification_failed';

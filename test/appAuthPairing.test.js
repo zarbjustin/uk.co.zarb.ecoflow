@@ -347,3 +347,23 @@ test('an older overlapping sign-in cannot replace the newer validated account cr
   release(); await assert.rejects(old, /session changed/); await session.call('add_device', {});
   assert.strictEqual(homey.values.get(APP_AUTH_PASSWORD_SETTING), 'new-synthetic-password');
 });
+
+test('confirming unchanged app credentials does not emit settings writes that stop existing listeners', async () => {
+  const homey = fakeHomey();
+  homey.values.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  homey.values.set(APP_AUTH_PASSWORD_SETTING, PASSWORD);
+  homey.values.set(APP_AUTH_HOST_SETTING, 'https://api.ecoflow.com');
+  const writes = []; const set = homey.settings.set.bind(homey.settings);
+  homey.settings.set = (key, value) => { writes.push(key); set(key, value); };
+  const session = fakeSession();
+  registerAppAuthHandlers(fakeDriver(homey), session, { transport: okTransport() });
+  await login(session); await session.call('add_device', {});
+  assert.deepStrictEqual(writes, []);
+  const changed = fakeSession();
+  registerAppAuthHandlers(fakeDriver(homey), changed, { transport: okTransport() });
+  await changed.call('app_login', {
+    email: EMAIL, password: 'changed-synthetic', host: 'https://api.ecoflow.com',
+  });
+  await changed.call('add_device', {});
+  assert.deepStrictEqual(writes, [APP_AUTH_PASSWORD_SETTING]);
+});

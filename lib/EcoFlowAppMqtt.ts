@@ -138,9 +138,18 @@ export class EcoFlowAppMqtt {
       queueQoSZero: false, // never replay an expired reserve intent after reconnect
     });
     this.client = client;
-    client.on('message', (topic, payload, packet) => this.onMessage(topic, payload as Buffer, packet));
-    client.on('close', () => this.onDisconnect('close'));
-    client.on('offline', () => this.onDisconnect('offline'));
+    client.on('message', (topic, payload, packet) => {
+      // A queued callback from a replaced socket must not gain a new receipt
+      // timestamp and appear fresh to consumers on the current connection.
+      if (this.ended || this.client !== client) return;
+      this.onMessage(topic, payload as Buffer, packet);
+    });
+    client.on('close', () => {
+      if (this.client === client) this.onDisconnect('close');
+    });
+    client.on('offline', () => {
+      if (this.client === client) this.onDisconnect('offline');
+    });
 
     await new Promise<void>((resolve, reject) => {
       let settled = false;
@@ -166,6 +175,7 @@ export class EcoFlowAppMqtt {
       if (this.client === client) this.client = null;
       client.removeAllListeners('close');
       client.removeAllListeners('offline');
+      client.removeAllListeners('message');
       client.end(true);
       throw e;
     });
@@ -175,6 +185,7 @@ export class EcoFlowAppMqtt {
     if (!this.client) return;
     this.client.removeAllListeners('close');
     this.client.removeAllListeners('offline');
+    this.client.removeAllListeners('message');
     try {
       this.client.end(true);
     } catch { /* ignore */ }
@@ -208,9 +219,13 @@ export class EcoFlowAppMqtt {
     if (!set) {
       set = new Set();
       this.handlers.set(sn, set);
+      set.add(onFrame);
+      this.subscribeTopics(sn);
+      return;
     }
+    // The broker subscription belongs to the serial, not each consumer.
+    // Re-subscribing can replay retained frames and disrupt a healthy feed.
     set.add(onFrame);
-    this.subscribeTopics(sn);
   }
 
   unsubscribe(sn: string, onFrame?: AppFrameHandler): void {
@@ -296,6 +311,7 @@ export class EcoFlowAppMqtt {
       } catch { /* ignore */ }
     }
     if (this.client) {
+      this.client.removeAllListeners('message');
       await new Promise<void>((res) => {
         this.client!.end(false, {}, () => res());
       });

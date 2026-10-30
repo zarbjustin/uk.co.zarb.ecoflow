@@ -6,6 +6,7 @@
   .energy-setup button { margin-top:16px; border:0; border-radius:8px; background:#1aa3e8; color:white; font:600 15px system-ui,sans-serif; }
   .energy-setup button:disabled { opacity:.5; }
   .energy-setup [hidden] { display:none; }
+  .energy-setup #overlapDetails { overflow-wrap:anywhere; }
 </style>
 <div class="energy-setup">
   <h2 id="title"></h2><p id="intro"></p><p id="status" role="status" aria-live="polite"></p>
@@ -23,6 +24,7 @@
       <label id="trialChoice" hidden><input id="trialConsent" type="checkbox"><span id="trialText"></span></label>
       <button id="review" type="button"></button>
       <p id="reviewStatus" role="status" aria-live="polite"></p>
+      <div id="overlapDetails" hidden><ul id="overlapDevices"></ul><p id="overlapMore"></p></div>
     </div>
     <div id="confirmation" hidden>
       <p id="reviewSource"></p><p id="totals"></p>
@@ -44,6 +46,7 @@
     element('scopeConsent').checked = false; element('overlapConsent').checked = false;
     element('approve').disabled = true; element('confirmation').hidden = true;
     element('review').disabled = false; element('reviewStatus').textContent = '';
+    element('overlapDetails').hidden = true; element('overlapDevices').replaceChildren(); element('overlapMore').textContent = '';
   }
   function updateConsent() {
     element('approve').disabled = !token || Date.now() >= expiresAt || !element('scopeConsent').checked || !element('overlapConsent').checked;
@@ -98,6 +101,19 @@
       if (mode === 'three_phase_community' && !element('trialConsent').checked) throw new Error('consent');
       const review = await Homey.emit('dual_ct_energy_review', { sn: element('source').value, mode, communityConsent: element('trialConsent').checked });
       if (generation !== operation) return;
+      if (review && review.blocked === true && review.reason === 'grid_source_overlap') {
+        if (!Array.isArray(review.devices) || !review.devices.length || review.devices.length > 5
+          || !Number.isSafeInteger(review.total) || review.total < review.devices.length || review.total > 256
+          || review.devices.some(name => name !== null && (typeof name !== 'string' || Array.from(name).length > 80))) throw new Error('review');
+        review.devices.forEach(name => {
+          const item = document.createElement('li'); item.textContent = name || text('unnamedOverlapDevice');
+          element('overlapDevices').appendChild(item);
+        });
+        element('overlapMore').textContent = review.total > review.devices.length ? `${text('moreOverlapDevices')}: ${review.total - review.devices.length}` : '';
+        element('overlapDetails').hidden = false; feedback('reviewOverlapNamed');
+        element('overlapDetails').scrollIntoView({ block: 'nearest' });
+        return;
+      }
       if (!review || typeof review.token !== 'string' || !Number.isFinite(review.expiresAt) || review.expiresAt <= Date.now()) throw new Error('review');
       token = review.token; expiresAt = review.expiresAt;
       element('reviewSource').textContent = review.sourceLabel;
