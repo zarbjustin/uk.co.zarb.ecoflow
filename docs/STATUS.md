@@ -1,5 +1,41 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 1.11.0 approved Development and CT1 Energy adoption — 30 October 2026
+
+Owner approved the non-clean combined candidate and one CT1 property Energy
+adoption, then explicitly authorised a new Test build. Source runtime aa4ee07,
+fingerprint 6fe3db750e6492e21a7028e3666df1105e2a39e0c58b128a5a59a90b52e44b94,
+passed exact CI and all 1,206 tests. The preflight found independently installed
+1.10.64: its compiled app/API/reserve bridge/configuration decoder match the
+combined candidate. Its execution Flow was disabled and a faulted lease prevented
+watchdog actions. No fault, gate, lease, battery setting or Flow was changed here.
+
+Non-clean 1.11.0 delivery and immediate readback passed: all 13 existing EcoFlow
+identities, definitions/settings, 101 Flows, app-setting hashes, all property Energy
+flags, 1,201 Insights IDs and eight nondecreasing counters were preserved.
+One separate owned CT1 Energy device was then added through real pairing,
+firmware readback and explicit overlap consent. It is cumulative and included;
+all pre-existing Energy flags and devices remain unchanged. The detailed monitor
+warning is cleared. The new meter is available; Homey's live Energy report includes
+it and totalCumulative.W matches its power. Estimated import increased from
+0.003 to 0.016 kWh; export remained zero. Three new Insights logs were added,
+with every prior Insights ID retained. These are adoption/import observations,
+not calibrated accuracy, physical export/zero, recovery or soak acceptance.
+
+The independent reserve task continues commissioning. A later readback found its
+houseReserveControl setting changed after the initially equal preservation check;
+this task did not write that setting or restore its old value. Preserve concurrent
+work and coordinate again before any future installation. No further battery
+operation, Flow execution, forced reconnect or app restart was performed here.
+
+The Test listing/changelog is being aligned with the supported single-phase CT1 /
+firmware 1.0.0.41 scope. Its runtime fingerprint is unchanged from local 1.11.0;
+metadata-only packaging does not require another local installation. Test publication
+must be verified separately in the portal. Live and Mainline remain unchanged.
+Full production and final 48-hour soak remain gated by the native acceptance ledger.
+Raw captures, settings, pairing receipts and household readings remain private.
+
+
 ## 1.11.0 combined CT1 Energy review candidate — 30 October 2026
 
 Normal CT1 Energy candidate admission is prepared for model 421 / firmware

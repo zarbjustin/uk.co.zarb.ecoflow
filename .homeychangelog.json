@@ -286,5 +286,8 @@
   },
   "1.10.59": {
     "en": "Prepare separate Dual CT property Energy pairing and persistent accounting safeguards, plus account repair without re-pairing. Dual CT Energy remains disabled pending source and hardware qualification."
+  },
+  "1.11.0": {
+    "en": "Adds Homey Energy setup for single-phase CT1 on Smart Meter Dual CT firmware 1.0.0.41, with approximate power and estimated import/export totals. Improves reporting-gap and accounting handling, clears the persistent research warning, and preserves existing devices and history. Add the property Energy meter separately; CT2 and three-phase accounting are excluded. Test validation continues before production."
   }
 }
