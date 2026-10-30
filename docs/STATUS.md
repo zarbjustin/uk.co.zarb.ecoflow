@@ -1,5 +1,52 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 1.11.5 approved Development correction and native recovery — 30 October 2026
+
+Owner approved the reviewed non-clean 1.11.5 archive after exact CI and idle
+preflight. Reviewed source matched the canonical snapshot with no drift; the
+already-installed 1.11.4 bridge/read-refresh/delta fixes were preserved and
+committed with the CT1 correction on the diagnostic branch, source
+`e76725844ff0d21145872a4330ce8823f9e0d949`.
+[Exact CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41028099564),
+with all 1,221 tests, lint, release checks and pinned Homey validation green.
+Delivered archive SHA-256:
+`63498f527eed6272207739ae3f3b3fce29908c12e7fe1dc1a1ba043f6e796307`.
+Runtime fingerprint:
+`14642252c61416221a632f402ec2a9e5308e50ffa5017bf71dd4d03524e353d3`.
+
+Fresh preflight found the coordinator outside charging windows with empty intent,
+a completed reserve lease and expired legacy lease. No coordinator/gate/fault was
+changed to make the preflight pass. One non-clean installation ran; readback
+confirmed running Development 1.11.5 and the existing CT1 Energy meter restored
+without Repair/re-pair or counter rewrite. Its live power matches Homey's property
+Energy report; import resumed increasing and export retained its prior value.
+
+An 82-sample bounded read-only window (08:44:33–08:47:32 UTC) observed a natural
+interruption at 08:46:25 and automatic recovery by 08:46:56. The first recovered
+sample retained the same totals, then counting resumed: no gap backfill or CT1
+counter decrease. One other unavailable sample was 'Updating CT1 readings' during
+projection. No forced silence/reconnect or new MQTT observer was used. Receipt
+coverage and the availability flicker remain longer-validation concerns, not
+utility-accuracy or full freshness signoff. The observer ended; no automation
+or final soak was started.
+
+All 14 EcoFlow definitions/identities/settings, 101 Flow definitions, 1,204 Insights
+identities, global app settings and all Energy inclusion flags match the baseline.
+All ten sampled counters are at/above baseline in the final readback. An original
+STREAM charged-energy counter transiently dipped by one Wh at startup, then rose
+above baseline on fresh vendor counters. Its pre-install checkpoint was pending;
+exact teardown persistence is unobserved. Record this separate startup-continuity
+finding; do not describe the entire interval as ten perfectly monotonic counters.
+No manual correction, additional installation or battery operation was performed.
+
+Test remains 1.11.0 / build 71 and Live 1.10.3 / build 18; Mainline unchanged.
+The corrective Test package/release notes can now be reviewed separately. Native
+mobile readback, calibrated accuracy/export/zero, backup recovery, longer coverage
+and the exact-runtime 48-hour soak remain open/partial. Hardware gates are not
+passed merely by this local restore/recovery observation. Private receipts and
+raw snapshots remain outside Git.
+
+
 ## CT1 unavailable recovery investigation — 30 October 2026
 
 Owner's mobile screenshot showed the adopted CT1 Energy meter unavailable with

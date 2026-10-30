@@ -107,6 +107,20 @@ no automatic edits to other meters. Review solar/battery duplication separately.
 
 ## native-storage-restart
 
+30 October: approved Development 1.11.5, runtime fingerprint
+`14642252c61416221a632f402ec2a9e5308e50ffa5017bf71dd4d03524e353d3`,
+restored the already-adopted meter's native rounded counters after a non-clean
+update. The precision correction retains exact internal Wh while comparing and
+projecting native one-Wh bins. A natural reporting interruption recovered after
+about 30 seconds, retained both counters at its first fresh anchor and resumed
+counting without downtime fill. No forced reconnect, account Repair or counter
+rewrite was used. This is partial native restore/recovery evidence; storage IO
+failure/backup recovery, precise expiry/coverage and final soak remain unverified.
+The original STREAM charged counter had a separate transient one-Wh startup dip;
+retain that finding under upgrade continuity rather than marking all counters
+monotonic through the update.
+
+
 Validate persist-before-project writes on Homey, failure/recovery, restart with
 retained totals and a fresh interval anchor, and no integration of unseen gaps.
 Restart requires a separately approved window; synthetic tests are insufficient.

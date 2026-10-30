@@ -57,8 +57,8 @@
     },
     {
       "id": "native_storage_restart",
-      "status": "open",
-      "evidence": "none",
+      "status": "partial",
+      "evidence": "candidate_hardware",
       "candidateFingerprint": null,
       "reference": "docs/DUAL_CT_ENERGY_RC.md#native-storage-restart"
     },
