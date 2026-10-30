@@ -473,3 +473,24 @@ test('preview manifest has no standard power, energy, control, tags, Insights or
     for (const key of Object.keys(wording)) assert.equal(typeof locale[key], 'string', language + ':' + key);
   }
 });
+
+test('monitor display selection preserves all existing capability identities and custom titles without reconnecting',async t=>{
+  t.mock.method(auth,'appAuthClientFromSettings',()=>({getSession:async()=>sessionInfo,getDeviceList:async()=>[deviceRow]}));
+  const h=harness();const options=new Map();
+  h.device.getCapabilityOptions=id=>options.get(id);
+  h.device.setCapabilityOptions=async(id,value)=>{options.set(id,value);};
+  await h.device.onInit();
+  options.set('dual_ct_preview_voltage.a_p1',{...options.get('dual_ct_preview_voltage.a_p1'),title:'Existing custom title'});
+  const before=[...h.values.keys()];
+  await h.device.onSettings({newSettings:{preview_enabled:true,display_ct1:'single_phase',display_ct2:'off',display_diagnostics:'hide'},changedKeys:['display_ct1','display_ct2','display_diagnostics']});
+  assert.equal(options.get('dual_ct_preview_voltage.a_p3').uiComponent,null);
+  assert.equal(options.get('dual_ct_preview_net.b').uiComponent,null);
+  assert.equal(options.get('dual_ct_preview_voltage.a_p1').title,'Existing custom title');
+  assert.deepEqual([...h.values.keys()],before);assert.equal(h.handlers.size,1);
+  await h.device.onSettings({newSettings:{preview_enabled:true,display_ct1:'three_phase',display_ct2:'single_phase',display_diagnostics:'show'},changedKeys:['display_ct1','display_ct2','display_diagnostics']});
+  assert.equal(options.get('dual_ct_preview_voltage.a_p3').uiComponent,'sensor');
+  assert.equal(options.get('dual_ct_preview_current.b_p1').uiComponent,'sensor');
+  assert.equal(options.get('dual_ct_preview_current.b_p2').uiComponent,null);
+  assert.equal(options.get('dual_ct_preview_counters').uiComponent,'sensor');
+  await h.device.onUninit();
+});

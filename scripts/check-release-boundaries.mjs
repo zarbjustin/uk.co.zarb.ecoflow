@@ -68,7 +68,14 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
   const grid = app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_energy');
   assert.equal(grid.class, 'sensor');
   assert.equal(grid.deprecated, undefined, 'normal candidate pairing must remain separate from the legacy monitor');
-  assert.deepEqual(grid.capabilities, ['measure_power', 'meter_power.imported', 'meter_power.exported']);
+  const detailCapabilities = [...['a', 'b'].flatMap(bank => [1, 2, 3].flatMap(phase =>
+    ['power', 'voltage', 'current'].map(quantity => `dual_ct_preview_${quantity}.${bank}_p${phase}`))), 'dual_ct_preview_net.b'];
+  // Exact allowed addition, never widen the Energy contract or remove existing capability identities.
+  assert.deepEqual(grid.capabilities, ['measure_power', 'meter_power.imported', 'meter_power.exported', ...detailCapabilities]);
+  for (const id of detailCapabilities) {
+    assert.equal(grid.capabilitiesOptions[id].preventInsights, true);
+    assert.equal(grid.capabilitiesOptions[id].preventTag, true);
+  }
   assert.deepEqual(grid.energy, { cumulative: true, cumulativeImportedCapability: 'meter_power.imported', cumulativeExportedCapability: 'meter_power.exported' });
   assert.equal(grid.pair[0].id, 'energy_setup');
 

@@ -1,5 +1,7 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { DualCtEnergyDetails } from '../../lib/dualCtEnergyDetails';
+import { DUAL_CT_DISPLAY_SETTINGS } from '../../lib/dualCtDisplaySettings';
 import { DualCtCommunityFeedback } from '../../lib/dualCtCommunityFeedback';
 import { appAuthClientFromSettings, clearSavedAppAuthCreds } from '../../lib/appAuthPairing';
 import { hasOtherAppAuthDevices } from '../../lib/appAuthConsumers';
@@ -17,6 +19,7 @@ const authority = new DualCtEnergyAuthority();
 
 module.exports = class DualCtEnergyDevice extends Homey.Device {
   private readonly communityFeedback = new DualCtCommunityFeedback();
+  private readonly details = new DualCtEnergyDetails(this);
   private generation = 0;
   private context: DualCtHomeyEnergyContext | null = null;
   private adapter: DualCtGridEnergyDeviceAdapter | null = null;
@@ -50,6 +53,8 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     this.homey.settings.on('set', this.accountChanged);
     this.homey.settings.on('unset', this.accountChanged);
     await this.connect();
+    // Optional capability/UI setup must never delay the core Energy subscription.
+    if (this.getStoreValue('dualCtEnergyConsent') === 1) await this.configureDetails().catch(() => {});
   }
 
   private async connect(): Promise<void> {
@@ -115,9 +120,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         await adapter.close(); return;
       }
       if (!adapter.diagnostics().active) throw new Error('blocked');
+      this.details.start(scope);
       const deliveryGuard = new DualCtLiveDelivery();
       const handler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => {
         if (generation === this.generation && this.handler === handler) {
+          this.details.observe(payload, topic, delivery, Date.now());
           const result = deliveryGuard.inspect(payload, topic, `/app/device/property/${source.device}`, delivery, Date.now());
           if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' && !result.accepted) this.communityFeedback.record('delivery_rejected');
           if (result.restartAnchor) {
@@ -138,6 +145,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       this.lastRefresh = Date.now();
       this.ticker = this.homey.setInterval(() => {
         if (generation !== this.generation || this.adapter !== adapter) return;
+        this.details.render().catch(() => {});
         adapter.refresh().then(() => {
           if (generation === this.generation && !adapter.diagnostics().active) this.recover(generation, dependencies.enabled).catch(() => {});
         }).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
@@ -177,13 +185,21 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (this.handler) (this.homey.app as any).unsubscribeAppRealtime(this.getData().sn, this.handler);
     this.handler = null; this.context?.close(); this.context = null;
     const { adapter } = this; this.adapter = null;
-    await adapter?.close();
+    await Promise.all([adapter?.close(), this.details.stop()]);
     if (generation !== this.generation) return;
     await this.setUnavailable(this.homey.__(this.getStoreValue('dualCtEnergyConsent') === 1
       ? 'dual_ct_energy.recovering' : 'dual_ct_energy.unavailable')).catch(() => {});
     if (generation !== this.generation) return;
     await this.setCapabilityValue('measure_power', null).catch(() => {});
     // Retain cumulative totals/checkpoints, paired identity, Insights and other devices.
+  }
+
+  private configureDetails(settings = { display_ct1: this.getSetting('display_ct1'), display_ct2: this.getSetting('display_ct2') }) {
+    return this.details.configure(settings, this.getStoreValue('dualCtEnergyMode') === 'three_phase_community');
+  }
+
+  async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.some((key) => DUAL_CT_DISPLAY_SETTINGS.includes(key))) await this.configureDetails(newSettings);
   }
 
   getDualCtCommunityFeedback() {

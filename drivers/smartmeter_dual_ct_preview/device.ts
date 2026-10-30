@@ -1,5 +1,8 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import {
+  DUAL_CT_DISPLAY_SETTINGS, DualCtDisplaySettings, dualCtDisplayOptions, dualCtDisplayVisible,
+} from '../../lib/dualCtDisplaySettings';
 import { appAuthClientFromSettings, clearSavedAppAuthCreds, hasSavedAppAuthCreds } from '../../lib/appAuthPairing';
 import { dualCtAccountBinding, dualCtPreviewDevices, DUAL_CT_PREVIEW_CONSENT } from '../../lib/dualCtPreviewPairing';
 import { hasOtherAppAuthDevices } from '../../lib/appAuthConsumers';
@@ -66,7 +69,9 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   }
 
   /** Additive, idempotent preview-only upgrade. Existing IDs and consent are preserved. */
-  private async ensureDisplays(generation: number): Promise<void> {
+  private async ensureDisplays(generation: number, settings: DualCtDisplaySettings = {
+    display_ct1: this.getSetting('display_ct1'), display_ct2: this.getSetting('display_ct2'), display_diagnostics: this.getSetting('display_diagnostics'),
+  }): Promise<void> {
     this.chain = this.chain.catch(() => {}).then(async () => {
       for (const capability of manifest.capabilities) {
         if (generation !== this.generation) return;
@@ -83,7 +88,8 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
         }>;
         // Apply per-instance titles/privacy fences on upgrades as well as fresh pairing.
         // eslint-disable-next-line no-await-in-loop
-        await this.setCapabilityOptions(capability, options[capability]);
+        await this.setCapabilityOptions(capability, dualCtDisplayOptions(options[capability],
+          this.getCapabilityOptions?.(capability) || {}, dualCtDisplayVisible(capability, settings, false)));
       }
     });
     await this.chain;
@@ -211,6 +217,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.some((key) => DUAL_CT_DISPLAY_SETTINGS.includes(key))) await this.ensureDisplays(this.generation, newSettings);
     if (changedKeys.some((key) => ['ct1_role', 'ct2_role'].includes(key))) {
       this.displayRoles = {
         aRole: dualCtCircuitRole(newSettings.ct1_role), bRole: dualCtCircuitRole(newSettings.ct2_role),

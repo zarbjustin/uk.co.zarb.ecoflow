@@ -26,12 +26,12 @@ export class DualCtMonitor {
     this.adapter.disconnect(); this.counters.clear(); this.lastAt = null; this.lastNow = null;
   }
 
-  observe(payload: Buffer, topic: string, now: number): boolean {
+  observe(payload: Buffer, topic: string, receivedAt: number, now = receivedAt): boolean {
     if (topic !== `/app/device/property/${this.scope.device}` || !Buffer.isBuffer(payload)
-      || !payload.length || payload.length > 65536 || !Number.isFinite(now) || now <= 0) return false;
+      || !payload.length || payload.length > 65536 || !Number.isFinite(now) || now <= 0 || !Number.isFinite(receivedAt) || receivedAt <= 0 || !dualCtFreshAge(now - receivedAt)) return false;
     if (this.lastNow !== null && now < this.lastNow) this.clear();
     this.lastNow = now;
-    if (this.lastAt !== null && now <= this.lastAt) return false;
+    if (this.lastAt !== null && receivedAt <= this.lastAt) return false;
     try {
       const headers = decodeFrameHeaders(payload);
       if (!headers.length || headers.length > 16 || headers.some((header) => header.candidateHeaderValid === false
@@ -46,7 +46,7 @@ export class DualCtMonitor {
           source: 'app_mqtt',
           encoding: 'plain',
           encodingBasis: policy.basis,
-          receivedAt: now,
+          receivedAt,
           now,
         };
         if (!this.adapter.observe(this.scope, header.pdata!, context)) continue;
@@ -66,12 +66,12 @@ export class DualCtMonitor {
             this.counters.set(row.field, {
               field: row.field,
               value: row.value,
-              receivedAt: now,
+              receivedAt,
               trend,
             });
           }
         }
-        this.lastAt = now;
+        this.lastAt = receivedAt;
         return true;
       }
     } catch { /* Reject malformed traffic without logging raw packets or values. */ }

@@ -297,5 +297,10 @@
     "en": "Adds an opt-in three-phase Dual CT CT1 community trial for Homey Energy on firmware 1.0.0.41. Uses signed phase netting, separate counter bindings, complete-packet and freshness guards, and local classification-only feedback in the integration support report. Single-phase pairing and existing counters are preserved. Three-phase field validation remains ongoing; CT2 is excluded.",
     "de": "Optionaler Dreiphasen-Community-Test für Dual CT CT1 in Homey Energy mit Firmware 1.0.0.41. Separate Zählerbindung, saldierte Phasen und lokales Feedback im Integrationsbericht. Bestehende einphasige Geräte und Zähler bleiben erhalten. Feldvalidierung läuft; CT2 ist ausgeschlossen.",
     "nl": "Optionele driefase-communitytest voor Dual CT CT1 in Homey Energy met firmware 1.0.0.41. Gesaldeerde fasen, aparte tellerbinding en lokale feedback in het integratierapport. Bestaande eenfase-apparaten en tellers blijven behouden. Praktijkvalidatie loopt; CT2 is uitgesloten."
+  },
+  "1.11.7": {
+    "en": "Adds per-device CT1 single-/three-phase display and independent optional CT2 views. Adds voltage/current and per-phase details to the property Energy device without changing its accounting mode or counters. Detailed monitor diagnostics can be shown or hidden. Existing capability IDs, custom titles, history and Flow references are retained.",
+    "de": "CT1-Anzeige für eine oder drei Phasen und unabhängige optionale CT2-Ansichten. Zusätzliche Spannungs-/Strom- und Phasendetails am Energy-Gerät ohne Änderung der Berechnung oder Zähler. Monitordiagnose ein-/ausblendbar. Bestehende IDs, Titel, Verlauf und Flow-Verweise bleiben erhalten.",
+    "nl": "CT1-weergave voor een of drie fasen en onafhankelijke optionele CT2-weergaven. Extra spanning/stroom en fasedetails op het Energy-apparaat zonder wijziging van berekening of tellers. Monitordiagnose kan worden getoond of verborgen. Bestaande IDs, titels, geschiedenis en Flow-verwijzingen blijven behouden."
   }
 }

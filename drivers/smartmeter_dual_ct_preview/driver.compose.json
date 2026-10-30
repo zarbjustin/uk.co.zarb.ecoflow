@@ -469,6 +469,137 @@
           }
         }
       ]
+    },
+    {
+      "id": "display_ct1",
+      "type": "dropdown",
+      "value": "default",
+      "label": {
+        "en": "CT1 phase display",
+        "de": "CT1 Phasenanzeige",
+        "nl": "CT1 faseweergave"
+      },
+      "hint": {
+        "en": "Display only. Does not change your Energy source, accounting mode, signs or counters. Hidden readings remain available internally; no history or Flow references are removed. Default keeps the monitor layout or follows the paired Energy mode. Details use independently received readings for up to 90 seconds; Energy power keeps its stricter freshness checks. Reopen the device view after saving.",
+        "de": "Nur Anzeige. Ändert weder Energy-Quelle, Abrechnung, Vorzeichen noch Zähler. Ausgeblendete Werte bleiben intern erhalten; Verlauf und Flow-Verweise werden nicht entfernt. Standard behält die Monitoransicht bzw. folgt dem gekoppelten Energy-Modus. Details zeigen separat empfangene Werte bis zu 90 Sekunden lang; Energy-Leistung behält ihre strengeren Aktualitätsprüfungen. Geräteansicht nach dem Speichern erneut öffnen.",
+        "nl": "Alleen weergave. Wijzigt geen Energy-bron, rekenmethode, tekens of tellers. Verborgen waarden blijven intern beschikbaar; geschiedenis en Flow-verwijzingen blijven behouden. Standaard behoudt de monitorweergave of volgt de gekoppelde Energy-modus. Details tonen afzonderlijk ontvangen waarden tot 90 seconden; Energy-vermogen behoudt zijn strengere actualiteitscontroles. Open de apparaatweergave opnieuw na opslaan."
+      },
+      "values": [
+        {
+          "id": "default",
+          "label": {
+            "en": "Default layout",
+            "de": "Standardansicht",
+            "nl": "Standaardweergave"
+          }
+        },
+        {
+          "id": "single_phase",
+          "label": {
+            "en": "Single phase",
+            "de": "Einphasig",
+            "nl": "Eenfase"
+          }
+        },
+        {
+          "id": "three_phase",
+          "label": {
+            "en": "Three phase",
+            "de": "Dreiphasig",
+            "nl": "Driefase"
+          }
+        }
+      ]
+    },
+    {
+      "id": "display_ct2",
+      "type": "dropdown",
+      "value": "default",
+      "label": {
+        "en": "CT2 display",
+        "de": "CT2 Anzeige",
+        "nl": "CT2 weergave"
+      },
+      "hint": {
+        "en": "Default keeps CT2 visible on the detailed monitor and hidden on the Energy device. Its phase layout is independent of CT1. CT2 never contributes to property Energy. Display choices retain received values, history and Flow references. Reopen the device view after saving.",
+        "de": "Standard zeigt CT2 im Detailmonitor und blendet CT2 am Energy-Gerät aus. Die Phasenanzeige ist unabhängig von CT1. CT2 trägt nie zur Hausenergie bei. Werte, Verlauf und Flow-Verweise bleiben erhalten. Geräteansicht nach dem Speichern erneut öffnen.",
+        "nl": "Standaard toont CT2 op de detailmonitor en verbergt CT2 op het Energy-apparaat. De faseweergave is onafhankelijk van CT1. CT2 telt nooit mee voor woningenergie. Waarden, geschiedenis en Flow-verwijzingen blijven behouden. Open de apparaatweergave opnieuw na opslaan."
+      },
+      "values": [
+        {
+          "id": "default",
+          "label": {
+            "en": "Default layout",
+            "de": "Standardansicht",
+            "nl": "Standaardweergave"
+          }
+        },
+        {
+          "id": "off",
+          "label": {
+            "en": "Hide CT2",
+            "de": "CT2 ausblenden",
+            "nl": "CT2 verbergen"
+          }
+        },
+        {
+          "id": "single_phase",
+          "label": {
+            "en": "Single phase",
+            "de": "Einphasig",
+            "nl": "Eenfase"
+          }
+        },
+        {
+          "id": "three_phase",
+          "label": {
+            "en": "Three phase",
+            "de": "Dreiphasig",
+            "nl": "Driefase"
+          }
+        }
+      ]
+    },
+    {
+      "id": "display_diagnostics",
+      "type": "dropdown",
+      "value": "default",
+      "label": {
+        "en": "Diagnostic details",
+        "de": "Diagnosedetails",
+        "nl": "Diagnostische details"
+      },
+      "hint": {
+        "en": "Display only. Does not change your Energy source, accounting mode, signs or counters. Hidden readings remain available internally; no history or Flow references are removed. Default keeps the monitor layout or follows the paired Energy mode.",
+        "de": "Nur Anzeige. Ändert weder Energy-Quelle, Abrechnung, Vorzeichen noch Zähler. Ausgeblendete Werte bleiben intern erhalten; Verlauf und Flow-Verweise werden nicht entfernt. Standard behält die Monitoransicht bzw. folgt dem gekoppelten Energy-Modus.",
+        "nl": "Alleen weergave. Wijzigt geen Energy-bron, rekenmethode, tekens of tellers. Verborgen waarden blijven intern beschikbaar; geschiedenis en Flow-verwijzingen blijven behouden. Standaard behoudt de monitorweergave of volgt de gekoppelde Energy-modus."
+      },
+      "values": [
+        {
+          "id": "default",
+          "label": {
+            "en": "Default layout",
+            "de": "Standardansicht",
+            "nl": "Standaardweergave"
+          }
+        },
+        {
+          "id": "show",
+          "label": {
+            "en": "Show",
+            "de": "Anzeigen",
+            "nl": "Tonen"
+          }
+        },
+        {
+          "id": "hide",
+          "label": {
+            "en": "Hide",
+            "de": "Ausblenden",
+            "nl": "Verbergen"
+          }
+        }
+      ]
     }
   ],
   "pair": [

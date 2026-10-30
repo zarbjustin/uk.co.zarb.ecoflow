@@ -1,5 +1,29 @@
 # Codex cross-machine handover
 
+## Dual CT display candidate 1.11.7 prepared — 30 October 2026
+
+Owner requested source implementation for review, keeping installed Development,
+Test and Live unchanged. Added independent CT1 single/three-phase display, optional
+CT2 display and detailed-monitor diagnostics settings. Legacy monitor defaults
+retain its existing layout. Energy defaults follow the paired accounting mode
+with CT2 hidden; core power/import/export stay present and new auxiliary readings
+use the existing subscription. Display selections never change accounting mode,
+consent, source binding, counter checkpoints or the qualified firmware registries.
+
+Cards are hidden/shown through capability options; no existing capability IDs,
+history or Flow references are removed. Hidden cards keep receiving normal values;
+custom titles/options are retained. New details remain display-only with existing
+privacy fences. Independent receipt ages expire details within 90 seconds; core
+Energy delivery stays on its existing five-second rules. No V×A inference or
+voltage/current phase summation. Optional SDK/display failures are isolated from
+core Energy. The separate reconnect/status-flicker proposal is not implemented.
+
+See `docs/DUAL_CT_DISPLAY_CANDIDATE.md` for household layouts, preservation design
+and native UI/preservation checks requiring a later approved installation. Locked Node 22 install, all 1,271 tests, lint, release checks and pinned Homey
+CLI 4.5.3 verified validation pass. Full hardware readiness remains blocked.
+This candidate is not installed or published; native show/hide remains unverified.
+
+
 ## Three-phase community Test 1.11.6 / build 73 active — 30 October 2026
 
 The owner authorised implementing and publishing the opt-in community Test trial.

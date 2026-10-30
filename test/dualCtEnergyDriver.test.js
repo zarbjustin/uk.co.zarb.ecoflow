@@ -21,6 +21,7 @@ class Device {
     this.values = new Map([['measure_power', 99], ['meter_power.imported', null], ['meter_power.exported', null]]);
     this.store = new Map(Object.entries({ dualCtEnergyConsent: 1, dualCtEnergySourceBinding: binding,
       dualCtEnergyAccountBinding: dualCtAccountBinding(account), dualCtEnergyGrid: 'homey_property_grid' }));
+    this.capOptions = new Map(); this.displaySettings = {};
     this.writes = []; this.timers = new Map(); this.subscriptions = []; this.detached = [];
     const settings = new EventEmitter(); settings.get = () => null;
     const deliveries = new Map();
@@ -36,7 +37,11 @@ class Device {
   getStoreValue(key) { return this.store.get(key); }
   async setStoreValue(key, value) { this.writes.push(['store', key]); this.store.set(key, value); }
   async setCapabilityValue(id, value) { this.writes.push(['cap', id, value]); this.values.set(id, value); }
-  async setCapabilityOptions() {}
+  hasCapability(id) { return this.values.has(id); }
+  async addCapability(id) { this.values.set(id, null); }
+  getCapabilityOptions(id) { return this.capOptions.get(id); }
+  getSetting(id) { return this.displaySettings[id]; }
+  async setCapabilityOptions(id, options) { this.capOptions.set(id, options); }
   async setEnergy(value) { this.writes.push(['energy', value]); }
   async setUnavailable() { this.available = false; }
   async setAvailable() { this.available = true; }
@@ -233,4 +238,33 @@ test('real community driver restores its separate binding, nets three phases and
   const saved=structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));await d.onUninit();
   now+=100000;await d.onInit();assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),saved);
   emit();await settle();assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),saved);await d.onUninit();
+});
+
+test('real Energy display settings never change the active subscription, core counter checkpoint or accounting mode',async t=>{
+  let now=1000;t.mock.method(Date,'now',()=>now);const d=new Driver();enabled(d);await d.onInit();
+  d.subscriptions[0](payload(600),`/app/device/property/${sn}`);await settle();now+=1000;
+  d.subscriptions[0](payload(600),`/app/device/property/${sn}`);await settle();
+  const before={store:structuredClone([...d.store]),core:['measure_power','meter_power.imported','meter_power.exported'].map(k=>d.values.get(k)),ids:[...d.values.keys()]};
+  d.writes.length=0;
+  await d.onSettings({newSettings:{display_ct1:'three_phase',display_ct2:'three_phase'},changedKeys:['display_ct1','display_ct2']});
+  assert.equal(d.capOptions.get('dual_ct_preview_voltage.a_p3').uiComponent,'sensor');
+  assert.equal(d.capOptions.get('dual_ct_preview_net.b').uiComponent,'sensor');
+  await d.onSettings({newSettings:{display_ct1:'single_phase',display_ct2:'off'},changedKeys:['display_ct1','display_ct2']});
+  assert.equal(d.capOptions.get('dual_ct_preview_voltage.a_p3').uiComponent,null);
+  assert.equal(d.capOptions.get('dual_ct_preview_net.b').uiComponent,null);
+  assert.deepEqual([...d.store],before.store);assert.deepEqual([...d.values.keys()],before.ids);
+  assert.deepEqual(['measure_power','meter_power.imported','meter_power.exported'].map(k=>d.values.get(k)),before.core);
+  assert.equal(d.writes.some(w=>w[0]==='store'||w[0]==='energy'),false);
+  assert.equal(d.subscriptions.length,1);assert.equal(d.detached.length,0);assert.equal(d.available,true);
+  await d.onUninit();
+});
+
+test('optional detail capability failure cannot block the existing Energy subscription or counter updates',async t=>{
+  let now=1000;t.mock.method(Date,'now',()=>now);const d=new Driver();enabled(d);
+  d.addCapability=async()=>{throw Error('synthetic UI capability failure');};
+  await d.onInit();assert.equal(d.subscriptions.length,1);
+  d.subscriptions[0](payload(600),`/app/device/property/${sn}`);await settle();now+=1000;
+  d.subscriptions[0](payload(600),`/app/device/property/${sn}`);await settle();
+  assert.equal(d.values.get('measure_power'),600);assert.equal(d.available,true);
+  assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).importedWh>0);await d.onUninit();
 });
