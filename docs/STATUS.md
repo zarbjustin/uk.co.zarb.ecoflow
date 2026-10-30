@@ -1,5 +1,46 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Corrective Test 1.11.8 / build 75 active; local installation held — 30 October 2026
+
+Owner-authorised runtime source `752e3acebc7c5d30f455336a825deb1dfa7688ae` was committed/pushed on
+`codex/mixed-generation-reporting-diagnostics`. Exact CI
+[41132995305](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41132995305)
+passed locked Node 22 tooling, all 1,284 tests, lint, release checks, dependency
+audit (zero known vulnerabilities) and pinned Homey 4.5.3 verified validation.
+The same checks passed locally. No hardware acceptance ledger was promoted.
+
+Archive SHA-256: `dd762a2c8bd64b48aeab293e7f843e53d682bb3fe06aaf1938da1fea7a8ed257`.
+Source runtime fingerprint: `d2bf83eda994f01f713b0e88f013f5128681fd18171d3ed00c8e0d078150ac33`.
+The archive was content/version/privacy checked, uploaded and activated only as
+**Test 1.11.8/build 75**, verified through API and portal. Build readme/changelog
+match the committed English/German/Dutch text. Published download SHA-256:
+`a1117352b68f06a18991bdf56038dc3da96dfd921794fd0e4f9c2cd90a9def85`. All 2,020 file paths match the upload; 2,019 file bytes are identical.
+Only `app.json` differs, with Homey's author-email removal and no other field
+change. Keep server repack provenance distinct from the source fingerprint.
+
+Fresh before/after readbacks confirm installed **Development 1.11.5**, the same
+devkit session, 14 EcoFlow device definitions/settings, 101 Flows and 1,204 Insights
+identities. All 10 comparable cumulative counters remain numeric/nondecreasing.
+App-setting difference is the concurrently renewed coordinator lease; unrelated
+integration device settings also changed during observation. No application-wide
+byte-equality claim. **Live 1.10.3/build 18 and Mainline unchanged.** No local
+installation/restart, battery command, Flow execution, pairing or Energy change.
+
+The authorised private reply was sent and reopened, signed JZ, with the new Test
+link and one targeted request for the newly visible message if setup still fails.
+No raw diagnostics or private correspondence is committed. The underlying field
+verification blocker remains unconfirmed; software feedback/wording fixes are not
+proof that the three-phase field pairing succeeds. Native/recovery/accuracy/soak
+gates remain open.
+
+The maintenance heartbeat retains its date/time but now explicitly defers under
+the latest owner instruction to keep installed Development unchanged. It must not
+install superseded 1.11.7 or substitute 1.11.8, pause the coordinator or release
+reserves without fresh exact-candidate installation approval. Test publication
+is not that approval. Earlier expedited-maintenance consent does not override
+this later boundary.
+
+
 ## Corrective Test 1.11.8 prepared for authorised delivery — 30 October 2026
 
 The owner authorised preparing, committing/pushing and publishing the pairing-review

@@ -5,6 +5,17 @@
 feedback before proceeding. No coordinator pause, reserve release or installation
 had occurred. The previously approved maintenance archive is unchanged.
 
+
+## Published checkpoint
+
+Corrective Test **1.11.8/build 75** is active, verified 30 October 2026, with
+successful exact-source CI 41132995305 and the authorised private follow-up sent.
+Live remains 1.10.3/build 18 and installed Development remains 1.11.5. The native
+field result is still pending. See the newest handover/status checkpoint for
+source/archive provenance and independent preservation readbacks. The preparation
+and hold history below remains historical; no local installation is authorised by
+this Test publication.
+
 ## Confirmed findings
 
 The pairing review action had no in-progress indication or overall UI deadline.
