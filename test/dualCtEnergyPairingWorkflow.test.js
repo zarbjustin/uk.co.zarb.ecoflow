@@ -57,3 +57,19 @@ test('desktop/mobile Energy review requires both acknowledgements, expires and p
     }
   } finally { await browser.close(); }
 });
+
+test('three-phase community selection requires a separate acknowledgement and defaults to single phase', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await pageFor(browser, {width:390,height:844}, 'en', true);
+    await page.locator('#find').click(); assert.equal(await page.locator('#wiring').inputValue(),'single_phase');
+    await page.locator('#wiring').selectOption('three_phase_community'); await page.locator('#review').click();
+    assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.name==='dual_ct_energy_review').length),0);
+    await page.locator('#trialConsent').check(); await page.locator('#review').click();
+    assert.deepEqual(await page.evaluate(()=>window.calls.find(c=>c.name==='dual_ct_energy_review').input),
+      {sn:'SYNTHETIC01',mode:'three_phase_community',communityConsent:true});
+    await page.locator('#wiring').selectOption('single_phase');
+    assert.equal(await page.locator('#confirmation').isHidden(),true);
+    assert.equal(await page.locator('#trialConsent').isChecked(),false);
+  } finally {await browser.close();}
+});

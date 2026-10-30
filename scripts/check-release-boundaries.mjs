@@ -20,6 +20,7 @@ export function loadReleaseInputs(root) {
     pairingAccess: fs.readFileSync(path.join(root, 'lib/stream5000PairingAccess.ts'), 'utf8'),
     gridProfiles: json('settings/dual-ct-grid-profiles.json'),
     threePhaseGridProfiles: json('settings/dual-ct-three-phase-grid-profiles.json'),
+    communityGridProfiles: json('settings/dual-ct-community-profiles.json'),
     gridGate: fs.readFileSync(path.join(root, 'lib/dualCtGridEnergySource.ts'), 'utf8'),
     timeObserver: fs.readFileSync(path.join(root, 'lib/stream5000TimeObserver.ts'), 'utf8'),
     timeObserverRuntime: fs.readFileSync(path.join(root, 'lib/Stream5000UnitDevice.ts'), 'utf8'),
@@ -27,9 +28,15 @@ export function loadReleaseInputs(root) {
       .filter(name => fs.existsSync(path.join(root, name))).map(name => fs.readFileSync(path.join(root, name), 'utf8')).join('\n'),
   };
 }
-export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, gridProfiles, threePhaseGridProfiles, runtime,
+export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, gridProfiles, threePhaseGridProfiles, communityGridProfiles, runtime,
   timeObserver, timeObserverRuntime }) {
-  assert.deepEqual(threePhaseGridProfiles, { schemaVersion: 1, profiles: [] }, 'Three-phase admission is not approved');
+  assert.deepEqual(threePhaseGridProfiles, { schemaVersion: 1, profiles: [] }, 'Hardware-qualified three-phase registry must remain empty during the community trial');
+  assert.deepEqual(communityGridProfiles, { schemaVersion: 1, qualification: 'community_trial_not_hardware_validated', profiles: [{
+    id: 'dual_ct_421_10041_ct1_three_phase_trial_v1', productType: 421, firmware: '1.0.0.41',
+    channel: 'ct1', bank: 'A', unit: 'W', importSign: 'positive', timing: 'verified_live_receipt_estimate',
+    encoding: 'omitted_zero_candidate', liveFreshnessValidated: true, freshnessMs: 5000,
+    wiring: 'three_phase', nettingPolicy: 'signed_phase_sum', communityTrial: true,
+  }] }, 'Community scope must remain explicit and pinned');
   assert.equal(app.id, 'uk.co.zarb.ecoflow');
   for (const version of [compose.version, pkg.version, lock.version, lock.packages[''].version]) assert.equal(version, app.version, 'version mismatch');
   assert.deepEqual([...app.permissions].sort(), ['homey:manager:api', 'homey:manager:geolocation']);

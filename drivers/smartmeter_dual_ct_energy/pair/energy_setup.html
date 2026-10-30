@@ -19,6 +19,8 @@
     <button id="find" type="button" hidden></button>
     <div id="selection" hidden>
       <label for="source" id="sourceLabel"></label><select id="source"></select>
+      <label for="wiring" id="wiringLabel"></label><select id="wiring"><option value="single_phase" id="singlePhase"></option><option value="three_phase_community" id="threePhase"></option></select>
+      <label id="trialChoice" hidden><input id="trialConsent" type="checkbox"><span id="trialText"></span></label>
       <button id="review" type="button"></button>
     </div>
     <div id="confirmation" hidden>
@@ -33,7 +35,7 @@
 (function () {
   const element = id => document.getElementById(id);
   const text = key => Homey.__('dual_ct_energy.' + key);
-  ['title', 'intro', 'emailLabel', 'passwordLabel', 'regionLabel', 'login', 'find', 'sourceLabel', 'review', 'totals', 'scopeText', 'overlapText', 'approve'].forEach(id => { element(id).textContent = text(id); });
+  ['title', 'intro', 'emailLabel', 'passwordLabel', 'regionLabel', 'login', 'find', 'sourceLabel', 'review', 'totals', 'scopeText', 'overlapText', 'approve', 'wiringLabel', 'singlePhase', 'threePhase', 'trialText'].forEach(id => { element(id).textContent = text(id); });
   let operation = 0, token = null, expiresAt = 0, expiry = null, handoff = false;
   function invalidate() {
     operation++; token = null; expiresAt = 0;
@@ -47,8 +49,14 @@
   element('scopeConsent').addEventListener('change', updateConsent);
   element('overlapConsent').addEventListener('change', updateConsent);
   element('source').addEventListener('change', function () {
-    invalidate(); Homey.emit('dual_ct_energy_cancel').catch(() => {});
+    invalidate(); element('trialConsent').checked = false; Homey.emit('dual_ct_energy_cancel').catch(() => {});
   });
+  element('wiring').addEventListener('change', function () {
+    invalidate(); element('trialConsent').checked = false;
+    element('trialChoice').hidden = this.value !== 'three_phase_community';
+    Homey.emit('dual_ct_energy_cancel').catch(() => {});
+  });
+  element('trialConsent').addEventListener('change', function () { invalidate(); Homey.emit('dual_ct_energy_cancel').catch(() => {}); });
   element('login').addEventListener('click', async function () {
     invalidate(); const generation = operation; this.disabled = true;
     try {
@@ -74,7 +82,9 @@
   element('review').addEventListener('click', async function () {
     invalidate(); const generation = operation; this.disabled = true;
     try {
-      const review = await Homey.emit('dual_ct_energy_review', { sn: element('source').value });
+      const mode = element('wiring').value;
+      if (mode === 'three_phase_community' && !element('trialConsent').checked) throw new Error('consent');
+      const review = await Homey.emit('dual_ct_energy_review', { sn: element('source').value, mode, communityConsent: element('trialConsent').checked });
       if (generation !== operation) return;
       if (!review || typeof review.token !== 'string' || !Number.isFinite(review.expiresAt) || review.expiresAt <= Date.now()) throw new Error('review');
       token = review.token; expiresAt = review.expiresAt;

@@ -1,4 +1,6 @@
 /** Owned-source and Homey inventory readback for the separate, gated CT1 Energy driver. */
+import { DualCtCommunityTrial } from './dualCtCommunityTrial';
+import { DualCtGridIdentity, resolveDualCtGridEnergyContract } from './dualCtGridEnergySource';
 import { appAuthCredentialsRevision } from './appAuthPairing';
 import { AppDevice } from './appDevices';
 import { EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
@@ -50,6 +52,7 @@ interface Options {
   sn: string;
   client: () => EcoFlowAppAuthClient | null;
   ownDevice?: { sn: string; driverId: string };
+  communityThreePhase?: boolean;
   /** Code-owned supported readback, NEVER a customer setting, native screenshot or cached report. */
   readFirmware?: (client: EcoFlowAppAuthClient, device: AppDevice) => Promise<string | null>;
   reader?: typeof createHomeyCoordinationReader;
@@ -62,6 +65,7 @@ export class DualCtHomeyEnergyContext {
     identity: { productType: number; firmware: string }; identityObservedAt: number } | null = null;
 
   private inventory: { account: string; observedAt: number; complete: boolean; contributors: DualCtEnergyContributor[] } | null = null;
+  private readonly trial: DualCtCommunityTrial;
   private generation = 0;
   private closed = false;
   private lastSnapshotAt: number | null = null;
@@ -70,6 +74,7 @@ export class DualCtHomeyEnergyContext {
 
   constructor(options: Options) {
     this.options = { ...options };
+    this.trial = new DualCtCommunityTrial(options.now || Date.now);
   }
 
   private now() {
@@ -91,7 +96,8 @@ export class DualCtHomeyEnergyContext {
     if (typeof firmware !== 'string' || !/^[A-Za-z0-9._-]{1,128}$/.test(firmware)) {
       this.source = null; throw new Error('firmware_readback_unavailable');
     }
-    if (generation !== this.generation || dualCtAccountBinding(await client.getSession()) !== account) throw new Error('source_changed');
+    const currentAccount = dualCtAccountBinding(await client.getSession());
+    if (this.closed || generation !== this.generation || currentAccount !== account) throw new Error('source_changed');
     const source = {
       account,
       device: owned.sn,
@@ -101,7 +107,17 @@ export class DualCtHomeyEnergyContext {
       identityObservedAt: this.now(),
     };
     this.source = source;
+    if (this.options.communityThreePhase === true) this.trial.refresh(source);
     return { ...source, identity: { ...source.identity } };
+  }
+
+  isCommunityTrial() {
+    return this.options.communityThreePhase === true;
+  }
+
+  resolveContract(identity: DualCtGridIdentity) {
+    if (this.closed) return null;
+    return this.options.communityThreePhase === true ? this.trial.resolve(identity) : resolveDualCtGridEnergyContract(identity);
   }
 
   async readInventory() {
@@ -143,7 +159,7 @@ export class DualCtHomeyEnergyContext {
     try {
       await this.readSelection(); await this.readInventory();
     } catch {
-      this.source = null; this.inventory = null; throw new Error('energy_source_unavailable');
+      this.trial.cancel(); this.source = null; this.inventory = null; throw new Error('energy_source_unavailable');
     }
   }
 
@@ -163,7 +179,7 @@ export class DualCtHomeyEnergyContext {
   }
 
   close() {
-    this.closed = true; this.generation++; this.controller.abort(); this.source = null; this.inventory = null;
+    this.trial.cancel(); this.closed = true; this.generation++; this.controller.abort(); this.source = null; this.inventory = null;
   }
 }
 

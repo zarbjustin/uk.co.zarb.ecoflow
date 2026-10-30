@@ -292,5 +292,10 @@
   },
   "1.11.5": {
     "en": "Fixes Smart Meter Dual CT Energy recovery when Homey’s rounded counters are restored after a restart or reporting interruption. Keeps accumulated totals and precise internal accounting, and shows a reconnecting message instead of an unsupported-meter error. Preserves the existing reserve-control bridge. Supported Energy scope remains single-phase CT1 on firmware 1.0.0.41; CT2 and three-phase Energy remain excluded. Existing paired Energy meters recover without re-pairing."
+  },
+  "1.11.6": {
+    "en": "Adds an opt-in three-phase Dual CT CT1 community trial for Homey Energy on firmware 1.0.0.41. Uses signed phase netting, separate counter bindings, complete-packet and freshness guards, and local classification-only feedback in the integration support report. Single-phase pairing and existing counters are preserved. Three-phase field validation remains ongoing; CT2 is excluded.",
+    "de": "Optionaler Dreiphasen-Community-Test für Dual CT CT1 in Homey Energy mit Firmware 1.0.0.41. Separate Zählerbindung, saldierte Phasen und lokales Feedback im Integrationsbericht. Bestehende einphasige Geräte und Zähler bleiben erhalten. Feldvalidierung läuft; CT2 ist ausgeschlossen.",
+    "nl": "Optionele driefase-communitytest voor Dual CT CT1 in Homey Energy met firmware 1.0.0.41. Gesaldeerde fasen, aparte tellerbinding en lokale feedback in het integratierapport. Bestaande eenfase-apparaten en tellers blijven behouden. Praktijkvalidatie loopt; CT2 is uitgesloten."
   }
 }

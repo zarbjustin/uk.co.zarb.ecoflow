@@ -211,3 +211,26 @@ test('native precision still rejects a genuinely older checkpoint in either coun
     }
   }
 });
+
+test('real community driver restores its separate binding, nets three phases and retains local feedback without affecting legacy admission',async t=>{
+  let now=1000;t.mock.method(Date,'now',()=>now);
+  const {DualCtCommunityTrial}=require('../.homeybuild/lib/dualCtCommunityTrial');
+  const prod={productType:421,firmware:'1.0.0.41'};const trial=new DualCtCommunityTrial(()=>now);
+  trial.refresh({account:dualCtAccountBinding(account),device:sn,grid:'homey_property_grid',identity:prod,identityObservedAt:now,owned:true});
+  const key=dualCtGridBinding({account:dualCtAccountBinding(account),device:sn,grid:'homey_property_grid',session:'one'},trial.resolve(prod));
+  const d=new Driver();d.store.set('dualCtEnergyMode','three_phase_community');d.store.set('dualCtEnergySourceBinding',key);
+  d.energyDependencies=()=>({enabled:()=>true,resolve:()=>{throw Error('legacy resolver must not admit trial');},
+    context:()=>new DualCtHomeyEnergyContext({homey:d.homey,sn,communityThreePhase:true,now:Date.now,
+      client:()=>({getSession:async()=>account,getDeviceList:async()=>[{sn,shared:false,modelCodes:[{field:'productType',code:421}]}]}),
+      readFirmware:async()=>prod.firmware,reader:async()=>({list:async()=>({}),close(){}})})});
+  await d.onInit();const emit=()=>d.subscriptions.at(-1)(nested(1,Buffer.concat([nested(1,Buffer.concat([[962,2000],[963,-1500],
+    [772,-1000],[515,-500],[991,50000],[992,50000],[993,50000],[998,150000]].map(([f,v])=>scalar(f,v)))),int(8,254),int(9,21),int(14,++sequence)])),`/app/device/property/${sn}`);
+  emit();await settle();now+=1000;emit();await settle();
+  assert.equal(d.values.get('measure_power'),-500);assert.equal(d.values.get('meter_power.exported'),0,'native projection rounds sub-Wh; exact storage retains it');
+  assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).exportedWh>0);
+  const report=d.getDualCtCommunityFeedback();assert.equal(report.eligibleIntervalMs,1000);assert.equal(report.hardwareValidated,false);
+  assert.equal(report.counts.eligible_interval,1);assert.equal(report.uploadedAutomatically,false);
+  const saved=structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));await d.onUninit();
+  now+=100000;await d.onInit();assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),saved);
+  emit();await settle();assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),saved);await d.onUninit();
+});

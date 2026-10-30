@@ -1,5 +1,9 @@
 # Dual CT three-phase source qualification and binding preparation
 
+Historical preparation design. The later separately authorised community Test
+path is documented in `DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md`; it does not
+populate the hardware-qualified registry described here.
+
 Prepared on the diagnostic branch on 30 October 2026. This is source preparation,
 not three-phase hardware acceptance or activation. Test, Live and installed
 Development remain unchanged. No tester was contacted.

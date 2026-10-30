@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "qualification": "community_trial_not_hardware_validated",
+  "profiles": [
+    {
+      "id": "dual_ct_421_10041_ct1_three_phase_trial_v1",
+      "productType": 421,
+      "firmware": "1.0.0.41",
+      "channel": "ct1",
+      "bank": "A",
+      "unit": "W",
+      "importSign": "positive",
+      "timing": "verified_live_receipt_estimate",
+      "encoding": "omitted_zero_candidate",
+      "liveFreshnessValidated": true,
+      "freshnessMs": 5000,
+      "wiring": "three_phase",
+      "nettingPolicy": "signed_phase_sum",
+      "communityTrial": true
+    }
+  ]
+}

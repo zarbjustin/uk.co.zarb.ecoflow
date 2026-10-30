@@ -15,6 +15,10 @@
     "saved": "Aanmelding opgeslagen. Apparaten verbinden opnieuw; controleer hun metingen. Apparaatidentiteiten en Energy-toestemmingen zijn behouden."
   },
   "dual_ct_energy": {
+    "wiringLabel": "Installatie",
+    "singlePhase": "Eenfase",
+    "threePhase": "Driefase — communitytest",
+    "trialText": "CT1 meet alle drie fasen van mijn huisaansluiting. Ik accepteer experimentele gesaldeerde energiewaarden op basis van ontvangsttijd. Geen facturatiemeter. CT2 is uitgesloten. Energiebronnen mogen niet overlappen. Lokale feedback staat in het integratierapport; niets wordt automatisch verzonden.",
     "recovering": "Metergegevens onderbroken. De verbinding wordt automatisch hersteld; opgebouwde energietotalen blijven behouden.",
     "title": "Dual CT woningenergie",
     "intro": "Gebruik CT1 als netmeter voor het hele terrein. CT2-metingen tellen niet mee in de woningtotalen.",

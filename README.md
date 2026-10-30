@@ -40,6 +40,14 @@ counters are preserved; there is no need to delete or re-pair for this update.
 - Cumulative **imported/exported energy** remains derived from observed grid power. Native counter candidates are diagnostic evidence only, not adopted energy totals; unseen gaps are not filled.
 - App settings provide a local meter-source/freshness summary when the integration report is refreshed. It distinguishes direct readings, installation fallback and missing/stale data. Keep one authoritative grid meter per connection; Home Battery has a separate battery-energy role.
 
+### Three-phase Dual CT community Test trial
+
+Version 1.11.6 adds an explicit new-device three-phase CT1 community trial on
+model 421/firmware 1.0.0.41. Single phase remains the default and existing devices
+keep their bindings/counters. CT2 is excluded from property Energy. Field validation
+is ongoing; local feedback is available in the integration support report, with no
+automatic upload. See [trial scope and feedback](docs/DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md).
+
 ### Dual CT and cross-app coordination previews
 
 **Smart Meter Dual CT (read-only preview)** is a separate optional driver, not the

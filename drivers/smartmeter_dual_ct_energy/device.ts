@@ -1,5 +1,6 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { DualCtCommunityFeedback } from '../../lib/dualCtCommunityFeedback';
 import { appAuthClientFromSettings, clearSavedAppAuthCreds } from '../../lib/appAuthPairing';
 import { hasOtherAppAuthDevices } from '../../lib/appAuthConsumers';
 import { DualCtHomeyEnergyContext, dualCtCredentialsRevision } from '../../lib/dualCtHomeyEnergyContext';
@@ -15,6 +16,7 @@ import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
 const authority = new DualCtEnergyAuthority();
 
 module.exports = class DualCtEnergyDevice extends Homey.Device {
+  private readonly communityFeedback = new DualCtCommunityFeedback();
   private generation = 0;
   private context: DualCtHomeyEnergyContext | null = null;
   private adapter: DualCtGridEnergyDeviceAdapter | null = null;
@@ -39,6 +41,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         sn: this.getData().sn,
         ownDevice: { sn: this.getData().sn, driverId: 'homey:app:uk.co.zarb.ecoflow:smartmeter_dual_ct_energy' },
         client: () => appAuthClientFromSettings(this.homey),
+        communityThreePhase: this.getStoreValue('dualCtEnergyMode') === 'three_phase_community',
       }),
     };
   }
@@ -64,7 +67,8 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       const snapshot = context.snapshot();
       if (!snapshot) throw new Error('source');
       const { source } = snapshot;
-      const contract = dependencies.resolve(source.identity);
+      const resolve = (identity: typeof source.identity) => (context.isCommunityTrial?.() === true ? context.resolveContract(identity) : dependencies.resolve(identity));
+      const contract = resolve(source.identity);
       const scope = {
         account: source.account, device: source.device, grid: source.grid, session: randomUUID(),
       };
@@ -89,7 +93,9 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         readIdentity: () => context.snapshot()?.source.identity || { productType: -1, firmware: '' },
         storage,
         authority,
-        resolveContract: dependencies.resolve,
+        resolveContract: resolve,
+        observeEvidence: this.getStoreValue('dualCtEnergyMode') === 'three_phase_community'
+          ? (status, ms) => this.communityFeedback.record(status, ms) : undefined,
         review: () => ({
           explicitConsent: generation === this.generation && this.getStoreValue('dualCtEnergyConsent') === 1
           && this.credentialRevision === dualCtCredentialsRevision(this.homey),
@@ -113,6 +119,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       const handler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => {
         if (generation === this.generation && this.handler === handler) {
           const result = deliveryGuard.inspect(payload, topic, `/app/device/property/${source.device}`, delivery, Date.now());
+          if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' && !result.accepted) this.communityFeedback.record('delivery_rejected');
           if (result.restartAnchor) {
             this.recover(generation, dependencies.enabled).catch(() => {}); return;
           }
@@ -151,6 +158,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
 
   private async recover(generation: number, enabled: () => boolean): Promise<void> {
     if (generation !== this.generation) return;
+    if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community') this.communityFeedback.record('recovery');
     const clearing = this.stop(); const stoppedGeneration = this.generation;
     await clearing;
     if (stoppedGeneration !== this.generation || !enabled() || this.getStoreValue('dualCtEnergyConsent') !== 1) return;
@@ -176,6 +184,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (generation !== this.generation) return;
     await this.setCapabilityValue('measure_power', null).catch(() => {});
     // Retain cumulative totals/checkpoints, paired identity, Insights and other devices.
+  }
+
+  getDualCtCommunityFeedback() {
+    return this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' ? this.communityFeedback.snapshot() : null;
   }
 
   async resumeAppAccountAfterRepair(): Promise<void> {

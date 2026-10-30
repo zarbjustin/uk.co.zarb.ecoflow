@@ -24,6 +24,7 @@ interface Options {
   /** Code-owned dependency injection for tests/future validated contracts, never a customer setting. */
   resolveContract?: DualCtGridContractResolver;
   now?: () => number;
+  observeEvidence?: (status: string, durationMs: number) => void;
 }
 
 export class DualCtGridEnergySession {
@@ -48,6 +49,12 @@ export class DualCtGridEnergySession {
     const pending = this.chain.catch(() => {}).then(work);
     this.chain = pending;
     return pending;
+  }
+
+  private evidence(status: string, durationMs = 0): void {
+    try {
+      this.options.observeEvidence?.(status, durationMs);
+    } catch { /* Feedback cannot affect accounting. */ }
   }
 
   private now(): number {
@@ -101,6 +108,7 @@ export class DualCtGridEnergySession {
     if (!this.options.authority.owns(this.options.scope.grid, this.binding, this.owner)) {
       this.deactivate('authority_lost'); return false;
     }
+    if (qualified.contract.communityTrial === true) this.contract = qualified.contract;
     return true;
   }
 
@@ -184,22 +192,24 @@ export class DualCtGridEnergySession {
       const sample = result.observation;
       // Non-power traffic is neither a new power measurement nor evidence that
       // an otherwise valid power interval was lost. Do not renew its timestamp.
-      if (!sample && result.status === 'unrelated_grid_packet') return;
+      if (!sample && result.status === 'unrelated_grid_packet') {
+        this.evidence('unrelated_grid_packet'); return;
+      }
       if (!sample || sample.binding !== this.binding || sample.session !== this.options.scope.session) {
-        this.baseline = null; this.status = result.status; return;
+        this.evidence(result.status); this.baseline = null; this.status = result.status; return;
       }
       const previous = this.baseline;
       if (!previous) {
-        this.baseline = sample; this.status = 'anchored'; return;
+        this.evidence('anchor'); this.baseline = sample; this.status = 'anchored'; return;
       }
       const at = sample.timing === 'device_measurement' ? sample.measuredAt! : sample.receivedAt;
       const before = previous.timing === 'device_measurement' ? previous.measuredAt! : previous.receivedAt;
       if (at <= before || sample.receivedAt <= previous.receivedAt) {
-        this.status = 'out_of_order'; return;
+        this.evidence('out_of_order'); this.status = 'out_of_order'; return;
       }
       const interval = dualCtPowerIntervalWh(previous.signedImportW, sample.signedImportW, at - before);
       if (!interval || !dualCtFreshAge(sample.receivedAt - previous.receivedAt) || at - before >= (this.contract!.freshnessMs ?? 90000)) {
-        this.baseline = sample; this.status = 'gap_anchor'; return;
+        this.evidence('gap', at - before); this.baseline = sample; this.status = 'gap_anchor'; return;
       }
       const next = makeDualCtEnergyCheckpoint(this.binding!, this.contract!.timing, this.checkpoint.revision + 1,
         this.checkpoint.importedWh + interval.importedWh, this.checkpoint.exportedWh + interval.exportedWh);
@@ -207,7 +217,7 @@ export class DualCtGridEnergySession {
         this.baseline = null; this.status = 'accounting_overflow'; return;
       }
       if (next.importedWh === this.checkpoint.importedWh && next.exportedWh === this.checkpoint.exportedWh) {
-        this.baseline = sample; this.status = 'unchanged'; return;
+        this.evidence('eligible_interval', at - before); this.baseline = sample; this.status = 'unchanged'; return;
       }
       try {
         // The process-local authority enforces one writer. Readback also catches external/stale storage writes.
@@ -227,7 +237,7 @@ export class DualCtGridEnergySession {
         // Persist first. Late/failed/revoked operations never publish speculative totals or power.
         this.checkpoint = next;
         if (!this.current(generation)) return;
-        this.baseline = sample; this.status = 'advanced';
+        this.evidence('eligible_interval', at - before); this.baseline = sample; this.status = 'advanced';
       } catch {
         if (generation === this.generation) this.deactivate('storage_failed');
       }

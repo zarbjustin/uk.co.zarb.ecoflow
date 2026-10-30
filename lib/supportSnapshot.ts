@@ -1,5 +1,7 @@
 'use strict';
 
+import { dualCtCommunityFeedbackSnapshot } from './dualCtCommunityFeedback';
+
 import { isStream5000AggregatePairingEnabled } from './stream5000PairingAccess';
 import { streamDiscoverySnapshot } from './streamDiscovery';
 import { dualCtResearchSnapshot } from './dualCtResearch';
@@ -526,6 +528,15 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     })),
     smartMeters,
     dualCtPreviews,
+    dualCtCommunityTrials: (() => {
+      try {
+        return homey.drivers.getDriver('smartmeter_dual_ct_energy').getDevices().slice(0, 16)
+          .map((device: any) => dualCtCommunityFeedbackSnapshot(device.getDualCtCommunityFeedback?.()))
+          .filter(Boolean);
+      } catch {
+        return [];
+      }
+    })(),
     installationTopology: streamAggregateOverlapSnapshot(aggregates, now),
     reporterShadow: reporterShadowSnapshot(shadowAggregates, reporters, now),
     reporterRepair: reporters.map((reporter) => {

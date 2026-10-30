@@ -6,8 +6,8 @@ const { DualCtHomeyEnergyContext } = require('../.homeybuild/lib/dualCtHomeyEner
 const sn = 'DUALCTSYNTHETIC01'; const identity = { productType: 421, firmware: 'synthetic.1' };
 const contract = { id: 'synthetic_contract', ...identity, channel: 'ct1', bank: 'A', unit: 'W', importSign: 'positive',
   timing: 'verified_live_receipt_estimate', encoding: 'explicit_zero', liveFreshnessValidated: true };
-function harness(t, production = false) {
-  let committed = 0, network = 0, disposed = 0, now = 1000, firmware = 'synthetic.1', enabled = true, devices = {};
+function harness(t, production = false, community = false) {
+  let committed = 0, network = 0, disposed = 0, now = 1000, firmware = community ? '1.0.0.41' : 'synthetic.1', enabled = true, devices = {};
   const handlers = new Map(); const session = { setHandler: (name, fn) => handlers.set(name, fn) };
   const client = { getSession: async () => ({ host: 'https://api.ecoflow.com', userId: 'synthetic' }),
     getDeviceList: async () => { network++; return [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }]; } };
@@ -18,7 +18,7 @@ function harness(t, production = false) {
   });
   const driver = { homey: { __: () => 'Source unavailable' }, getDevices: () => [] };
   const dependencies = { enabled: () => enabled, resolve: () => contract, now: () => now,
-    context: (selected, getClient) => new DualCtHomeyEnergyContext({ homey: {}, sn: selected, client: getClient, now: () => now,
+    context: (selected, getClient, communityThreePhase) => new DualCtHomeyEnergyContext({ homey: {}, sn: selected, client: getClient, communityThreePhase, now: () => now,
       readFirmware: async () => firmware, reader: async () => ({ list: async () => devices, close() {} }) }) };
   if (production) registerDualCtEnergyPairing(driver, session); else registerDualCtEnergyPairing(driver, session, dependencies);
   const call = (name, input) => handlers.get(name)(input);
@@ -54,4 +54,23 @@ test('cancellation and pending sign-in changes discard the review and never save
   await assert.rejects(h.call('dual_ct_energy_approve', { token: review.token, consent: true, externalOverlapReviewed: true }));
   await h.review(); await h.call('app_login'); await assert.rejects(h.call('list_devices'));
   await h.call('disconnect'); assert.equal(h.counters().committed, 0); assert.equal(h.counters().disposed, 1);
+});
+
+test('community pairing uses current owned firmware, explicit consent and native mode-bound Add', async t => {
+  const h=harness(t,false,true);await h.call('dual_ct_energy_candidates');
+  await assert.rejects(h.call('dual_ct_energy_review',{sn,mode:'three_phase_community'}));
+  const review=await h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true});
+  assert.equal(review.communityTrial,true);
+  await h.call('dual_ct_energy_approve',{token:review.token,consent:true,externalOverlapReviewed:true});
+  const row=(await h.call('list_devices'))[0];assert.equal(row.store.dualCtEnergyMode,'three_phase_community');
+  assert.match(row.name,/three-phase trial/);await h.call('add_device',row);assert.equal(h.counters().committed,1);
+});
+test('legacy pairing cannot inject trial mode; trial firmware drift cannot commit a stale native Add',async t=>{
+  const legacy=harness(t);const row=await legacy.prepared();row.store.dualCtEnergyMode='three_phase_community';
+  await assert.rejects(legacy.call('add_device',row));assert.equal(legacy.counters().committed,0);
+  const h=harness(t,false,true);await h.call('dual_ct_energy_candidates');
+  const review=await h.call('dual_ct_energy_review',{sn,mode:'three_phase_community',communityConsent:true});
+  await h.call('dual_ct_energy_approve',{token:review.token,consent:true,externalOverlapReviewed:true});
+  const trial=(await h.call('list_devices'))[0];h.firmware('unknown');await assert.rejects(h.call('add_device',trial));
+  assert.equal(h.counters().committed,0);
 });

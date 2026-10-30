@@ -12,7 +12,9 @@ const inventoryKey = (context: DualCtHomeyEnergyContext) => createHash('sha256')
 export function registerDualCtEnergyPairing(driver: any, session: any, dependencies = {
   enabled: () => DUAL_CT_ENERGY_RUNTIME_ENABLED,
   resolve: resolveDualCtGridEnergyContract,
-  context: (sn: string, client: any) => new DualCtHomeyEnergyContext({ homey: driver.homey, sn, client }),
+  context: (sn: string, client: any, communityThreePhase = false) => new DualCtHomeyEnergyContext({
+    homey: driver.homey, sn, client, communityThreePhase,
+  }),
   now: Date.now,
 }) {
   let generation = 0;
@@ -60,20 +62,23 @@ export function registerDualCtEnergyPairing(driver: any, session: any, dependenc
   });
   session.setHandler('dual_ct_energy_review', async (input: any) => {
     guard(); if (!candidates.has(input?.sn)) throw new Error(text());
+    if (input?.mode !== undefined && input.mode !== 'single_phase' && input.mode !== 'three_phase_community') throw new Error(text());
+    if (input?.mode === 'three_phase_community' && input.communityConsent !== true) throw new Error(text());
     cancel(); const operation = generation;
-    const selectedContext = dependencies.context(input.sn, () => auth.getClient());
+    const community = input.mode === 'three_phase_community';
+    const selectedContext = dependencies.context(input.sn, () => auth.getClient(), community);
     context = selectedContext;
     workflow = new DualCtEnergyAdoptionWorkflow({
       readSelection: () => selectedContext.readSelection(),
       readInventory: () => selectedContext.readInventory(),
-      resolveContract: dependencies.resolve,
+      resolveContract: (identity) => (selectedContext.isCommunityTrial?.() === true ? selectedContext.resolveContract(identity) : dependencies.resolve(identity)),
       runtimeEnabled: dependencies.enabled,
       now: dependencies.now,
     });
     try {
       const review = await workflow.prepare();
       if (operation !== generation || !dependencies.enabled()) throw new Error('cancelled');
-      return review;
+      return { ...review, communityTrial: community };
     } catch {
       throw new Error(text());
     }
@@ -92,6 +97,10 @@ export function registerDualCtEnergyPairing(driver: any, session: any, dependenc
     try {
       const row = await workflow.confirm(consent); consent = null;
       if (operation !== generation || !dependencies.enabled()) throw new Error('cancelled');
+      if ((context as any).resolveContract?.(context.snapshot()?.source.identity)?.communityTrial === true) {
+        (row.store as any).dualCtEnergyMode = 'three_phase_community';
+        row.name = `Dual CT three-phase trial · ${row.data.sn.slice(-4)}`;
+      }
       admitted = row; admittedAt = dependencies.now(); inventory = inventoryKey(context);
       return [{ ...row, data: { ...row.data }, store: { ...row.store } }];
     } catch {
@@ -104,22 +113,24 @@ export function registerDualCtEnergyPairing(driver: any, session: any, dependenc
     const operation = generation;
     const fresh = () => Number.isFinite(dependencies.now()) && dependencies.now() >= admittedAt && dependencies.now() - admittedAt < 90000;
     if (!expected || !context || !fresh() || input?.data?.sn !== expected.data.sn
+      || input.store?.dualCtEnergyMode !== expected.store.dualCtEnergyMode
       || Object.keys(input.data).length !== 1
       || Object.keys(expected.store).some((key) => input.store?.[key] !== expected.store[key])) throw new Error(text());
     const selectedContext = context;
     try {
       await selectedContext.refresh();
       const snapshot = selectedContext.snapshot();
-      const contract = snapshot && dependencies.resolve(snapshot.source.identity);
+      const contract = snapshot && (selectedContext.isCommunityTrial?.() === true ? selectedContext.resolveContract(snapshot.source.identity) : dependencies.resolve(snapshot.source.identity));
       const review = new DualCtEnergyAdoptionWorkflow({
         readSelection: () => selectedContext.readSelection(),
         readInventory: () => selectedContext.readInventory(),
         runtimeEnabled: dependencies.enabled,
-        resolveContract: dependencies.resolve,
+        resolveContract: (identity) => (selectedContext.isCommunityTrial?.() === true ? selectedContext.resolveContract(identity) : dependencies.resolve(identity)),
         now: dependencies.now,
       });
       const token = await review.prepare();
       const row = await review.confirm({ token: token.token, consent: true, externalOverlapReviewed: true });
+      if (contract?.communityTrial === true) (row.store as any).dualCtEnergyMode = 'three_phase_community';
       if (!snapshot || !contract || inventoryKey(selectedContext) !== inventory || operation !== generation || !fresh()
         || Object.keys(expected.store).some((key) => row.store[key as keyof typeof row.store] !== expected.store[key])) throw new Error('changed');
       guard(); auth.commit();

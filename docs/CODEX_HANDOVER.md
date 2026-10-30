@@ -1,5 +1,29 @@
 # Codex cross-machine handover
 
+## Opt-in three-phase community Test candidate — 30 October 2026
+
+Owner authorised implementing and publishing a community Test trial because the
+remaining physical three-phase validation must come from community installations.
+Candidate 1.11.6 adds explicit new-device mode/consent, owned current firmware
+readback, separate source-bound trial accounting and local feedback classifications.
+Model 421/firmware 1.0.0.41 only; CT1 signed phase sum, CT2 excluded, complete-frame
+and five-second packet expiry guards. Qualified three-phase registry remains empty;
+community declaration is not hardware verification or a release acceptance pass.
+
+Existing single-phase registry/default resolver/V1 binding and exact-Wh checkpoint
+path remain unchanged. No mode migration or existing counter rewrite. Native Add
+rechecks source/inventory/mode; trial authority renews with current owned readback.
+The existing integration support report gains a bounded classification-only trial
+section with no automatic upload. No new controls/public route/battery changes.
+
+See `docs/DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md` for scope, feedback and remaining
+full-release gates. All 1,261 tests, lint, release checks and pinned Homey CLI 4.5.3 verified
+validation pass with locked Node 22 tooling. Full hardware readiness remains
+blocked. Publication is pending exact CI/archive verification;
+Live/Mainline and installed Development must remain unchanged. No installation,
+community message, tester capture request or hardware operation is authorised here.
+
+
 ## Retained three-phase evidence assessed offline — 30 October 2026
 
 Reopened the historical complete snapshot, pruned indexed export and concluding

@@ -5,6 +5,7 @@ import { dualCtEncodingPolicy, DualCtEncodingBasis } from './dualCtEncoding';
 import { decodeDualCtCandidates } from './dualCtDecoder';
 import { DUAL_CT_BANK_DEFINITIONS, dualCtFreshAge } from './dualCtContract';
 import { dualCtContainsFields } from './dualCtLiveDelivery';
+import { isDualCtCommunityContract, dualCtCommunityBinding } from './dualCtCommunityTrial';
 import registry = require('../settings/dual-ct-grid-profiles.json');
 import { isQualifiedDualCtThreePhaseContract, qualifiedDualCtThreePhaseBinding } from './dualCtSourceQualification';
 
@@ -24,6 +25,7 @@ export interface DualCtGridEnergyContract {
   encoding: DualCtEncodingBasis;
   liveFreshnessValidated: true;
   singlePhaseOnly?: true;
+  communityTrial?: true;
   wiring?: 'three_phase';
   nettingPolicy?: 'signed_phase_sum';
   freshnessMs?: number;
@@ -36,6 +38,13 @@ export function dualCtGridScopeValid(scope: DualCtGridScope): boolean {
   return !!scope && [scope.account, scope.device, scope.session, scope.grid].every(identifier);
 }
 
+function wiringContractValid(contract: DualCtGridEnergyContract, identity: DualCtGridIdentity): boolean {
+  if (contract.wiring === undefined && contract.nettingPolicy === undefined && contract.communityTrial === undefined) {
+    return contract.singlePhaseOnly === undefined || contract.singlePhaseOnly === true;
+  }
+  return contract.communityTrial === true ? isDualCtCommunityContract(contract, identity) : isQualifiedDualCtThreePhaseContract(contract, identity);
+}
+
 export function dualCtGridContractValid(contract: DualCtGridEnergyContract | null, identity: DualCtGridIdentity): contract is DualCtGridEnergyContract {
   return !!contract && !!identity && identity.productType === 421 && contract.productType === 421
     && identifier(contract.id) && firmwareValid(identity.firmware) && contract.firmware === identity.firmware
@@ -44,9 +53,7 @@ export function dualCtGridContractValid(contract: DualCtGridEnergyContract | nul
     && ['device_measurement', 'verified_live_receipt_estimate'].includes(contract.timing)
     && ['explicit_zero', 'omitted_zero_candidate'].includes(contract.encoding)
     && contract.liveFreshnessValidated === true
-    && (contract.wiring === undefined && contract.nettingPolicy === undefined
-      ? (contract.singlePhaseOnly === undefined || contract.singlePhaseOnly === true)
-      : isQualifiedDualCtThreePhaseContract(contract, identity))
+    && wiringContractValid(contract, identity)
     && (contract.freshnessMs === undefined || (Number.isSafeInteger(contract.freshnessMs) && contract.freshnessMs > 0 && contract.freshnessMs <= 90000));
 }
 
@@ -62,7 +69,10 @@ export const DUAL_CT_ENERGY_RUNTIME_ENABLED = true;
 /** Stable across sessions, not across account/meter/grid/contract/direction/timing changes. No raw identity in stores. */
 export function dualCtGridBinding(scope: DualCtGridScope, contract: DualCtGridEnergyContract): string | null {
   if (!dualCtGridScopeValid(scope) || !dualCtGridContractValid(contract, { productType: 421, firmware: contract?.firmware })) return null;
-  if (contract.wiring === 'three_phase') return qualifiedDualCtThreePhaseBinding(scope, contract);
+  if (contract.wiring === 'three_phase') {
+    return contract.communityTrial === true
+      ? dualCtCommunityBinding(scope, contract) : qualifiedDualCtThreePhaseBinding(scope, contract);
+  }
   return createHash('sha256').update(JSON.stringify([scope.account, scope.device, scope.grid, contract.id,
     contract.firmware, contract.channel, contract.bank, contract.unit, contract.importSign, contract.timing, contract.encoding,
     contract.singlePhaseOnly ?? false, contract.freshnessMs ?? 90000])).digest('hex');
