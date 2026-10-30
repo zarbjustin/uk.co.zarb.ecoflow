@@ -1,5 +1,9 @@
 # Dual CT three-phase community Test trial — 1.11.6
 
+Active on store Test as build 73, verified 30 October 2026.
+[Install Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live and the owner's installed Development app were preserved.
+
 The owner authorised an opt-in Test implementation so community installations can
 provide the missing field evidence. This is experimental admission, not completed
 three-phase hardware acceptance. Live/Mainline and the owner's installed

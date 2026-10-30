@@ -1,5 +1,39 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Three-phase community Test 1.11.6 / build 73 active — 30 October 2026
+
+The owner authorised implementing and publishing the opt-in community Test trial.
+Exact source `4b1218cd2e5819557d6f76ea84eb369c9e9b46a9` passed CI
+[41110353477](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41110353477),
+all 1,261 tests, lint, release checks and pinned Homey CLI 4.5.3 verified validation.
+The verified archive was uploaded and build 73 was explicitly activated on Test;
+channel readback confirms **Test 1.11.6/build 73**, **Live 1.10.3/build 18**.
+Mainline is unchanged. No installation or restart was performed.
+
+Archive SHA-256: `99c565726d8fc5c84f428ac83bcccace65b7cea9eed2286e6ace8354a2f5598b`.
+Source runtime fingerprint: `f69f7a286e79627a75c0ee701c07704a26a2e3ec9b28caae416239301448620a`.
+Archive contents include the isolated trial runtime/profile; the hardware-qualified
+three-phase registry remains empty and the single-phase profile is unchanged.
+
+Before/after private readbacks confirm installed Development 1.11.5, app/devkit
+session, all 14 EcoFlow device definitions/settings, app settings, 101 Flows and
+1,204 Insights identities preserved. Across all Homey devices, two unrelated
+integrations changed diagnostic settings during observation; those are separate
+from EcoFlow preservation. The existing owner CT1 source was already unavailable
+in automatic recovery before upload and remained so afterward. Publication is not
+claimed to fix or newly validate that installed runtime; no local operation was
+performed to force recovery. Investigate that separately read-only if required.
+
+New pairing defaults to single phase. Three phase requires separate community
+consent, current owned model 421/firmware 1.0.0.41 readback and source-overlap review.
+It uses signed CT1 phase netting, excludes CT2, rejects incomplete/stale frames and
+uses a separate counter binding without migration. Local classification-only
+feedback is available through the integration support report, with no automatic
+upload. Hardware, independent reference accuracy, native three-phase recovery and
+48-hour gates remain open; there is no full-release signoff. No community message
+or repeated capture request was sent. See `docs/DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md`.
+
+
 ## Opt-in three-phase community Test candidate — 30 October 2026
 
 Owner authorised implementing and publishing a community Test trial because the
