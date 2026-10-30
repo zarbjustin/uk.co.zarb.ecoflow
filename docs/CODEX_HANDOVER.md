@@ -1,5 +1,45 @@
 # Codex cross-machine handover
 
+## Test 1.11.9 / build 76 active; Development unchanged — 30 October 2026
+
+Owner-authorised combined named-overlap and shared-subscription fixes were
+committed/pushed as `7cb0412f4dbb165548c3f40042ff005fddb6a3ee` on the diagnostic
+branch. Exact [CI 41144306551](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41144306551)
+passed all 1,295 tests, lint, release checks, dependency audit (zero known
+vulnerabilities) and pinned Homey 4.5.3 verified validation. The same checks passed
+locally using the committed lockfile and Node 22.23.4. Hardware gates remain open.
+
+**Test 1.11.9/build 76** was uploaded and activated, then confirmed by Apps API and
+portal. English/German/Dutch listing and changelog match the committed text.
+[Test installation link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+No certification or Live publication was submitted.
+
+- Runtime fingerprint: `8f26c96ba03ea8e7b57e91a9b6f8e45cae550fad2b8dd37d8fb064625f2693b4`.
+- Uploaded archive SHA-256: `9a7a68c53e82e4839fc239a72244bb9b7680667a7509ad5a504e3466fa2f715d`.
+- Processed download SHA-256: `9346e56d4d2116c318054308b534b0bd9c4dcc54e3899255a497dee160e38c02`.
+- All 2,023 packed files matched the validated build; 2,022 processed files remain
+  byte-identical. The only difference is Homey's removal of author email from
+  `app.json`; parsed manifests otherwise match. Private evidence stays outside Git.
+
+Fresh before/after readbacks confirm **Live 1.10.3/build 18**, installed
+**Development 1.11.5** running from the same devkit session, 14 unchanged EcoFlow
+device definitions/settings/capabilities/Energy metadata, 101 unchanged Flow
+contracts, 1,204 unchanged Insights identities and ten nondecreasing cumulative
+counters. Mainline remains `66b1cb5f828a53333739798281fce86125f61c28`.
+App settings match except the background `houseReserveLease` hash, which changed
+during observation; this release performed no Homey setting writes. Unrelated
+apps refreshed diagnostic settings. Do not describe all household settings as
+byte-identical or infer a battery setting change from that hash alone.
+
+No local installation/restart, re-pairing, Energy/source switch, counter rewrite,
+battery command or Flow execution was performed. The maintenance installation
+remains held pending fresh approval. These are software fixes, not proof of the
+community report's root cause or a three-phase hardware pass. Next field check:
+observe the existing detailed monitor and property Energy meter after the Test
+update, without deleting/re-pairing or weakening freshness/accounting guards.
+No tester message or request for further captures was sent in this release task.
+
+
 ## Test 1.11.9 preparation authorised — 30 October 2026
 
 Owner authorised deploying the combined named-overlap and shared-subscription
