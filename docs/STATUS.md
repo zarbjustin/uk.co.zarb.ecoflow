@@ -1,5 +1,39 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.12 / build 79 published — 31 October 2026
+
+Owner authorised publishing the reviewed shared-delivery fixes to Test for the
+community tester. Runtime source `2014544ebada21aee14bdbe6658370ea7c59bf18`
+was committed/pushed on the diagnostic branch. Exact
+[CI 41192102541](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41192102541)
+passed all 1,321 tests, lint, release checks, dependency audit and pinned Homey
+4.5.3 verified validation. Local Node 22 committed-lockfile checks also passed.
+
+Frozen archive SHA-256:
+`f2268ac273f63e53c9a8b0cb8bac2ae8ea4218cf662000e7bdf2e2a5d883dec2`.
+Runtime fingerprint:
+`4e6de1f92449e39ce46fa8631d3eb83772e280523b7a5c5d381e4754c80765e3`.
+All 2,032 archive files match the validated build; private/env/work/output paths
+are excluded. Build 79 is confirmed active on Test as 1.11.12, with matching
+en/de/nl listing and changelog. No certification/Live submission was performed.
+
+Read-only publication baseline/readback confirms installed Development 1.11.10
+running with unchanged devkit session; all 14 EcoFlow device definitions/settings,
+app settings, 101 Flow contracts, 1,204 Insights identities and all device IDs
+are preserved. Unrelated devices refreshed their own diagnostic metadata, so the
+whole-house metadata hash differs; EcoFlow definitions match exactly. No install,
+restart, battery command/setting, Energy-source change, Flow action, repair or
+re-pair was performed. Live remains 1.10.3/build 18; Mainline remains
+`66b1cb5f828a53333739798281fce86125f61c28`.
+
+[Shared-delivery bug-bash findings](DUAL_CT_SHARED_DELIVERY_BUG_BASH.md) describe
+what changed and what remains unproven. The prior 1.11.11 field recovery failure
+is retained; this publication is not a new field pass. Community validation still
+needs to establish actual delivery/rejection status and sustained three-phase
+recovery/accounting. No new capture or external reply was requested/sent in this
+publication task. Private upload/activation receipts and preservation evidence
+remain outside Git. Existing paired devices and counters should be retained.
+
 ## Test 1.11.12 preparation authorised — 31 October 2026
 
 Owner authorises publishing the reviewed shared-delivery bug-bash fixes to Test
