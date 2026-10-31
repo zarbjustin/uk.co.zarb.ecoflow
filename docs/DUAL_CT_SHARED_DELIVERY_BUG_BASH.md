@@ -77,3 +77,40 @@ whether frames reach both consumers, and whether encoding or field guards reject
 them. Existing paired devices, settings, counters and history should be retained.
 Do not request another broad capture, force reconnection or ask for re-pairing as
 a shortcut. No three-phase hardware acceptance or full-release readiness is claimed.
+
+## Focused reliability bug bash — 31 October 2026
+
+Completed the bounded offline review of authentication, mixed-device startup,
+connection lifecycle, durable counter recovery and repeated recovery cycles.
+Added four regressions: twenty concurrent failed sign-ins share at most one
+attempt per allowed region and subsequently recover with one login; auth failure
+logs exclude arbitrary upstream text; thirty failed-handshake/recovery cycles
+retain both meter/battery consumers without accumulating managed timers or replaying
+late frames; an applied checkpoint write whose acknowledgement fails restores the
+durable total and starts a new anchor without double-counting or filling the gap.
+
+Confirmed additional defect: auth/MQTT error logs forwarded arbitrary upstream
+exception text. Those paths now use fixed failure labels, including app-owned
+MQTT connect/reconnect/teardown logging. The new privacy assertions failed before
+this fix and pass afterward. No claim of an actual credential disclosure is made.
+The behavioral assertions in the new recovery/durability tests already passed;
+no speculative accounting or connection-policy change was made for those cases.
+
+Existing full-suite checks also cover original/ES21/ES22/Dual CT coexistence,
+50 research-listener detach cycles, actual locked MQTT.js SUBACK rejection/retry,
+bounded missing acknowledgements, stale callback isolation, single/three-phase
+accounting, storage conflicts/readback failure and a synthetic 72-hour ledger
+replay. These are simulated/offline checks, not field telemetry or heap profiling.
+
+Combined candidate: Node 22 committed-lockfile installation (zero audit findings),
+all 1,342 tests, lint, release checks and pinned Homey CLI 4.5.3 verified validation
+pass. No new field recovery conclusion: sparse delivery and the reported original
+aggregate outage remain unresolved in the field; final-candidate 48-hour hardware
+soak remains outstanding. Keep them distinct from passing regression tests.
+
+All changes remain local, uncommitted and unversioned on the diagnostic branch.
+Previous fixes and unrelated local-AI workflow edits are preserved. Test, Live,
+Mainline and installed Development remain unchanged. No hardware command, restart,
+re-pair, setting/Flow operation or external message/capture request was performed.
+Next: review/version the combined candidate for a separately authorised Test build,
+then verify recovery with existing devices rather than adding speculative fixes.

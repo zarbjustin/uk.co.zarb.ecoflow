@@ -538,11 +538,14 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   getReportingDiagnostics() {
     let aggregateBinding = 'not_checked';
     if (this.bindingAttempted) aggregateBinding = this.aggregateBound ? 'verified_original_main' : 'blocked';
+    let recoveryState = aggregateBinding;
+    if (this.bindingAttempted && !this.aggregateBound && !this.aggregateVerifiedMain) recoveryState = 'startup_unverified';
+    if (this.aggregateIdentityConflict) recoveryState = 'identity_changed';
     return {
       readAddressMatchesSavedMain: this.getStoreValue('mainSn') ? this.getReadSn() === this.getStoreValue('mainSn') : null,
       aggregateBinding,
       aggregateRecovery: {
-        state: this.aggregateIdentityConflict ? 'identity_changed' : aggregateBinding,
+        state: recoveryState,
         verificationFailures: this.aggregateVerificationFailures,
         recoveries: this.aggregateRecoveries,
       },

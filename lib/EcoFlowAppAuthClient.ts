@@ -234,7 +234,7 @@ export class EcoFlowAppAuthClient {
           this.log('app-auth login rejected by', host);
           continue;
         }
-        this.log('app-auth login failed on', host, '-', e?.message || 'unknown error');
+        this.log('app-auth login failed on', host, 'transport_failed');
       }
     }
     this.invalidateSession();
@@ -270,16 +270,18 @@ export class EcoFlowAppAuthClient {
 
   /** Broker credentials for the app (WSS) MQTT session. */
   async getMqttCredentials(): Promise<AppMqttCredentials> {
-    const session = await this.getSession();
-    const data = await this.authorized((s) => ({
-      method: 'GET' as const,
-      url: `${s.host}${CERTIFICATION_PATH}`,
-      headers: { Authorization: `Bearer ${s.token}` },
-    }));
+    let requestToken = '';
+    const data = await this.authorized((s) => {
+      requestToken = s.token;
+      return {
+        method: 'GET' as const,
+        url: `${s.host}${CERTIFICATION_PATH}`,
+        headers: { Authorization: `Bearer ${s.token}` },
+      };
+    });
     // The payload is encrypted with a key derived from the token that fetched it,
     // so decrypt with the token of the session that actually served the request.
-    const token = this.session?.token || session.token;
-    const decoded = typeof data === 'string' ? decryptCertification(token, data) : (data as Record<string, unknown>);
+    const decoded = typeof data === 'string' ? decryptCertification(requestToken, data) : (data as Record<string, unknown>);
     const account = String(decoded?.certificateAccount || decoded?.userName || '');
     const password = String(decoded?.certificatePassword || decoded?.password || '');
     const url = String(decoded?.url || '');
@@ -297,8 +299,9 @@ export class EcoFlowAppAuthClient {
       return await this.send(session.host, build(session));
     } catch (e: any) {
       if (!(e instanceof EcoFlowAppAuthError) || !e.authFailure) throw e;
-      this.invalidateSession();
-      const refreshed = await this.getSession(true);
+      // A late rejection for an old token must not invalidate a newer login.
+      if (this.session === session) this.invalidateSession();
+      const refreshed = await this.getSession();
       return this.send(refreshed.host, build(refreshed));
     }
   }

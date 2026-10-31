@@ -367,3 +367,33 @@ test('confirming unchanged app credentials does not emit settings writes that st
   await changed.call('add_device', {});
   assert.deepStrictEqual(writes, [APP_AUTH_PASSWORD_SETTING]);
 });
+
+test('saved-account consumers share one login and credential changes retire that cache', async () => {
+  const { appAuthClientFromSettings } = require('../.homeybuild/lib/appAuthPairing.js');
+  const homey = fakeHomey();
+  homey.settings.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  homey.settings.set(APP_AUTH_PASSWORD_SETTING, PASSWORD);
+  const first = appAuthClientFromSettings(homey);
+  let logins = 0;
+  first.transport = async () => {
+    logins++;
+    return { status: 200, body: { code: '0', data: { token: TOKEN, user: { userId: USER_ID } } } };
+  };
+  await Promise.all([first.getSession(), appAuthClientFromSettings(homey).getSession(), appAuthClientFromSettings(homey).getSession()]);
+  await appAuthClientFromSettings(homey).getSession();
+  assert.strictEqual(logins, 1, 'concurrent startup and later inventory reuse the same login');
+  assert.strictEqual(appAuthClientFromSettings(homey), first);
+  homey.settings.set(APP_AUTH_PASSWORD_SETTING, 'changed-synthetic-password');
+  const changed = appAuthClientFromSettings(homey);
+  assert.notStrictEqual(changed, first);
+  assert.strictEqual(appAuthClientFromSettings(homey), changed);
+  clearSavedAppAuthCreds(homey);
+  assert.strictEqual(appAuthClientFromSettings(homey), null);
+  homey.settings.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  homey.settings.set(APP_AUTH_PASSWORD_SETTING, 'changed-synthetic-password');
+  assert.notStrictEqual(appAuthClientFromSettings(homey), changed);
+  const other = fakeHomey();
+  other.settings.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  other.settings.set(APP_AUTH_PASSWORD_SETTING, 'changed-synthetic-password');
+  assert.notStrictEqual(appAuthClientFromSettings(other), appAuthClientFromSettings(homey));
+});

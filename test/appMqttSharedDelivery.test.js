@@ -229,3 +229,70 @@ test('a failing app listener cannot interrupt peers or disclose exception conten
     assert.doesNotMatch(JSON.stringify(logs), /PRIVATE|household|payload/);
   } finally { await mqtt.end(); }
 });
+
+test('ending a pending handshake settles all consumers without waiting for CONNACK', async () => {
+  autoConnect = false;
+  const mqtt = new EcoFlowAppMqtt({ client: auth });
+  const results = [];
+  try {
+    const first = mqtt.connect().then(() => results.push('ready'), () => results.push('failed'));
+    const second = mqtt.connect().then(() => results.push('ready'), () => results.push('failed'));
+    await new Promise(setImmediate);
+    let ended = false;
+    const ending = mqtt.end().then(() => { ended = true; });
+    await new Promise(setImmediate);
+    assert.equal(ended, true, 'shutdown must cancel a pending handshake');
+    await Promise.all([first, second, ending]);
+    assert.deepEqual(results, ['failed', 'failed']);
+    assert.equal(mqtt.connected, false);
+  } finally {
+    // Release the old implementation too so a failing regression cannot hang.
+    clients.at(-1).emit('error', new Error('synthetic cleanup'));
+    autoConnect = true; await mqtt.end();
+  }
+});
+
+test('one silent serial cannot interrupt delivery to another serial on the shared connection', async () => {
+  const mqtt = new EcoFlowAppMqtt({ client: auth }); let received = 0;
+  const quiet = () => {}; const active = () => { received++; };
+  try {
+    await mqtt.connect(); const client = clients.at(-1);
+    mqtt.subscribe(sn, quiet); mqtt.subscribe('SYNTHETICBATTERY', active);
+    client.emit('message', '/app/device/property/SYNTHETICBATTERY', Buffer.from('synthetic'), { retain: false, dup: false });
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).receivedFrames, 0);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).lastFrameAgeSec, null);
+    mqtt.unsubscribe(sn, quiet);
+    client.emit('message', '/app/device/property/SYNTHETICBATTERY', Buffer.from('synthetic'), { retain: false, dup: false });
+    assert.equal(received, 2); assert.equal(mqtt.connected, true);
+    assert.equal(mqtt.getDeliveryDiagnostics('SYNTHETICBATTERY').activeTopics, 2);
+  } finally { await mqtt.end(); }
+});
+
+test('repeated failed handshakes and successful mixed-serial recovery leave no owned timers', async t => {
+  const clock = fakeTimers(t); const logs = [];
+  const mqtt = new EcoFlowAppMqtt({ client: auth, log: (...args) => logs.push(args) });
+  let meter = 0, battery = 0;
+  mqtt.subscribe(sn, () => meter++); mqtt.subscribe('SYNTHETICBATTERY', () => battery++);
+  try {
+    for (let cycle = 0; cycle < 30; cycle++) {
+      autoConnect = false;
+      const failed = mqtt.connect(); const rejected = assert.rejects(failed);
+      await new Promise(setImmediate);
+      const old = clients.at(-1);
+      old.emit('error', new Error('PRIVATE broker context'));
+      await rejected;
+      assert.equal(clock.timers.size, 1, 'one managed retry, independent of consumer count');
+      autoConnect = true; await mqtt.connect();
+      const current = clients.at(-1);
+      assert.equal(current.subscribed.length, 4);
+      assert.equal(clock.timers.size, 0);
+      old.emit('message', topic, Buffer.from('late'), { retain: false, dup: false });
+      current.emit('message', topic, Buffer.from('synthetic'), { retain: false, dup: false });
+      current.emit('message', '/app/device/property/SYNTHETICBATTERY', Buffer.from('synthetic'), { retain: false, dup: false });
+      assert.equal(meter, cycle + 1); assert.equal(battery, cycle + 1);
+      current.connected = false; current.emit('close');
+    }
+    assert.doesNotMatch(JSON.stringify(logs), /PRIVATE|broker context/);
+  } finally { autoConnect = true; await mqtt.end(); }
+  assert.equal(clock.timers.size, 0);
+});

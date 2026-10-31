@@ -56,8 +56,8 @@ const RESUBSCRIBE_INTERVAL_MS = 5 * 60 * 1000;
 const DIAGNOSTIC_SUMMARY_EVERY_FRAMES = 100;
 const MONITORING_ONLY_FALLBACK = 'Monitoring only · controls intentionally disabled';
 
-const UNAVAILABLE_MESSAGE = 'No data from EcoFlow\'s app connection. Check the EcoFlow account in the app settings.';
-const NOT_CONNECTED_MESSAGE = 'EcoFlow app connection unavailable — check or update your EcoFlow account in the app settings.';
+const UNAVAILABLE_MESSAGE = 'Waiting for fresh EcoFlow readings. Missing readings are not zero; energy totals are retained.';
+const NOT_CONNECTED_MESSAGE = 'EcoFlow connection unavailable. Retrying automatically; your paired device and energy totals are retained.';
 const APPLICATION_FAILED_MESSAGE = 'Fresh EcoFlow readings could not be applied in Homey. Check the integration report.';
 const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as const;
 
@@ -85,6 +85,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private diagnosticCaptureNext = false;
   private subscriptionState: 'starting' | 'active' | 'waiting' | 'stopped' = 'starting';
   private subscriptionAttempts = 0;
+  private subscriptionInFlight: Promise<void> | null = null;
   private resubscribeCount = 0;
   private sampleGate!: ReturnType<Stream5000TelemetryAdapter['createSampleGate']>;
   private readonly commandKeys = new Set<string>();
@@ -281,6 +282,20 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async subscribe(): Promise<void> {
+    if (this.subscriptionInFlight) {
+      await this.subscriptionInFlight;
+      return;
+    }
+    const pending = this.subscribeOnce();
+    this.subscriptionInFlight = pending;
+    try {
+      await pending;
+    } finally {
+      if (this.subscriptionInFlight === pending) this.subscriptionInFlight = null;
+    }
+  }
+
+  private async subscribeOnce(): Promise<void> {
     if (this.isStopped()) return;
     const sn = this.getData().sn as string;
     let subscribed = false;

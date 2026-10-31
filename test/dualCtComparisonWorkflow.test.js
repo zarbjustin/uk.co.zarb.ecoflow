@@ -19,7 +19,7 @@ async function setup(browser,viewport){const page=await browser.newPage({viewpor
   await page.locator('#supportTitle').click();
   assert.equal(await page.evaluate(()=>Object.isFrozen(window.EcoFlowDualCtContract?.banks[0].power)),true,
     'shared profile must load before the settings projectors in the actual HTML workflow');
-  await page.clock.install({time:new Date('2026-10-15T20:00:00Z')});
+  await page.clock.install({time:new Date('2026-10-14T20:00:00Z')});
   // Install alone keeps ticking: under full-suite load a zero-age fixture could
   // age a second before assertion. All expiry tests advance this clock explicitly.
   await page.clock.pauseAt(new Date('2026-10-15T20:00:00Z'));

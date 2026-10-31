@@ -637,3 +637,16 @@ test('an old pending identity lookup cannot mark a newly initialized session una
   assert.equal(d.getReportingDiagnostics().aggregateRecovery.verificationFailures, 0);
   await d.onTeardown();
 });
+
+test('startup verification failure is distinguishable from a previously verified source interruption', async () => {
+  const d = await harness({ chargedWh: 12000, dischargedWh: 34000 }); preparePolling(d);
+  d.client = { getMainSn: async () => { throw Error('synthetic startup failure'); } };
+  try {
+    await d.beforeFirstPoll(); await d.poll();
+    const { reportingSnapshot } = require('../.homeybuild/lib/streamReportingDiagnostics');
+    assert.equal(reportingSnapshot(d, 1000).aggregateRecovery.state, 'startup_unverified');
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, 12);
+    assert.equal(d.aggregateBound, false);
+    await assert.rejects(d.flowSetFeedIn(false), /unverified/);
+  } finally { await d.onTeardown(); }
+});

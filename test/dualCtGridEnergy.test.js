@@ -419,3 +419,17 @@ test('three-phase lab netting integrates the signed CT1 sum, not gross opposing 
   assert.equal(adapt(scope, liveIdentity, live, sameWire, topic, 2000, null, 2000).status, 'wiring_outside_qualification');
   await h.session.close();
 });
+
+test('an applied checkpoint write with a rejected acknowledgement recovers durable totals without replaying the interval', async () => {
+  const h = harness(); await h.session.start(); await h.sample(1000);
+  const originalWrite = h.storage.write;
+  h.storage.write = async function(value) { await originalWrite.call(this, value); throw Error('synthetic lost acknowledgement'); };
+  await h.sample(2000);
+  assert.equal(h.session.view().status, 'storage_failed');
+  assert.equal(h.storage.data.importedWh, 1);
+  h.storage.write = originalWrite;
+  await h.session.start(); await h.sample(10000);
+  assert.equal(h.storage.data.importedWh, 1, 'recovery establishes a new anchor only');
+  await h.sample(11000); assert.equal(h.storage.data.importedWh, 2);
+  await h.session.close();
+});

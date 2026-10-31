@@ -1548,3 +1548,18 @@ test('startup and existing watchdog use the SOC fallback only for aggregate devi
     await h.device.onUninit(); assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
   }
 });
+
+test('5000 retry ticks coalesce a pending subscription and do not blame account credentials', async () => {
+  let calls = 0; let complete;
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, device => {
+    device.homey.app.subscribeAppRealtime = async () => { calls++; return false; };
+  });
+  assert.doesNotMatch(h.device.unavailableMessage, /check or update|account in/i);
+  h.device.homey.app.subscribeAppRealtime = async () => { calls++; return new Promise(resolve => { complete = resolve; }); };
+  const first = h.device.subscribe();
+  const second = h.device.subscribe();
+  await new Promise(setImmediate);
+  assert.equal(calls, 2, 'one initial failure and only one in-flight retry');
+  complete(true); await Promise.all([first, second]);
+  await h.device.onUninit();
+});

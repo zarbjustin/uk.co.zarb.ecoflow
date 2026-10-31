@@ -332,5 +332,10 @@
     "en": "Restores original STREAM telemetry after temporary source-verification failures when the same main unit is verified again, and refreshes changed API credentials before verification. Prevents Dual CT Energy accounting across separate MQTT connections while preserving counters and stale-data safeguards. Adds regression coverage for sparse feeds and single-/three-phase recovery. Three-phase Energy remains a community trial; the cause of sparse meter delivery is still under investigation.",
     "de": "Stellt die ursprüngliche STREAM-Telemetrie nach vorübergehenden Fehlern der Quellenprüfung wieder her, sobald dieselbe Haupteinheit erneut bestätigt wurde. Aktualisiert geänderte API-Zugangsdaten vor der Prüfung. Verhindert Dual-CT-Energieberechnung über getrennte MQTT-Verbindungen hinweg; Zählerstände und Schutz vor veralteten Daten bleiben erhalten. Ergänzt Regressionstests für lückenhafte Meldungen und Ein-/Dreiphasen-Wiederherstellung. Dreiphasen-Energy bleibt ein Community-Test; die Ursache seltener Zählermeldungen wird weiter untersucht.",
     "nl": "Herstelt oorspronkelijke STREAM-telemetrie na tijdelijke fouten bij bronverificatie zodra dezelfde hoofdeenheid opnieuw is bevestigd, en vernieuwt gewijzigde API-inloggegevens vóór verificatie. Voorkomt Dual CT-energieberekening over verschillende MQTT-verbindingen met behoud van tellers en bescherming tegen verouderde gegevens. Voegt regressietests toe voor schaarse meldingen en een-/driefaseherstel. Driefase-Energy blijft een communitytest; de oorzaak van schaarse metermeldingen wordt nog onderzocht."
+  },
+  "1.11.14": {
+    "en": "Improve shared EcoFlow account recovery, connection cleanup and STREAM 5000 retry handling. Preserve energy counters and stale-reading safeguards; improve connection messages and diagnostic privacy.",
+    "de": "Verbessert die Wiederherstellung der EcoFlow-Verbindung und STREAM-5000-Wiederholungen. Energiezähler und Schutz vor veralteten Messwerten bleiben erhalten.",
+    "nl": "Verbetert herstel van de EcoFlow-verbinding en STREAM 5000-verbindingspogingen. Energietellers en bescherming tegen verouderde metingen blijven behouden."
   }
 }

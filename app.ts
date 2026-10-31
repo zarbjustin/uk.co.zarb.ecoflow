@@ -737,8 +737,8 @@ module.exports = class EcoFlowApp extends Homey.App {
       try {
         await this.appMqtt.reconnect();
         return this.appMqtt;
-      } catch (e: any) {
-        this.error('App-auth MQTT reconnect failed', e?.message || 'unknown error');
+      } catch {
+        this.error('App-auth MQTT reconnect failed');
         return null;
       }
     }
@@ -751,8 +751,8 @@ module.exports = class EcoFlowApp extends Homey.App {
     try {
       await this.appMqtt.connect();
       return this.appMqtt;
-    } catch (e: any) {
-      this.error('App-auth MQTT connect failed', e?.message || 'unknown error');
+    } catch {
+      this.error('App-auth MQTT connect failed');
       return null;
     }
   }
@@ -789,6 +789,6 @@ module.exports = class EcoFlowApp extends Homey.App {
     const mqtt = this.appMqtt;
     this.appMqtt = null;
     this.appMqttCredsKey = '';
-    mqtt.end().catch((e) => this.error('App-auth MQTT teardown', e?.message || 'unknown error'));
+    mqtt.end().catch(() => this.error('App-auth MQTT teardown failed'));
   }
 };

@@ -37,7 +37,7 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
       const evidence = input.aggregateRecovery;
       const count = (value: unknown) => (Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 65535 ? value : 0);
       aggregateRecovery = {
-        state: ['not_checked', 'verified_original_main', 'blocked', 'identity_changed'].includes(evidence.state) ? evidence.state : 'unknown',
+        state: ['not_checked', 'verified_original_main', 'blocked', 'identity_changed', 'startup_unverified'].includes(evidence.state) ? evidence.state : 'unknown',
         verificationFailures: count(evidence.verificationFailures),
         recoveries: count(evidence.recoveries),
       };

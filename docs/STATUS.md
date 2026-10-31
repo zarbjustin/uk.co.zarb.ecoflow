@@ -1,5 +1,124 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.14 preparation authorised — 31 October 2026
+
+Owner authorises committing/pushing the combined account/lifecycle candidate,
+checking exact CI and publishing Test, then updating the community tester with
+bounded existing-device tests. Live, Mainline and installed Development must stay
+unchanged. Version 1.11.14 includes the prior fixes and fixed-label error logging.
+Release checks also exposed a browser fixture clock race; setup now installs the
+clock before its pause target. Hardware recovery and final-candidate soak remain
+open. Publication awaits exact CI and archive/channel verification.
+
+## Focused reliability bug bash — 31 October 2026
+
+Completed the bounded offline review of authentication, mixed-device startup,
+connection lifecycle, durable counter recovery and repeated recovery cycles.
+Added four regressions: twenty concurrent failed sign-ins share at most one
+attempt per allowed region and subsequently recover with one login; auth failure
+logs exclude arbitrary upstream text; thirty failed-handshake/recovery cycles
+retain both meter/battery consumers without accumulating managed timers or replaying
+late frames; an applied checkpoint write whose acknowledgement fails restores the
+durable total and starts a new anchor without double-counting or filling the gap.
+
+Confirmed additional defect: auth/MQTT error logs forwarded arbitrary upstream
+exception text. Those paths now use fixed failure labels, including app-owned
+MQTT connect/reconnect/teardown logging. The new privacy assertions failed before
+this fix and pass afterward. No claim of an actual credential disclosure is made.
+The behavioral assertions in the new recovery/durability tests already passed;
+no speculative accounting or connection-policy change was made for those cases.
+
+Existing full-suite checks also cover original/ES21/ES22/Dual CT coexistence,
+50 research-listener detach cycles, actual locked MQTT.js SUBACK rejection/retry,
+bounded missing acknowledgements, stale callback isolation, single/three-phase
+accounting, storage conflicts/readback failure and a synthetic 72-hour ledger
+replay. These are simulated/offline checks, not field telemetry or heap profiling.
+
+Combined candidate: Node 22 committed-lockfile installation (zero audit findings),
+all 1,342 tests, lint, release checks and pinned Homey CLI 4.5.3 verified validation
+pass. No new field recovery conclusion: sparse delivery and the reported original
+aggregate outage remain unresolved in the field; final-candidate 48-hour hardware
+soak remains outstanding. Keep them distinct from passing regression tests.
+
+All changes remain local, uncommitted and unversioned on the diagnostic branch.
+Previous fixes and unrelated local-AI workflow edits are preserved. Test, Live,
+Mainline and installed Development remain unchanged. No hardware command, restart,
+re-pair, setting/Flow operation or external message/capture request was performed.
+Next: review/version the combined candidate for a separately authorised Test build,
+then verify recovery with existing devices rather than adding speculative fixes.
+
+## Connection lifecycle review candidate — 31 October 2026
+
+Continued the shared-account candidate with an offline connection/recovery review.
+The shared MQTT handshake now rejects pending consumers when its owned socket is
+destroyed or shutdown begins, instead of waiting for a broker acknowledgement.
+A regression failed before this change and passes afterward. STREAM 5000 subscription
+retries now share one in-flight attempt, preventing overlapping timer callbacks
+from racing subscription state. Generic connection failures no longer tell users
+to change account credentials; missing data remains explicitly unknown.
+
+Additional tests cover shutdown with concurrent consumers, repeated 5000 retry
+calls, and a silent serial alongside another actively reporting serial. Original
+STREAM source diagnostics now distinguish startup_unverified from an interruption
+after successful verification and identity_changed. Existing source-binding gates
+remain intact: no silent adoption of a new main, counter reset or re-pair shortcut.
+The earlier same-source recovery and credential-order regressions still pass.
+
+Review outcome by issue:
+- Shared connection: authentication races and the above lifecycle defects fixed
+  locally; no claim that screenshots identify the field broker failure.
+- Sparse Dual CT: replay still expires honestly and recovers without backfill;
+  silent-device isolation passes. The upstream reason for stopped publishing is
+  unresolved. No stream-switch request or quiet-feed reconnect loop was added.
+- Original aggregate: verified-source recovery passes; startup/identity blocks
+  now distinguishable. The reported aggregate outage is not field-resolved.
+- Error wording: generic transport failure no longer blames account settings.
+
+The combined candidate passes Node 22 locked installation, 1,338 tests, lint,
+release boundary checks and pinned Homey CLI 4.5.3 verified validation. Counter,
+freshness and single-phase/three-phase regression suites remain green. Final
+candidate hardware recovery and the 48-hour soak are NOT completed by these tests.
+Changes remain local/uncommitted/unversioned. Test, Live, Mainline and installed
+Development are unchanged. No hardware operations, external messages or new
+capture requests. Existing local-AI workflow changes are preserved separately.
+
+Next bounded step: review the combined source candidate before authorising a
+versioned Test build. Field validation should retain existing devices/settings and
+check sustained delivery, spontaneous recovery and counter continuity. If it still
+fails, distinguish startup_unverified/identity_changed from transport failure using
+the existing support report, rather than requesting another broad capture.
+
+## Shared app-account recovery candidate — 31 October 2026
+
+New community feedback on Test 1.11.13 reports both Dual CT devices and a physical
+STREAM 5000 unavailable, plus the original aggregate. Other original devices
+still display values, but their freshness is not established. This broadens the
+investigation beyond CT1 interval admission. Screenshots establish unavailable
+states, not a broker reason, credential rejection, or confirmed release regression.
+
+Source-only fixes now share one saved-account authentication client per Homey and
+exact credential set, bind broker-certificate decryption to the token used by the
+successful request, and prevent a late old-token rejection from discarding a
+newer session. Explicit pairing clients remain separate; removing/changing saved
+credentials invalidates the cache. No account session is persisted or logged.
+
+Two regressions failed on the prior implementation (independent saved-account
+clients and certificate decryption during token rotation). Three new tests cover
+shared concurrent/later login, credential removal/change and Homey isolation,
+certificate response races, and late old-token rejection. Node 22 locked install
+(audit clean), all 1,334 tests, lint, release checks and pinned Homey CLI 4.5.3
+verified validation pass. No decoding, counter, freshness, overlap or hardware
+control rules changed. This is not proof of the field cause or recovery.
+
+Changes are local, uncommitted and unversioned on the diagnostic branch. Existing
+AGENTS/local-AI workflow changes belong to other work and are preserved. Test,
+Live, Mainline and installed Development are unchanged by this task. No repair,
+re-pair, restart, setting, hardware request, new tester capture or message was sent.
+Next: review this bounded authentication candidate before authorising a Test build;
+confirm recovery on existing devices without counter resets. The original aggregate
+failure and sparse delivery still require field confirmation; do not declare them
+resolved from unit tests. Private report/screenshots remain outside Git.
+
 ## Test 1.11.13 / build 80 published — 31 October 2026
 
 Owner authorised publishing the combined original STREAM recovery and Dual CT

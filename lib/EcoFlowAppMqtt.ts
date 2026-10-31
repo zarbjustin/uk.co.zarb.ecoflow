@@ -61,6 +61,7 @@ export class EcoFlowAppMqtt {
   private userId = '';
   private connecting: Promise<void> | null = null;
   private ended = false;
+  private cancelHandshake: (() => void) | null = null;
   private connectionEpoch = 0;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private backoffMs = 0;
@@ -164,10 +165,18 @@ export class EcoFlowAppMqtt {
 
     await new Promise<void>((resolve, reject) => {
       let settled = false;
+      const cancel = () => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('app MQTT handshake interrupted'));
+        }
+      };
+      this.cancelHandshake = cancel;
       client.once('connect', () => {
         if (this.ended || this.client !== client) {
           reject(new Error('app MQTT connection replaced before it was ready')); return;
         }
+        if (this.cancelHandshake === cancel) this.cancelHandshake = null;
         ++this.connectionEpoch;
         settled = true;
         this.backoffMs = 0;
@@ -183,11 +192,12 @@ export class EcoFlowAppMqtt {
         if (!settled) reject(new Error('app MQTT connection closed before it was ready'));
       });
       client.on('error', (e: any) => {
-        this.log('error', e?.message || 'connection error');
+        this.log('error', 'connection_failed');
         if (!settled) reject(e);
       });
     }).catch((e) => {
       if (this.client === client) {
+        this.cancelHandshake = null;
         this.clearSubscriptions(); this.client = null;
       }
       client.removeAllListeners('close');
@@ -207,6 +217,8 @@ export class EcoFlowAppMqtt {
   }
 
   private destroyClient(): void {
+    this.cancelHandshake?.();
+    this.cancelHandshake = null;
     this.clearSubscriptions();
     if (!this.client) return;
     this.client.removeAllListeners('close');
@@ -233,8 +245,8 @@ export class EcoFlowAppMqtt {
     // eslint-disable-next-line homey-app/global-timers
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect().catch((e) => {
-        this.log('reconnect failed', e?.message || 'unknown error');
+      this.connect().catch(() => {
+        this.log('reconnect failed');
         this.scheduleReconnect();
       });
     }, delay);
@@ -389,6 +401,7 @@ export class EcoFlowAppMqtt {
 
   async end(): Promise<void> {
     this.ended = true;
+    if (this.cancelHandshake) this.destroyClient();
     this.clearSubscriptions();
     this.receipts.clear();
     if (this.reconnectTimer) {

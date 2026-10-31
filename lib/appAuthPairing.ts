@@ -55,8 +55,11 @@ export function hasSavedAppAuthCreds(homey: any): boolean {
   return Boolean(email && password);
 }
 
+const savedClients = new WeakMap<object, { key: string; client: EcoFlowAppAuthClient }>();
+
 /** Remove the stored EcoFlow account. Called when the last family device goes. */
 export function clearSavedAppAuthCreds(homey: any): void {
+  savedClients.delete(homey);
   homey.settings.unset(APP_AUTH_EMAIL_SETTING);
   homey.settings.unset(APP_AUTH_PASSWORD_SETTING);
   homey.settings.unset(APP_AUTH_HOST_SETTING);
@@ -68,10 +71,20 @@ export function appAuthClientFromSettings(
   log?: (...args: any[]) => void,
 ): EcoFlowAppAuthClient | null {
   const { email, password, host } = getSavedAppAuthCreds(homey);
-  if (!email || !password) return null;
-  return new EcoFlowAppAuthClient({
+  if (!email || !password) {
+    savedClients.delete(homey);
+    return null;
+  }
+  // One saved-account session per Homey: periodic inventory checks must not
+  // create independent login streams alongside the shared MQTT connection.
+  const key = createHash('sha256').update(JSON.stringify([email, password, host])).digest('hex');
+  const cached = savedClients.get(homey);
+  if (cached?.key === key) return cached.client;
+  const client = new EcoFlowAppAuthClient({
     email, password, host, log,
   });
+  savedClients.set(homey, { key, client });
+  return client;
 }
 
 /** Handle on the credentials of one pairing session. */
