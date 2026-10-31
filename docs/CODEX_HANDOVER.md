@@ -1,5 +1,25 @@
 # Codex cross-machine handover
 
+## Test 1.11.18 / build 85 verified — 31 October 2026
+
+Source `5c453f709a14725e73a87560038de086554fe884` committed/pushed; exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41239562446 passed.
+Locked Node 22 install, all 1,356 tests, lint, release:check, diff check and pinned
+CLI 4.5.3 verified validation passed. Clean-source archive SHA256
+`c269c67e9775973afd64557ac73116b779d58944a71b6cf0e6c060c451cfb30c`; runtime fingerprint
+`b7ae978883245330dd89d1562c053b3be829f68f8450af7f4a2ce2638ab8baca`. EN/DE/NL metadata matched; build 85 activated
+and read back as Test. Live remains 1.10.3/build 18. Installed Development 1.11.16
+and devkit session unchanged; EcoFlow definitions/settings, all device IDs, Flows
+and Insights IDs matched. CT1 remained available. Whole-house metadata changed and
+the running coordinator's houseReserveLease changed; no settings/lease write ran here.
+
+Focused tester reply sent, signed JZ, and permanent item reopened/verified. Requested
+one existing small support summary after about ten minutes or after recurrence,
+without re-pairing, Repair, settings/Energy changes or separate raw capture. Explicitly
+explained shared socket vs target device counts and that this is a diagnostic correction,
+not a proven delivery fix. Next sprint depends on field summary; no hardware changes.
+
+
 ## 1.11.18 Test candidate — 31 October 2026
 
 Owner approved release of the prepared socket/routing diagnostic correction to Test
