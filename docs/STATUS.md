@@ -1,5 +1,29 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Development and Test 1.11.10 deployed — 31 October 2026
+
+Owner explicitly instructed deployment despite the explained coordinator hold.
+The frozen archive from source `9217c3e38bb4088ff7cbd2654037fd42703b55e6`
+was installed non-clean as Development 1.11.10. Readback confirms running,
+aggregate SOC 0% through the official cloud-report fallback, 14 device identities
+and existing settings/capabilities preserved (additive Dual CT display capabilities),
+101 Flow contracts, 1,204 Insights identities and ten nondecreasing counters.
+Native phone favourite-tile rendering remains to be confirmed by the owner.
+
+The restart was followed by Office reserve restoration to its watchdog baseline
+and a coordinator ownership fault. This is the risk explained before the owner's
+explicit override; no separate battery command or fault clear was performed.
+Do not claim battery settings or coordinator state were preserved. Recovery
+requires separate owner review; do not silently restore reserves or clear faults.
+
+After local app validation, the same archive was uploaded and activated as
+Test 1.11.10/build 77. Store metadata matches committed en/de/nl listing/changelog.
+Live remains 1.10.3/build 18; Mainline is unchanged. Source CI 41160015772 passed
+all 1,308 tests, lint, release checks, full audit and pinned verified validation.
+Private installation/store receipts, baseline/readbacks and fault evidence remain
+outside Git. The previous held-deployment checkpoints below are historical.
+
+
 ## 1.11.10 exact CI/archive ready; local-first deployment held — 31 October 2026
 
 Runtime source `9217c3e38bb4088ff7cbd2654037fd42703b55e6` is committed/pushed on
