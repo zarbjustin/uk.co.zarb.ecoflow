@@ -1,5 +1,26 @@
 # Codex cross-machine handover
 
+## Test 1.11.17 / build 84 verified — 31 October 2026
+
+Source `085969ad0a11a1cd57e63144655e2b4a6c08daa9` committed and pushed on diagnostic branch.
+Exact CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41230122689
+passed. Clean source packaged with pinned CLI; archive SHA256
+`465ba8fe006fb687d9c1d4f0320f70346d9a38843d1149f8eba6422afaed6c11`; runtime fingerprint
+`b17bdae75c722665941b963b0f212487e1cc9cfbe3e2b783ea4c882e1f5436ee`. EN/DE/NL metadata matched; build 84 activated
+and read back as Test. Live remains 1.10.3/build 18. Installed Development 1.11.16
+charging-reliability archive and devkit session were unchanged. All EcoFlow device
+definitions/settings, app settings, device IDs, Flows and Insights identities matched
+the private baseline. CT1 remained available; unrelated whole-house device metadata
+changed during observation, so no claim of whole-house metadata equality is made.
+
+Focused tester instructions sent, signed JZ, and reopened at permanent item for
+verification. Acknowledged that whole-property Energy is not configured on the
+tester installation. Requested one small Dual CT support summary after recurrence
+(or after ten minutes without recovery), without re-pair, Repair, settings change,
+forced reconnect or raw capture. Await that evidence; root cause and stable physical
+recovery remain unconfirmed. No installation or hardware change ran in this task.
+
+
 ## Dual CT targeted diagnostics / 1.11.17 candidate — 31 October 2026
 
 Owner authorised a targeted app diagnostic, Test release and tester instructions;
