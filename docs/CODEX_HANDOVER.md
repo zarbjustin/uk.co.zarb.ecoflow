@@ -1,5 +1,30 @@
 # Codex cross-machine handover
 
+## Test 1.11.14 / build 81 published — 31 October 2026
+
+Combined candidate committed/pushed as `98110f7567e2a6300074d862991435bd2beece66`. Exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41216647134 passed.
+Node 22 locked install, all 1,342 tests, lint, release checks and pinned Homey
+4.5.3 verified validation pass. Browser fixture clock setup was corrected after
+the release run exposed a pause-in-the-past race. Archive SHA256:
+`2ec5a0e1ffbc0d5d79420194d6739ba62ce24d591f8b86b8a30c83cde8021ca5`; runtime fingerprint:
+`769e37db6b5a4929adb38a6c9b72c5014c254b3747ff69fb33f7810c3eb76ec1`. All 2,034 archive files match the clean committed
+source build; unrelated local-AI workflow edits were excluded and preserved.
+
+Test activation of build 81 and en/de/nl metadata are verified. Live stays
+1.10.3/build 18. Read-only baseline/readback confirms installed Development
+1.11.10 running with unchanged devkit session; 14 EcoFlow definitions/settings,
+app settings, all device IDs, 101 Flow contracts and 1,204 Insights IDs preserved.
+Whole-house device metadata differs outside EcoFlow; whole-house equality is not
+claimed. No installation, restart, pairing, battery/Flow/Energy change occurred.
+Mainline unchanged. No new hardware acceptance or 48-hour soak pass is claimed.
+
+Authorised community reply sent and reopened: requests five-minute availability,
+15–30-minute normal-use freshness/recovery, retained Dual CT totals and Energy
+visibility on existing devices. No re-pair/reset, setting change or large capture.
+Correspondence, screenshot proof and private receipts remain outside Git.
+Field cause/recovery remains unconfirmed. Next: review feedback before more changes.
+
 ## Test 1.11.14 preparation authorised — 31 October 2026
 
 Owner authorises committing/pushing the combined account/lifecycle candidate,
