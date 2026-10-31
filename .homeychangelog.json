@@ -1,4 +1,9 @@
 {
+  "1.11.17": {
+    "en": "Adds a focused Dual CT support summary with specific message rejection reasons and bounded recent recovery events. No changes to meter accounting or freshness limits. Includes the reviewed house reserve configuration refresh fix.",
+    "de": "Ergänzt eine gezielte Dual-CT-Supportübersicht mit Ablehnungsgründen und begrenztem Ereignisverlauf. Keine Änderung der Zählerberechnung oder Aktualitätsgrenzen. Enthält die geprüfte Aktualisierung der Hausreserve-Konfiguration.",
+    "nl": "Voegt een gericht Dual CT-ondersteuningsoverzicht toe met afwijsredenen en beperkte recente gebeurtenissen. Geen wijzigingen aan meterberekening of actualiteitsgrenzen. Bevat de beoordeelde vernieuwing van de huisreserveconfiguratie."
+  },
   "1.7.8": {
     "en": "Renamed the app to \"EcoFlow - Stream Systems\" to better reflect its focus on the STREAM range."
   },

@@ -1,5 +1,6 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { DualCtDiagnosticEvents, DUAL_CT_MONITOR_EVENTS } from '../../lib/dualCtDiagnosticEvents';
 import {
   DUAL_CT_DISPLAY_SETTINGS, DualCtDisplaySettings, dualCtDisplayOptions, dualCtDisplayVisible,
 } from '../../lib/dualCtDisplaySettings';
@@ -11,6 +12,7 @@ import { dualCtCircuitRole, DualCtDisplayRoles } from '../../lib/dualCtPresentat
 import manifest from './driver.compose.json';
 
 module.exports = class DualCtPreviewDevice extends Homey.Device {
+  private readonly diagnosticEvents = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS);
   private generation = 0;
   private monitor: DualCtMonitor | null = null;
   private handler: ((payload: Buffer, topic: string) => void) | null = null;
@@ -113,7 +115,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       if (!owned) {
         await this.stop('model_unavailable'); return;
       }
-      this.monitor = new DualCtMonitor({ account, device: sn, session: randomUUID() });
+      this.monitor = new DualCtMonitor({ account, device: sn, session: randomUUID() }, this.diagnosticEvents);
       const app = this.homey.app as any;
       const handler = (payload: Buffer, topic: string) => {
         if (!this.enabled || generation !== this.generation || this.handler !== handler) return;
@@ -144,6 +146,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       if (this.handler) (this.homey.app as any).unsubscribeAppRealtime(this.getData().sn, this.handler);
       this.handler = null;
       this.monitor?.clear(); this.monitor = null;
+      this.diagnosticEvents.record('connection_failed');
       this.state = 'connection_failed';
       await this.clearDisplays(generation, 'connection_failed');
       if (!this.enabled || generation !== this.generation) return;
@@ -161,7 +164,9 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       if (this.renderQueuedGeneration === generation) this.renderQueuedGeneration = null;
       if (!this.enabled || generation !== this.generation || !this.monitor) return;
       const view = this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles);
-      this.state = view.recent ? 'recent' : 'waiting_stale';
+      const nextState = view.recent ? 'recent' : 'waiting_stale';
+      if (nextState !== this.state) this.diagnosticEvents.record(nextState);
+      this.state = nextState;
       if (this.expiry) this.homey.clearTimeout(this.expiry);
       this.expiry = view.nextExpiryMs === null ? null : this.homey.setTimeout(() => {
         this.expiry = null; this.render(generation);
@@ -186,6 +191,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
 
   private async stop(reason: string): Promise<void> {
     this.enabled = false;
+    this.diagnosticEvents.record(reason);
     this.state = reason;
     this.acceptedPackets = 0; this.lastAcceptedAt = null;
     this.receivedFrames = 0; this.rejectedFrames = 0; this.lastFrameAt = null;
@@ -276,6 +282,8 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       receivedFrames: this.receivedFrames,
       rejectedFrames: this.rejectedFrames,
       rejectionReasons: this.monitor?.getRejectionCounts() || {},
+      recentEvents: this.diagnosticEvents.snapshot(),
+      retryScheduled: this.retry !== null,
       lastFrameAgeSec: frameAge !== null && Number.isFinite(frameAge) && frameAge >= 0 ? frameAge : null,
       lastReceiptAgeSec: age !== null && Number.isFinite(age) && age >= 0 ? age : null,
       valuesIncluded: false,

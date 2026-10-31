@@ -411,7 +411,11 @@ test('rejected preview frames advance transport health but cannot renew accepted
     await h.device.onInit(); const handler = [...h.handlers][0];
     handler(frame(), topic); await h.device.chain;
     now += 95000; handler(Buffer.from('invalid'), topic); await h.device.chain;
+    h.device.render(h.device.generation); await h.device.chain;
     const health = h.device.getDualCtPreviewDiagnostics();
+    assert.equal(h.device.available, false);
+    assert.ok(health.recentEvents.some(e => e.reason === 'packet_accepted' && e.ageSec === 95));
+    assert.equal(health.recentEvents.at(-1).reason, 'waiting_stale');
     assert.equal(health.receivedFrames, 2); assert.equal(health.rejectedFrames, 1);
     assert.equal(health.acceptedPackets, 1); assert.equal(health.lastFrameAgeSec, 0);
     assert.equal(health.lastReceiptAgeSec, 95);
@@ -531,8 +535,35 @@ test('detailed monitor distinguishes rejected encodings, malformed frames and un
   assert.equal(monitor.observe(frame(packet(), { encoding: 1 }), topic, 1000), false);
   assert.equal(monitor.observe(Buffer.from('invalid'), topic, 2000), false);
   assert.equal(monitor.observe(frame(), '/app/foreign/'+sn+'/thing/property/get_reply', 3000), false);
-  assert.deepEqual(monitor.getRejectionCounts(), { unsupported_encoding: 1, malformed_frame: 1, scope_or_receipt_rejected: 1 });
+  assert.deepEqual(monitor.getRejectionCounts(), { unsupported_encoding: 1, malformed_frame: 1, topic_get_reply: 1 });
   assert.equal(monitor.snapshot(3000, text).recent, false);
   assert.equal(monitor.observe(frame(), topic, 4000), true);
   assert.equal(monitor.snapshot(4000, text).recent, true);
+});
+
+test('targeted diagnostics separate topic, payload and receipt failures without accepting them', () => {
+  const { DualCtDiagnosticEvents, DUAL_CT_MONITOR_EVENTS } = require('../.homeybuild/lib/dualCtDiagnosticEvents');
+  const events = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS);
+  const m = new DualCtMonitor(scope, events);
+  const rows = [
+    [frame(), `/app/private/${sn}/thing/property/get_reply`, 1000, 1000, 'topic_get_reply'],
+    [frame(), '/app/device/property/OTHER', 1000, 1000, 'topic_property_other_device'],
+    [frame(), '/private', 1000, 1000, 'topic_other'],
+    ['private', topic, 1000, 1000, 'payload_not_buffer'],
+    [Buffer.alloc(0), topic, 1000, 1000, 'payload_empty'],
+    [Buffer.alloc(65537), topic, 1000, 1000, 'payload_oversized'],
+    [frame(), topic, 1000, NaN, 'clock_invalid'],
+    [frame(), topic, NaN, 1000, 'receipt_invalid'],
+    [frame(), topic, 1001, 1000, 'receipt_future'],
+    [frame(), topic, 1000, 91001, 'receipt_expired'],
+  ];
+  for(const [payload,route,received,now,reason] of rows) {
+    assert.equal(m.observe(payload,route,received,now),false);
+    assert.equal(m.getRejectionCounts()[reason],1);
+  }
+  assert.equal(m.snapshot(92000,text).recent,false);
+  assert.equal(m.observe(frame(),topic,93000),true);
+  assert.equal(m.snapshot(93000,text).recent,true);
+  assert.equal(m.snapshot(183001,text).recent,false);
+  assert.doesNotMatch(JSON.stringify(events.snapshot(183001)),/private|DUALCTSYNTHETIC/);
 });

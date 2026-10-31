@@ -101,6 +101,7 @@
     A recent setting receipt is not proof that a command changed physical power. Copy it when reporting
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
+  <button id="dualCtSupportSummary" type="button">Show Dual CT support summary</button>
   <button id="supportSnapshot" type="button">Show integration support report</button>
   <button id="copySupportSnapshot" type="button" disabled>Copy integration support report</button>
   <button id="downloadSupportSnapshot" type="button" disabled>Download integration JSON</button>
@@ -714,6 +715,8 @@
       var captureTimer = null;
       var reportParts = [];
       var reportPartIndex = 0;
+      var dualCtSummaryButton = document.getElementById('dualCtSupportSummary');
+      dualCtSummaryButton.textContent = Homey.__('settings.support.dual_ct_summary');
       var showButton = document.getElementById('supportSnapshot');
       var checkButton = document.getElementById('refreshReporterDiagnostics');
       var downloadButton = document.getElementById('downloadSupportSnapshot');
@@ -827,13 +830,13 @@
         }
       });
 
-      function requestReport(remoteCheck) {
+      function requestReport(remoteCheck, dualCtOnly) {
         if (reportBusy) return;
         reportBusy = true;
         var operation = ++reportOperation;
         var dualCtAtRequest = dualCtOperation;
         var output = document.getElementById('supportSnapshotResult');
-        showButton.disabled = checkButton.disabled = true;
+        dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = true;
         reportText = '';
         copyButton.disabled = true;
         copyStatus.textContent = '';
@@ -846,7 +849,10 @@
           clearTimeout(reportDeadline);
           reportDeadline = null;
           reportBusy = false;
-          showButton.disabled = checkButton.disabled = false;
+          dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = false;
+          if (dualCtOnly && report && !err) report = { schemaVersion: 1, scope: "dual_ct_support_summary", appVersion: report.appVersion,
+            homeyVersion: report.homeyVersion, persistence: "since_app_start_bounded_recent_events",
+            dualCtPreviews: report.dualCtPreviews, dualCtCommunityTrials: report.dualCtCommunityTrials };
           try { reportText = err || !report || typeof report !== 'object' ? '' : JSON.stringify(report, null, 2); }
           catch (serializationError) { reportText = ''; }
           output.textContent = timedOut ? Homey.__('settings.reporter.request_timeout') : reportText
@@ -862,6 +868,7 @@
             remoteCheck ? {} : null, function (err, report) { finish(err, report, false); });
         } catch (apiError) { finish(true, null, false); }
       }
+      dualCtSummaryButton.addEventListener('click', function () { requestReport(false, true); });
       showButton.addEventListener('click', function () { requestReport(false); });
       checkButton.addEventListener('click', function () { requestReport(true); });
 

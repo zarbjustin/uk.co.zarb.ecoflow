@@ -515,6 +515,7 @@
       "snapshot": "This is a snapshot, not a live connection indicator. Refresh the report to check again."
     },
     "support": {
+      "dual_ct_summary": "Show Dual CT support summary",
       "show": "Show integration support report",
       "copy": "Copy integration support report",
       "check": "Check current battery reporter (read-only)",

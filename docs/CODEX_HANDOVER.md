@@ -1,5 +1,41 @@
 # Codex cross-machine handover
 
+## Dual CT targeted diagnostics / 1.11.17 candidate — 31 October 2026
+
+Owner authorised a targeted app diagnostic, Test release and tester instructions;
+Live and installed Development remain unchanged. Preserves newer committed charging
+reliability changes (e512d61); these are included in this candidate, not reverted.
+Current installed Development is the separate 1.11.16 charging-reliability archive.
+
+Latest private tester evidence: 1.11.16 received three rejected frames classified
+scope_or_receipt_rejected, later briefly displayed detailed CT1 readings, then became
+unavailable again. Tester explicitly says whole-property Energy selection is not
+active. This proves intermittent accepted readings, not a broken saved pairing or
+stable Energy operation. No re-pairing is justified by this evidence.
+
+Split the broad monitor rejection into topic category, buffer/size, clock/receipt
+validity, future receipt and expiry classifications. The checks and acceptance
+boundaries are unchanged. Reply-topic traffic is labelled separately and remains
+ineligible for live readings. Added up to 32 coalesced recent classified events
+with relative ages, plus retry scheduling state. Preview availability transitions
+and three-phase startup/delivery/recovery events are included. Events are local,
+volatile, bounded and contain no topic strings, IDs, errors, packets or readings.
+Repeated adjacent reasons coalesce; the age is of their latest occurrence. Event
+history survives local recovery but resets when the device/app instance restarts.
+
+App settings now offer Show Dual CT support summary (EN/DE/NL). It uses the existing
+read-only local support endpoint and extracts only app/Homey versions and sanitised
+Dual CT sections. Existing Copy integration support report copies this small result;
+no discovery, forced reconnect, settings change or automatic upload is performed.
+
+Regression coverage separates rejection gates, acceptance then natural expiry,
+bounded/coalesced history, clock reversal, event sanitisation and summary copy/privacy.
+Node 22 locked install, all 1,354 tests, lint, release:check, diff check and
+pinned CLI 4.5.3 verified validation pass.
+Counter/accounting and freshness policy are unchanged. Hardware root cause is still
+unconfirmed; this release supplies discriminating evidence rather than claiming a fix.
+
+
 ## 31 October 2026 — charging reliability source review
 
 Owner authorised review, commit and push of the charging reliability changes.

@@ -1,3 +1,4 @@
+import { DualCtDiagnosticEvents, DUAL_CT_MONITOR_EVENTS } from './dualCtDiagnosticEvents';
 import { DualCtDevicePreview } from './dualCtDevicePreview';
 import { decodeFrameHeaders } from './streamAc5000Protocol';
 import { dualCtEncodingPolicy } from './dualCtEncoding';
@@ -19,7 +20,7 @@ export class DualCtMonitor {
   private lastAt: number | null = null;
   private lastNow: number | null = null;
 
-  constructor(private readonly scope: Scope) {
+  constructor(private readonly scope: Scope, private readonly diagnosticEvents = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS)) {
     this.adapter = new DualCtDevicePreview(scope);
   }
 
@@ -33,13 +34,22 @@ export class DualCtMonitor {
 
   observe(payload: Buffer, topic: string, receivedAt: number, now = receivedAt): boolean {
     const reject = (reason: string) => {
+      this.diagnosticEvents.record(reason, now);
       this.rejections[reason] = Math.min(65535, (this.rejections[reason] || 0) + 1);
       return false;
     };
     let reason = 'decode_rejected';
-    if (topic !== `/app/device/property/${this.scope.device}` || !Buffer.isBuffer(payload)
-      || !payload.length || payload.length > 65536 || !Number.isFinite(now) || now <= 0 || !Number.isFinite(receivedAt)
-      || receivedAt <= 0 || !dualCtFreshAge(now - receivedAt)) return reject('scope_or_receipt_rejected');
+    if (topic !== `/app/device/property/${this.scope.device}`) {
+      if (typeof topic === 'string' && topic.startsWith('/app/') && topic.endsWith(`/${this.scope.device}/thing/property/get_reply`)) return reject('topic_get_reply');
+      return reject(typeof topic === 'string' && topic.startsWith('/app/device/property/') ? 'topic_property_other_device' : 'topic_other');
+    }
+    if (!Buffer.isBuffer(payload)) return reject('payload_not_buffer');
+    if (!payload.length) return reject('payload_empty');
+    if (payload.length > 65536) return reject('payload_oversized');
+    if (!Number.isFinite(now) || now <= 0) return reject('clock_invalid');
+    if (!Number.isFinite(receivedAt) || receivedAt <= 0) return reject('receipt_invalid');
+    if (receivedAt > now) return reject('receipt_future');
+    if (!dualCtFreshAge(now - receivedAt)) return reject('receipt_expired');
     if (this.lastNow !== null && now < this.lastNow) this.clear();
     this.lastNow = now;
     if (this.lastAt !== null && receivedAt <= this.lastAt) return reject('receipt_order_rejected');
@@ -85,6 +95,7 @@ export class DualCtMonitor {
             });
           }
         }
+        this.diagnosticEvents.record('packet_accepted', now);
         this.lastAt = receivedAt;
         return true;
       }

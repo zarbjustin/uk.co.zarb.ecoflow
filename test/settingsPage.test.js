@@ -803,3 +803,15 @@ test('a late initial Energy opt-in read cannot overwrite a newer explicit opt-ou
   assert.equal(checkbox.checked, false);
   assert.equal(homey.store.get('stream5000AggregatePairingEnabled'), false);
 });
+
+test('Dual CT support summary requests local diagnostics once and copies only relevant sections', async () => {
+ const context=loadSettingsScript();const homey=fakeHomey();const calls=[];let copied='';
+ context.navigator={clipboard:{writeText:async text=>{copied=text;}}};
+ homey.api=(method,url,body,cb)=>{calls.push({method,url,body});cb(null,{appVersion:'1.11.17',homeyVersion:'13.5.3',dualCtPreviews:[{status:'waiting_stale'}],dualCtCommunityTrials:[{counts:{receipt_expired:1}}],privateUnrelated:'PRIVATE'});};
+ context.onHomeyReady(homey);
+ await context.document.getElementById('dualCtSupportSummary').click();
+ await context.document.getElementById('copySupportSnapshot').click();
+ assert.deepEqual(calls,[{method:'GET',url:'/support-snapshot',body:null}]);
+ const summary=JSON.parse(copied);assert.equal(summary.scope,'dual_ct_support_summary');assert.equal(summary.dualCtPreviews.length,1);
+ assert.doesNotMatch(copied,/PRIVATE|privateUnrelated/);
+});

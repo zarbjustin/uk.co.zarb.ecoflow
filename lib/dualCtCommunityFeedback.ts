@@ -1,3 +1,4 @@
+import { DualCtDiagnosticEvents, dualCtEventSnapshot } from './dualCtDiagnosticEvents';
 import { appMqttDiagnosticsSnapshot } from './appMqttDiagnostics';
 
 /** Local, bounded classifications only. No powers, energy totals, IDs, timestamps or uploads. */
@@ -22,7 +23,9 @@ export function dualCtCommunityFeedbackSnapshot(input: any) {
     timing: 'receipt_estimate',
     persistence: 'since_app_start',
     counts,
+    recentEvents: dualCtEventSnapshot(input.recentEvents, statuses),
     transport: appMqttDiagnosticsSnapshot(input.transport),
+    retryScheduled: input.retryScheduled === true,
     eligibleIntervalMs: count(input.eligibleIntervalMs),
     rejectedGapMs: count(input.rejectedGapMs),
     coveragePercent: null,
@@ -32,10 +35,12 @@ export function dualCtCommunityFeedbackSnapshot(input: any) {
 }
 export class DualCtCommunityFeedback {
   private readonly events: Record<string, number> = {};
+  private readonly recentEvents = new DualCtDiagnosticEvents(statuses);
   private eligibleMs = 0;
   private gapMs = 0;
   record(status: string, durationMs = 0): void {
     if (!statuses.includes(status)) return;
+    this.recentEvents.record(status);
     if (!Object.prototype.hasOwnProperty.call(this.events, status) && Object.keys(this.events).length >= 64) return;
     this.events[status] = Math.min(Number.MAX_SAFE_INTEGER, (this.events[status] || 0) + 1);
     if (Number.isFinite(durationMs) && durationMs > 0 && durationMs < 86400000) {
@@ -53,6 +58,7 @@ export class DualCtCommunityFeedback {
       timing: 'receipt_estimate',
       persistence: 'since_app_start',
       counts: { ...this.events },
+      recentEvents: this.recentEvents.snapshot(),
       eligibleIntervalMs: this.eligibleMs,
       rejectedGapMs: this.gapMs,
       coveragePercent: null,

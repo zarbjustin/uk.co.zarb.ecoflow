@@ -1,3 +1,5 @@
+import { DUAL_CT_MONITOR_EVENTS } from './dualCtDiagnosticEvents';
+
 /** Whitelisted local delivery evidence. Never copies topics, identifiers, errors or payloads. */
 export function appMqttDiagnosticsSnapshot(input: any) {
   if (!input || typeof input !== 'object') return null;
@@ -17,8 +19,7 @@ export function appMqttDiagnosticsSnapshot(input: any) {
 
 export function dualCtRejectionSnapshot(input: any) {
   const result: Record<string, number> = {};
-  for (const reason of ['scope_or_receipt_rejected', 'receipt_order_rejected', 'header_rejected',
-    'unsupported_encoding', 'unrelated_message', 'decode_rejected', 'malformed_frame']) {
+  for (const reason of DUAL_CT_MONITOR_EVENTS) {
     const value = input?.[reason];
     if (Number.isSafeInteger(value) && value > 0 && value <= 65535) result[reason] = value;
   }

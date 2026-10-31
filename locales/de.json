@@ -514,6 +514,7 @@
       "snapshot": "Dies ist eine Momentaufnahme, keine Live-Verbindungsanzeige. Den Bericht zur erneuten Prüfung aktualisieren."
     },
     "support": {
+      "dual_ct_summary": "Dual-CT-Supportübersicht anzeigen",
       "show": "Integrationsbericht anzeigen",
       "copy": "Integrationsbericht kopieren",
       "check": "Aktuellen Batterie-Melder prüfen (nur lesen)",

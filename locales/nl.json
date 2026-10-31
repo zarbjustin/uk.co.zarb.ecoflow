@@ -514,6 +514,7 @@
       "snapshot": "Dit is een momentopname, geen live verbindingsindicator. Vernieuw het rapport om opnieuw te controleren."
     },
     "support": {
+      "dual_ct_summary": "Dual CT-ondersteuningsoverzicht tonen",
       "show": "Integratierapport tonen",
       "copy": "Integratierapport kopiëren",
       "check": "Huidige batterijbron controleren (alleen lezen)",
