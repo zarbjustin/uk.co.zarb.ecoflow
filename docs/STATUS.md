@@ -1,5 +1,27 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.16 / build 83 published — 31 October 2026
+
+Source `a177dfa44a6871503d8a637e70ff0545c388a386` pushed to diagnostic branch.
+Exact CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41221140493
+passed; locked Node 22 install, 1,348 tests, lint, release:check, diff check and
+Homey CLI 4.5.3 verified validation passed. Clean committed-source archive SHA256
+`5e45fca3dd246f8236c941d6174c5d8ed6eb7b9538a592c37d0e854bb24fdf17`;
+runtime fingerprint `71209ae5f6de8ecde1e75446827390a8da7dad21fccbd0e38dc4a1a17b640ca6`.
+Build 83 processed with matching EN/DE/NL listing/changelog, activated and read back
+as Test. Live remains 1.10.3/build 18. Installed Development 1.11.14, devkit session,
+all EcoFlow device definitions/settings, all device IDs, Flows and Insights IDs
+were preserved. Single-phase CT1 remained available. Whole-house metadata comparison
+was not identical: two non-EcoFlow devices changed, and the running coordinator's
+houseReserveLease changed. No installation, hardware commands or settings edits ran.
+
+Tester update sent and permanent item reopened/verified, signed JZ. Requested ordinary
+observation after update, keeping existing devices/settings/counters, and only the
+current bounded Dual CT report sections if unavailable. No re-pairing or raw capture.
+The exhausted shared-topic retry defect is reproduced and fixed; it is not proven
+to explain the tester's current outage. Full-release hardware gates remain open.
+
+
 ## Dual CT reliability review / 1.11.16 candidate — 31 October 2026
 
 Owner authorises focused review followed by commit/push, CI, Test publication and
