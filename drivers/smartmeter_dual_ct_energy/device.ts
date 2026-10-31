@@ -126,9 +126,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         if (generation === this.generation && this.handler === handler) {
           this.details.observe(payload, topic, delivery, Date.now());
           const result = deliveryGuard.inspect(payload, topic, `/app/device/property/${source.device}`, delivery, Date.now());
-          if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' && !result.accepted) this.communityFeedback.record('delivery_rejected');
+          if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' && !result.accepted) {
+            this.communityFeedback.record('delivery_rejected'); this.communityFeedback.record(result.status);
+          }
           if (result.restartAnchor) {
-            this.recover(generation, dependencies.enabled).catch(() => {}); return;
+            session.resetAnchor().then(() => adapter.refresh()).catch(() => this.recover(generation, dependencies.enabled).catch(() => {})); return;
           }
           if (!result.accepted || !delivery) return;
           adapter.observe(payload, topic, delivery.receivedAt).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));

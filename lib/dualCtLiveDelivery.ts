@@ -59,7 +59,10 @@ export class DualCtLiveDelivery {
   private previous: { seq: number; wall: number; mono: number } | null = null;
 
   inspect(payload: Buffer, topic: string, expectedTopic: string, delivery: Readonly<AppFrameDelivery> | undefined, now: number) {
-    const reject = (status: string, restartAnchor = false) => ({ accepted: false, status, restartAnchor });
+    const reject = (status: string, restartAnchor = false) => {
+      if (restartAnchor) this.previous = null;
+      return { accepted: false, status, restartAnchor };
+    };
     if (topic !== expectedTopic || !Buffer.isBuffer(payload) || !payload.length || payload.length > 65536) return reject('delivery_scope');
     if (!delivery || delivery.retained !== false || delivery.duplicate !== false
       || !Number.isFinite(delivery.receivedAt) || delivery.receivedAt <= 0 || !Number.isFinite(delivery.receivedMonoMs) || delivery.receivedMonoMs < 0

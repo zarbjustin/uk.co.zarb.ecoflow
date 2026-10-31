@@ -1,5 +1,23 @@
 # Historical three-phase evidence reconciliation
 
+## 31 October source investigation update
+
+Earlier three-phase detailed display operation is retained as positive historical
+evidence. It does not establish current three-phase Homey Energy qualification.
+The current community trial and its binding are separate from the historical
+planning matrix below. Latest screenshots show both monitor and Energy unavailable;
+no phase-decoder-only root cause has been demonstrated.
+
+A confirmed recovery defect was fixed in the uncommitted source candidate:
+delivery discontinuities now reset anchors without tearing down the subscription
+or imposing reconnect backoff. Synthetic real-driver tests cover signed three-phase
+netting, gap rejection, same-subscription recovery, preserved counters and restart.
+Single-phase recovery has parallel coverage. Strict completeness and five-second
+receipt eligibility remain unchanged. Field recovery, eligible interval coverage
+and reference import/export accounting still require community evidence.
+
+## Historical matrix (30 October)
+
 30 October 2026. This is a sanitized evidence classification, not a current
 hardware signoff. Private source messages/images/numeric exports remain outside
 Git. The detailed source-by-source matrix is in the owner's private review report.

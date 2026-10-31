@@ -1,5 +1,53 @@
 # Codex cross-machine handover
 
+## Test 1.11.11 preparation authorised — 31 October 2026
+
+Owner requests immediate Test publication for the community tester and a reply to
+the public freezing report. Version 1.11.11 contains the source recovery fixes
+below. Installed Development 1.11.10, Live 1.10.3 and Mainline must remain unchanged.
+Publication is pending exact-commit CI and archive/channel verification. No hardware
+acceptance is inferred from software validation; no new tester capture requested.
+
+## Community recovery fixes prepared in source — 31 October 2026
+
+Uncommitted diagnostic-branch candidate only; installed Development and store
+Test remain 1.11.10, Live remains 1.10.3. No install, restart, settings/Flow change,
+community reply or new tester capture was performed for this investigation.
+
+The earlier three-phase detailed monitor did produce readings. That evidence is
+not a completed three-phase Homey Energy acceptance pass. The newer Energy path
+requires coherent CT1 phases plus total in the same payload and qualified live
+intervals; the detailed monitor can retain separately received display fields.
+The latest field screenshots show both the detailed monitor and Energy device
+unavailable, so a phase-only decoding regression is not established.
+
+Confirmed source defect: a five-second delivery gap, sequence reset or clock
+discontinuity unnecessarily tore down the Energy subscription and entered its
+30-second-or-longer reconnect backoff. Recovery now clears only the delivery and
+accounting anchors in place. The crossing packet is discarded; the next qualified
+frame anchors, and only a following valid interval advances counters. Persisted
+precise checkpoints and writer ownership remain intact. Five-second freshness,
+complete-phase checks, retained/duplicate rejection and missing-data handling are
+unchanged. Three-phase local feedback now records bounded delivery rejection
+reasons without raw payloads, measurements, identifiers or automatic uploads.
+
+The original STREAM public MQTT client also lacked replacement-socket fencing
+and listener isolation already present on the app transport. The candidate fences
+old messages/disconnects, shares subscriptions, isolates throwing listeners and
+resubscribes surviving status-only consumers. These are confirmed implementation
+defects; the sparse field report does not establish them as the freeze's cause.
+The latest edited public freeze report names 1.11.10, but its diagnostic metadata
+identifies 1.11.6. Preserve that chronology distinction when following up.
+
+Node 22 locked `npm ci` (zero audit findings), all 1,311 tests, lint, release
+boundary/ledger checks and pinned Homey 4.5.3 verified validation pass locally.
+Regression coverage includes both phase modes across gaps, exact and rounded
+counter continuity, restart restoration, duplicate rejection, shared listeners,
+old-socket callbacks and status-only resubscription. Hardware gates remain open:
+current community delivery cadence/payload completeness, sustained recovery and
+three-phase import/export reference accounting. No field pass or exact new CI is
+claimed. Review this source candidate before versioning/publication/installation.
+
 ## Development and Test 1.11.10 deployed — 31 October 2026
 
 Owner explicitly instructed deployment despite the explained coordinator hold.

@@ -79,6 +79,7 @@ export class EcoFlowMqtt {
     if (this.client) {
       this.client.removeAllListeners('close');
       this.client.removeAllListeners('offline');
+      this.client.removeAllListeners('message');
       try {
         this.client.end(true);
       } catch { /* ignore */ }
@@ -110,9 +111,15 @@ export class EcoFlowMqtt {
       clean: true,
     });
     this.client = client;
-    client.on('message', (topic, payload) => this.onMessage(topic, payload));
-    client.on('close', () => this.onDisconnect('close'));
-    client.on('offline', () => this.onDisconnect('offline'));
+    client.on('message', (topic, payload) => {
+      if (!this.ended && this.client === client) this.onMessage(topic, payload);
+    });
+    client.on('close', () => {
+      if (this.client === client) this.onDisconnect('close');
+    });
+    client.on('offline', () => {
+      if (this.client === client) this.onDisconnect('offline');
+    });
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       client.once('connect', () => {
@@ -123,7 +130,7 @@ export class EcoFlowMqtt {
           this.reconnectTimer = null;
         }
         this.log('connected');
-        for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
+        for (const sn of new Set([...this.quotaHandlers.keys(), ...this.statusHandlers.keys()])) this.subscribeTopics(sn);
         resolve();
       });
       client.once('close', () => {
@@ -137,6 +144,7 @@ export class EcoFlowMqtt {
       if (this.client === client) this.client = null;
       client.removeAllListeners('close');
       client.removeAllListeners('offline');
+      client.removeAllListeners('message');
       client.end(true);
       throw e;
     });
@@ -148,6 +156,7 @@ export class EcoFlowMqtt {
     if (this.client) {
       this.client.removeAllListeners('close');
       this.client.removeAllListeners('offline');
+      this.client.removeAllListeners('message');
       try {
         this.client.end(true);
       } catch { /* ignore */ }
@@ -173,6 +182,7 @@ export class EcoFlowMqtt {
   }
 
   subscribe(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): void {
+    const alreadySubscribed = this.quotaHandlers.has(sn) || this.statusHandlers.has(sn);
     let qh = this.quotaHandlers.get(sn);
     if (!qh) {
       qh = new Set();
@@ -187,7 +197,7 @@ export class EcoFlowMqtt {
       }
       sh.add(onStatus);
     }
-    this.subscribeTopics(sn);
+    if (!alreadySubscribed) this.subscribeTopics(sn);
   }
 
   /**
@@ -235,10 +245,22 @@ export class EcoFlowMqtt {
     const kind = parts[4];
     if (kind === 'quota') {
       const quota = this.extractQuota(data);
-      this.quotaHandlers.get(sn)?.forEach((h) => h(quota));
+      this.quotaHandlers.get(sn)?.forEach((h) => {
+        try {
+          h(quota);
+        } catch {
+          this.log('quota handler failed');
+        }
+      });
     } else if (kind === 'status') {
       const online = (data?.params?.status ?? data?.status) === 1;
-      this.statusHandlers.get(sn)?.forEach((h) => h(online));
+      this.statusHandlers.get(sn)?.forEach((h) => {
+        try {
+          h(online);
+        } catch {
+          this.log('status handler failed');
+        }
+      });
     }
   }
 
@@ -266,6 +288,7 @@ export class EcoFlowMqtt {
       } catch { /* ignore */ }
     }
     if (this.client) {
+      this.client.removeAllListeners('message');
       await new Promise<void>((res) => {
         this.client!.end(false, {}, () => res());
       });

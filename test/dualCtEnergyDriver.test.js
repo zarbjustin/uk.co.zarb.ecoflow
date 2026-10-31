@@ -157,7 +157,7 @@ test('receipt gaps re-anchor a new session without filling missing time or reset
   const total = d.values.get('meter_power.imported');
   now = 8000; d.subscriptions[0](payload(99000), topic); await settle();
   assert.equal(d.values.get('meter_power.imported'), total); assert.equal(d.values.get('measure_power'), null);
-  const retry = [...d.timers.values()].find(timer => !timer.interval); assert.ok(retry); retry.fn(); await settle();
+  assert.equal([...d.timers.values()].filter(timer => !timer.interval).length, 0, 'delivery gap must not tear down the subscription');
   now = 9000; d.subscriptions.at(-1)(payload(3600), topic); await settle();
   assert.equal(d.values.get('meter_power.imported'), total, 'first fresh delivery is an anchor only');
   now = 10000; d.subscriptions.at(-1)(payload(3600), topic); await settle();
@@ -181,9 +181,9 @@ test('native rounded import and export counters survive a reporting gap and runt
       const checkpoint = first.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY);
       assert.ok(Math.abs((watts > 0 ? checkpoint.importedWh : checkpoint.exportedWh) - 1.6) < 1e-9);
       now = 8000; first.subscriptions[0](payload(watts), `/app/device/property/${sn}`); await settle();
-      const retry = [...first.timers.values()].find(timer => !timer.interval); assert.ok(retry);
-      retry.fn(); await settle();
-      assert.equal(first.subscriptions.length, 2, 'rounded native projection is not a rollback');
+      assert.equal([...first.timers.values()].filter(timer => !timer.interval).length, 0);
+      await settle();
+      assert.equal(first.subscriptions.length, 1, 'gap recovery retains the subscription and precise checkpoint');
       assert.equal(first.values.get(cap), 0.002, 'recovery never lowers the native counter');
       first.subscriptions.at(-1)(payload(watts), `/app/device/property/${sn}`); await settle();
       assert.equal(first.values.get(cap), 0.002, 'new epoch does not backfill the gap');
@@ -235,6 +235,16 @@ test('real community driver restores its separate binding, nets three phases and
   assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).exportedWh>0);
   const report=d.getDualCtCommunityFeedback();assert.equal(report.eligibleIntervalMs,1000);assert.equal(report.hardwareValidated,false);
   assert.equal(report.counts.eligible_interval,1);assert.equal(report.uploadedAutomatically,false);
+  const beforeGap=structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+  now+=6000;emit();await settle();
+  assert.equal(d.subscriptions.length,1,'three-phase gap must not enter a blind reconnect window');
+  assert.equal(d.values.get('measure_power'),null);
+  assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),beforeGap);
+  now+=1000;emit();await settle();
+  assert.equal(d.values.get('measure_power'),-500);
+  assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),beforeGap,'first resumed frame anchors without filling the gap');
+  now+=1000;emit();await settle();
+  assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).exportedWh>beforeGap.exportedWh);
   const saved=structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));await d.onUninit();
   now+=100000;await d.onInit();assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),saved);
   emit();await settle();assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY),saved);await d.onUninit();

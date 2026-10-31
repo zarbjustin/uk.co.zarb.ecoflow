@@ -1,5 +1,7 @@
 /** Local, bounded classifications only. No powers, energy totals, IDs, timestamps or uploads. */
-const statuses = ['anchor', 'gap', 'eligible_interval', 'out_of_order', 'delivery_rejected', 'recovery',
+const statuses = ['delivery_gap', 'sequence_required', 'sequence_duplicate', 'sequence_reset',
+  'clock_discontinuity', 'delivery_not_live', 'delivery_scope', 'not_ct1_property_upload',
+  'invalid_grid_payload', 'invalid_header', 'anchor', 'gap', 'eligible_interval', 'out_of_order', 'delivery_rejected', 'recovery',
   'unrelated_grid_packet', 'contract_blocked', 'source_qualification_mismatch', 'transport_rejected',
   'receipt_expired', 'measurement_time_required', 'timing_basis_conflict', 'header_rejected', 'ambiguous_packet',
   'encoding_contract_conflict', 'decode_rejected', 'incomplete_grid_phases', 'wiring_outside_qualification',

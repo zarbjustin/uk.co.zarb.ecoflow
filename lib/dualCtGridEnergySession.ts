@@ -112,6 +112,16 @@ export class DualCtGridEnergySession {
     return true;
   }
 
+  /** Keep the writer/checkpoint, but never bridge a delivery discontinuity. */
+  resetAnchor(): Promise<void> {
+    const { generation } = this;
+    return this.enqueue(async () => {
+      if (generation !== this.generation) return;
+      this.baseline = null; this.lastNow = null;
+      this.status = 'waiting_for_anchor';
+    });
+  }
+
   /** No automatic startup. Must be called explicitly by a future adoption workflow. Restores totals, never a baseline. */
   start(): Promise<void> {
     const generation = ++this.generation;

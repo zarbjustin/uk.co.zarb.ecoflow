@@ -50,3 +50,13 @@ test('a five-second receipt gap, wall clock jump and sequence wrap/reset require
   assert.equal(inspect(g, frame(0), metadata(2000)).restartAnchor, true);
   assert.equal(inspect(new DualCtLiveDelivery(), frame(0), metadata(2000)).accepted, true);
 });
+
+test('delivery discontinuity rejects the crossing packet but accepts the next fresh epoch without resubscription', () => {
+  for (const [seq, at] of [[2, 7000], [0, 2000]]) {
+    const g = new DualCtLiveDelivery();
+    assert.equal(inspect(g, frame(1), metadata(1000)).accepted, true);
+    assert.equal(inspect(g, frame(seq), metadata(at)).restartAnchor, true);
+    assert.equal(inspect(g, frame(seq + 1), metadata(at + 1000)).accepted, true);
+    assert.equal(inspect(g, frame(seq + 1), metadata(at + 1500)).accepted, false, 'duplicate rejection remains active');
+  }
+});
