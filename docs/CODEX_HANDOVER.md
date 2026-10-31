@@ -1,5 +1,24 @@
 # Codex cross-machine handover
 
+## Test 1.11.15 / build 82 published — 31 October 2026
+
+Cleanup source committed/pushed as `69c3356b049fba0330f9cc3d30fca59fbd64cf9b`.
+Exact CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41219610862
+passed. Clean-source archive SHA256 `4741bb499ef3f08750ce51e3b439e11fcf77860939158adc9f5637e214566659`;
+packaged-source fingerprint `a4fdc5caac49b28eaeb9421d37dc8ddd81465a0e9331f7e4b2dabd7ab114d4ea`.
+Build 82 processed, EN/DE/NL metadata matched, Test activated and read back.
+Live remains 1.10.3/build 18. Installed Development 1.11.14 and devkit session
+are unchanged. All EcoFlow device definitions/settings, all device IDs, Flow
+contracts and Insights IDs match publication baseline. House reserve lease changed
+while the resumed coordinator operated; app-wide settings equality is not claimed.
+Other-app device metadata also differed; whole-house equality is not claimed.
+
+Authorised tester update posted and reopened. It acknowledges broader recovery
+on 1.11.14 while both Dual CT roles remain unavailable, explains this release's
+setup/display scope, and does not request repeated captures, re-pairing or claim
+the remaining feed failure is fixed. Private receipts/correspondence stay outside
+Git. Next investigation: remaining shared Dual CT feed; hardware gates remain open.
+
 ## Test 1.11.15 preparation — 31 October 2026
 
 Owner authorises diagnostic-branch commit/push, exact CI, Test publication and a
