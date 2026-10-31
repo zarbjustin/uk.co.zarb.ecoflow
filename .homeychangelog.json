@@ -1,4 +1,9 @@
 {
+  "1.11.18": {
+    "en": "Improves Dual CT support diagnostics by separating shared socket traffic, routing rejections and broker ping responses from meter readings. No changes to accounting, freshness limits or device commands.",
+    "de": "Verbessert Dual-CT-Supportdiagnosen durch getrennte Zähler für Socket-Verkehr, Routing-Ablehnungen und Broker-Ping-Antworten. Keine Änderung der Energieberechnung, Aktualitätsgrenzen oder Gerätebefehle.",
+    "nl": "Verbetert Dual CT-diagnostiek met aparte tellers voor socketverkeer, afgewezen routering en brokerping-antwoorden. Geen wijzigingen aan energieberekening, actualiteitsgrenzen of apparaatcommando’s."
+  },
   "1.11.17": {
     "en": "Adds a focused Dual CT support summary with specific message rejection reasons and bounded recent recovery events. No changes to meter accounting or freshness limits. Includes the reviewed house reserve configuration refresh fix.",
     "de": "Ergänzt eine gezielte Dual-CT-Supportübersicht mit Ablehnungsgründen und begrenztem Ereignisverlauf. Keine Änderung der Zählerberechnung oder Aktualitätsgrenzen. Enthält die geprüfte Aktualisierung der Hausreserve-Konfiguration.",

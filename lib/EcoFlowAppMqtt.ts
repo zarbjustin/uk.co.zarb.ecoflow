@@ -63,6 +63,12 @@ export class EcoFlowAppMqtt {
   private ended = false;
   private cancelHandshake: (() => void) | null = null;
   private connectionEpoch = 0;
+  private socketReceivedFrames = 0;
+  private socketRouteRejectedFrames = 0;
+  private socketPingResponses = 0;
+  private socketLastFrameAt: number | null = null;
+  private socketLastPingAt: number | null = null;
+  private socketConnectedAt: number | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private backoffMs = 0;
   private readonly handlers = new Map<string, Set<AppFrameHandler>>();
@@ -156,6 +162,11 @@ export class EcoFlowAppMqtt {
       if (this.ended || this.client !== client) return;
       this.onMessage(topic, payload as Buffer, packet);
     });
+    client.on('packetreceive', (packet) => {
+      if (this.ended || this.client !== client || packet.cmd !== 'pingresp') return;
+      this.socketPingResponses = Math.min(65535, this.socketPingResponses + 1);
+      this.socketLastPingAt = Date.now();
+    });
     client.on('close', () => {
       if (this.client === client) this.onDisconnect('close');
     });
@@ -178,6 +189,8 @@ export class EcoFlowAppMqtt {
         }
         if (this.cancelHandshake === cancel) this.cancelHandshake = null;
         ++this.connectionEpoch;
+        this.socketReceivedFrames = 0; this.socketRouteRejectedFrames = 0; this.socketPingResponses = 0;
+        this.socketLastFrameAt = null; this.socketLastPingAt = null; this.socketConnectedAt = Date.now();
         settled = true;
         this.backoffMs = 0;
         if (this.reconnectTimer) {
@@ -203,6 +216,7 @@ export class EcoFlowAppMqtt {
       client.removeAllListeners('close');
       client.removeAllListeners('offline');
       client.removeAllListeners('message');
+      client.removeAllListeners('packetreceive');
       client.end(true);
       throw e;
     });
@@ -224,6 +238,7 @@ export class EcoFlowAppMqtt {
     this.client.removeAllListeners('close');
     this.client.removeAllListeners('offline');
     this.client.removeAllListeners('message');
+    this.client.removeAllListeners('packetreceive');
     try {
       this.client.end(true);
     } catch { /* ignore */ }
@@ -346,7 +361,15 @@ export class EcoFlowAppMqtt {
     const items = [...this.subscriptions.values()].filter((item) => item.sn === sn);
     const receipt = this.receipts.get(sn);
     const age = receipt ? Date.now() - receipt.at : null;
+    const ageSec = (at: number | null) => (at !== null && Number.isFinite(Date.now() - at) && Date.now() >= at ? (Date.now() - at) / 1000 : null);
     return {
+      socketEvidenceScope: 'shared_current_connection',
+      socketReceivedFrames: this.socketReceivedFrames,
+      socketRouteRejectedFrames: this.socketRouteRejectedFrames,
+      socketPingResponses: this.socketPingResponses,
+      socketLastFrameAgeSec: ageSec(this.socketLastFrameAt),
+      socketLastPingAgeSec: ageSec(this.socketLastPingAt),
+      socketConnectionAgeSec: ageSec(this.socketConnectedAt),
       connected: this.connected,
       listening: this.handlers.has(sn),
       pendingTopics: items.filter((item) => item.state === 'pending').length,
@@ -359,11 +382,16 @@ export class EcoFlowAppMqtt {
   }
 
   private onMessage(topic: string, payload: Buffer, packet?: { retain?: boolean; dup?: boolean }): void {
+    this.socketReceivedFrames = Math.min(65535, this.socketReceivedFrames + 1);
+    this.socketLastFrameAt = Date.now();
     // Topics are either /app/device/property/{sn} or /app/{userId}/{sn}/thing/...
     const parts = topic.split('/');
     const sn = parts[2] === 'device' ? parts[4] : parts[3];
     const set = sn ? this.handlers.get(sn) : undefined;
-    if (!set || !this.topics(sn).includes(topic)) return;
+    if (!set || !this.topics(sn).includes(topic)) {
+      this.socketRouteRejectedFrames = Math.min(65535, this.socketRouteRejectedFrames + 1);
+      return;
+    }
     const prior = this.receipts.get(sn);
     this.receipts.set(sn, { count: Math.min(65535, (prior?.count || 0) + 1), at: Date.now() });
     // Optional third argument preserves existing consumers. Missing transport

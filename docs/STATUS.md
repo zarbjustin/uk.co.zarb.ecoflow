@@ -1,5 +1,61 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 1.11.18 Test candidate — 31 October 2026
+
+Owner approved release of the prepared socket/routing diagnostic correction to Test
+and focused tester instructions. Live and installed Development remain unchanged.
+No telemetry requests, stream activation, new subscriptions or accounting changes.
+
+
+## Dual CT 1.11.17 zero-delivery investigation — 31 October 2026
+
+Reviewed and locally decoded the newest private tester support summary. Both roles
+show connected/listening, two active topics, zero pending/rejected/timed-out topics,
+zero routed frames, zero decoder rejections, no retry scheduled. Detailed monitor
+waited about 382 seconds. Whole-property Energy remains unconfirmed/inactive per
+tester correction; a paired community-trial role is not proof of Energy selection.
+
+Confirmed diagnostic defect: receivedFrames is incremented only after topic/serial
+routing, so zero cannot distinguish socket silence from discarded routing traffic.
+Added bounded current-connection socket message, route-rejection and PINGRESP counts,
+relative ages and explicit shared_current_connection scope. These are shared socket
+observations, not Dual CT-specific receipts; other devices may contribute. Existing
+per-device delivery counters remain separate. Old socket callbacks cannot update
+new evidence, and replacement connections reset socket counts. No new subscription,
+publish, reconnect, timer, control, decoder permission or accounting change is added.
+Red regression reproduced the missing evidence; all 1,356 tests, locked Node 22
+install, lint, release:check, diff check and pinned CLI verified validation pass.
+Changes remain local for candidate review, without version bump or publication.
+Test 1.11.17/build 84, Live and installed Development were not changed by this task.
+
+Delivery failure remains unexplained. Upstream HA cloud_mqtt.py uses the same two
+app topic families, plus an open quota topic; non-listen-only paths send explicit
+get-all/latestQuotas and optional stream activation. Its comments about stale feeds
+include other products, not validation for this Dual CT/firmware. Do not copy its
+SET/stream switch or treat reply payloads as fresh Energy intervals. Reference:
+https://github.com/shuette42/ecoflow-energy-ha/blob/main/custom_components/ecoflow_energy/ecoflow/cloud_mqtt.py
+
+Bounded sprints:
+1. Evidence/routing audit COMPLETE: decoded report; reproduced diagnostic ambiguity;
+   regression-tested socket-vs-route-vs-consumer separation and privacy.
+2. Field delivery qualification PREPARED: review/release the diagnostic correction;
+   collect one current summary under ordinary use. Shared socket zero + recent
+   PINGRESP means broker responsive but no PUBLISH reached this socket. Socket
+   messages with route rejects require route investigation; socket messages without
+   rejects but no target frames mean traffic belongs elsewhere, not target recovery.
+   Do not re-pair, reset counters or assume native EcoFlow readings prove MQTT delivery.
+3. Demand-driven telemetry/recovery PENDING: if genuine target silence is established,
+   first qualify a product-specific read request and its response envelope using
+   authoritative/vendor evidence or existing authorised captures. Prepare exact
+   one-shot request, no SET/stream activation, cooldown/deadline and echo/reply fences
+   for review before hardware execution. A cache reply cannot become live accounting
+   evidence. Stable normal-use/48-hour acceptance follows a confirmed correction,
+   not merely green tests or an acknowledged subscription.
+
+No extra tester request or external message was sent. Preserve private report locally;
+do not upload the original report or household evidence into Git.
+
+
 ## Test 1.11.17 / build 84 verified — 31 October 2026
 
 Source `085969ad0a11a1cd57e63144655e2b4a6c08daa9` committed and pushed on diagnostic branch.

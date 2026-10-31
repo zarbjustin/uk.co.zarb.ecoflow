@@ -340,3 +340,22 @@ test('consumer churn cannot multiply scheduled subscription retries or touch a h
   await mqtt.end();assert.equal(clock.timers.size,0);
  }finally{subscribeHook=undefined;await mqtt.end();}
 });
+
+test('support distinguishes acknowledged silent topics from socket traffic discarded before device routing', async () => {
+ const mqtt = new EcoFlowAppMqtt({client:auth});let delivered=0;
+ try {
+  await mqtt.connect();mqtt.subscribe(sn,()=>delivered++);const client=clients.at(-1);
+  let d=mqtt.getDeliveryDiagnostics(sn);
+  assert.equal(d.activeTopics,2);assert.equal(d.socketReceivedFrames,0);assert.equal(d.receivedFrames,0);
+  client.emit('message','/app/foreign/'+sn+'/thing/property/get_reply',Buffer.from('PRIVATE'),{retain:false,dup:false});
+  d=mqtt.getDeliveryDiagnostics(sn);assert.equal(d.socketReceivedFrames,1);assert.equal(d.socketRouteRejectedFrames,1);
+  assert.equal(d.receivedFrames,0);assert.equal(delivered,0);
+  client.emit('message',topic,Buffer.from('synthetic'),{retain:false,dup:false});
+  d=mqtt.getDeliveryDiagnostics(sn);assert.equal(d.socketReceivedFrames,2);assert.equal(d.receivedFrames,1);assert.equal(delivered,1);
+  client.emit('packetreceive',{cmd:'pingresp',secret:'PRIVATE'});
+  assert.equal(mqtt.getDeliveryDiagnostics(sn).socketPingResponses,1);
+  assert.doesNotMatch(JSON.stringify(mqtt.getDeliveryDiagnostics(sn)),/PRIVATE|synthetic|\/app\//);
+  const old=client.listeners('message')[0];await mqtt.reconnect();old(topic,Buffer.from('late'));
+  d=mqtt.getDeliveryDiagnostics(sn);assert.equal(d.socketReceivedFrames,0);assert.equal(d.socketPingResponses,0);
+ }finally{await mqtt.end();}
+});

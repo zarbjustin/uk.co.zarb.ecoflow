@@ -4,7 +4,15 @@ import { DUAL_CT_MONITOR_EVENTS } from './dualCtDiagnosticEvents';
 export function appMqttDiagnosticsSnapshot(input: any) {
   if (!input || typeof input !== 'object') return null;
   const count = (key: string, max: number) => (Number.isSafeInteger(input[key]) && input[key] >= 0 && input[key] <= max ? input[key] : 0);
+  const age = (key: string) => (typeof input[key] === 'number' && Number.isFinite(input[key]) && input[key] >= 0 ? input[key] : null);
   return {
+    socketEvidenceScope: input.socketEvidenceScope === 'shared_current_connection' ? 'shared_current_connection' : 'unknown',
+    socketReceivedFrames: count('socketReceivedFrames', 65535),
+    socketRouteRejectedFrames: count('socketRouteRejectedFrames', 65535),
+    socketPingResponses: count('socketPingResponses', 65535),
+    socketLastFrameAgeSec: age('socketLastFrameAgeSec'),
+    socketLastPingAgeSec: age('socketLastPingAgeSec'),
+    socketConnectionAgeSec: age('socketConnectionAgeSec'),
     connected: input.connected === true,
     listening: input.listening === true,
     pendingTopics: count('pendingTopics', 2),
