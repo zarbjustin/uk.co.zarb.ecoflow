@@ -1,5 +1,63 @@
 # Codex cross-machine handover
 
+## Dual CT reliability review / 1.11.16 candidate — 31 October 2026
+
+Owner authorises focused review followed by commit/push, CI, Test publication and
+a tester update. Includes the previously reproduced exhausted shared-topic retry
+fix. New churn regression proves repeated attach/detach does not multiply a
+scheduled retry or resubscribe the healthy topic. Reviewed sparse/mixed/partial
+packets, delayed/duplicate/retained frames, source qualification, startup recovery,
+shutdown and checkpoint preservation against existing driver/protocol regressions.
+No additional accounting defect was confirmed; freshness and source gates remain.
+
+Added allowlisted startup failure counts to three-phase support feedback: source,
+contract, binding, admission (including checkpoint/overlap), subscription and later
+identity refresh. Stale asynchronous generations cannot record current failures.
+No raw exception text, account, serial, power or counter values are added. New
+real-driver regressions cover source/contract/binding/subscription failures,
+single retry scheduling, cleanup and unchanged counters/store. These counts are
+historical since app startup, not a claim that the latest failure remains active.
+Current tester Dual CT outage is still unproven; no re-pairing is requested.
+
+Candidate validation: Node 22 npm ci, 1,348 tests, lint, release:check, diff check
+and pinned Homey CLI 4.5.3 verified validation pass. Hardware acceptance gates
+remain open; this is a Test candidate, not full-release hardware signoff.
+
+## Dual CT three-path investigation — 31 October 2026
+
+Reviewed existing private 1.11.12 support extract, 1.11.13 failure report and the
+previously read 1.11.14/1.11.15 community updates. The latest updates show both
+Dual CT roles unavailable while other devices recovered, but contain no current
+subscription counters or binding diagnostic. No new capture was requested.
+
+1. Subscription: 1.11.12 reported two accepted topics, zero denied/timed-out topics,
+   three frames and approximately 250 seconds since the last frame. This proves
+   earlier delivery, not current broker health. Found a separate reproducible
+   exhausted-retry defect: an existing listener kept a failed topic attached, and
+   a newly attached recovering consumer never restarted its exhausted retry.
+   Local fix retries only rejected/timed-out topics with no scheduled timer when
+   a new handler joins. Active/pending topics and existing retry timers are kept;
+   each new attempt retains the three-attempt bound. No forced socket reconnect,
+   meter status request, fabricated frame or accounting write is added.
+2. Rejections: earlier evidence records one admitted CT1 anchor plus an unrelated
+   message and delivery gap; two preview packets were accepted. Existing synthetic
+   sparse-feed replay continues to match the classifications and zero coverage.
+   This is consistent with missing subsequent delivery; it does not identify why
+   delivery stopped. No decoder/freshness relaxation is justified by the evidence.
+3. Bindings: an admitted anchor required the saved account/source/grid binding to
+   pass at that earlier time. Latest messages do not establish a binding mismatch.
+   Existing three-phase binding/checkpoint and single-phase preservation tests pass.
+   Re-pairing would replace identity/counter continuity and is not justified yet.
+
+New regression failed before the fix (no retry on new consumer) and passes for
+both denial and timeout exhaustion. It also verifies no healthy-topic resubscribe,
+no fabricated telemetry, duplicate-listener idempotence and both consumers receiving
+later frames. Node 22 locked install, all 1,346 tests, lint, release:check, diff check
+and Homey CLI 4.5.3 verified validation pass. This fix is not established as the
+cause of the tester's current outage. Next evidence, if needed after review, is a
+small current-version subscription/rejection/binding classification, not another
+raw household report. No commit/push, publication, install or hardware changes.
+
 ## Test 1.11.15 / build 82 published — 31 October 2026
 
 Cleanup source committed/pushed as `69c3356b049fba0330f9cc3d30fca59fbd64cf9b`.

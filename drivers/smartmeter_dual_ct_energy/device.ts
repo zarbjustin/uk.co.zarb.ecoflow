@@ -66,6 +66,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (!dependencies.enabled() || this.getStoreValue('dualCtEnergyConsent') !== 1) return;
     this.credentialRevision = dualCtCredentialsRevision(this.homey);
     const context = dependencies.context(); this.context = context;
+    let startupStage = 'source';
     try {
       await context.refresh();
       if (generation !== this.generation) return;
@@ -73,13 +74,17 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       if (!snapshot) throw new Error('source');
       const { source } = snapshot;
       const resolve = (identity: typeof source.identity) => (context.isCommunityTrial?.() === true ? context.resolveContract(identity) : dependencies.resolve(identity));
+      startupStage = 'contract';
       const contract = resolve(source.identity);
+      if (!contract) throw new Error('contract');
       const scope = {
         account: source.account, device: source.device, grid: source.grid, session: randomUUID(),
       };
-      const binding = contract && dualCtGridBinding(scope, contract);
+      startupStage = 'binding';
+      const binding = dualCtGridBinding(scope, contract);
       if (!binding || binding !== this.getStoreValue('dualCtEnergySourceBinding')
         || source.account !== this.getStoreValue('dualCtEnergyAccountBinding') || source.grid !== this.getStoreValue('dualCtEnergyGrid')) throw new Error('binding');
+      startupStage = 'admission';
       const storage = dualCtEnergyHomeyStorage(this);
       const { read } = storage;
       storage.read = async () => {
@@ -138,6 +143,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       };
       this.handler = handler;
       const app = this.homey.app as any;
+      startupStage = 'subscription';
       const subscribed = await app.subscribeAppRealtime(source.device, handler, () => generation === this.generation && dependencies.enabled());
       if (generation !== this.generation) {
         app.unsubscribeAppRealtime(source.device, handler); return;
@@ -154,7 +160,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         // Local expiry never waits for a network inventory/identity refresh.
         if (Date.now() - this.lastRefresh >= 60000 && !this.identityRefresh) {
           this.lastRefresh = Date.now();
-          const refresh = context.refresh().then(() => (generation === this.generation ? adapter.refresh() : undefined)).catch(() => this.recover(generation, dependencies.enabled))
+          const refresh = context.refresh().then(() => (generation === this.generation ? adapter.refresh() : undefined)).catch(() => {
+            if (generation === this.generation) this.communityFeedback.record('identity_refresh_failed');
+            return this.recover(generation, dependencies.enabled);
+          })
             .finally(() => {
               if (this.identityRefresh === refresh) this.identityRefresh = null;
             });
@@ -162,6 +171,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         }
       }, 1000);
     } catch {
+      if (generation === this.generation) this.communityFeedback.record(`startup_${startupStage}_failed`);
       await this.recover(generation, dependencies.enabled);
     }
   }

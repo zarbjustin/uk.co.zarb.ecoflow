@@ -296,3 +296,47 @@ test('repeated failed handshakes and successful mixed-serial recovery leave no o
   } finally { autoConnect = true; await mqtt.end(); }
   assert.equal(clock.timers.size, 0);
 });
+
+test('a new consumer can recover exhausted shared topics without resubscribing active topics or fabricating frames', async t => {
+  const clock = fakeTimers(t);
+  for (const failure of ['denied', 'timeout']) {
+    let fail = true; let frames = 0;
+    subscribeHook = (_client, route, callback) => {
+      if (route === topic && fail) {
+        if (failure === 'denied') callback(null, [{topic:route,qos:128}]);
+        return;
+      }
+      callback(null, [{topic:route,qos:0}]);
+    };
+    const mqtt = new EcoFlowAppMqtt({client:auth}); const preview=()=>{frames++;}, energy=()=>{frames++;};
+    try {
+      await mqtt.connect(); const client=clients.at(-1); mqtt.subscribe(sn,preview);
+      if (failure==='timeout') clock.run(10000);
+      clock.run(5000);
+      if (failure==='timeout') clock.run(10000);
+      clock.run(10000);
+      if (failure==='timeout') clock.run(10000);
+      assert.equal(clock.timers.size,0);
+      const before=client.subscribed.length; fail=false;
+      mqtt.subscribe(sn,energy);
+      assert.equal(client.subscribed.length,before+1,'only exhausted topic retried');
+      assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics,2);
+      assert.equal(frames,0,'SUBACK is not telemetry');
+      assert.equal(mqtt.getDeliveryDiagnostics(sn).receivedFrames,0);
+      mqtt.subscribe(sn,energy); assert.equal(client.subscribed.length,before+1);
+      client.emit('message',topic,Buffer.from('synthetic'),{retain:false,dup:false});assert.equal(frames,2);
+      mqtt.unsubscribe(sn,energy);assert.equal(client.unsubscribed.length,0);
+    } finally { subscribeHook=undefined;await mqtt.end(); }
+  }
+});
+
+test('consumer churn cannot multiply scheduled subscription retries or touch a healthy topic', async t => {
+ const clock=fakeTimers(t);subscribeHook=(_c,route,cb)=>{if(route===topic)cb(null,[{topic:route,qos:128}]);else cb(null,[{topic:route,qos:0}]);};
+ const mqtt=new EcoFlowAppMqtt({client:auth});
+ try{await mqtt.connect();const client=clients.at(-1);mqtt.subscribe(sn,()=>{});
+  for(let cycle=0;cycle<20;cycle++){const listener=()=>{};mqtt.subscribe(sn,listener);mqtt.unsubscribe(sn,listener);}
+  assert.equal(client.subscribed.length,2);assert.equal(clock.timers.size,1);
+  clock.run(5000);assert.equal(client.subscribed.length,3);assert.equal(clock.timers.size,1);
+  await mqtt.end();assert.equal(clock.timers.size,0);
+ }finally{subscribeHook=undefined;await mqtt.end();}
+});

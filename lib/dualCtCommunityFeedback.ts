@@ -1,7 +1,8 @@
 import { appMqttDiagnosticsSnapshot } from './appMqttDiagnostics';
 
 /** Local, bounded classifications only. No powers, energy totals, IDs, timestamps or uploads. */
-const statuses = ['delivery_gap', 'connection_changed', 'sequence_required', 'sequence_duplicate', 'sequence_reset',
+const statuses = ['startup_source_failed', 'startup_contract_failed', 'startup_binding_failed', 'startup_admission_failed', 'startup_subscription_failed',
+  'identity_refresh_failed', 'delivery_gap', 'connection_changed', 'sequence_required', 'sequence_duplicate', 'sequence_reset',
   'clock_discontinuity', 'delivery_not_live', 'delivery_scope', 'not_ct1_property_upload',
   'invalid_grid_payload', 'invalid_header', 'anchor', 'gap', 'eligible_interval', 'out_of_order', 'delivery_rejected', 'recovery',
   'unrelated_grid_packet', 'contract_blocked', 'source_qualification_mismatch', 'transport_rejected',

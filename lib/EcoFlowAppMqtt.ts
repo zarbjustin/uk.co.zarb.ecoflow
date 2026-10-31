@@ -262,8 +262,19 @@ export class EcoFlowAppMqtt {
       return;
     }
     // The broker subscription belongs to the serial, not each consumer.
-    // Re-subscribing can replay retained frames and disrupt a healthy feed.
+    // Preserve healthy/pending topics and any scheduled bounded retry.
+    const added = !set.has(onFrame);
     set.add(onFrame);
+    if (added) {
+      for (const topic of this.topics(sn)) {
+        const item = this.subscriptions.get(topic);
+        if (item && !item.timer && (item.state === 'rejected' || item.state === 'timed_out')) {
+          // A recovering consumer must not be pinned to an exhausted topic by
+          // another listener. A new bounded attempt never fabricates telemetry.
+          this.subscribeTopic(sn, topic);
+        }
+      }
+    }
   }
 
   unsubscribe(sn: string, onFrame?: AppFrameHandler): void {

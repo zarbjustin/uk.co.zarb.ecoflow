@@ -363,3 +363,26 @@ test('paired mode summary follows stored consent, never display settings; summar
     assert.equal(d.capOptions.get('dual_ct_preview_voltage.b_p3').uiComponent, 'sensor');
   }
 });
+
+test('startup diagnostics distinguish source, contract, binding and subscription failures without resetting counters', async t => {
+ t.mock.method(Date,'now',()=>1000);
+ for(const stage of ['source','contract','binding','subscription']) {
+  const d=new Driver();enabled(d);d.store.set('dualCtEnergyMode','three_phase_community');
+  const deps=d.energyDependencies();
+  if(stage==='source') {const context=deps.context();context.refresh=async()=>{throw Error('PRIVATE account');};deps.context=()=>context;}
+  if(stage==='contract') deps.resolve=()=>null;
+  if(stage==='binding') d.store.set('dualCtEnergySourceBinding','synthetic-other');
+  if(stage==='subscription') d.homey.app.subscribeAppRealtime=async()=>{throw Error('PRIVATE broker');};
+  d.energyDependencies=()=>deps;
+  d.values.set('meter_power.imported',2);d.values.set('meter_power.exported',1);
+  d.store.set(DUAL_CT_ENERGY_CHECKPOINT_KEY,makeDualCtEnergyCheckpoint(binding,contract.timing,1,2000,1000));
+  const before=structuredClone([...d.store]);
+  try {await d.onInit();const evidence=d.getDualCtCommunityFeedback();
+   assert.equal(evidence.counts[`startup_${stage}_failed`],1);
+   assert.doesNotMatch(JSON.stringify(evidence),/PRIVATE|synthetic-other/);
+   assert.equal(d.values.get('meter_power.imported'),2);assert.equal(d.values.get('meter_power.exported'),1);
+   assert.deepEqual([...d.store],before);
+   assert.equal([...d.timers.values()].filter(x=>!x.interval).length,1);
+  }finally{await d.onUninit();assert.equal(d.timers.size,0);}
+ }
+});
