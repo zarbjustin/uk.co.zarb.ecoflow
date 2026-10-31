@@ -1,5 +1,68 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.13 preparation authorised — 31 October 2026
+
+Owner authorises committing/pushing the combined original STREAM recovery and
+Dual CT connection-boundary fixes, checking exact CI and publishing Test only.
+This supersedes the prior Test publication hold; full-release/hardware gates
+remain open. Live, Mainline and installed Development must remain unchanged.
+A reply to the community tester must be drafted for owner review, not posted.
+
+Candidate 1.11.13 preserves the evidence limits recorded below: sparse delivery
+is reproducible but its field cause is unproven. No automatic meter requests,
+forced reconnects, counter resets, re-pairing or Energy/settings changes are added.
+Publication awaits final checks, exact-commit CI and frozen archive verification.
+
+## Sparse Dual CT feed reproduced; release remains on hold — 31 October 2026
+
+The latest private, manually transcribed support extract establishes accepted
+subscriptions and an admitted CT1 anchor followed by genuinely stale delivery.
+It does not establish why publishing stopped. A generated three-frame replay
+matches the reported acceptance/rejection classifications and zero eligible
+coverage; it is a possible sequence, not the actual packet chronology. Missing
+power remains unknown, counters stay unchanged and sustained fresh delivery
+recovers on the existing subscription without backfill.
+
+A separate confirmed defect allowed a fast socket replacement with increasing
+sequences to integrate across the interruption. Local connection epochs now
+invalidate the crossing interval and use the existing in-place anchor reset.
+Single-phase and three-phase import/export regressions protect checkpoints,
+freshness and normal recovery. This is not claimed to solve the field feed stall.
+
+[Investigation and evidence limits](DUAL_CT_SPARSE_FEED_INVESTIGATION.md) records
+the findings. Node 22 locked install, all 1,331 tests, lint, release checks and
+pinned Homey 4.5.3 verified validation pass locally. Published-guard comparison
+confirms the new accounting regression fails before the fix. Changes remain
+local/uncommitted/unversioned; prior original STREAM fixes are preserved. Release
+is on hold; Test, Live, Mainline and installed Development remain unchanged.
+No restart, hardware request, settings change, new tester capture or message.
+
+## Original STREAM freeze recovery candidate prepared — 31 October 2026
+
+Latest original STREAM feedback confirms freezing persists on 1.11.12. The new
+manual diagnostic matches that version but contains startup logs only, so it does
+not establish the event's root cause or a process crash. No new reply/capture,
+remote operation or hardware action was performed for this investigation.
+
+Confirmed source defects: a transient aggregate-main lookup failure permanently
+latched telemetry off, even after fresh same-source verification; rotated API
+credentials were refreshed only after that prerequisite lookup; MQTT availability
+could claim online while the binding gate suppressed quota application. Candidate
+allows telemetry polling to recover only the previously session-verified same
+source, refreshes credentials first, and keeps changed/unverified identities and
+controls blocked. Totals/raw baselines are retained and power gaps are not filled.
+Fixed log classifications and whitelisted recovery counts make future evidence
+useful without publishing household data. Late old-session lookup results cannot
+invalidate a newer initialized session.
+
+[Investigation and regression evidence](ORIGINAL_STREAM_FREEZE_INVESTIGATION.md)
+records the limits. Local Node 22 locked install, all 1,327 tests, lint, release
+checks and pinned Homey 4.5.3 verified validation pass. Six new regression cases
+cover recovery, changed identity, credential ordering, accounting, privacy and
+lifecycle safety. Changes are local, uncommitted and unversioned. Test 1.11.12,
+installed Development 1.11.10, Live 1.10.3 and Mainline remain unchanged; no new
+field pass or exact-commit CI is claimed.
+
 ## Test 1.11.12 / build 79 published — 31 October 2026
 
 Owner authorised publishing the reviewed shared-delivery fixes to Test for the

@@ -56,7 +56,7 @@ function sequence(payload: Buffer): number | null {
 
 /** Per owned subscription epoch. No storage, capability, Energy or network operations. */
 export class DualCtLiveDelivery {
-  private previous: { seq: number; wall: number; mono: number } | null = null;
+  private previous: { seq: number; wall: number; mono: number; epoch?: number } | null = null;
 
   inspect(payload: Buffer, topic: string, expectedTopic: string, delivery: Readonly<AppFrameDelivery> | undefined, now: number) {
     const reject = (status: string, restartAnchor = false) => {
@@ -67,6 +67,12 @@ export class DualCtLiveDelivery {
     if (!delivery || delivery.retained !== false || delivery.duplicate !== false
       || !Number.isFinite(delivery.receivedAt) || delivery.receivedAt <= 0 || !Number.isFinite(delivery.receivedMonoMs) || delivery.receivedMonoMs < 0
       || !Number.isFinite(now) || now < delivery.receivedAt || now - delivery.receivedAt >= DUAL_CT_LIVE_INTERVAL_MS) return reject('delivery_not_live');
+    if (delivery.connectionEpoch !== undefined && (!Number.isSafeInteger(delivery.connectionEpoch) || delivery.connectionEpoch <= 0)) return reject('delivery_not_live');
+    // A fast socket replacement can preserve sequence order and receipt cadence.
+    // It still interrupts the owned live stream: never integrate across it.
+    // Check before payload classification so an unrelated packet on the new
+    // socket also clears the old anchor instead of leaving old power available.
+    if (this.previous && this.previous.epoch !== delivery.connectionEpoch) return reject('connection_changed', true);
     try {
       const headers = decodeFrameHeaders(payload);
       if (headers.length !== 1 || headers[0].candidateHeaderValid === false
@@ -87,7 +93,9 @@ export class DualCtLiveDelivery {
       if (wall < 0 || mono < 0 || Math.abs(wall - mono) > 1000) return reject('clock_discontinuity', true);
       if (mono >= DUAL_CT_LIVE_INTERVAL_MS) return reject('delivery_gap', true);
     }
-    this.previous = { seq, wall: delivery.receivedAt, mono: delivery.receivedMonoMs };
+    this.previous = {
+      seq, wall: delivery.receivedAt, mono: delivery.receivedMonoMs, epoch: delivery.connectionEpoch,
+    };
     return { accepted: true, status: 'receipt_estimate', restartAnchor: false };
   }
 }

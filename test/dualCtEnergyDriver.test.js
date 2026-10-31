@@ -6,6 +6,7 @@ const { DualCtHomeyEnergyContext } = require('../.homeybuild/lib/dualCtHomeyEner
 const { makeDualCtEnergyCheckpoint, DUAL_CT_ENERGY_CHECKPOINT_KEY } = require('../.homeybuild/lib/dualCtEnergyCheckpoint');
 const { dualCtGridBinding } = require('../.homeybuild/lib/dualCtGridEnergySource');
 const { dualCtAccountBinding } = require('../.homeybuild/lib/dualCtPreviewPairing');
+const { DualCtMonitor } = require('../.homeybuild/lib/dualCtMonitor');
 const sn = 'DUALCTSYNTHETIC01'; const account = { host: 'https://api.ecoflow.com', userId: 'synthetic' };
 const identity = { productType: 421, firmware: 'synthetic.1' };
 const contract = { id: 'synthetic_contract', ...identity, channel: 'ct1', bank: 'A', unit: 'W', importSign: 'positive',
@@ -14,8 +15,8 @@ const binding = dualCtGridBinding({ account: dualCtAccountBinding(account), devi
 const nested = (f, bytes) => Buffer.concat([varint(f * 8 + 2), varint(bytes.length), bytes]);
 const int = (f, n) => Buffer.concat([varint(f * 8), varint(n)]);
 let sequence = 0;
-const payload = watts => nested(1, Buffer.concat([nested(1, Buffer.concat([[962, watts], [963, 0], [772, 0], [515, watts],
-  [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), int(6, 0), int(8, 254), int(9, 21), int(14, ++sequence)]));
+const payload = (watts, explicitEncoding = true) => nested(1, Buffer.concat([nested(1, Buffer.concat([[962, watts], [963, 0], [772, 0], [515, watts],
+  [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), ...(explicitEncoding ? [int(6, 0)] : []), int(8, 254), int(9, 21), int(14, ++sequence)]));
 class Device {
   constructor() {
     this.values = new Map([['measure_power', 99], ['meter_power.imported', null], ['meter_power.exported', null]]);
@@ -57,6 +58,17 @@ function enabled(device) {
     context: () => new DualCtHomeyEnergyContext({ homey: device.homey, sn, now: Date.now,
       client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }] }),
       readFirmware: async () => identity.firmware, reader: async () => ({ list: async () => ({}), close() {} }) }) });
+}
+function enabledCommunity(device) {
+  const { DualCtCommunityTrial } = require('../.homeybuild/lib/dualCtCommunityTrial');
+  const prod = { productType: 421, firmware: '1.0.0.41' }; const trial = new DualCtCommunityTrial(Date.now);
+  trial.refresh({ account: dualCtAccountBinding(account), device: sn, grid: 'homey_property_grid', identity: prod, identityObservedAt: Date.now(), owned: true });
+  device.store.set('dualCtEnergyMode', 'three_phase_community');
+  device.store.set('dualCtEnergySourceBinding', dualCtGridBinding({ account: dualCtAccountBinding(account), device: sn, grid: 'homey_property_grid', session: 'one' }, trial.resolve(prod)));
+  device.energyDependencies = () => ({ enabled: () => true, resolve: () => { throw Error('legacy resolver must not admit trial'); },
+    context: () => new DualCtHomeyEnergyContext({ homey: device.homey, sn, communityThreePhase: true, now: Date.now,
+      client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }] }),
+      readFirmware: async () => prod.firmware, reader: async () => ({ list: async () => ({}), close() {} }) }) });
 }
 test('unadopted Energy driver stays unavailable without auth, subscriptions, timers, store writes or resets', async () => {
   const d = new Driver(); d.store.delete('dualCtEnergyConsent'); d.values.set('meter_power.imported', 9); d.values.set('meter_power.exported', 8); await d.onInit();
@@ -277,4 +289,58 @@ test('optional detail capability failure cannot block the existing Energy subscr
   d.subscriptions[0](payload(600),`/app/device/property/${sn}`);await settle();
   assert.equal(d.values.get('measure_power'),600);assert.equal(d.available,true);
   assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).importedWh>0);await d.onUninit();
+});
+
+test('synthetic sparse three-frame feed reproduces accepted packets, gap, unrelated message and honest stale Energy', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabledCommunity(d);
+  const monitor = new DualCtMonitor({ account: 'synthetic', device: sn, session: 'sparse' });
+  let accepted = 0;
+  try {
+    await d.onInit(); const handler = d.subscriptions[0]; const topic = `/app/device/property/${sn}`;
+    const emit = bytes => {
+      if (monitor.observe(bytes, topic, now, now)) accepted++;
+      handler(bytes, topic);
+    };
+    const saved = structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+    emit(payload(3600, false)); await settle();
+    now = 7000; emit(payload(3600, false)); await settle();
+    now = 8000; emit(nested(1, Buffer.concat([nested(1, scalar(962, 900000)), int(8, 254), int(9, 22), int(14, ++sequence)]))); await settle();
+    now = 258600; await d.context.refresh(); await d.adapter.refresh();
+    assert.equal(accepted, 2);
+    assert.deepEqual(monitor.getRejectionCounts(), { unrelated_message: 1 });
+    assert.equal(monitor.snapshot(now, key => key).values.dual_ct_preview_status, 'stale');
+    const feedback = d.getDualCtCommunityFeedback();
+    assert.deepEqual(feedback.counts, { anchor: 1, delivery_rejected: 2, delivery_gap: 1, not_ct1_property_upload: 1 });
+    assert.equal(feedback.eligibleIntervalMs, 0); assert.equal(feedback.rejectedGapMs, 0);
+    assert.equal(d.available, false); assert.equal(d.values.get('measure_power'), null);
+    assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+    assert.equal(d.subscriptions.length, 1); assert.equal(d.detached.length, 0);
+    now += 1000; emit(payload(3600, false)); await settle();
+    assert.equal(d.available, true); assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved, 'resume anchors without filling missing time');
+    now += 1000; emit(payload(3600, false)); await settle();
+    assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).importedWh > saved.importedWh);
+  } finally { await d.onUninit(); }
+});
+
+test('a fast transport reconnection cannot integrate across socket epochs even with increasing sequences', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  for (const [setup, watts] of [[enabled, 3600], [enabled, -3600], [enabledCommunity, 3600], [enabledCommunity, -3600]]) {
+    now = 1000; const d = new Driver(); setup(d);
+    try {
+      await d.onInit(); const handler = d.subscriptions[0]; const topic = `/app/device/property/${sn}`;
+      const emit = epoch => handler(payload(watts, setup === enabled), topic, { receivedAt: now, receivedMonoMs: now, retained: false, duplicate: false, connectionEpoch: epoch });
+      emit(1); await settle(); now += 1000; emit(1); await settle();
+      const saved = structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+      now += 1000; emit(2); await settle();
+      assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved, 'socket gap is unknown even below five seconds');
+      assert.equal(d.available, false); assert.equal(d.values.get('measure_power'), null);
+      now += 1000; emit(2); await settle();
+      assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved, 'first resumed sample anchors only');
+      now += 1000; emit(2); await settle();
+      const counter = watts > 0 ? 'importedWh' : 'exportedWh';
+      assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY)[counter] > saved[counter]);
+      assert.equal(d.subscriptions.length, 1); assert.equal(d.detached.length, 0);
+    } finally { await d.onUninit(); }
+  }
 });

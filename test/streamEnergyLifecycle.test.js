@@ -25,6 +25,7 @@ test('counter continuity follows original counter receipts without migrating or 
 });
 
 class FakeDevice {
+  log() {}
   constructor() { this.store = {}; this.values = {}; this.timers = new Map(); this.nextTimer = 0; }
   getData() { return { sn: 'BK61TEST00000001' }; }
   getStoreValue(key) { return this.store[key]; }
@@ -529,4 +530,110 @@ test('counter persistence snapshots the reporter identity with the raw baselines
  const pending=d.persistBatteryStore();await started;d.energySourceSn='BK61SOURCEB00001';release();await pending;
  assert.equal(d.store.energySourceSn,'BK61SOURCEA00001');
  d.setStoreValue=save;await d.onTeardown();
+});
+
+function preparePolling(device) {
+  let available = true;
+  device.refreshClientCredentials = () => {};
+  device.getAvailable = () => available;
+  device.setAvailable = async () => { available = true; };
+  device.setUnavailable = async () => { available = false; };
+  device.error = () => {};
+  device.fireTriggers = () => {};
+}
+
+test('original STREAM resumes the same verified main after a transient lookup failure without restart or counter reset', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const main = 'BK61TEST00000001'; let failing = false; let reads = 0;
+  const d = await harness({ chargedWh: 12000, dischargedWh: 34000, chargedRawWh: 1000, dischargedRawWh: 2000,
+    countersAvailable: true, ownerMarker: 'keep' });
+  preparePolling(d);
+  d.client = {
+    getMainSn: async () => { if (failing) throw new Error('synthetic timeout'); return main; },
+    getQuotaAll: async sn => { assert.equal(sn, main); reads++; return { cmsBattSoc: 50 + reads, powGetBpCms: -200,
+      accuChgEnergy: 1000 + (reads - 1) * 100, accuDsgEnergy: 2000 }; },
+  };
+  try {
+    await d.beforeFirstPoll(); await d.poll(); assert.equal(reads, 1);
+    failing = true; now += 30000; await d.poll(); assert.equal(d.aggregateBound, false);
+    assert.equal(d.getAvailable(), false);
+    await d.setOnlineState(true); assert.equal(d.getAvailable(), false, 'MQTT availability must not bypass a blocked binding');
+    await d.applyQuota({ accuChgEnergy: 999999, powGetBpCms: 900 }, { source: 'mqtt', receivedAt: now });
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, 12);
+    failing = false;
+    await assert.rejects(d.flowSetFeedIn(false), /unverified/, 'a control call cannot reopen telemetry or send a command');
+    now += 30000; await d.poll();
+    assert.equal(reads, 2, 'same-source verification must reopen telemetry polling');
+    assert.equal(d.aggregateBound, true); assert.equal(d.getReadSn(), main);
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, 12.1); assert.equal(d.getEnergyDiagnostics().dischargedKWh, 34);
+    assert.equal(d.store.ownerMarker, 'keep'); assert.notEqual(d.values.measure_power, null);
+    assert.equal(d.getAvailable(), true); assert.equal(d.getReportingDiagnostics().aggregateRecovery.recoveries, 1);
+  } finally { await d.onTeardown(); }
+});
+
+test('a changed aggregate main remains blocked even if a later lookup returns the old source', async () => {
+  const d = await harness({ chargedWh: 12000, dischargedWh: 34000 }); preparePolling(d);
+  let main = 'BK61TEST00000001'; let reads = 0;
+  d.client = { getMainSn: async () => main, getQuotaAll: async () => { reads++; return { cmsBattSoc: 50, powGetBpCms: 0 }; } };
+  try {
+    await d.beforeFirstPoll(); main = 'BK61CHANGED00001'; await d.poll();
+    main = 'BK61TEST00000001'; await d.poll();
+    assert.equal(reads, 0); assert.equal(d.aggregateBound, false);
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, 12);
+    await assert.rejects(d.flowSetFeedIn(false), /unverified/);
+  } finally { await d.onTeardown(); }
+});
+
+
+test('original STREAM refreshes rotated credentials before its main lookup can block the base poll', async () => {
+  const d = await harness(); preparePolling(d); let lookups = 0, reads = 0, refreshes = 0;
+  const main = 'BK61TEST00000001';
+  const current = { getMainSn: async () => { lookups++; return main; }, getQuotaAll: async () => { reads++; return {}; } };
+  d.client = current; await d.beforeFirstPoll();
+  d.client = { getMainSn: async () => { throw new Error('retired credentials'); } };
+  d.refreshClientCredentials = () => { refreshes++; d.client = current; };
+  try {
+    await d.poll();
+    assert.equal(reads, 1); assert.equal(lookups, 2); assert.ok(refreshes >= 1);
+    assert.equal(d.aggregateBound, true);
+  } finally { await d.onTeardown(); }
+});
+
+test('same-source recovery resumes power at a new anchor without integrating the verification outage', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now); let fail = false;
+  const d = await harness({ chargedWh: 12000, dischargedWh: 34000 }); preparePolling(d);
+  d.client = { getMainSn: async () => { if (fail) throw Error('synthetic'); return 'BK61TEST00000001'; },
+    getQuotaAll: async () => ({ powGetBpCms: 3600 }) };
+  try {
+    await d.beforeFirstPoll(); await d.poll();
+    const total = d.getEnergyDiagnostics().chargedKWh;
+    now += 1000; fail = true; await d.poll();
+    now += 60000; fail = false; await d.poll();
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, total, 'first resumed sample must not backfill the outage');
+    now += 1000; await d.poll();
+    assert.ok(d.getEnergyDiagnostics().chargedKWh > total);
+  } finally { await d.onTeardown(); }
+});
+
+test('reporting recovery evidence excludes source identity and arbitrary fields', () => {
+  const { reportingSnapshot } = require('../.homeybuild/lib/streamReportingDiagnostics');
+  const snapshot = reportingSnapshot({ getReportingDiagnostics: () => ({ aggregateRecovery: {
+    state: 'blocked', verificationFailures: 2, recoveries: 1, serial: 'PRIVATE', error: 'PRIVATE' }, observations: {} }) }, 1000);
+  assert.deepEqual(snapshot.aggregateRecovery, { state: 'blocked', verificationFailures: 2, recoveries: 1 });
+  assert.doesNotMatch(JSON.stringify(snapshot), /PRIVATE/);
+});
+
+
+test('an old pending identity lookup cannot mark a newly initialized session unavailable', async () => {
+  const d = await harness(); preparePolling(d); const main = 'BK61TEST00000001'; let release;
+  d.client = { getMainSn: async () => main }; await d.beforeFirstPoll();
+  d.client.getMainSn = () => new Promise(resolve => { release = resolve; });
+  const old = d.poll();
+  await d.onTeardown(); await d.onReady();
+  d.client = { getMainSn: async () => main }; await d.beforeFirstPoll();
+  await d.setOnlineState(true); assert.equal(d.getAvailable(), true);
+  release(main); await old;
+  assert.equal(d.getAvailable(), true); assert.equal(d.aggregateBound, true);
+  assert.equal(d.getReportingDiagnostics().aggregateRecovery.verificationFailures, 0);
+  await d.onTeardown();
 });

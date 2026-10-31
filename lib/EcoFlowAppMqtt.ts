@@ -26,6 +26,8 @@ export interface AppFrameDelivery {
   receivedMonoMs: number;
   retained: boolean;
   duplicate: boolean;
+  /** Local socket epoch only; no account/broker identifier. Absent on legacy injected deliveries. */
+  connectionEpoch?: number;
 }
 export type AppFrameHandler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => void;
 
@@ -59,6 +61,7 @@ export class EcoFlowAppMqtt {
   private userId = '';
   private connecting: Promise<void> | null = null;
   private ended = false;
+  private connectionEpoch = 0;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private backoffMs = 0;
   private readonly handlers = new Map<string, Set<AppFrameHandler>>();
@@ -162,6 +165,10 @@ export class EcoFlowAppMqtt {
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       client.once('connect', () => {
+        if (this.ended || this.client !== client) {
+          reject(new Error('app MQTT connection replaced before it was ready')); return;
+        }
+        ++this.connectionEpoch;
         settled = true;
         this.backoffMs = 0;
         if (this.reconnectTimer) {
@@ -340,7 +347,11 @@ export class EcoFlowAppMqtt {
     // metadata stays unknown; a future Energy consumer must not assume live.
     const delivery = packet && typeof packet.retain === 'boolean' && typeof packet.dup === 'boolean'
       ? Object.freeze({
-        receivedAt: Date.now(), receivedMonoMs: performance.now(), retained: packet.retain, duplicate: packet.dup,
+        receivedAt: Date.now(),
+        receivedMonoMs: performance.now(),
+        retained: packet.retain,
+        duplicate: packet.dup,
+        connectionEpoch: this.connectionEpoch,
       }) : undefined;
     for (const handler of set) {
       try {

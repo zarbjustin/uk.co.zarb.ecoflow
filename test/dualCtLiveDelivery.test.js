@@ -60,3 +60,18 @@ test('delivery discontinuity rejects the crossing packet but accepts the next fr
     assert.equal(inspect(g, frame(seq + 1), metadata(at + 1500)).accepted, false, 'duplicate rejection remains active');
   }
 });
+
+test('socket epoch changes invalidate the anchor before sequence and payload checks, without accepting the crossing packet', () => {
+  for (const next of [frame(2), frame(1), nest(1, Buffer.concat([integer(8, 254), integer(9, 22)]))]) {
+    const g = new DualCtLiveDelivery();
+    assert.equal(inspect(g, frame(1), metadata(1000, { connectionEpoch: 1 })).accepted, true);
+    assert.deepEqual(inspect(g, next, metadata(2000, { connectionEpoch: 2 })), { accepted: false, status: 'connection_changed', restartAnchor: true });
+    assert.equal(inspect(g, frame(3), metadata(3000, { connectionEpoch: 2 })).accepted, true);
+    assert.equal(inspect(g, frame(3), metadata(3500, { connectionEpoch: 2 })).status, 'sequence_duplicate');
+  }
+  for (const epoch of [0, -1, NaN, Infinity, 1.5, '2']) {
+    assert.equal(inspect(new DualCtLiveDelivery(), frame(1), metadata(1000, { connectionEpoch: epoch })).accepted, false);
+  }
+  const g = new DualCtLiveDelivery(); inspect(g, frame(1), metadata(1000, { connectionEpoch: 1 }));
+  assert.equal(inspect(g, frame(2), metadata(2000)).restartAnchor, true, 'missing epoch cannot bridge an identified connection');
+});

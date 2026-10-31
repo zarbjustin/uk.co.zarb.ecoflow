@@ -443,7 +443,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     return this.applyChain;
   }
 
-  private refreshClientCredentials(): void {
+  protected refreshClientCredentials(): void {
     const accessKey = this.homey.settings.get('accessKey') as string;
     const secretKey = this.homey.settings.get('secretKey') as string;
     const host = this.homey.settings.get('host') as string | undefined;

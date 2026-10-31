@@ -11,6 +11,7 @@ const MEMBER = 'BK61CONTROLMEMBER';
 const normal = { cmsMaxChgSoc: 80, cmsMinDsgSoc: 10, backupReverseSoc: 20, feedGridMode: 1,
   'energyStrategyOperateMode.operateSelfPoweredOpen': true };
 class FakeDevice {
+  log() {}
   constructor() {
     this.store = { mainSn: MAIN };
     this.values = {};

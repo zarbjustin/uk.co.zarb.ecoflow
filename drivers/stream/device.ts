@@ -44,6 +44,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private mainSn = '';
   private aggregateBound = false;
+  private aggregateVerifiedMain = '';
+  private aggregateIdentityConflict = false;
+  private aggregateVerificationFailures = 0;
+  private aggregateRecoveries = 0;
   private bindingAttempted = false;
   private energySourceSn = '';
 
@@ -461,6 +465,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         await this.persistBatteryStore();
         if (generation === this.controlGeneration && !this.controlStopped) {
           this.aggregateBound = true;
+          this.aggregateVerifiedMain = this.mainSn;
+          this.aggregateIdentityConflict = false;
           if (this.getSetting('enable_history') !== false) this.startHistory();
         }
       } catch {
@@ -477,20 +483,32 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return main.toUpperCase();
   }
 
-  private async requireAggregateMain(): Promise<string> {
+  private async requireAggregateMain(allowTelemetryRecovery = false): Promise<string> {
     const generation = this.controlGeneration;
     try {
       const main = await this.resolveAggregateMain();
-      if (!this.aggregateBound || main !== this.mainSn) throw Error('Aggregate main changed; reinitialization required');
+      if (main !== this.mainSn) this.aggregateIdentityConflict = true;
+      if (this.aggregateIdentityConflict) throw Error('Aggregate main changed; reinitialization required');
+      if (!this.aggregateBound && allowTelemetryRecovery && this.aggregateVerifiedMain === main) {
+        // A fresh successful lookup of the same session-verified source can
+        // recover telemetry. Never adopt a changed source or replay readings.
+        this.aggregateBound = true;
+        this.aggregateRecoveries = Math.min(65535, this.aggregateRecoveries + 1);
+        this.log('Original STREAM telemetry source reverified');
+      }
+      if (!this.aggregateBound) throw Error('Aggregate main unverified; reinitialization required');
       return main;
     } catch {
       if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) throw Error('Aggregate lookup interrupted');
+      if (this.aggregateBound) this.log('Original STREAM source verification interrupted', this.aggregateIdentityConflict ? 'identity_changed' : 'lookup_failed');
       this.aggregateBound = false;
+      this.aggregateVerificationFailures = Math.min(65535, this.aggregateVerificationFailures + 1);
       this.lastEnergyTs = 0;
       this.legacyFlowReadings = new LegacyFlowReadings();
       for (const cap of ['measure_battery', 'measure_power', 'measure_power.grid', 'measure_power.load',
         'measure_power.pv', 'battery_charging_state', 'feed_in_control', 'backup_reserve_soc',
         'charge_limit', 'discharge_limit', 'operating_mode']) {
+        if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) break;
         if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
       }
       throw Error('Aggregate main unverified; no controls or legacy readings allowed');
@@ -498,10 +516,18 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async poll(): Promise<void> {
+    const generation = this.controlGeneration;
+    if (this.controlStopped || this.isShuttingDown()) return;
     if (!this.monitoringEnabled && !this.monitoringRollbackPending) {
       try {
-        await this.requireAggregateMain();
+        // Identity checks precede the base poll, so refresh rotated API keys
+        // here too; otherwise a failed lookup can trap the old client forever.
+        this.refreshClientCredentials();
+        await this.requireAggregateMain(true);
       } catch {
+        if (generation === this.controlGeneration && !this.controlStopped && !this.isShuttingDown()) {
+          await this.setOnlineState(false, this.aggregateUnavailableMessage());
+        }
         return;
       }
     }
@@ -515,6 +541,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return {
       readAddressMatchesSavedMain: this.getStoreValue('mainSn') ? this.getReadSn() === this.getStoreValue('mainSn') : null,
       aggregateBinding,
+      aggregateRecovery: {
+        state: this.aggregateIdentityConflict ? 'identity_changed' : aggregateBinding,
+        verificationFailures: this.aggregateVerificationFailures,
+        recoveries: this.aggregateRecoveries,
+      },
       observations: this.reportingObservations,
       lastControlFailure: this.lastControlFailure,
       mainResolution: this.mainResolution,
@@ -563,6 +594,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.monitoringTimer = null;
     this.controlGeneration += 1;
     this.aggregateBound = false;
+    this.aggregateVerifiedMain = '';
+    this.aggregateIdentityConflict = false;
+    this.aggregateVerificationFailures = 0;
+    this.aggregateRecoveries = 0;
     this.bindingAttempted = false;
     this.controlStopped = false;
     this.priceUpdatedAt = 0;
@@ -864,6 +899,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.runControl({ kind: 'reserve', value: targetSoc });
   }
 
+  private aggregateUnavailableMessage(): string {
+    if (this.aggregateIdentityConflict) return 'Original STREAM main unit changed; review the installation before continuing.';
+    return this.aggregateVerifiedMain
+      ? 'Original STREAM source verification interrupted; retrying automatically.'
+      : 'Waiting for original STREAM source verification.';
+  }
+
   /** Availability + online/offline flow triggers (overrides the base). */
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {
     if (this.monitoringEnabled) {
@@ -873,6 +915,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
     if (this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
       await super.setOnlineState(false, 'Waiting for fresh original battery readings after rollback.');
+      return;
+    }
+    if (this.bindingAttempted && !this.aggregateBound) {
+      await super.setOnlineState(false, this.aggregateUnavailableMessage());
       return;
     }
     if (online) {

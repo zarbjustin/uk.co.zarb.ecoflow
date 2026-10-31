@@ -54,6 +54,7 @@ test('shared same-meter consumers subscribe once, detach independently and resub
     assert.equal(preview.length, 1); assert.equal(energy.length, 1);
     assert.equal(preview[0], energy[0], 'both consumers receive the same immutable receipt');
     assert.ok(Object.isFrozen(preview[0]));
+    assert.equal(preview[0].connectionEpoch, 1);
     client.emit('message', topic, Buffer.from('retained'), { retain: true, dup: true });
     assert.equal(energy[1].retained, true); assert.equal(energy[1].duplicate, true);
     mqtt.unsubscribe(sn, e); assert.equal(client.unsubscribed.length, 0);
@@ -63,6 +64,8 @@ test('shared same-meter consumers subscribe once, detach independently and resub
     assert.equal(next.subscribed.length, 2);
     next.emit('message', topic, Buffer.from('synthetic'), { retain: false, dup: false });
     assert.equal(preview.length, 4); assert.equal(energy.length, 3);
+    assert.equal(energy[2].connectionEpoch, 2, 'new socket gives both existing consumers a new epoch');
+    assert.equal(preview[3], energy[2]);
     mqtt.unsubscribe(sn, p); assert.equal(next.unsubscribed.length, 0);
     mqtt.unsubscribe(sn, e); assert.equal(next.unsubscribed.length, 2);
     mqtt.subscribe(sn, e); assert.equal(next.subscribed.length, 4, 'first returning listener reopens topics');
@@ -107,6 +110,21 @@ test('a second consumer waits for the shared connection handshake rather than mi
     if (!client.connected) { client.connected = true; client.emit('connect'); }
     await mqtt.end();
   }
+});
+
+test('a queued connect callback from a replaced socket cannot change the current delivery epoch or subscriptions', async () => {
+  autoConnect = false;
+  const mqtt = new EcoFlowAppMqtt({ client: auth }); const frames = [];
+  try {
+    const connecting = mqtt.connect(); await new Promise(setImmediate);
+    const old = clients.at(-1); const queuedConnect = old.listeners('connect')[0];
+    old.connected = true; old.emit('connect'); await connecting;
+    mqtt.subscribe(sn, (_bytes, _topic, delivery) => frames.push(delivery));
+    autoConnect = true; await mqtt.reconnect(); const current = clients.at(-1);
+    queuedConnect();
+    current.emit('message', topic, Buffer.from('synthetic'), { retain: false, dup: false });
+    assert.equal(frames[0].connectionEpoch, 2); assert.equal(current.subscribed.length, 2);
+  } finally { autoConnect = true; await mqtt.end(); }
 });
 
 function fakeTimers(t) {

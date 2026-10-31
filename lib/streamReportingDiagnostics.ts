@@ -29,9 +29,19 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   let readAddressMatchesSavedMain: boolean | null = null;
   let lastControlFailure: Record<string, unknown> | null = null;
   let mainResolution = mainResolutionSnapshot(null, now);
+  let aggregateRecovery: Record<string, unknown> | null = null;
   try {
     const input = device.getReportingDiagnostics?.();
     mainResolution = mainResolutionSnapshot(input?.mainResolution, now);
+    if (input?.aggregateRecovery && typeof input.aggregateRecovery === 'object') {
+      const evidence = input.aggregateRecovery;
+      const count = (value: unknown) => (Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 65535 ? value : 0);
+      aggregateRecovery = {
+        state: ['not_checked', 'verified_original_main', 'blocked', 'identity_changed'].includes(evidence.state) ? evidence.state : 'unknown',
+        verificationFailures: count(evidence.verificationFailures),
+        recoveries: count(evidence.recoveries),
+      };
+    }
     const failure = input?.lastControlFailure;
     if (failure) {
       const reason = ['read_failed', 'cancelled', 'observation_failed', 'preflight_rejected',
@@ -69,6 +79,7 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   }
   return {
     currentReadings,
+    aggregateRecovery,
     lastControlFailure,
     mainResolution,
     observations,
