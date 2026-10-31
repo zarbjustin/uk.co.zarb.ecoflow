@@ -205,7 +205,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   }
 
   getDualCtCommunityFeedback() {
-    return this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' ? this.communityFeedback.snapshot() : null;
+    if (this.getStoreValue('dualCtEnergyMode') !== 'three_phase_community') return null;
+    return {
+      ...this.communityFeedback.snapshot(),
+      transport: (this.homey.app as any).getAppRealtimeDiagnostics?.(this.getData().sn) || null,
+    };
   }
 
   async resumeAppAccountAfterRepair(): Promise<void> {

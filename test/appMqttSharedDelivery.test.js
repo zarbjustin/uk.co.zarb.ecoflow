@@ -5,11 +5,17 @@ const Module = require('node:module');
 const { EventEmitter } = require('node:events');
 
 const clients = [];
+let subscribeHook;
+let autoConnect = true;
 class Client extends EventEmitter {
   constructor() {
     super(); this.connected = false; this.subscribed = []; this.unsubscribed = [];
   }
-  subscribe(topic, _options, callback) { this.subscribed.push(topic); callback?.(null); }
+  subscribe(topic, _options, callback) {
+    this.subscribed.push(topic);
+    if (subscribeHook) subscribeHook(this, topic, callback);
+    else callback?.(null, [{ topic, qos: 0 }]);
+  }
   unsubscribe(topic) { this.unsubscribed.push(topic); }
   end(_force, options, callback) {
     this.connected = false; (typeof options === 'function' ? options : callback)?.();
@@ -21,7 +27,7 @@ try {
   Module._load = function (request, ...args) {
     if (request === 'mqtt') return { connect() {
       const client = new Client(); clients.push(client);
-      queueMicrotask(() => { client.connected = true; client.emit('connect'); });
+      if (autoConnect) queueMicrotask(() => { client.connected = true; client.emit('connect'); });
       return client;
     } };
     return originalLoad.call(this, request, ...args);
@@ -79,5 +85,129 @@ test('late frames and disconnect callbacks from a replaced socket cannot affect 
     const afterEnd = current.listeners('message')[0]; await mqtt.end();
     afterEnd(topic, Buffer.from('late'), { retain: false, dup: false });
     assert.equal(frames.length, 2); assert.equal(current.listenerCount('message'), 0);
+  } finally { await mqtt.end(); }
+});
+
+
+test('a second consumer waits for the shared connection handshake rather than mistaking a pending socket for readiness', async () => {
+  autoConnect = false;
+  const mqtt = new EcoFlowAppMqtt({ client: auth });
+  try {
+    const first = mqtt.connect();
+    await new Promise(resolve => setImmediate(resolve));
+    let ready = false;
+    const second = mqtt.connect().then(() => { ready = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(ready, false);
+    const client = clients.at(-1); client.connected = true; client.emit('connect');
+    await Promise.all([first, second]); assert.equal(ready, true);
+  } finally {
+    autoConnect = true;
+    const client = clients.at(-1);
+    if (!client.connected) { client.connected = true; client.emit('connect'); }
+    await mqtt.end();
+  }
+});
+
+function fakeTimers(t) {
+  const timers = new Set();
+  t.mock.method(global, 'setTimeout', (fn, ms) => { const timer = { fn, ms }; timers.add(timer); return timer; });
+  t.mock.method(global, 'clearTimeout', timer => timers.delete(timer));
+  return { timers, run(ms) { const timer = [...timers].find(x => x.ms === ms); assert.ok(timer, 'expected timer '+ms); timers.delete(timer); timer.fn(); } };
+}
+
+test('denied topic retries alone and recovers on the shared socket without interrupting both consumers', async t => {
+  const clock = fakeTimers(t); const logs = []; let pendingAck; let received = 0;
+  subscribeHook = (_client, route, callback) => {
+    if (route === topic && !pendingAck) { pendingAck = callback; callback(null, [{ topic: route, qos: 128 }]); }
+    else callback(null, [{ topic: route, qos: 0 }]);
+  };
+  const mqtt = new EcoFlowAppMqtt({ client: auth, log: (...args) => logs.push(args) });
+  try {
+    await mqtt.connect(); const client = clients.at(-1);
+    mqtt.subscribe(sn, () => { received++; }); mqtt.subscribe(sn, () => { received++; });
+    assert.equal(client.subscribed.length, 2);
+    clock.run(5000);
+    assert.equal(clients.at(-1), client); assert.equal(client.subscribed.length, 3);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 2);
+    pendingAck(new Error('private topic '+topic), []); // late failed callback must not poison the successful retry.
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 2);
+    client.emit('message', topic, Buffer.from('synthetic'), { retain: false, dup: false });
+    assert.equal(received, 2); assert.equal(mqtt.getDeliveryDiagnostics(sn).receivedFrames, 1);
+    assert.doesNotMatch(JSON.stringify(logs), /SYNTHETIC|private|\/app/);
+    assert.equal(clock.timers.size, 0);
+  } finally { subscribeHook = undefined; await mqtt.end(); }
+});
+
+test('missing SUBACK retries are bounded, late callbacks fenced and last detach/end cancels owned timers', async t => {
+  const clock = fakeTimers(t); const callbacks = [];
+  subscribeHook = (_client, route, callback) => { if (route === topic) callbacks.push(callback); else callback(null, [{ topic: route, qos: 0 }]); };
+  const mqtt = new EcoFlowAppMqtt({ client: auth }); const preview = () => {}, energy = () => {};
+  try {
+    await mqtt.connect(); const client = clients.at(-1);
+    mqtt.subscribe(sn, preview); mqtt.subscribe(sn, energy);
+    clock.run(10000); assert.equal(mqtt.getDeliveryDiagnostics(sn).timedOutTopics, 1);
+    clock.run(5000); callbacks[0](null, [{ topic, qos: 0 }]);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).pendingTopics, 1, 'old SUBACK cannot accept a replacement attempt');
+    clock.run(10000); clock.run(10000); // deadline, then second retry backoff.
+    clock.run(10000); // final deadline: no further retries.
+    assert.equal(client.subscribed.length, 4); assert.equal(clock.timers.size, 0);
+    mqtt.unsubscribe(sn, preview); assert.equal(client.unsubscribed.length, 0);
+    mqtt.unsubscribe(sn, energy); assert.equal(client.unsubscribed.length, 2);
+    mqtt.subscribe(sn, energy); assert.equal(clock.timers.size, 1);
+    await mqtt.end(); assert.equal(clock.timers.size, 0);
+    callbacks.at(-1)(null, [{ topic, qos: 0 }]);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 0);
+  } finally { subscribeHook = undefined; await mqtt.end(); }
+});
+
+test('foreign and malformed topic routes cannot reach same-serial consumers or renew delivery evidence', async () => {
+  const mqtt = new EcoFlowAppMqtt({ client: auth }); let calls = 0;
+  try {
+    await mqtt.connect(); mqtt.subscribe(sn, () => calls++); const client = clients.at(-1);
+    for (const route of ['/app/foreign/'+sn+'/thing/property/get_reply',topic+'/extra','/app/device/wrong/'+sn]) {
+      client.emit('message', route, Buffer.from('synthetic'), { retain: false, dup: false });
+    }
+    assert.equal(calls, 0); assert.equal(mqtt.getDeliveryDiagnostics(sn).receivedFrames, 0);
+  } finally { await mqtt.end(); }
+});
+
+
+test('subscription errors and synchronous failures recover; old-socket SUBACKs cannot change replacement state', async t => {
+  const clock = fakeTimers(t); const callbacks = []; let failures = 2; const logs = [];
+  subscribeHook = (_client, route, callback) => {
+    callbacks.push({ route, callback });
+    if (route === topic && failures-- > 0) {
+      if (failures === 1) throw new Error('private broker data');
+      callback(new Error('private broker data')); return;
+    }
+    callback(null, [{ topic: route, qos: 0 }]);
+  };
+  const mqtt = new EcoFlowAppMqtt({ client: auth, log: (...args) => logs.push(args) });
+  try {
+    await mqtt.connect(); mqtt.subscribe(sn, () => {});
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).rejectedTopics, 1);
+    clock.run(5000); clock.run(10000);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 2);
+    const old = callbacks[0];
+    await mqtt.reconnect();
+    old.callback(new Error('private broker data'));
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 2);
+    assert.equal(clock.timers.size, 0);
+    assert.doesNotMatch(JSON.stringify(logs), /private|broker data/);
+  } finally { subscribeHook = undefined; await mqtt.end(); }
+});
+
+
+test('a failing app listener cannot interrupt peers or disclose exception contents', async () => {
+  const logs = []; let received = 0;
+  const mqtt = new EcoFlowAppMqtt({ client: auth, log: (...args) => logs.push(args) });
+  try {
+    await mqtt.connect();
+    mqtt.subscribe(sn, () => { throw new Error('PRIVATE raw household payload'); });
+    mqtt.subscribe(sn, () => { received++; });
+    clients.at(-1).emit('message', topic, Buffer.from('synthetic'), { retain: false, dup: false });
+    assert.equal(received, 1);
+    assert.doesNotMatch(JSON.stringify(logs), /PRIVATE|household|payload/);
   } finally { await mqtt.end(); }
 });

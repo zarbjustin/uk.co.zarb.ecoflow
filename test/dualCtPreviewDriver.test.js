@@ -389,10 +389,12 @@ test('ordinary support export contains preview health but never preview numbers,
     if (id !== 'smartmeter_dual_ct_preview') throw new Error('absent');
     return { getDevices: () => [{ getDualCtPreviewDiagnostics: () => ({ enabled: true, status: 'recent', acceptedPackets: 59,
       lastReceiptAgeSec: 1, receivedFrames: 60, rejectedFrames: 1, lastFrameAgeSec: 0,
-      value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
+      transport: { connected: true, listening: true, activeTopics: 2, receivedFrames: 60, topic: 'PRIVATE', payload: 'PRIVATE', error: 'PRIVATE' }, value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
   } } });
   assert.equal(report.schemaVersion, 19); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
   assert.equal(report.dualCtPreviews[0].receivedFrames, 60);
+  assert.equal(report.dualCtPreviews[0].transport.activeTopics, 2);
+  assert.equal(report.dualCtPreviews[0].transport.receivedFrames, 60);
   assert.equal(report.dualCtPreviews[0].rejectedFrames, 1);
   assert.equal(report.dualCtPreviews[0].lastFrameAgeSec, 0);
   assert.equal(report.dualCtPreviews[0].valuesIncluded, false);
@@ -521,4 +523,16 @@ test('same-account pairing keeps an existing Dual CT monitor live; changed crede
     await confirm('different-synthetic-password');
     assert.equal(h.handlers.size, 0); assert.equal(h.device.available, false);
   } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+
+test('detailed monitor distinguishes rejected encodings, malformed frames and unrelated replies without accepting them', () => {
+  const monitor = new DualCtMonitor(scope);
+  assert.equal(monitor.observe(frame(packet(), { encoding: 1 }), topic, 1000), false);
+  assert.equal(monitor.observe(Buffer.from('invalid'), topic, 2000), false);
+  assert.equal(monitor.observe(frame(), '/app/foreign/'+sn+'/thing/property/get_reply', 3000), false);
+  assert.deepEqual(monitor.getRejectionCounts(), { unsupported_encoding: 1, malformed_frame: 1, scope_or_receipt_rejected: 1 });
+  assert.equal(monitor.snapshot(3000, text).recent, false);
+  assert.equal(monitor.observe(frame(), topic, 4000), true);
+  assert.equal(monitor.snapshot(4000, text).recent, true);
 });

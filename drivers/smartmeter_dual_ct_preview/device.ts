@@ -271,9 +271,11 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     return {
       enabled: this.enabled,
       status: this.state,
+      transport: (this.homey.app as any).getAppRealtimeDiagnostics?.(this.getData().sn) || null,
       acceptedPackets: this.acceptedPackets,
       receivedFrames: this.receivedFrames,
       rejectedFrames: this.rejectedFrames,
+      rejectionReasons: this.monitor?.getRejectionCounts() || {},
       lastFrameAgeSec: frameAge !== null && Number.isFinite(frameAge) && frameAge >= 0 ? frameAge : null,
       lastReceiptAgeSec: age !== null && Number.isFinite(age) && age >= 0 ? age : null,
       valuesIncluded: false,

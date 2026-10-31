@@ -15,6 +15,7 @@ type Counter = { field: number; value: number; receivedAt: number; trend: string
 export class DualCtMonitor {
   private readonly adapter: DualCtDevicePreview;
   private readonly counters = new Map<number, Counter>();
+  private readonly rejections: Record<string, number> = {};
   private lastAt: number | null = null;
   private lastNow: number | null = null;
 
@@ -26,19 +27,32 @@ export class DualCtMonitor {
     this.adapter.disconnect(); this.counters.clear(); this.lastAt = null; this.lastNow = null;
   }
 
+  getRejectionCounts(): Record<string, number> {
+    return { ...this.rejections };
+  }
+
   observe(payload: Buffer, topic: string, receivedAt: number, now = receivedAt): boolean {
+    const reject = (reason: string) => {
+      this.rejections[reason] = Math.min(65535, (this.rejections[reason] || 0) + 1);
+      return false;
+    };
+    let reason = 'decode_rejected';
     if (topic !== `/app/device/property/${this.scope.device}` || !Buffer.isBuffer(payload)
-      || !payload.length || payload.length > 65536 || !Number.isFinite(now) || now <= 0 || !Number.isFinite(receivedAt) || receivedAt <= 0 || !dualCtFreshAge(now - receivedAt)) return false;
+      || !payload.length || payload.length > 65536 || !Number.isFinite(now) || now <= 0 || !Number.isFinite(receivedAt)
+      || receivedAt <= 0 || !dualCtFreshAge(now - receivedAt)) return reject('scope_or_receipt_rejected');
     if (this.lastNow !== null && now < this.lastNow) this.clear();
     this.lastNow = now;
-    if (this.lastAt !== null && receivedAt <= this.lastAt) return false;
+    if (this.lastAt !== null && receivedAt <= this.lastAt) return reject('receipt_order_rejected');
     try {
       const headers = decodeFrameHeaders(payload);
       if (!headers.length || headers.length > 16 || headers.some((header) => header.candidateHeaderValid === false
-        || (header.deviceSn && header.deviceSn !== this.scope.device))) return false;
+        || (header.deviceSn && header.deviceSn !== this.scope.device))) return reject('header_rejected');
       for (const header of headers) {
         const policy = dualCtEncodingPolicy(header, 421, 'app_mqtt');
-        if (!policy.basis) continue;
+        if (!policy.basis) {
+          reason = policy.reason === 'unsupported_encoding' ? 'unsupported_encoding' : 'unrelated_message';
+          continue;
+        }
         const context = {
           productType: 421,
           cmdFunc: header.cmdFunc,
@@ -74,8 +88,10 @@ export class DualCtMonitor {
         this.lastAt = receivedAt;
         return true;
       }
-    } catch { /* Reject malformed traffic without logging raw packets or values. */ }
-    return false;
+    } catch {
+      return reject('malformed_frame');
+    }
+    return reject(reason);
   }
 
   snapshot(now: number, translate: (key: string) => string, roles: DualCtDisplayRoles = {}) {

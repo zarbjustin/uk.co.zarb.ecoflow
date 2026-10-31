@@ -1,3 +1,5 @@
+import { appMqttDiagnosticsSnapshot } from './appMqttDiagnostics';
+
 /** Local, bounded classifications only. No powers, energy totals, IDs, timestamps or uploads. */
 const statuses = ['delivery_gap', 'sequence_required', 'sequence_duplicate', 'sequence_reset',
   'clock_discontinuity', 'delivery_not_live', 'delivery_scope', 'not_ct1_property_upload',
@@ -19,6 +21,7 @@ export function dualCtCommunityFeedbackSnapshot(input: any) {
     timing: 'receipt_estimate',
     persistence: 'since_app_start',
     counts,
+    transport: appMqttDiagnosticsSnapshot(input.transport),
     eligibleIntervalMs: count(input.eligibleIntervalMs),
     rejectedGapMs: count(input.rejectedGapMs),
     coveragePercent: null,

@@ -1,5 +1,40 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.12 preparation authorised — 31 October 2026
+
+Owner authorises publishing the reviewed shared-delivery bug-bash fixes to Test
+for community validation. Candidate 1.11.12 retains the findings below and awaits
+exact-commit CI, frozen-archive checks and channel verification. Installed
+Development 1.11.10, Live 1.10.3 and Mainline must remain unchanged. No hardware
+acceptance, new tester capture or external message is implied by publication.
+
+## Shared Dual CT delivery bug bash prepared — 31 October 2026
+
+The tester reports 1.11.11 did not restore either the older detailed monitor or
+three-phase Energy meter, although native readings update. This is negative field
+recovery evidence; the previous software fixes are not claimed to have solved it.
+
+A source-only candidate fixes premature readiness for concurrent MQTT consumers
+and failed/unanswered subscription handling: 10-second SUBACK deadlines, at most
+three per-topic attempts with 5/10-second retry delays, no shared-socket reset,
+and cancellation/identity fences for stale acknowledgements and teardown. Exact
+receive-topic scoping and listener-error privacy are hardened. Whitelisted local
+support evidence distinguishes topic acceptance, no incoming delivery and monitor
+encoding/header/decode rejections without raw data or automatic upload.
+
+Two regressions fail on published source and pass here; an actual locked MQTT.js
+v5 in-memory broker test confirms a denied subscription is retried on the wire and
+both listeners recover. Local Node 22 locked installation, all 1,321 tests, lint,
+release checks and pinned Homey 4.5.3 verified validation pass. Existing single-
+and three-phase accounting/counter/staleness tests remain intact.
+
+[Bug-bash findings and upstream review](DUAL_CT_SHARED_DELIVERY_BUG_BASH.md) explain
+the remaining field gate. The Home Assistant BK21 parser is useful protocol
+research, not a Dual CT hardware contract. No alternate decoding, GET/SET request,
+Energy-accounting change, new capture or community reply was performed. Candidate
+is uncommitted/unversioned; Test 1.11.11, installed Development 1.11.10, Live and
+Mainline were not changed. Separate review is needed before another Test release.
+
 ## Test 1.11.11 / build 78 published — 31 October 2026
 
 Owner authorised immediate Test publication for community recovery testing and

@@ -37,6 +37,12 @@ const WSS_PATH = '/mqtt';
 const KEEPALIVE_S = 30;
 const MIN_BACKOFF_MS = 5000;
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
+const SUBSCRIBE_TIMEOUT_MS = 10000;
+const MAX_SUBSCRIBE_ATTEMPTS = 3;
+type TopicSubscription = {
+  sn: string; state: 'pending' | 'active' | 'rejected' | 'timed_out';
+  timer: ReturnType<typeof setTimeout> | null;
+};
 
 export interface EcoFlowAppMqttOptions {
   client: EcoFlowAppAuthClient;
@@ -56,6 +62,8 @@ export class EcoFlowAppMqtt {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private backoffMs = 0;
   private readonly handlers = new Map<string, Set<AppFrameHandler>>();
+  private readonly subscriptions = new Map<string, TopicSubscription>();
+  private readonly receipts = new Map<string, { count: number; at: number }>();
   private readonly log: (...args: any[]) => void;
   private auth: EcoFlowAppAuthClient;
 
@@ -79,11 +87,11 @@ export class EcoFlowAppMqtt {
   }
 
   async connect(): Promise<void> {
-    if (this.client) return;
     if (this.connecting) {
       await this.connecting;
       return;
     }
+    if (this.client) return;
     this.ended = false;
     this.connecting = this.establish();
     try {
@@ -172,7 +180,9 @@ export class EcoFlowAppMqtt {
         if (!settled) reject(e);
       });
     }).catch((e) => {
-      if (this.client === client) this.client = null;
+      if (this.client === client) {
+        this.clearSubscriptions(); this.client = null;
+      }
       client.removeAllListeners('close');
       client.removeAllListeners('offline');
       client.removeAllListeners('message');
@@ -181,7 +191,16 @@ export class EcoFlowAppMqtt {
     });
   }
 
+  private clearSubscriptions(sn?: string): void {
+    for (const [topic, item] of this.subscriptions) {
+      if (sn !== undefined && item.sn !== sn) continue;
+      if (item.timer) clearTimeout(item.timer);
+      this.subscriptions.delete(topic);
+    }
+  }
+
   private destroyClient(): void {
+    this.clearSubscriptions();
     if (!this.client) return;
     this.client.removeAllListeners('close');
     this.client.removeAllListeners('offline');
@@ -235,6 +254,8 @@ export class EcoFlowAppMqtt {
     else set.clear();
     if (set.size > 0) return;
     this.handlers.delete(sn);
+    this.clearSubscriptions(sn);
+    this.receipts.delete(sn);
     if (!this.client) return;
     for (const topic of this.topics(sn)) this.client.unsubscribe(topic);
   }
@@ -247,10 +268,64 @@ export class EcoFlowAppMqtt {
   }
 
   private subscribeTopics(sn: string): void {
-    if (!this.client?.connected) return;
-    for (const topic of this.topics(sn)) {
-      this.client.subscribe(topic, { qos: 0 }, (e) => e && this.log('subscribe failed', e.message));
+    if (!this.client?.connected || this.ended) return;
+    for (const topic of this.topics(sn)) this.subscribeTopic(sn, topic);
+  }
+
+  private subscribeTopic(sn: string, topic: string, attempt = 1): void {
+    const { client } = this;
+    if (!client?.connected || this.ended || !this.handlers.has(sn)) return;
+    const item: TopicSubscription = {
+      sn, state: 'pending', timer: null,
+    };
+    this.subscriptions.set(topic, item);
+    const current = () => !this.ended && this.client === client && this.handlers.has(sn) && this.subscriptions.get(topic) === item;
+    const failed = (state: 'rejected' | 'timed_out') => {
+      if (!current() || item.state !== 'pending') return;
+      if (item.timer) clearTimeout(item.timer);
+      item.state = state;
+      this.log('subscription', state); // Never log a topic, account, serial or broker error.
+      if (attempt < MAX_SUBSCRIBE_ATTEMPTS) {
+        // eslint-disable-next-line homey-app/global-timers -- owned per-topic retry, cancelled on detach/end.
+        item.timer = setTimeout(() => {
+          item.timer = null;
+          if (current()) this.subscribeTopic(sn, topic, attempt + 1);
+        }, MIN_BACKOFF_MS * attempt);
+      } else item.timer = null;
+    };
+    // A connected socket is not proof the broker accepted its subscription.
+    // eslint-disable-next-line homey-app/global-timers -- owned acknowledgement deadline, cancelled on detach/end.
+    item.timer = setTimeout(() => failed('timed_out'), SUBSCRIBE_TIMEOUT_MS);
+    try {
+      client.subscribe(topic, { qos: 0 }, (error, granted) => {
+        if (!current() || item.state !== 'pending') return;
+        if (error || !Array.isArray(granted) || granted.length !== 1
+          || granted[0].topic !== topic || ![0, 1, 2].includes(granted[0].qos)) {
+          failed('rejected'); return;
+        }
+        if (item.timer) clearTimeout(item.timer);
+        item.timer = null; item.state = 'active';
+      });
+    } catch {
+      failed('rejected');
     }
+  }
+
+  /** Local bounded evidence only; successful SUBACK never makes stale telemetry fresh. */
+  getDeliveryDiagnostics(sn: string) {
+    const items = [...this.subscriptions.values()].filter((item) => item.sn === sn);
+    const receipt = this.receipts.get(sn);
+    const age = receipt ? Date.now() - receipt.at : null;
+    return {
+      connected: this.connected,
+      listening: this.handlers.has(sn),
+      pendingTopics: items.filter((item) => item.state === 'pending').length,
+      activeTopics: items.filter((item) => item.state === 'active').length,
+      rejectedTopics: items.filter((item) => item.state === 'rejected').length,
+      timedOutTopics: items.filter((item) => item.state === 'timed_out').length,
+      receivedFrames: receipt?.count || 0,
+      lastFrameAgeSec: age !== null && Number.isFinite(age) && age >= 0 ? age / 1000 : null,
+    };
   }
 
   private onMessage(topic: string, payload: Buffer, packet?: { retain?: boolean; dup?: boolean }): void {
@@ -258,7 +333,9 @@ export class EcoFlowAppMqtt {
     const parts = topic.split('/');
     const sn = parts[2] === 'device' ? parts[4] : parts[3];
     const set = sn ? this.handlers.get(sn) : undefined;
-    if (!set) return;
+    if (!set || !this.topics(sn).includes(topic)) return;
+    const prior = this.receipts.get(sn);
+    this.receipts.set(sn, { count: Math.min(65535, (prior?.count || 0) + 1), at: Date.now() });
     // Optional third argument preserves existing consumers. Missing transport
     // metadata stays unknown; a future Energy consumer must not assume live.
     const delivery = packet && typeof packet.retain === 'boolean' && typeof packet.dup === 'boolean'
@@ -268,8 +345,8 @@ export class EcoFlowAppMqtt {
     for (const handler of set) {
       try {
         handler(payload, topic, delivery);
-      } catch (e: any) {
-        this.log('frame handler error', e?.message || 'unknown error');
+      } catch {
+        this.log('frame handler error');
       }
     }
   }
@@ -301,6 +378,8 @@ export class EcoFlowAppMqtt {
 
   async end(): Promise<void> {
     this.ended = true;
+    this.clearSubscriptions();
+    this.receipts.clear();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

@@ -772,6 +772,10 @@ module.exports = class EcoFlowApp extends Homey.App {
     }
   }
 
+  getAppRealtimeDiagnostics(sn: string) {
+    return this.appMqtt?.getDeliveryDiagnostics(sn) || null;
+  }
+
   unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void {
     if (!this.appMqtt) return;
     this.appMqtt.unsubscribe(sn, onFrame);

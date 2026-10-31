@@ -1,5 +1,6 @@
 'use strict';
 
+import { appMqttDiagnosticsSnapshot, dualCtRejectionSnapshot } from './appMqttDiagnostics';
 import { dualCtCommunityFeedbackSnapshot } from './dualCtCommunityFeedback';
 
 import { isStream5000AggregatePairingEnabled } from './stream5000PairingAccess';
@@ -516,9 +517,11 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           enabled: input?.enabled === true,
           status: ['waiting', 'recent', 'waiting_stale', 'disabled', 'account_changed', 'model_unavailable', 'connection_failed', 'display_failed'].includes(input?.status)
             ? input.status : 'unknown',
+          transport: appMqttDiagnosticsSnapshot(input?.transport),
           acceptedPackets: safeNumber(input?.acceptedPackets),
           receivedFrames: safeNumber(input?.receivedFrames),
           rejectedFrames: safeNumber(input?.rejectedFrames),
+          rejectionReasons: dualCtRejectionSnapshot(input?.rejectionReasons),
           lastFrameAgeSec: safeNumber(input?.lastFrameAgeSec),
           lastReceiptAgeSec: safeNumber(input?.lastReceiptAgeSec),
           valuesIncluded: false,
