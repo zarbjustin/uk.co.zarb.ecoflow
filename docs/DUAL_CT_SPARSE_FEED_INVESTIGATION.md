@@ -1,5 +1,11 @@
 # Sparse Dual CT feed investigation — 31 October 2026
 
+Publication update: the reviewed fixes are now on Test 1.11.13/build 80, from
+runtime source `8adf1908e0837c7531accdb98fc88161978d740f` with passing exact CI.
+See [current handover](CODEX_HANDOVER.md) for archive and preservation evidence.
+The preparation findings below are historical; no new hardware pass is claimed.
+Installed Development, Live and Mainline remain unchanged.
+
 ## Evidence and limits
 
 The community tester supplied a manually transcribed support extract for Test

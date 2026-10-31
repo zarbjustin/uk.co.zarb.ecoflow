@@ -1,5 +1,39 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.13 / build 80 published — 31 October 2026
+
+Owner authorised publishing the combined original STREAM recovery and Dual CT
+connection-boundary fixes to Test. Runtime source
+`8adf1908e0837c7531accdb98fc88161978d740f` is committed/pushed on the diagnostic
+branch. Exact [CI 41200109882](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41200109882)
+passed all checks. Local Node 22 locked install (audit clean), all 1,331 tests,
+lint, release checks and pinned Homey 4.5.3 verified validation also pass.
+
+Frozen archive SHA-256:
+`3dd9fa290a430628d7a05d176f1afacd8c5e51ce3aa19193949abafda69f137c`.
+Runtime fingerprint:
+`f9d74cc3e15e99b8298488fc61e7769496d75f0c3b6fcea28f199825d21a85f5`.
+All 2,034 packed files match the validated build; private/env/work/output paths
+are excluded. Build 80 is confirmed active on Test as 1.11.13, with matching
+en/de/nl listing and changelog. No certification/Live submission was performed.
+
+Read-only baseline/readback confirms installed Development 1.11.10 running with
+the same devkit session. All 14 EcoFlow device definitions/settings, app settings,
+101 Flow contracts, 1,204 Insights identities and all device IDs are preserved.
+Eight comparable cumulative capabilities are numeric and nondecreasing. Other
+apps refreshed device metadata, so whole-house metadata equality is not claimed.
+Existing owner CT1 is available on the unchanged installed runtime; this is not
+an installed 1.11.13 hardware pass. Live remains 1.10.3/build 18; Mainline remains
+`66b1cb5f828a53333739798281fce86125f61c28`.
+
+[Sparse-feed investigation](DUAL_CT_SPARSE_FEED_INVESTIGATION.md) and
+[original STREAM findings](ORIGINAL_STREAM_FREEZE_INVESTIGATION.md) retain their
+limits: the field cause of sparse delivery remains unproven and full-release
+hardware gates remain open. No install, restart, setting/Flow/battery command,
+Energy change, repair or re-pair occurred. The community reply is a private draft
+for owner review and has not been sent. Publication receipts, preservation data
+and the draft remain outside Git.
+
 ## Test 1.11.13 preparation authorised — 31 October 2026
 
 Owner authorises committing/pushing the combined original STREAM recovery and

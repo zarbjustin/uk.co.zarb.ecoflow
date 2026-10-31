@@ -1,5 +1,11 @@
 # Original STREAM freeze investigation — 31 October 2026
 
+Publication update: the reviewed fixes are now on Test 1.11.13/build 80, from
+runtime source `8adf1908e0837c7531accdb98fc88161978d740f` with passing exact CI.
+See [current handover](CODEX_HANDOVER.md) for archive and preservation evidence.
+The preparation findings below are historical; no new hardware pass is claimed.
+Installed Development, Live and Mainline remain unchanged.
+
 This is a source-only candidate after Test 1.11.12/build 79. No publication,
 installation, restart, controls, settings/Flow change, repair or re-pair is part
 of this investigation. Private reports, household values and identities remain
