@@ -22,6 +22,7 @@ import { EnergyCheckpoint } from './EnergyCheckpoint';
 import { Stream5000ConfigurationTracker } from './stream5000Configuration';
 import { Stream5000CapabilityCandidates } from './stream5000Capabilities';
 import { Stream5000TimeObserver } from './stream5000TimeObserver';
+import type { Stream5000OfficialSocSample } from './stream5000OfficialSoc';
 import { Stream5000BatteryPresentation, STREAM_5000_PRESENTATION_CAPABILITY } from './stream5000BatteryPresentation';
 import { migrateReadingTitle, STREAM_5000_UNIT_TITLES, STREAM_5000_CONFIGURATION_TITLES } from './streamReadingScopes';
 import {
@@ -33,8 +34,9 @@ import {
  * Shared monitoring lifecycle for verified STREAM 5000-family units.
  *
  * Read-only by design: this device subscribes to the app-auth MQTT feed and
- * never publishes. It also never polls the Developer/Open REST API: admitted
- * models require an app-auth telemetry adapter and remain read-only.
+ * never publishes. Installation SOC alone can use a read-only public API fallback
+ * when app telemetry has no usable percentage and Developer credentials exist.
+ * This is latest cloud-report evidence, not a device measurement timestamp.
  *
  * Availability is therefore derived from the age of the last usable parsed
  * MQTT telemetry. Unknown frames alone cannot keep stale readings online, and
@@ -101,6 +103,9 @@ export class Stream5000UnitDevice extends Homey.Device {
   private batteryPresentation = new Stream5000BatteryPresentation();
   private linkedPowerWarning = false;
   private lastOfflineMessage = '';
+  private officialSocAbort?: AbortController;
+  private officialSocLastAttempt = 0;
+  private officialSocEvidence: Stream5000OfficialSocSample | null = null;
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -122,6 +127,8 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.subscriptionState = 'starting';
     this.batteryPresentation.reset();
     this.startedAt = Date.now();
+    this.officialSocLastAttempt = 0;
+    this.officialSocEvidence = null;
     this.diagnosticCaptureNext = Boolean(this.getSetting('diagnostic_capture_next'));
     const sn = this.getData().sn as string;
     const model = stream5000ModelFromSn(sn);
@@ -253,7 +260,9 @@ export class Stream5000UnitDevice extends Homey.Device {
 
     await this.subscribe();
     if (this.isStopped()) return;
+    this.refreshOfficialSystemSoc().catch(() => {});
     this.watchdog = this.homey.setInterval(() => {
+      this.refreshOfficialSystemSoc().catch(() => {});
       this.checkAvailability().catch((e) => this.error('availability check', e?.message || e));
     }, WATCHDOG_INTERVAL_MS);
     if (!this.isEnergyAggregate()) {
@@ -351,7 +360,10 @@ export class Stream5000UnitDevice extends Homey.Device {
       if (!this.hasCapability(capability)) continue;
       // eslint-disable-next-line no-await-in-loop
       const success = await this.applyLiveReading(capability, value, receivedAt);
-      if (success) appliedValues[capability] = value;
+      if (success) {
+        appliedValues[capability] = value;
+        if (capability === 'measure_battery') this.officialSocEvidence = null;
+      }
       applied = success && applied;
     }
     if (!this.isEnergyAggregate()) {
@@ -467,8 +479,73 @@ export class Stream5000UnitDevice extends Homey.Device {
     return this.readingAges.appliedReceiptAt(key);
   }
 
+  private usableSoc(): boolean {
+    const value = this.getCapabilityValue('measure_battery');
+    const age = this.readingAges.snapshot(Date.now(), this.unavailableAfterMs()).measure_battery as any;
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
+      && age?.stale === false && age.applicationStatus === 'applied';
+  }
+
+  /** A conservative receipt age, never a claim of hardware measurement age. */
+  private async refreshOfficialSystemSoc(): Promise<void> {
+    if (!this.isEnergyAggregate() || this.isStopped() || this.officialSocAbort || this.usableSoc()) return;
+    const app = getApp(this.homey);
+    if (Date.now() < this.officialSocLastAttempt) this.officialSocLastAttempt = 0;
+    if (!app.readStream5000SystemSoc || Date.now() - this.officialSocLastAttempt < 60000) return;
+    const abort = new AbortController(); this.officialSocAbort = abort;
+    this.officialSocLastAttempt = Date.now();
+    const deadline = this.homey.setTimeout(() => abort.abort(), 15000);
+    const { sn } = this.getData();
+    try {
+      const sample = await app.readStream5000SystemSoc(sn, abort.signal);
+      if (!sample || abort.signal.aborted || this.isStopped() || this.getData().sn !== sn
+        || sample.basis !== 'cloud_latest_report' || sample.hardwareReportedAt !== null
+        || !Number.isInteger(sample.percent) || sample.percent < 0 || sample.percent > 100
+        || !Number.isFinite(sample.requestStartedAt) || sample.requestStartedAt < this.officialSocLastAttempt
+        || !Number.isFinite(sample.receivedAt) || sample.receivedAt < sample.requestStartedAt
+        || sample.receivedAt > Date.now() || Date.now() - sample.requestStartedAt > 15000) return;
+      const apply = async () => {
+        if (abort.signal.aborted || this.isStopped() || this.getData().sn !== sn || this.usableSoc()) return;
+        const appliedAt = this.readingAges.appliedReceiptAt('measure_battery');
+        if (appliedAt !== null && appliedAt <= Date.now() && appliedAt >= sample.requestStartedAt) return;
+        if (await this.applyLiveReading('measure_battery', sample.percent, sample.requestStartedAt)) {
+          this.officialSocEvidence = sample;
+        }
+      };
+      this.applyChain = this.applyChain.then(apply, apply);
+      await this.applyChain;
+    } catch { /* Optional read failure cannot stop MQTT or expose API errors/identifiers. */ } finally {
+      this.homey.clearTimeout(deadline);
+      if (this.officialSocAbort === abort) this.officialSocAbort = undefined;
+    }
+  }
+
+  getOfficialSocDiagnostics(): Record<string, unknown> | null {
+    if (!this.isEnergyAggregate() || !this.officialSocEvidence) return null;
+    const { requestStartedAt, receivedAt } = this.officialSocEvidence;
+    const now = Date.now();
+    return {
+      source: 'developer_api',
+      basis: 'cloud_latest_report',
+      hardwareReportedAt: null,
+      receiptAgeSec: now >= requestStartedAt ? Math.floor((now - requestStartedAt) / 1000) : null,
+      requestDurationMs: receivedAt - requestStartedAt,
+      stale: !this.usableSoc() || now < requestStartedAt || now - requestStartedAt > this.unavailableAfterMs(),
+    };
+  }
+
   getReadingDiagnostics(): Record<string, unknown> {
-    return this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
+    const readings = this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
+    if (this.officialSocEvidence && readings.measure_battery) {
+      readings.measure_battery = {
+        ...(readings.measure_battery as Record<string, unknown>),
+        source: 'developer_api',
+        basis: 'cloud_latest_report',
+        hardwareReportedAt: null,
+        hardwareFreshnessVerified: false,
+      };
+    }
+    return readings;
   }
 
   /** Display-only status. No last-known number is restored to a live capability. */
@@ -833,6 +910,8 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async teardown(): Promise<void> {
     this.subscriptionState = 'stopped';
+    this.officialSocAbort?.abort();
+    this.officialSocEvidence = null;
     this.batteryPresentation.reset();
     this.timeObserver?.close();
     if (this.framesReceived > 0) {

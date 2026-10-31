@@ -454,6 +454,24 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           return { deviceIndex, readings: {} }; // No private getter or exception contents.
         }
       }),
+      officialSoc: id !== 'stream_5000_system' ? [] : devices.map((device, deviceIndex) => {
+        try {
+          const value = device.getOfficialSocDiagnostics?.();
+          if (value?.source !== 'developer_api' || value.basis !== 'cloud_latest_report'
+            || value.hardwareReportedAt !== null) return null;
+          return {
+            deviceIndex,
+            source: 'developer_api',
+            basis: 'cloud_latest_report',
+            hardwareReportedAt: null,
+            receiptAgeSec: safeNumber(value.receiptAgeSec),
+            requestDurationMs: safeNumber(value.requestDurationMs),
+            stale: value.stale !== false,
+          };
+        } catch {
+          return null;
+        }
+      }).filter(Boolean),
       connection: id === 'stream' || id === 'stream_unit' ? [] : devices.map((device, deviceIndex) => {
         try {
           const input = device.getConnectionDiagnostics?.();

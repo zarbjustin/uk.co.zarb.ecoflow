@@ -11,6 +11,7 @@ import { AppDevice } from './lib/appDevices';
 import { DualCtResearch } from './lib/dualCtResearch';
 import { mergeDualCtInventory, probeDualCtDeveloper, dualCtInventorySummary } from './lib/dualCtSources';
 import { EcoFlowClient } from './lib/EcoFlowClient';
+import { readStream5000OfficialSoc, Stream5000OfficialSocSample } from './lib/stream5000OfficialSoc';
 import { EcoFlowDevice } from './lib/types';
 import { CoordinationWorkspace, createHomeyCoordinationReader } from './lib/coordinationWorkspace';
 import { CoordinationFlowMonitor } from './lib/coordinationFlowMonitor';
@@ -198,6 +199,19 @@ module.exports = class EcoFlowApp extends Homey.App {
       secretKey: this.homey.settings.get('secretKey'),
       host: this.homey.settings.get('host'),
     };
+  }
+
+  /** Read-only system SOC; never starts MQTT, commands, pairing or accounting. */
+  async readStream5000SystemSoc(sn: string, signal: AbortSignal): Promise<Stream5000OfficialSocSample | null> {
+    if (this.stopping || signal.aborted) return null;
+    const credentials = this.getCredentials();
+    if (!credentials.accessKey || !credentials.secretKey) return null;
+    const client = new EcoFlowClient({ accessKey: credentials.accessKey, secretKey: credentials.secretKey, host: credentials.host });
+    const sample = await readStream5000OfficialSoc(client, sn, signal);
+    const current = this.getCredentials();
+    if (this.stopping || signal.aborted || current.accessKey !== credentials.accessKey
+      || current.secretKey !== credentials.secretKey || current.host !== credentials.host) return null;
+    return sample;
   }
 
   /** Lazily create and connect the shared MQTT client. Returns null if unconfigured/unavailable. */

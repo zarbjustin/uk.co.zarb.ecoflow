@@ -73,6 +73,12 @@ contract: do not auto-merge BK/ES systems or pair an aggregate for every member.
 
 ## Sources and confidence
 
+- [Official STREAM 5000 Series API](https://developer-eu.ecoflow.com/us/document/PP3?id=2115695633708867585)
+  was reviewed on 31 October 2026. It documents a public HTTP/Open-MQTT path for
+  the 5000 family; see [current API review](STREAM_5000_API_REVIEW.md). This
+  supersedes earlier absence-of-documentation conclusions, not app-protocol or
+  mixed-generation hardware acceptance boundaries.
+
 - [Official STREAM API documentation](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
   was read in the browser during this review. It documents BK examples/main-SN
   routing, not an established ES21/ES22 app-protobuf or mixed-generation membership

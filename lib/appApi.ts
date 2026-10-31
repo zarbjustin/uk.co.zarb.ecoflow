@@ -1,10 +1,14 @@
 'use strict';
 
+import type { Stream5000OfficialSocSample } from './stream5000OfficialSoc';
+
 import { QuotaHandler, StatusHandler } from './EcoFlowMqtt';
 import { AppFrameHandler } from './EcoFlowAppMqtt';
 
 /** The realtime API surface the app exposes to devices (see app.ts). */
 export interface EcoFlowAppApi {
+  /** Optional public-API SOC fallback. Receipt time is not device measurement time. */
+  readStream5000SystemSoc?(sn: string, signal: AbortSignal): Promise<Stream5000OfficialSocSample | null>;
   subscribeRealtime(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): Promise<boolean>;
   unsubscribeRealtime(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void;
   /**

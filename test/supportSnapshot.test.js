@@ -514,3 +514,16 @@ test('topology report flags aggregate overlap anonymously and ignores optional p
   assert.ok(!output.includes('SYNTHETIC'));
   assert.ok(!output.includes('PRIVATE'));
 });
+
+test('official system SOC provenance is bounded, excludes private identifiers and never claims a hardware timestamp', () => {
+  const h = homey();
+  h.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_system' ? [{
+    getOfficialSocDiagnostics: () => ({ source: 'developer_api', basis: 'cloud_latest_report',
+      hardwareReportedAt: null, receiptAgeSec: 2, requestDurationMs: 60, stale: false,
+      serial: 'PRIVATE_SOC', accessKey: 'PRIVATE_SOC', rawQuota: 'PRIVATE_SOC' }),
+  }, { getOfficialSocDiagnostics() { throw new Error('PRIVATE_SOC'); } }] : [] });
+  const report = createSupportSnapshot(h); const system = report.drivers.find(d => d.id === 'stream_5000_system');
+  assert.deepEqual(system.officialSoc, [{ deviceIndex: 0, source: 'developer_api', basis: 'cloud_latest_report',
+    hardwareReportedAt: null, receiptAgeSec: 2, requestDurationMs: 60, stale: false }]);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE_SOC'));
+});

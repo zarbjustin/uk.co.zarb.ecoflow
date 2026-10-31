@@ -1431,3 +1431,120 @@ test('a late-joining ES21 aggregate waits through unrelated deltas then accepts 
   await system.device.onUninit(); await unit.device.onUninit();
   assert.equal(callbacks.size, 0);
 });
+
+const officialSoc = (percent, at) => ({ percent, requestStartedAt: at, receivedAt: at,
+  basis: 'cloud_latest_report', hardwareReportedAt: null });
+
+test('official SOC fallback restores aggregate zero without touching power, availability or cumulative counters', async (t) => {
+  const now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 2500, dischargedWh: 1500 });
+  const beforeStore = { ...device.store }; const beforePower = device.values.measure_power;
+  const beforeCounters = [device.values['meter_power.charged'], device.values['meter_power.discharged']];
+  device.homey.app.readStream5000SystemSoc = async () => officialSoc(0, now);
+  await device.refreshOfficialSystemSoc();
+  assert.equal(device.values.measure_battery, 0);
+  assert.equal(device.values.measure_power, beforePower); assert.equal(device.available, false);
+  assert.deepEqual(device.store, beforeStore);
+  assert.deepEqual([device.values['meter_power.charged'], device.values['meter_power.discharged']], beforeCounters);
+  assert.equal(device.getOfficialSocDiagnostics().basis, 'cloud_latest_report');
+  assert.equal(device.getOfficialSocDiagnostics().hardwareReportedAt, null);
+  await device.onUninit();
+});
+
+test('official SOC never replaces fresh MQTT SOC or routes an aggregate value to the physical unit', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  for (const Type of [classes.Stream5000UnitDevice, classes.Stream5000PhysicalUnitDevice]) {
+    const { device } = await harness(Type);
+    if (Type === classes.Stream5000UnitDevice) await device.queueTelemetry({ measure_battery: 25 }, 100000, true);
+    device.homey.app.readStream5000SystemSoc = async () => assert.fail('must not read');
+    await device.refreshOfficialSystemSoc();
+    assert.equal(device.getOfficialSocDiagnostics(), null);
+    if (Type === classes.Stream5000UnitDevice) assert.equal(device.values.measure_battery, 25);
+    await device.onUninit();
+  }
+});
+
+test('newer MQTT SOC wins over an in-flight official read, including a valid zero', async (t) => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice); let release;
+  device.homey.app.readStream5000SystemSoc = () => new Promise(resolve => { release = resolve; });
+  const pending = device.refreshOfficialSystemSoc();
+  now += 100; await device.queueTelemetry({ measure_battery: 0 }, now, true);
+  release(officialSoc(50, 100000)); await pending;
+  assert.equal(device.values.measure_battery, 0); assert.equal(device.getOfficialSocDiagnostics(), null);
+  await device.onUninit();
+});
+
+test('missing/failed official SOC does not invent zero; reads coalesce and stop safely on teardown', async (t) => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice); let calls = 0; let release; let signal;
+  device.homey.app.readStream5000SystemSoc = async () => { calls++; return null; };
+  await device.refreshOfficialSystemSoc(); await device.refreshOfficialSystemSoc();
+  assert.equal(calls, 1); assert.equal(device.values.measure_battery, null);
+  now += 60001;
+  device.homey.app.readStream5000SystemSoc = async () => { throw new Error('synthetic private upstream message'); };
+  await device.refreshOfficialSystemSoc(); assert.equal(device.values.measure_battery, null);
+  assert.ok(!JSON.stringify(device.errors).includes('private upstream'));
+  now += 60001;
+  device.homey.app.readStream5000SystemSoc = (_sn, s) => { calls++; signal = s; return new Promise(resolve => { release = resolve; }); };
+  const pending = device.refreshOfficialSystemSoc(); await device.refreshOfficialSystemSoc(); assert.equal(calls, 2);
+  await device.onUninit(); assert.equal(signal.aborted, true);
+  release(officialSoc(0, now)); await pending;
+  assert.equal(device.values.measure_battery, null); assert.equal(device.getOfficialSocDiagnostics(), null);
+});
+
+test('expired official SOC clears normally and failed reads do not renew it; future or invalid samples are rejected', async (t) => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  for (const sample of [officialSoc(NaN, now), officialSoc(101, now), officialSoc(0, now + 1),
+    { ...officialSoc(0, now), basis: 'hardware' }, { ...officialSoc(0, now), hardwareReportedAt: now }]) {
+    device.homey.app.readStream5000SystemSoc = async () => sample;
+    await device.refreshOfficialSystemSoc(); assert.equal(device.values.measure_battery, null); now += 60001;
+  }
+  device.homey.app.readStream5000SystemSoc = async () => officialSoc(0, now);
+  await device.refreshOfficialSystemSoc(); assert.equal(device.values.measure_battery, 0);
+  now += 21 * 60000; await device.queueReadingExpiry();
+  assert.equal(device.values.measure_battery, null); assert.equal(device.getOfficialSocDiagnostics().stale, true);
+  device.homey.app.readStream5000SystemSoc = async () => null;
+  await device.refreshOfficialSystemSoc(); assert.equal(device.values.measure_battery, null);
+  await device.onUninit();
+});
+
+test('failed Homey SOC write is not admitted as official evidence and a later MQTT report clears fallback provenance', async (t) => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', async (key, value) => {
+    if (key === 'measure_battery' && value === 0) throw new Error('synthetic write rejection');
+    return write(key, value);
+  });
+  device.homey.app.readStream5000SystemSoc = async () => officialSoc(0, now);
+  await device.refreshOfficialSystemSoc();
+  assert.equal(device.values.measure_battery, null); assert.equal(device.getOfficialSocDiagnostics(), null);
+  t.mock.method(device, 'setCapabilityValue', write);
+  now += 60001; await device.refreshOfficialSystemSoc();
+  assert.equal(device.values.measure_battery, 0);
+  assert.equal(device.getReadingDiagnostics().measure_battery.hardwareFreshnessVerified, false);
+  now += 100; await device.queueTelemetry({ measure_battery: 1 }, now, true);
+  assert.equal(device.getOfficialSocDiagnostics(), null);
+  assert.equal(device.values.measure_battery, 1);
+  assert.equal(device.getReadingDiagnostics().measure_battery.basis, undefined);
+  await device.onUninit();
+});
+
+test('startup and existing watchdog use the SOC fallback only for aggregate devices, with no additional recurring timer', async (t) => {
+  t.mock.method(Date, 'now', () => 100000);
+  for (const Type of [classes.Stream5000UnitDevice, classes.Stream5000PhysicalUnitDevice]) {
+    let calls = 0;
+    const h = await harness(Type, {}, captures.pair.unit_a, {}, device => {
+      device.homey.app.readStream5000SystemSoc = async () => { calls++; return officialSoc(0, 100000); };
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    const watchdog = [...h.intervals.values()].find(timer => timer.ms === 60000);
+    await watchdog.callback();
+    assert.equal(calls, Type === classes.Stream5000UnitDevice ? 1 : 0);
+    assert.ok([...h.intervals.values()].every(timer => timer.ms === 60000 || timer.ms === 5000));
+    if (Type === classes.Stream5000UnitDevice) assert.equal(h.device.values.measure_battery, 0);
+    await h.device.onUninit(); assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+  }
+});

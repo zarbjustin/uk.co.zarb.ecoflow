@@ -1,5 +1,75 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Development 1.11.10 then Test preparation authorised — 31 October 2026
+
+Versioned local checks completed: all 1,308 tests, lint, release checks, full
+dependency audit (zero findings) and pinned Homey verified validation pass.
+Native deployment is still blocked by the active coordinator hold. No hardware
+acceptance or local UI restoration is claimed by these software results.
+
+Owner authorised non-clean local Development deployment of the SOC candidate,
+validation and subsequent Test publication; Live/Mainline remain unchanged.
+The archive will include the already reviewed 1.11.6–1.11.9 changes that have
+not yet been installed on this Homey. Do not delete/re-pair or reset counters.
+
+Read-only preflight found an active Office reserve hold above its restoration
+level. Restarting EcoFlow could trigger a reserve restoration, so installation
+is blocked while that lease remains active. The forecast's first candidate
+natural-release interval is 17:00–17:30 GMT; this is not an idle guarantee.
+A coordination-message approval is pending. No runner pause, lease release,
+battery change, installation or Test publication has occurred in this checkpoint.
+
+The new development-tooling advisory was remediated without disabling audit:
+all development minimatch resolutions use patched 11.0.1. A development-only
+lint wrapper adapts its namespace export to the callable API expected by legacy
+ESLint plugins; the patched implementation and named/static APIs are retained.
+All 145 previously linted files remain covered. Production dependencies and
+runtime use are unchanged. Full and production audit now report zero findings.
+The earlier 20-finding checkpoint below is historical. Exact versioned tests,
+CI, archive, final preservation baseline, idle checks and readback remain required.
+
+
+## Official 5000 SOC comparison and local recovery candidate — 31 October 2026
+
+Two read-only public quota reads returned explicit system SOC 0%, matching the
+physical ES21 monitor. Main resolution returned the paired ES21; the app-protocol
+aggregate SOC was expired/null. Public reads have no hardware measurement time.
+A source-only fallback now reads the main reporter's documented SOC when aggregate
+SOC is unusable, rechecks reporter identity, protects newer app readings and
+applies SOC alone. Physical units, power, availability and cumulative accounting
+are unchanged. Existing Developer credentials are required; none were altered.
+Diagnostics distinguish latest-cloud-report evidence from hardware freshness.
+
+All 1,306 tests, lint, release checks and pinned Homey 4.5.3 verified validation
+pass after locked Node 22 tooling. Production audit has zero findings; full audit
+reports 20 moderate findings in existing development tooling. No dependency/lock
+changes were made. See `docs/STREAM_5000_API_REVIEW.md` for the candidate contract,
+regression coverage, audit limitation and remaining installed/hardware gates.
+
+Changes remain local/uncommitted and unversioned after 1.11.9; earlier official
+reference documentation edits are preserved. No archive, source push/CI,
+publication, installation, restart, re-pairing, Energy/source switch, battery
+command/setting or Flow execution occurred. Installed Development 1.11.5 was
+read-only checked. Last verified Test 1.11.9/build 76 and Live 1.10.3/build 18
+remain unchanged by this work. No raw household evidence or correspondence is
+included in Git. Review the source candidate before any Development deployment.
+
+
+## Official 5000 API reference retained — 31 October 2026
+
+Owner requested preserving the official [STREAM 5000 API path](https://developer-eu.ecoflow.com/us/document/PP3?id=2115695633708867585).
+Re-read the full page and updated `docs/STREAM_5000_API_REVIEW.md` and model
+coverage references. Public HTTP/Open-MQTT support is now documented for the
+5000 family; earlier absence-of-documentation conclusions are historical.
+Existing app-account decoding has not been converted to this API, and no live
+quota request or hardware validation was run in this documentation task.
+The page still does not establish a product-421 Dual CT contract. A focused
+reply about supported interfaces, firmware, phase/netting semantics, freshness
+and native counters is proposed for owner review, not sent or saved in Outlook.
+Private correspondence stays outside Git. These documentation edits remain
+local/uncommitted; no runtime, Test, Live, Mainline or installed-app change.
+
+
 ## Test 1.11.9 / build 76 active; Development unchanged — 30 October 2026
 
 Owner-authorised combined named-overlap and shared-subscription fixes were
