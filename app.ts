@@ -530,7 +530,15 @@ module.exports = class EcoFlowApp extends Homey.App {
         if (gate?.enabled !== true || gate.mode !== 'routine') throw new Error('Coordinator disabled');
         const power = house?.getReadingDiagnostics()?.stream_unit_power_battery_flow;
         const officePower: ReportingObservation | undefined = office?.getReportingDiagnostics()?.observations?.measure_power;
-        if (power?.stale !== false || power.ageSec > 20 || !officePower || Date.now() - officePower.receivedAt > 20000) await this.refreshCoordinatedReadings();
+        // Live power does not prove unchanged reserve/mode/task configuration.
+        // Refresh that independent receipt before its 20-minute safety horizon,
+        // even when frequent power packets keep arriving. Never extend the horizon.
+        const config = house?.getConfigurationDiagnostics()?.values;
+        const configNeedsRead = ['backupReserveEnabled', 'backupReservePct', 'mode', 'tasks'].some((key) => {
+          const field = config?.[key];
+          return field?.stale !== false || !Number.isFinite(field.ageSec) || field.ageSec < 0 || field.ageSec > 600;
+        });
+        if (configNeedsRead || power?.stale !== false || power.ageSec > 20 || !officePower || Date.now() - officePower.receivedAt > 20000) await this.refreshCoordinatedReadings();
         this.assertCoordinatedPower(house, office, gate);
       } catch {
         guardLost = true;
@@ -555,6 +563,13 @@ module.exports = class EcoFlowApp extends Homey.App {
       const houses = this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[];
       const house = houses.find((d) => d.getId() === lease.houseDeviceId && d.getData()?.sn === lease.serial);
       if (!house || !house.getAvailable()) throw new Error('House unavailable for expiry restoration');
+      // Office is already physically stopped. One bounded read may recover a
+      // missing configuration receipt; it cannot authorise a blind restoration.
+      try {
+        freshReserveSnapshot(house.getConfigurationDiagnostics());
+      } catch {
+        await this.refreshCoordinatedReadings();
+      }
       const current = freshReserveSnapshot(house.getConfigurationDiagnostics());
       if (current.enabled !== lease.restoreEnabled || current.percent !== lease.restorePercent) {
         if (current.enabled !== lease.expectedEnabled || current.percent !== lease.expectedPercent) throw new Error('House manual ownership changed');

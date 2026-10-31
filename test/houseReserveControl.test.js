@@ -149,3 +149,30 @@ test('read refresh coalesces, needs a new applied house packet, and makes no set
  const [a, b] = await Promise.all([first, second]); assert.deepEqual(a, b); assert.equal(sent, 1); assert.equal(a.houseFresh, true); assert.equal(a.officeFresh, true); assert.equal(a.settingsWrites, 0);
  update = false; const third = h.app.refreshCoordinatedReadings(); await new Promise(resolve => setImmediate(resolve)); delay(); assert.equal((await third).houseFresh, false); assert.equal(h.publishes(), 0);
 });
+
+// Regression for 31 October: frequent power receipts hid an ageing config until
+// watchdog restoration latched the planner for the entire charging day.
+test('watchdog refreshes ageing configuration despite fresh house and office power', async () => {
+ const h = coordinatedHarness(); h.setOffice(13);
+ const house = h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0];
+ let value = snapshot(); for (const f of Object.values(value.values)) f.ageSec = 601;
+ house.getConfigurationDiagnostics = () => value;
+ h.store.houseReserveLease = { until: Date.now() + 60000, officeDeviceId: 'office', officeRestoreReserve: 3, officeExpectedReserve: 13, houseDeviceId: h.gate.deviceId, serial: h.gate.serial, restoreEnabled: true, restorePercent: 18, expectedEnabled: true, expectedPercent: 18 };
+ let reads = 0; h.app.refreshCoordinatedReadings = async () => { reads++; value = snapshot(); return { houseFresh: true, officeFresh: true }; };
+ await h.app.expireHouseReserveLease(); assert.equal(reads, 1); assert.deepEqual(h.events, []); assert.equal(h.store.houseReserveLease.fault, undefined); assert.equal(h.store.houseReserveLease.completed, undefined);
+});
+test('unrecoverable configuration still stops office first and preserves the fault', async () => {
+ const h = coordinatedHarness(); h.setOffice(13);
+ const house = h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0];
+ const value = snapshot(); value.values.tasks.ageSec = 1201; value.values.tasks.stale = true; house.getConfigurationDiagnostics = () => value;
+ h.store.houseReserveLease = { until: Date.now() + 60000, officeDeviceId: 'office', officeRestoreReserve: 3, officeExpectedReserve: 13, houseDeviceId: h.gate.deviceId, serial: h.gate.serial, restoreEnabled: true, restorePercent: 18, expectedEnabled: true, expectedPercent: 18 };
+ h.app.refreshCoordinatedReadings = async () => ({ houseFresh: true, officeFresh: true });
+ await assert.rejects(h.app.expireHouseReserveLease(), /configuration stale/); assert.deepEqual(h.events, ['office:3']); assert.match(h.store.houseReserveLease.fault, /stale/); assert.equal(h.publishes(), 0);
+});
+test('expiry rereads stale house configuration after office stop without adopting manual changes', async () => {
+ const h = coordinatedHarness(); const house = h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0];
+ let value = snapshot(); value.values.tasks.stale = true; house.getConfigurationDiagnostics = () => value;
+ h.store.houseReserveLease = { until: Date.now() - 1, officeDeviceId: 'office', officeRestoreReserve: 3, officeExpectedReserve: 3, houseDeviceId: h.gate.deviceId, serial: h.gate.serial, restoreEnabled: true, restorePercent: 0, expectedEnabled: true, expectedPercent: 18 };
+ h.app.refreshCoordinatedReadings = async () => { value = snapshot(true, 55); };
+ await assert.rejects(h.app.expireHouseReserveLease(), /manual ownership/); assert.equal(h.publishes(), 0);
+});

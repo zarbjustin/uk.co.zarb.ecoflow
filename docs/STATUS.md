@@ -1,5 +1,52 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 31 October 2026 — charging reliability source review
+
+Owner authorised review, commit and push of the charging reliability changes.
+Review covers independent configuration freshness, fail-closed restoration and
+manual ownership, bounded failure history/notifications, and regression coverage.
+HomeyPro also includes the previously deployed 95% pre-peak readiness policy and
+its tests. No further installation, Homey control, settings/Flow change or Codex
+monitoring-task resumption is authorised by this source-publication step.
+Private evidence and unrelated local-AI workflow edits remain outside the commits.
+Earlier uncommitted-source statements below describe their dated checkpoints.
+
+## 31 October 2026 — owner house charging reliability repair installed locally
+
+Owner authorised missed-house-charge diagnosis, repair and bounded physical proof.
+Preserved private evidence identifies the 02:33 coordinator ownership latch after
+an office-first watchdog restoration, with stale house configuration. That latch
+blocked both roles until separate owner-reviewed reconciliation at 16:20. The
+initial missing configuration field/transport cause is not established.
+
+Fixed watchdog refresh selection: old reserve/mode/task configuration now triggers
+a bounded read even with fresh power; refresh begins at 600 seconds while the
+1200-second validity horizon remains. Expiry can reread stale configuration only
+after office stop, and cannot adopt a manually changed reserve. New regressions
+cover recovery with fresh power, unrecoverable stale configuration, office-first
+stop and manual ownership. All 1351 tests, lint, release checks, diff check and
+pinned CLI verified validation pass.
+
+Installed a non-clean local Development 1.11.16 patch, same version but distinct
+uncommitted archive SHA256
+`dec5aa02c3c63fa7eca31f0b5c5eece5e5c98d8674e2e4401822db76239ac384`.
+No Store channel/publication, identity, pairing, device-definition or Energy change.
+The coordinated runner was paused safely with house 0%, office 3% and completed
+lease, then restored. A one-off 1% house reserve test with native 180-second lease
+showed approximately 2.5 kW actual charging, +0.030 kWh charged and SOC 0% to 1%.
+Scoped stop/native expiry restored house reserve 0%, office 3%, completed/no-fault
+lease; subsequent house discharge approximately 795 W observed. This is bounded
+charge-path evidence for this archive, not full monitoring/release acceptance or
+a future tariff schedule/bill-saving result. General acceptance ledgers unchanged.
+
+Private preservation readback retained all device IDs, 14 EcoFlow definitions,
+Flows, Insights identities, 10 sampled cumulative counters, house/CT1 limits/mode/
+settings and office owner-controlled feed-in. Current property meter is the Dual CT
+Energy device (Single phase / CT1); older smart meter is office only. All six office
+unit powers are now reported; synchronized fleet energy balance remains unqualified.
+HomeyPro source retains forecast demand baselines and new bounded failure history.
+No source commit/push or Codex monitoring-task resumption in this change.
+
 ## Test 1.11.16 / build 83 published — 31 October 2026
 
 Source `a177dfa44a6871503d8a637e70ff0545c388a386` pushed to diagnostic branch.
