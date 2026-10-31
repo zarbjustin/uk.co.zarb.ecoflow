@@ -196,7 +196,13 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     // Retain cumulative totals/checkpoints, paired identity, Insights and other devices.
   }
 
-  private configureDetails(settings = { display_ct1: this.getSetting('display_ct1'), display_ct2: this.getSetting('display_ct2') }) {
+  private async configureDetails(settings = { display_ct1: this.getSetting('display_ct1'), display_ct2: this.getSetting('display_ct2') }) {
+    let mode = 'pairedDisabled';
+    if (this.getStoreValue('dualCtEnergyConsent') === 1) {
+      mode = this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' ? 'pairedThreePhase' : 'pairedSinglePhase';
+    }
+    // Presentation only: never use the label as accounting authority. Failure must not block details.
+    await this.setSettings({ paired_mode_summary: this.homey.__(`dual_ct_energy.${mode}`) }).catch(() => {});
     return this.details.configure(settings, this.getStoreValue('dualCtEnergyMode') === 'three_phase_community');
   }
 

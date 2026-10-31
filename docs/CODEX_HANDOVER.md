@@ -1,5 +1,97 @@
 # Codex cross-machine handover
 
+## Test 1.11.15 preparation — 31 October 2026
+
+Owner authorises diagnostic-branch commit/push, exact CI, Test publication and a
+community tester update. Cleanup changes validated with locked Node 22 install,
+1,345 passing tests, lint, release checks and Homey 4.5.3 verified validation.
+New version 1.11.15 distinguishes the release from installed Development 1.11.14
+cleanup. Publication must preserve Live and the installed Development session.
+Fresh tester feedback confirms broader devices recovered on 1.11.14 but both
+Dual CT roles remain unavailable. This presentation cleanup does not claim to fix
+that remaining field problem. Private correspondence is retained outside Git.
+
+## Owner Development cleanup installed — 31 October 2026
+
+Owner approved fault reconciliation, temporary coordinator pause/resumption and
+non-clean local installation. Fresh preflight found App Store 1.11.14 installed,
+superseding the earlier Development 1.11.10 observation. The Office watchdog had
+restored reserve from 13% to 3%; House configuration freshness then faulted and
+the coordinator retained its earlier 13% expectation. With execution paused,
+read-only refresh confirmed House reserve 0%, Self-powered, no tasks, and Office
+reserve 3%. The owner-approved reconciliation preserved faults in maintenance
+history, marked the restored lease complete and aligned the Office expectation.
+No direct battery-setting command was issued.
+
+The uncommitted cleanup candidate was installed non-clean as Development 1.11.14
+(same version number as store Test, distinct archive). Archive SHA256:
+`1af89d7435fe34376e672883ebb4f151cbfa7d8f63e80763a2b1b681b1c7638a`;
+packaged-source fingerprint:
+`e3df8b0ab90257604871fe02a9e7a426462d10fb895ef1253bd768c036e1440f`.
+Homey delivery acknowledged and running devkit_install readback verified. This
+fingerprint identifies the packaged source; no separate runtime hash API claim.
+All 14 EcoFlow devices became available, including both Dual CT roles. Energy
+settings show Single phase — CT1. Existing identities/names/zones/capabilities,
+settings (apart from the new presentation label), Flows, Insights IDs, app settings
+and nondecreasing cumulative counters passed offline baseline/readback comparison.
+Store channels were unchanged. Original coordinator config and execution Flow
+were restored after fresh readings and preservation checks. No Test/Live publication,
+Mainline change or new hardware acceptance claim. Private receipts stay outside Git.
+
+## Pre-Test setup and compatibility cleanup — 31 October 2026
+
+Validation: Node 22 committed-lockfile install; all 1,345 tests, lint,
+release:check, git diff --check and pinned Homey CLI 4.5.3 verified validation
+pass. The label uses paired_mode_summary to avoid Homey reserved setting prefixes.
+
+Local candidate updates the README and EN/DE/NL research guidance for one Dual CT
+pairing entry and STREAM 5000 Home Battery naming. CT2 is optional circuit detail,
+not a separate solar/load Energy contributor. Cloud response time is not promised
+from native product marketing; CT1 totals remain observed-power estimates excluding
+gaps. Research candidates are distinct from qualified CT1 accounting.
+
+The Energy device now shows a read-only Paired Energy mode label in Advanced
+Settings, sourced from saved pairing consent/mode. Display choices cannot change
+that authority. Label failures do not block optional details. No source migration,
+capability removal or counter rewrite is introduced. Existing user names remain.
+
+Offline regression coverage compares both legacy-monitor and Energy capability,
+repair and Energy contracts against the published 1.11.14 source baseline; the
+fixture is public manifest data, independent of Git history availability in CI.
+Driver tests cover single/three-phase labels, display changes, unchanged bindings
+and counters, and label write failure. This is software upgrade coverage, not an
+installed Homey upgrade or field acceptance. Three-phase feedback and hardware
+release gates remain open. No publication, install, restart, battery or Energy
+activation is authorised or performed by this cleanup.
+
+## Dual CT picker consolidation — 31 October 2026
+
+Local candidate supersedes the two-entry naming proposal below. New pairing has
+one Smart Meter Dual CT entry: the existing property Energy driver with single-
+phase or explicitly consented three-phase community-trial source selection,
+per-phase details and optional CT2 display. CT2 is not included in property
+Energy totals; qualification, overlap and freshness safeguards are unchanged.
+
+The older detailed-monitor driver is deprecated in the manifest, hiding it from
+new pairing while retaining its implementation, repair, capabilities and existing
+paired devices. No automatic conversion, deletion or re-pairing is performed.
+Raw diagnostic counters are not promoted to Energy totals. STREAM 5000 Home
+Battery naming is retained for the driver and newly paired default names; existing
+custom device names remain unchanged.
+
+Validation: committed-lockfile npm ci on Node 22; all 1,343 tests, lint,
+release:check and pinned Homey CLI 4.5.3 verified validation pass. The added
+regression protects the single visible entry, legacy compatibility and phase/CT2
+capability contracts. Hardware acceptance gates remain open. This is local source
+only: no commit/push, publication, installation, Energy or battery changes.
+
+## Driver naming clarification — 31 October 2026
+
+Local presentation update distinguishes Dual CT detailed readings from Homey Energy;
+these are roles, not separate phase-count drivers. Renamed the 5000 system driver
+and new-device default to STREAM 5000 Home Battery. Existing device names/IDs,
+counters, settings and Flows are not migrated. Test/Live/installed app unchanged.
+
 ## Test 1.11.14 / build 81 published — 31 October 2026
 
 Combined candidate committed/pushed as `98110f7567e2a6300074d862991435bd2beece66`. Exact CI

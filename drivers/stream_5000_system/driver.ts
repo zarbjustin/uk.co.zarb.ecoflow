@@ -13,7 +13,7 @@ module.exports = class Stream5000SystemDriver extends Homey.Driver {
   async onPair(session: any): Promise<void> {
     registerStream5000Pairing(this, session, {
       duplicateDriverIds: STREAM_5000_SYSTEM_DRIVER_IDS,
-      deviceName: (device) => `STREAM Home Battery (${device.name})`,
+      deviceName: (device) => `STREAM 5000 Home Battery (${device.name})`,
       noAccountMessage: 'No EcoFlow account is configured for STREAM 5000 Home Battery pairing.',
     });
   }

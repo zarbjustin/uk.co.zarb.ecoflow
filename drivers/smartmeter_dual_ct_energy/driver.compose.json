@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "Smart Meter Dual CT — property Energy",
-    "de": "Smart Meter Dual CT — Hausenergie",
-    "nl": "Smart Meter Dual CT — woningenergie"
+    "en": "Smart Meter Dual CT",
+    "de": "Smart Meter Dual CT",
+    "nl": "Smart Meter Dual CT"
   },
   "class": "sensor",
   "platforms": [
@@ -258,6 +258,21 @@
   ],
   "settings": [
     {
+      "id": "paired_mode_summary",
+      "type": "label",
+      "label": {
+        "en": "Paired Energy mode",
+        "de": "Gekoppelter Energy-Modus",
+        "nl": "Gekoppelde Energy-modus"
+      },
+      "value": "—",
+      "hint": {
+        "en": "Recorded at pairing. The phase display settings below do not change this accounting mode. CT2 is never added to property grid totals.",
+        "de": "Beim Koppeln festgelegt. Die Phasenanzeige unten ändert diesen Berechnungsmodus nicht. CT2 wird nie zur Netzbilanz addiert.",
+        "nl": "Vastgelegd bij koppelen. De faseweergave hieronder verandert deze berekening niet. CT2 wordt nooit bij het netverbruik opgeteld."
+      }
+    },
+    {
       "id": "display_ct1",
       "type": "dropdown",
       "value": "default",
@@ -308,9 +323,9 @@
         "nl": "CT2 weergave"
       },
       "hint": {
-        "en": "Default keeps CT2 visible on the detailed monitor and hidden on the Energy device. Its phase layout is independent of CT1. CT2 never contributes to property Energy. Display choices retain received values, history and Flow references. Reopen the device view after saving.",
-        "de": "Standard zeigt CT2 im Detailmonitor und blendet CT2 am Energy-Gerät aus. Die Phasenanzeige ist unabhängig von CT1. CT2 trägt nie zur Hausenergie bei. Werte, Verlauf und Flow-Verweise bleiben erhalten. Geräteansicht nach dem Speichern erneut öffnen.",
-        "nl": "Standaard toont CT2 op de detailmonitor en verbergt CT2 op het Energy-apparaat. De faseweergave is onafhankelijk van CT1. CT2 telt nooit mee voor woningenergie. Waarden, geschiedenis en Flow-verwijzingen blijven behouden. Open de apparaatweergave opnieuw na opslaan."
+        "en": "Choose Off, single phase or three phase for optional CT2 readings. CT2 does not contribute to whole-property Energy totals. Display changes preserve history and Flow references. Reopen the device after saving.",
+        "de": "Wählen Sie Aus, einphasig oder dreiphasig für optionale CT2-Werte. CT2 trägt nicht zur Hausenergie bei. Anzeigeänderungen erhalten Verlauf und Flow-Verweise. Öffnen Sie das Gerät nach dem Speichern erneut.",
+        "nl": "Kies Uit, één fase of drie fasen voor optionele CT2-metingen. CT2 telt niet mee in de woningenergie. Weergavewijzigingen behouden historie en Flow-verwijzingen. Open het apparaat opnieuw na opslaan."
       },
       "values": [
         {

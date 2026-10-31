@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "Smart Meter Dual CT",
-    "de": "Smart Meter Dual CT",
-    "nl": "Smart Meter Dual CT"
+    "en": "Smart Meter Dual CT — detailed readings",
+    "de": "Smart Meter Dual CT — Detailwerte",
+    "nl": "Smart Meter Dual CT — detailmetingen"
   },
   "class": "other",
   "platforms": [
@@ -625,5 +625,6 @@
     {
       "id": "app_account_repair"
     }
-  ]
+  ],
+  "deprecated": true
 }

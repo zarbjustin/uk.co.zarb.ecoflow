@@ -42,6 +42,7 @@ class Device {
   async addCapability(id) { this.values.set(id, null); }
   getCapabilityOptions(id) { return this.capOptions.get(id); }
   getSetting(id) { return this.displaySettings[id]; }
+  async setSettings(values) { Object.assign(this.displaySettings, values); }
   async setCapabilityOptions(id, options) { this.capOptions.set(id, options); }
   async setEnergy(value) { this.writes.push(['energy', value]); }
   async setUnavailable() { this.available = false; }
@@ -342,5 +343,23 @@ test('a fast transport reconnection cannot integrate across socket epochs even w
       assert.ok(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY)[counter] > saved[counter]);
       assert.equal(d.subscriptions.length, 1); assert.equal(d.detached.length, 0);
     } finally { await d.onUninit(); }
+  }
+});
+
+
+test('paired mode summary follows stored consent, never display settings; summary failure preserves details', async () => {
+  for (const mode of [undefined, 'three_phase_community']) {
+    const d = new Driver(); d.homey.__ = key => key;
+    if (mode) d.store.set('dualCtEnergyMode', mode);
+    const before = structuredClone([...d.store]);
+    const expected = mode ? 'pairedThreePhase' : 'pairedSinglePhase';
+    await d.configureDetails();
+    assert.equal(d.displaySettings.paired_mode_summary, `dual_ct_energy.${expected}`);
+    await d.onSettings({newSettings:{display_ct1:mode ? 'single_phase' : 'three_phase',paired_mode_summary:'forged'},changedKeys:['display_ct1']});
+    assert.equal(d.displaySettings.paired_mode_summary, `dual_ct_energy.${expected}`);
+    assert.deepEqual([...d.store], before);
+    d.setSettings = async () => { throw Error('synthetic label failure'); };
+    await assert.doesNotReject(d.configureDetails({display_ct2:'three_phase'}));
+    assert.equal(d.capOptions.get('dual_ct_preview_voltage.b_p3').uiComponent, 'sensor');
   }
 });

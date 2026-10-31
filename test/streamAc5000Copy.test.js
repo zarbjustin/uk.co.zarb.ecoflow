@@ -56,9 +56,9 @@ test('the STREAM 5000 installation aggregate is the sole Homey Energy battery', 
     meterPowerExportedCapability: 'meter_power.discharged',
   };
   assert.deepStrictEqual(systemCompose.name, {
-    en: 'STREAM Home Battery (5000)',
-    de: 'STREAM-Hausbatterie (5000)',
-    nl: 'STREAM-thuisbatterij (5000)',
+    en: 'STREAM 5000 Home Battery',
+    de: 'STREAM 5000 Hausbatterie',
+    nl: 'STREAM 5000 Thuisbatterij',
   });
   assert.deepStrictEqual(systemCompose.energy, expectedEnergy);
   assert.ok(systemCompose.capabilities.includes('measure_power'));
@@ -171,13 +171,13 @@ test('pairing clearly explains the monitoring-only app connection', () => {
   assert.match(familyHtml, /verified serial prefixes and telemetry/i);
   assert.match(familyHtml, /Monitoring only/i);
   assert.match(familyHtml, /does not contribute to Homey Energy/i);
-  assert.match(familyHtml, /STREAM Home Battery \(5000\)/i);
+  assert.match(familyHtml, /STREAM 5000 Home Battery/i);
 
   const systemHtml = fs.readFileSync(
     path.join(root, 'drivers', 'stream_5000_system', 'pair', 'app_credentials.html'),
     'utf8',
   );
-  assert.match(systemHtml, /STREAM Home Battery \(5000\)/);
+  assert.match(systemHtml, /STREAM 5000 Home Battery/);
   assert.match(systemHtml, /Homey Energy Home Battery/);
 
   for (const driverId of ['stream_5000_unit', 'stream_5000_system']) {
@@ -252,7 +252,7 @@ test('settings explain separate Energy consent without promising picker repair o
   const copy = require('../locales/en.json').settings.setup;
   assert.match(copy.aggregatePairingHelp, /permits adding a new installation-level Home Battery only/);
   assert.match(copy.pairingSupportHelp, /does not install or update the app or add device types/);
-  assert.match(copy.stream5000PairingHelp, /STREAM Home Battery \(5000\)/);
+  assert.match(copy.stream5000PairingHelp, /STREAM 5000 Home Battery/);
   assert.match(copy.energyBatteryHelp, /without contributing a second battery/);
   assert.match(copy.pairingSupportHelp, /Do not delete existing devices/);
   assert.match(copy.pairingSupportHelp, /Homey mobile-app version/);

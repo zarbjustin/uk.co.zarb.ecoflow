@@ -337,5 +337,10 @@
     "en": "Improve shared EcoFlow account recovery, connection cleanup and STREAM 5000 retry handling. Preserve energy counters and stale-reading safeguards; improve connection messages and diagnostic privacy.",
     "de": "Verbessert die Wiederherstellung der EcoFlow-Verbindung und STREAM-5000-Wiederholungen. Energiezähler und Schutz vor veralteten Messwerten bleiben erhalten.",
     "nl": "Verbetert herstel van de EcoFlow-verbinding en STREAM 5000-verbindingspogingen. Energietellers en bescherming tegen verouderde metingen blijven behouden."
+  },
+  "1.11.15": {
+    "en": "One Smart Meter Dual CT choice for new pairing, with optional phase and CT2 readings. Existing detailed monitors remain supported. Shows the paired Energy mode separately from display settings. Clearer setup guidance and STREAM 5000 Home Battery naming; counters and existing devices retained.",
+    "de": "Ein Smart Meter Dual CT für neues Koppeln, mit optionalen Phasen- und CT2-Werten. Bestehende Detailmonitore bleiben unterstützt. Gekoppelter Energy-Modus getrennt von Anzeigeeinstellungen; klarere Einrichtung und STREAM 5000 Hausbatterie. Bestehende Geräte und Zähler bleiben erhalten.",
+    "nl": "Eén Smart Meter Dual CT voor nieuw koppelen, met optionele fase- en CT2-metingen. Bestaande detailmonitors blijven ondersteund. Gekoppelde Energy-modus los van weergave; duidelijkere installatie en STREAM 5000 Thuisbatterij. Bestaande apparaten en tellers blijven behouden."
   }
 }

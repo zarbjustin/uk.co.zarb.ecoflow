@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.11.14",
+  "version": "1.11.15",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -2035,9 +2035,9 @@
     },
     {
       "name": {
-        "en": "Smart Meter Dual CT — property Energy",
-        "de": "Smart Meter Dual CT — Hausenergie",
-        "nl": "Smart Meter Dual CT — woningenergie"
+        "en": "Smart Meter Dual CT",
+        "de": "Smart Meter Dual CT",
+        "nl": "Smart Meter Dual CT"
       },
       "class": "sensor",
       "platforms": [
@@ -2293,6 +2293,21 @@
       ],
       "settings": [
         {
+          "id": "paired_mode_summary",
+          "type": "label",
+          "label": {
+            "en": "Paired Energy mode",
+            "de": "Gekoppelter Energy-Modus",
+            "nl": "Gekoppelde Energy-modus"
+          },
+          "value": "—",
+          "hint": {
+            "en": "Recorded at pairing. The phase display settings below do not change this accounting mode. CT2 is never added to property grid totals.",
+            "de": "Beim Koppeln festgelegt. Die Phasenanzeige unten ändert diesen Berechnungsmodus nicht. CT2 wird nie zur Netzbilanz addiert.",
+            "nl": "Vastgelegd bij koppelen. De faseweergave hieronder verandert deze berekening niet. CT2 wordt nooit bij het netverbruik opgeteld."
+          }
+        },
+        {
           "id": "display_ct1",
           "type": "dropdown",
           "value": "default",
@@ -2343,9 +2358,9 @@
             "nl": "CT2 weergave"
           },
           "hint": {
-            "en": "Default keeps CT2 visible on the detailed monitor and hidden on the Energy device. Its phase layout is independent of CT1. CT2 never contributes to property Energy. Display choices retain received values, history and Flow references. Reopen the device view after saving.",
-            "de": "Standard zeigt CT2 im Detailmonitor und blendet CT2 am Energy-Gerät aus. Die Phasenanzeige ist unabhängig von CT1. CT2 trägt nie zur Hausenergie bei. Werte, Verlauf und Flow-Verweise bleiben erhalten. Geräteansicht nach dem Speichern erneut öffnen.",
-            "nl": "Standaard toont CT2 op de detailmonitor en verbergt CT2 op het Energy-apparaat. De faseweergave is onafhankelijk van CT1. CT2 telt nooit mee voor woningenergie. Waarden, geschiedenis en Flow-verwijzingen blijven behouden. Open de apparaatweergave opnieuw na opslaan."
+            "en": "Choose Off, single phase or three phase for optional CT2 readings. CT2 does not contribute to whole-property Energy totals. Display changes preserve history and Flow references. Reopen the device after saving.",
+            "de": "Wählen Sie Aus, einphasig oder dreiphasig für optionale CT2-Werte. CT2 trägt nicht zur Hausenergie bei. Anzeigeänderungen erhalten Verlauf und Flow-Verweise. Öffnen Sie das Gerät nach dem Speichern erneut.",
+            "nl": "Kies Uit, één fase of drie fasen voor optionele CT2-metingen. CT2 telt niet mee in de woningenergie. Weergavewijzigingen behouden historie en Flow-verwijzingen. Open het apparaat opnieuw na opslaan."
           },
           "values": [
             {
@@ -2387,9 +2402,9 @@
     },
     {
       "name": {
-        "en": "Smart Meter Dual CT",
-        "de": "Smart Meter Dual CT",
-        "nl": "Smart Meter Dual CT"
+        "en": "Smart Meter Dual CT — detailed readings",
+        "de": "Smart Meter Dual CT — Detailwerte",
+        "nl": "Smart Meter Dual CT — detailmetingen"
       },
       "class": "other",
       "platforms": [
@@ -3013,6 +3028,7 @@
           "id": "app_account_repair"
         }
       ],
+      "deprecated": true,
       "id": "smartmeter_dual_ct_preview"
     },
     {
@@ -3438,9 +3454,9 @@
     },
     {
       "name": {
-        "en": "STREAM Home Battery (5000)",
-        "de": "STREAM-Hausbatterie (5000)",
-        "nl": "STREAM-thuisbatterij (5000)"
+        "en": "STREAM 5000 Home Battery",
+        "de": "STREAM 5000 Hausbatterie",
+        "nl": "STREAM 5000 Thuisbatterij"
       },
       "class": "battery",
       "platforms": [
@@ -3919,9 +3935,9 @@
               },
               "value": "Battery monitoring · manage battery settings in EcoFlow",
               "hint": {
-                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit shows unit battery telemetry and separate system house/grid context and does not contribute to Homey Energy. Pair STREAM Home Battery (5000) for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
-                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit zeigt Batteriewerte der Einheit und getrennte Haus-/Netzwerte des Systems und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM Home Battery (5000) für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
-                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze optionele fysieke unit toont unit-batterijgegevens en aparte huis-/netwaarden van het systeem en draagt niet bij aan Homey Energy. Koppel STREAM Home Battery (5000) voor de gecombineerde energiegegevens van de installatie. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
+                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit shows unit battery telemetry and separate system house/grid context and does not contribute to Homey Energy. Pair STREAM 5000 Home Battery for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
+                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit zeigt Batteriewerte der Einheit und getrennte Haus-/Netzwerte des Systems und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM 5000 Home Battery für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
+                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze optionele fysieke unit toont unit-batterijgegevens en aparte huis-/netwaarden van het systeem en draagt niet bij aan Homey Energy. Koppel STREAM 5000 Home Battery voor de gecombineerde energiegegevens van de installatie. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
               }
             }
           ]

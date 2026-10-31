@@ -1,0 +1,95 @@
+{
+  "smartmeter_dual_ct_preview": {
+    "capabilities": [
+      "dual_ct_preview_status",
+      "dual_ct_preview_age",
+      "dual_ct_preview_net.a",
+      "dual_ct_preview_net_status.a",
+      "dual_ct_preview_net.b",
+      "dual_ct_preview_net_status.b",
+      "dual_ct_preview_power.a_p1",
+      "dual_ct_preview_voltage.a_p1",
+      "dual_ct_preview_current.a_p1",
+      "dual_ct_preview_power.a_p2",
+      "dual_ct_preview_voltage.a_p2",
+      "dual_ct_preview_current.a_p2",
+      "dual_ct_preview_power.a_p3",
+      "dual_ct_preview_voltage.a_p3",
+      "dual_ct_preview_current.a_p3",
+      "dual_ct_preview_power.b_p1",
+      "dual_ct_preview_voltage.b_p1",
+      "dual_ct_preview_current.b_p1",
+      "dual_ct_preview_power.b_p2",
+      "dual_ct_preview_voltage.b_p2",
+      "dual_ct_preview_current.b_p2",
+      "dual_ct_preview_power.b_p3",
+      "dual_ct_preview_voltage.b_p3",
+      "dual_ct_preview_current.b_p3",
+      "dual_ct_preview_total.a",
+      "dual_ct_preview_total.b",
+      "dual_ct_preview_fields.a_power",
+      "dual_ct_preview_fields.a_voltage",
+      "dual_ct_preview_fields.a_current",
+      "dual_ct_preview_fields.b_power",
+      "dual_ct_preview_fields.b_voltage",
+      "dual_ct_preview_fields.b_current",
+      "dual_ct_preview_counters",
+      "dual_ct_preview_trends"
+    ],
+    "repair": [
+      {
+        "id": "app_account_repair"
+      }
+    ],
+    "capabilitiesOptionsSha256": "4bec5a51fe5e8dd5aacf18e5861cd7c7250e730b14809034ddac1ea1d16c8362",
+    "settingIds": [
+      "preview_enabled",
+      "ct1_role",
+      "ct2_role",
+      "display_ct1",
+      "display_ct2",
+      "display_diagnostics"
+    ]
+  },
+  "smartmeter_dual_ct_energy": {
+    "capabilities": [
+      "measure_power",
+      "meter_power.imported",
+      "meter_power.exported",
+      "dual_ct_preview_power.a_p1",
+      "dual_ct_preview_voltage.a_p1",
+      "dual_ct_preview_current.a_p1",
+      "dual_ct_preview_power.a_p2",
+      "dual_ct_preview_voltage.a_p2",
+      "dual_ct_preview_current.a_p2",
+      "dual_ct_preview_power.a_p3",
+      "dual_ct_preview_voltage.a_p3",
+      "dual_ct_preview_current.a_p3",
+      "dual_ct_preview_power.b_p1",
+      "dual_ct_preview_voltage.b_p1",
+      "dual_ct_preview_current.b_p1",
+      "dual_ct_preview_power.b_p2",
+      "dual_ct_preview_voltage.b_p2",
+      "dual_ct_preview_current.b_p2",
+      "dual_ct_preview_power.b_p3",
+      "dual_ct_preview_voltage.b_p3",
+      "dual_ct_preview_current.b_p3",
+      "dual_ct_preview_net.b"
+    ],
+    "repair": [
+      {
+        "id": "app_account_repair"
+      }
+    ],
+    "energy": {
+      "cumulative": true,
+      "cumulativeImportedCapability": "meter_power.imported",
+      "cumulativeExportedCapability": "meter_power.exported"
+    },
+    "capabilitiesOptionsSha256": "da3ff2c05a5185e034c56644fdc13b6cd228583ec750bada5eae5b13812c9c95",
+    "settingIds": [
+      "display_ct1",
+      "display_ct2"
+    ]
+  }
+}

@@ -64,7 +64,7 @@ test('desktop/mobile comparison cards distinguish missing/stale/zero, lock captu
     assert.match(comparison,/Candidate bank A/);assert.match(comparison,/Candidate bank B/);assert.match(comparison,/Not observed; not zero/);
     assert.match(comparison,/0 · 0 s/);assert.match(comparison,/773.4: 150.*unscaled/);
     assert.match(comparison,/Record 997: structure only/);assert.doesNotMatch(comparison,/997.4: 150/);
-    assert.match(comparison,/Verified meter capabilities remain blocked/);
+    assert.match(comparison,/Raw research fields are not qualified Energy sources/);
     assert.match(comparison,/Homey Energy adoption is blocked/);
     assert.match(comparison,/Counter continuity observations/);assert.match(comparison,/Daily totals unavailable/);
     assert.match(comparison,/Baseline only/);assert.match(comparison,/Restart clears this observation history/);

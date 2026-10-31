@@ -1,6 +1,6 @@
 # EcoFlow for Homey Pro
 
-Monitor **EcoFlow STREAM** systems and the original **EcoFlow Smart Meter** from Homey Pro. Original STREAM has guarded settings controls and Energy/Flow/Insights support. STREAM 5000 monitoring, mixed-generation trials and the separate Dual CT preview have distinct limits; product availability is not integration hardware acceptance.
+Monitor **EcoFlow STREAM** systems and the original **EcoFlow Smart Meter** from Homey Pro. Original STREAM has guarded settings controls and Energy/Flow/Insights support. STREAM 5000 monitoring, mixed-generation trials and Dual CT Energy trials have distinct limits; product availability is not integration hardware acceptance.
 
 > App ID `uk.co.zarb.ecoflow` · Homey SDK v3 · TypeScript
 
@@ -25,7 +25,7 @@ Pair **STREAM Unit** only when you also want separate per-device telemetry; phys
 do not contribute to Homey Energy and do not contain reliable whole-installation totals.
 
 ### STREAM 5000 Series — separate monitoring and Energy pairing
-The diagnostic source candidate offers **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** monitoring through EcoFlow's app connection, not a verified official Developer-key API. **STREAM 5000 Series Unit** needs no Beta switch or Energy opt-in and contributes no battery Energy. **STREAM Home Battery (5000)** has a separate, default-off **Allow Home Battery (5000) Energy pairing** opt-in in the Homey integration settings; use it only once per already combined installation, checking for overlap. The retired Beta flag does not grant this new consent. Existing paired devices keep working when the new gate is off. Both roles use your EcoFlow app-account sign-in. Available PV/socket/configuration views are read-only and depend on received fields; no 5000 command is sent. Model/role hardware acceptance remains separate. Mixed-generation trials, Dual CT previews and expansion/3000/Gateway admission retain their own restrictions. See [delivery/installed status](docs/STATUS.md), [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
+The diagnostic source candidate offers **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** monitoring through EcoFlow's app connection, not a verified official Developer-key API. **STREAM 5000 Series Unit** needs no Beta switch or Energy opt-in and contributes no battery Energy. **STREAM 5000 Home Battery** has a separate, default-off **Allow Home Battery (5000) Energy pairing** opt-in in the Homey integration settings; use it only once per already combined installation, checking for overlap. The retired Beta flag does not grant this new consent. Existing paired devices keep working when the new gate is off. Both roles use your EcoFlow app-account sign-in. Available PV/socket/configuration views are read-only and depend on received fields; no 5000 command is sent. Model/role hardware acceptance remains separate. Mixed-generation trials, Dual CT community trials and expansion/3000/Gateway admission retain their own restrictions. See [delivery/installed status](docs/STATUS.md), [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
 
 The socket/configuration update includes battery-to-backup-socket discharge in
 the installation's power and future energy totals. It adds read-only configuration
@@ -48,12 +48,27 @@ keep their bindings/counters. CT2 is excluded from property Energy. Field valida
 is ongoing; local feedback is available in the integration support report, with no
 automatic upload. See [trial scope and feedback](docs/DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md).
 
-### Dual CT and cross-app coordination previews
+### Smart Meter Dual CT
 
-**Smart Meter Dual CT (read-only preview)** is a separate optional driver, not the
-original Smart Meter. Its candidate phase/circuit readings expire independently;
-it has no Energy participation, controls, tags or Insights. A hybrid inverter's
-output includes battery exchange and must not be counted as solar-only production.
+Choose **Smart Meter Dual CT** for CT1 whole-property Homey Energy. Select single
+phase or the explicit three-phase community trial during pairing. Advanced settings
+show the **Paired Energy mode**; changing the phase display only changes visible
+readings, never the accounting mode. Per-phase power, voltage and current and
+optional CT2 readings are available on the same device.
+
+CT2 can monitor another circuit, but is not added to property grid totals and is
+not a separate Homey Energy solar/load contributor. A hybrid inverter can include
+battery exchange; its output must not be labelled solar-only production.
+Import/export totals are estimates from observed CT1 power, exclude unobserved
+gaps, and do not copy historical meter totals. Native EcoFlow response-time claims
+are not guarantees for this cloud integration. Three-phase field validation remains
+open; see the community trial guide above.
+
+The earlier detailed-monitor driver is hidden from new pairing. Existing devices,
+capabilities, history and Flow references remain supported; this update does not
+convert or remove them. There is no need to re-pair existing devices for the cleanup.
+
+### Cross-app coordination preview
 
 The settings workspace can explicitly read selected Homey capabilities for a
 grid meter, external battery SOC/power and STREAM power. Broad Homey API permission
