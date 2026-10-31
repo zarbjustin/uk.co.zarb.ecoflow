@@ -1,5 +1,24 @@
 # Codex cross-machine handover
 
+## Test 1.11.19 / build 86 verified — 31 October 2026
+
+Diagnostic source `4aeb5c91187bc5c1654562d9caa108dbc2ce3351` pushed; exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41243570750 passed.
+All 1,364 tests, locked Node 22 install, lint, release:check, diff check and pinned
+Homey CLI 4.5.3 verified validation passed. Clean committed-source archive SHA256
+`f05f1f520bfafd53dab5c23adaac7c0ffeb6ebe8a381d026d65447095facd816`; runtime
+fingerprint `14cbea1797cd3591d7345e11b95b3c160ffd35717d18beb41e871053380fe866`.
+Build 86 metadata matched EN/DE/NL; Test activation confirmed through developer API.
+Live remains 1.10.3/build 18. Installed Development 1.11.16 remains running with
+the same devkit session. All device identities, EcoFlow device definitions, 101
+Flows and 1,204 Insights identities preserved; single-phase CT1 available.
+Concurrent unrelated device metadata and houseReserveLease hash changed during
+readback; no full-house settings equality is claimed. This release issued no
+installation, battery command, settings write or Flow execution. Hardware gates
+remain open. Robert's version-specific message is prepared locally but NOT SENT:
+browser access returned unavailable. Resume posting the approved draft and verify
+its permanent item when browser access is restored; no new release needed.
+
 ## 1.11.19 diagnostic Test release preparation — 31 October 2026
 
 Owner approved committing/pushing the targeted comparison, publishing to Test and

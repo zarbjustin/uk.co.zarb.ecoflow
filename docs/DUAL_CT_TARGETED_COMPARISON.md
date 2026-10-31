@@ -1,7 +1,8 @@
 # Dual CT targeted comparison candidate — 31 October 2026
 
 Version 1.11.19 diagnostic candidate on the diagnostic branch.
-Owner approved Test publication and tester instructions; activation pending verification.
+Test 1.11.19/build 86 activated and verified on 31 October 2026.
+Tester instructions approved; posting remains pending unavailable browser access.
 
 ## Purpose and scope
 
