@@ -1,3 +1,4 @@
+import { DualCtMessageEvidence } from './dualCtMessageEvidence';
 import { DualCtDiagnosticEvents, DUAL_CT_MONITOR_EVENTS } from './dualCtDiagnosticEvents';
 import { DualCtDevicePreview } from './dualCtDevicePreview';
 import { decodeFrameHeaders } from './streamAc5000Protocol';
@@ -20,7 +21,8 @@ export class DualCtMonitor {
   private lastAt: number | null = null;
   private lastNow: number | null = null;
 
-  constructor(private readonly scope: Scope, private readonly diagnosticEvents = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS)) {
+  constructor(private readonly scope: Scope, private readonly diagnosticEvents = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS),
+    private readonly messageEvidence = new DualCtMessageEvidence()) {
     this.adapter = new DualCtDevicePreview(scope);
   }
 
@@ -33,7 +35,11 @@ export class DualCtMonitor {
   }
 
   observe(payload: Buffer, topic: string, receivedAt: number, now = receivedAt): boolean {
+    let topicKind = 'other';
+    if (topic === `/app/device/property/${this.scope.device}`) topicKind = 'property';
+    else if (typeof topic === 'string' && topic.endsWith(`/${this.scope.device}/thing/property/get_reply`)) topicKind = 'get_reply';
     const reject = (reason: string) => {
+      this.messageEvidence.record(payload, topicKind, reason, now);
       this.diagnosticEvents.record(reason, now);
       this.rejections[reason] = Math.min(65535, (this.rejections[reason] || 0) + 1);
       return false;
@@ -96,6 +102,7 @@ export class DualCtMonitor {
           }
         }
         this.diagnosticEvents.record('packet_accepted', now);
+        this.messageEvidence.record(payload, topicKind, 'packet_accepted', now);
         this.lastAt = receivedAt;
         return true;
       }

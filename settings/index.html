@@ -101,6 +101,8 @@
     A recent setting receipt is not proof that a command changed physical power. Copy it when reporting
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
+  <p id="dualCtComparisonHelp"></p>
+  <button id="dualCtComparisonStep" type="button">Record comparison baseline</button>
   <button id="dualCtSupportSummary" type="button">Show Dual CT support summary</button>
   <button id="supportSnapshot" type="button">Show integration support report</button>
   <button id="copySupportSnapshot" type="button" disabled>Copy integration support report</button>
@@ -715,6 +717,15 @@
       var captureTimer = null;
       var reportParts = [];
       var reportPartIndex = 0;
+      var comparisonSnapshots = [];
+      var comparisonStartedAt = null;
+      var comparisonButton = document.getElementById('dualCtComparisonStep');
+      function renderComparisonStep() {
+        var step = comparisonSnapshots.length % 3;
+        comparisonButton.textContent = Homey.__('settings.support.comparison_step_' + step);
+        document.getElementById('dualCtComparisonHelp').textContent = Homey.__('settings.support.comparison_help_' + step);
+      }
+      renderComparisonStep();
       var dualCtSummaryButton = document.getElementById('dualCtSupportSummary');
       dualCtSummaryButton.textContent = Homey.__('settings.support.dual_ct_summary');
       var showButton = document.getElementById('supportSnapshot');
@@ -793,6 +804,7 @@
       }
       startCaptureTimer();
       window.addEventListener('pagehide', function () {
+        comparisonSnapshots = []; comparisonStartedAt = null; renderComparisonStep();
         cancelCompletionRefresh();
         document.getElementById('enableDualCtPreview').checked = false;
         renderDualCt(null);
@@ -830,13 +842,13 @@
         }
       });
 
-      function requestReport(remoteCheck, dualCtOnly) {
+      function requestReport(remoteCheck, dualCtOnly, comparison) {
         if (reportBusy) return;
         reportBusy = true;
         var operation = ++reportOperation;
         var dualCtAtRequest = dualCtOperation;
         var output = document.getElementById('supportSnapshotResult');
-        dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = true;
+        comparisonButton.disabled = dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = true;
         reportText = '';
         copyButton.disabled = true;
         copyStatus.textContent = '';
@@ -849,10 +861,23 @@
           clearTimeout(reportDeadline);
           reportDeadline = null;
           reportBusy = false;
-          dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = false;
+          comparisonButton.disabled = dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = false;
           if (dualCtOnly && report && !err) report = { schemaVersion: 1, scope: "dual_ct_support_summary", appVersion: report.appVersion,
             homeyVersion: report.homeyVersion, persistence: "since_app_start_bounded_recent_events",
             dualCtPreviews: report.dualCtPreviews, dualCtCommunityTrials: report.dualCtCommunityTrials };
+          if (comparison && report && !err && report.scope === 'dual_ct_support_summary') {
+            var now = Date.now();
+            if (comparisonSnapshots.length === 3 || (comparisonStartedAt !== null && (now < comparisonStartedAt || now - comparisonStartedAt > 900000))
+              || (comparisonSnapshots.length && comparisonSnapshots[0].report.appVersion !== report.appVersion)) {
+              comparisonSnapshots = []; comparisonStartedAt = null;
+            }
+            if (comparisonStartedAt === null) comparisonStartedAt = now;
+            comparisonSnapshots.push({ phase: ['baseline', 'native_screen_open', 'native_screen_closed'][comparisonSnapshots.length],
+              elapsedSec: (now - comparisonStartedAt) / 1000, report: report });
+            report = { schemaVersion: 1, scope: 'dual_ct_native_comparison', phaseLabels: 'user_reported_not_device_verified',
+              completed: comparisonSnapshots.length === 3, outgoingRequestsObserved: false, snapshots: comparisonSnapshots };
+            renderComparisonStep();
+          }
           try { reportText = err || !report || typeof report !== 'object' ? '' : JSON.stringify(report, null, 2); }
           catch (serializationError) { reportText = ''; }
           output.textContent = timedOut ? Homey.__('settings.reporter.request_timeout') : reportText
@@ -868,6 +893,7 @@
             remoteCheck ? {} : null, function (err, report) { finish(err, report, false); });
         } catch (apiError) { finish(true, null, false); }
       }
+      comparisonButton.addEventListener('click', function () { requestReport(false, true, true); });
       dualCtSummaryButton.addEventListener('click', function () { requestReport(false, true); });
       showButton.addEventListener('click', function () { requestReport(false); });
       checkButton.addEventListener('click', function () { requestReport(true); });

@@ -1,5 +1,124 @@
 # Sparse Dual CT feed investigation — 31 October 2026
 
+## Dual CT native bridge trace and validation proposal — 31 October 2026
+
+Static trace now reaches EFSmartDeviceModule.sendMsg. Product-specific request is
+ConfigWrite 254/17, dst 2, ddst 1, V3, field 71 true only, needAck false, 6000 ms.
+Device-scoped session supplies same selected src/dest serial and actionId 0. Actual
+wire framing/topic/transport and firmware persistence remain inside native code or
+hardware; no MQTT encoder or command is qualified by this trace.
+
+Correction: Dual CT UI handles custom legacy 21 AND shared display 39. No field
+command-ID evidence yet shows that 39 caused a rejection; acceptance unchanged.
+Prepared [review protocol and vendor draft](DUAL_CT_TELEMETRY_REQUEST_REVIEW.md).
+Opening the native meter screen may send an upload command, so the proposed
+observation is approval-gated and not represented as purely read-only hardware work.
+No runtime/source behaviour change, hardware operation, install, publication or
+external message. Prior 1,358-test result remains applicable; this step changes docs
+only. Test/Live/installed state not freshly queried and unchanged by this work.
+
+
+## Sparse-feed reproduction and telemetry qualification — 31 October 2026
+
+Scope: offline regression tests and read-only research only. Diagnostic branch
+fetched and matched origin at 26cc4a1 before edits. Existing local AI workflow
+changes preserved. No runtime changes, version bump, hardware requests, release,
+installation or tester message.
+
+### New field evidence and its limits
+
+The latest 1.11.18 support summary distinguishes a busy shared socket from two
+target deliveries: one unrelated envelope and one accepted CT1 sample. The trial
+recorded one anchor and no eligible interval. Both consumers are represented in
+separate preview/trial arrays; a single preview entry is not a missing second device.
+A roughly one-minute-old sample can remain recent in the 90-second detail display
+while the five-second Energy freshness contract has already expired. Neither the
+anchor nor shared socket activity establishes sustained measurement coverage.
+The report covers about four minutes of socket lifetime, not a completed soak.
+No raw report, device identifiers or private correspondence is stored here.
+
+### Sprint 1 results
+
+Two synthetic regressions reproduce the new evidence classes:
+
+- `test/appMqttSharedDelivery.test.js`: two same-meter consumers receive identical
+  receipts, while 1,205 other-device frames leave their target receipt ages unchanged.
+  The shared count reaches 1,207 with no routing rejection. Neither consumer causes
+  an extra subscription, disconnect or implicit freshness renewal.
+- `test/dualCtEnergyDriver.test.js`: unrelated envelope, one CT1 anchor, 59.6-second
+  silence, detail expiry, identity refresh and resumed uploads. The real driver
+  retains its subscription and precise checkpoint, clears stale Energy power,
+  rejects the cross-gap interval, re-anchors, then integrates only a fresh one-second
+  interval. No missing energy is backfilled; export totals are preserved.
+
+Existing tests cover single-phase import/export, retained/duplicate/reordered
+messages, socket replacement, independent consumer removal and restart preservation.
+No new delivery defect was demonstrated by these sequences. Tests prove the local
+behaviour under synthetic input, not the cause of the field silence or accuracy.
+
+Validation: locked Node 22 npm ci, 1,358 tests, lint and release:check pass.
+Hardware acceptance remains pending; those checks were not bypassed.
+
+### Sprint 2 research: stronger native-app lead, not an executable approval
+
+Official reference re-read in the browser:
+https://developer-eu.ecoflow.com/us/document/PP3?id=2115695633708867585
+It explicitly covers STREAM 5000 / 5000 AC. It does not provide the product-421
+Dual CT command, reporting cadence or measurement-time contract needed here.
+
+Upstream primary source reviewed:
+https://github.com/shuette42/ecoflow-energy-ha/blob/main/custom_components/ecoflow_energy/ecoflow/cloud_mqtt.py
+Its get-all/latestQuotas paths are investigative leads, not product-421 proof.
+The sparse-feed recovery comment identifies PowerOcean Plus; enhanced recovery
+also sends a SET. Do not copy that recovery routine into this integration.
+
+Read the already installed native app's DualCt.bundle as static data only:
+EcoFlow 6.17.5 build 88, SHA256
+`3e72e19895a4ece9a9f237d89c23687dfef71317862f53eb86d133c5833be26c`.
+No bundle or extracted proprietary source is committed or indexed.
+
+Findings:
+- The Dual CT online hook invokes the product-specific command sender with
+  `activeDisplayPropertyFullUpload: true`.
+- That sender encodes `ConfigWrite`; configuration is cmdSet 254, cmdId 17,
+  destination 2, protocol V3, timeout 6000 ms, needAck false. The flag is bool
+  field 71. This is a configuration-command path, not a verified read-only GET.
+- Adjacent schema fields include upload-period configuration. They are NOT part
+  of the observed flag-only request and must not be populated or defaulted.
+- Shared native fetching also tries cache first, with a full-data request fallback.
+  Cached success cannot prove a new physical measurement or live stream.
+- The bundle names display IDs 39 and legacy 21; the Dual CT custom decoder
+  explicitly handles 21. Presence of 39 in shared constants is not evidence that
+  the rejected field packet used 39 or that admitting it would fix silence.
+
+This is a plausible on-demand upload mechanism, not proof that it caused the
+observed sample, produces a continuous stream, or is safe to invoke unattended.
+No new command encoder, publish path or broader decoder acceptance was added.
+The existing ES21-only house-read bridge must not be widened to product 421.
+
+### Next bounded work and approval packet requirements
+
+1. Trace the native command sender through its transport/outer envelope and reply
+   handling using static code/existing authorised evidence. Confirm exact scope,
+   routing, whether flag-only encoding changes persistent configuration, and whether
+   it triggers one snapshot or sustained reporting. Do not infer these from names.
+2. If still ambiguous, prepare a precise vendor question about product 421 / current
+   firmware: supported snapshot/stream request, cadence, measurement timestamps,
+   required renewals, persistence and cancellation. Draft only; owner approves send.
+3. Only after the envelope is qualified, propose one explicitly approved device
+   experiment: no periodic scheduler, no automatic retry/reconnect, one selected
+   owned meter, unchanged settings baseline, bounded response deadline, stop on
+   unexpected changes, separate replies/echoes from live uploads. Any rollback or
+   persistent setting restoration needs its own concrete procedure, not guesses.
+4. Demonstrate repeated fresh CT1 intervals before reference accuracy testing and
+   48-hour soak. Keep gaps unknown. A polling snapshot may help display while still
+   being unsuitable for energy integration; do not stretch freshness to conceal it.
+
+Sprint 1 reproduction is complete. Sprint 2 research produced a specific lead;
+telemetry qualification and any hardware trial remain incomplete. Test, Live,
+Mainline and installed Development are unchanged by this work.
+
+
 ## Dual CT 1.11.17 zero-delivery investigation — 31 October 2026
 
 Reviewed and locally decoded the newest private tester support summary. Both roles

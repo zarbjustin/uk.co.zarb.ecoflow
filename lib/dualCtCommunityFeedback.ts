@@ -1,3 +1,4 @@
+import { messageEvidenceSnapshot } from './dualCtMessageEvidence';
 import { DualCtDiagnosticEvents, dualCtEventSnapshot } from './dualCtDiagnosticEvents';
 import { appMqttDiagnosticsSnapshot } from './appMqttDiagnostics';
 
@@ -23,6 +24,7 @@ export function dualCtCommunityFeedbackSnapshot(input: any) {
     timing: 'receipt_estimate',
     persistence: 'since_app_start',
     counts,
+    messageEvidence: messageEvidenceSnapshot(input.messageEvidence),
     recentEvents: dualCtEventSnapshot(input.recentEvents, statuses),
     transport: appMqttDiagnosticsSnapshot(input.transport),
     retryScheduled: input.retryScheduled === true,

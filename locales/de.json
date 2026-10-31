@@ -515,6 +515,12 @@
     },
     "support": {
       "dual_ct_summary": "Dual-CT-Supportübersicht anzeigen",
+      "comparison_step_0": "Vergleichsbasis erfassen",
+      "comparison_help_0": "Nur für einen vereinbarten Supporttest. Diese Einstellungsseite offen lassen. Die native EcoFlow-Zähleransicht zwei Minuten geschlossen lassen, dann die Basis erfassen. Diese Schaltflächen lesen nur lokale Homey-Diagnosen.",
+      "comparison_step_1": "Ergebnis bei geöffnetem Bildschirm erfassen",
+      "comparison_help_1": "Die native EcoFlow-Zähleransicht einmal öffnen und zwei Minuten warten, dann das Ergebnis erfassen. Das Öffnen kann einen EcoFlow-Uploadbefehl auslösen. Keine Einstellungen ändern oder Geräte neu koppeln. Ausgehende Befehle werden nicht erfasst.",
+      "comparison_step_2": "Vergleich abschließen",
+      "comparison_help_2": "Die native Zähleransicht schließen, fünf Minuten warten und abschließen. Den Integrationsbericht kopieren und vor dem Senden prüfen. Diese Seite bis dahin offen lassen. Phasen beschreiben Ihre Aktionen, keinen bestätigten Gerätezustand.",
       "show": "Integrationsbericht anzeigen",
       "copy": "Integrationsbericht kopieren",
       "check": "Aktuellen Batterie-Melder prüfen (nur lesen)",

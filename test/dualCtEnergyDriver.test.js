@@ -386,3 +386,41 @@ test('startup diagnostics distinguish source, contract, binding and subscription
   }finally{await d.onUninit();assert.equal(d.timers.size,0);}
  }
 });
+
+test('busy transport with one sparse CT1 anchor can show recent detail while Energy expires, then recover without backfill', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabledCommunity(d);
+  const monitor = new DualCtMonitor({ account: 'synthetic', device: sn, session: 'sparse_latest' });
+  try {
+    await d.onInit(); const handler = d.subscriptions[0]; const topic = `/app/device/property/${sn}`;
+    const emit = bytes => { const accepted = monitor.observe(bytes, topic, now, now); handler(bytes, topic); return accepted; };
+    const unrelated = nested(1, Buffer.concat([nested(1, scalar(962, 900000)), int(8, 254), int(9, 22), int(14, ++sequence)]));
+    assert.equal(emit(unrelated), false); await settle();
+    now = 17000; assert.equal(emit(payload(3600, false)), true); await settle();
+    const saved = structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+    const feedback = d.getDualCtCommunityFeedback();
+    assert.deepEqual(feedback.counts, { delivery_rejected: 1, not_ct1_property_upload: 1, anchor: 1 });
+    assert.equal(feedback.eligibleIntervalMs, 0);
+    assert.deepEqual(feedback.messageEvidence.groups.map(row => row.outcome), ['not_ct1_property_upload', 'delivery_eligible']);
+    assert.deepEqual(feedback.messageEvidence.groups.map(row => row.cmdId), [22, 21]);
+    now += 59600; await d.adapter.refresh();
+    assert.equal(monitor.snapshot(now, key => key).recent, true, 'detail age remains within 90 seconds');
+    assert.equal(d.available, false, 'one old sample cannot represent live grid power');
+    assert.equal(d.values.get('measure_power'), null);
+    assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+    // Renew identity only, as the normal runtime does. Identity is not measurement freshness.
+    now = 110000; await d.context.refresh(); await d.adapter.refresh();
+    assert.equal(monitor.snapshot(now, key => key).recent, false);
+    assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+    assert.equal(d.subscriptions.length, 1); assert.equal(d.detached.length, 0);
+    now += 1000; emit(payload(3600, false)); await settle();
+    assert.equal(d.values.get('measure_power'), null, 'cross-gap packet resets the accounting anchor');
+    now += 1000; emit(payload(3600, false)); await settle();
+    assert.equal(d.available, true); assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+    now += 1000; emit(payload(3600, false)); await settle();
+    assert.equal(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).importedWh, saved.importedWh + 1);
+    assert.equal(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY).exportedWh, saved.exportedWh);
+    assert.equal(d.getDualCtCommunityFeedback().eligibleIntervalMs, 1000);
+    assert.equal(d.subscriptions.length, 1); assert.equal(d.detached.length, 0);
+  } finally { await d.onUninit(); }
+});

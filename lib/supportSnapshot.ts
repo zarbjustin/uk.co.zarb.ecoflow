@@ -1,5 +1,7 @@
 'use strict';
 
+import { messageEvidenceSnapshot } from './dualCtMessageEvidence';
+
 import { dualCtEventSnapshot, DUAL_CT_MONITOR_EVENTS } from './dualCtDiagnosticEvents';
 import { appMqttDiagnosticsSnapshot, dualCtRejectionSnapshot } from './appMqttDiagnostics';
 import { dualCtCommunityFeedbackSnapshot } from './dualCtCommunityFeedback';
@@ -524,6 +526,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           rejectedFrames: safeNumber(input?.rejectedFrames),
           rejectionReasons: dualCtRejectionSnapshot(input?.rejectionReasons),
           recentEvents: dualCtEventSnapshot(input?.recentEvents, DUAL_CT_MONITOR_EVENTS),
+          messageEvidence: messageEvidenceSnapshot(input?.messageEvidence),
           retryScheduled: input?.retryScheduled === true,
           lastFrameAgeSec: safeNumber(input?.lastFrameAgeSec),
           lastReceiptAgeSec: safeNumber(input?.lastReceiptAgeSec),

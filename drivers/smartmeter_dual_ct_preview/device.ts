@@ -1,5 +1,6 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { DualCtMessageEvidence } from '../../lib/dualCtMessageEvidence';
 import { DualCtDiagnosticEvents, DUAL_CT_MONITOR_EVENTS } from '../../lib/dualCtDiagnosticEvents';
 import {
   DUAL_CT_DISPLAY_SETTINGS, DualCtDisplaySettings, dualCtDisplayOptions, dualCtDisplayVisible,
@@ -14,6 +15,7 @@ import manifest from './driver.compose.json';
 module.exports = class DualCtPreviewDevice extends Homey.Device {
   private readonly diagnosticEvents = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS);
   private generation = 0;
+  private readonly messageEvidence = new DualCtMessageEvidence();
   private monitor: DualCtMonitor | null = null;
   private handler: ((payload: Buffer, topic: string) => void) | null = null;
   private ticker: ReturnType<typeof setInterval> | null = null;
@@ -115,7 +117,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       if (!owned) {
         await this.stop('model_unavailable'); return;
       }
-      this.monitor = new DualCtMonitor({ account, device: sn, session: randomUUID() }, this.diagnosticEvents);
+      this.monitor = new DualCtMonitor({ account, device: sn, session: randomUUID() }, this.diagnosticEvents, this.messageEvidence);
       const app = this.homey.app as any;
       const handler = (payload: Buffer, topic: string) => {
         if (!this.enabled || generation !== this.generation || this.handler !== handler) return;
@@ -283,6 +285,7 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       rejectedFrames: this.rejectedFrames,
       rejectionReasons: this.monitor?.getRejectionCounts() || {},
       recentEvents: this.diagnosticEvents.snapshot(),
+      messageEvidence: this.messageEvidence.snapshot(),
       retryScheduled: this.retry !== null,
       lastFrameAgeSec: frameAge !== null && Number.isFinite(frameAge) && frameAge >= 0 ? frameAge : null,
       lastReceiptAgeSec: age !== null && Number.isFinite(age) && age >= 0 ? age : null,

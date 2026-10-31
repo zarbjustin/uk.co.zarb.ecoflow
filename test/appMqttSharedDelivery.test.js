@@ -359,3 +359,30 @@ test('support distinguishes acknowledged silent topics from socket traffic disca
   d=mqtt.getDeliveryDiagnostics(sn);assert.equal(d.socketReceivedFrames,0);assert.equal(d.socketPingResponses,0);
  }finally{await mqtt.end();}
 });
+
+test('busy other-device traffic does not renew sparse Dual CT receipts or resubscribe either consumer', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const mqtt = new EcoFlowAppMqtt({ client: auth }); const preview = []; const energy = [];
+  try {
+    await mqtt.connect(); const client = clients.at(-1);
+    mqtt.subscribe(sn, (_p, _t, receipt) => preview.push(receipt));
+    mqtt.subscribe(sn, (_p, _t, receipt) => energy.push(receipt));
+    mqtt.subscribe('OTHER_SYNTHETIC', () => {});
+    const subscribed = [...client.subscribed];
+    client.emit('message', topic, Buffer.from('unrelated synthetic message'), { retain: false, dup: false });
+    now = 17000;
+    client.emit('message', topic, Buffer.from('synthetic power envelope'), { retain: false, dup: false });
+    for (let i = 0; i < 1205; i++) {
+      now = 17001 + i;
+      client.emit('message', '/app/device/property/OTHER_SYNTHETIC', Buffer.from('other'), { retain: false, dup: false });
+    }
+    now = 76600;
+    client.emit('packetreceive', { cmd: 'pingresp' });
+    const report = mqtt.getDeliveryDiagnostics(sn);
+    assert.equal(report.socketReceivedFrames, 1207); assert.equal(report.socketRouteRejectedFrames, 0);
+    assert.equal(report.receivedFrames, 2); assert.equal(report.lastFrameAgeSec, 59.6);
+    assert.equal(preview.length, 2); assert.equal(energy.length, 2);
+    assert.equal(preview[1], energy[1]); assert.equal(preview[1].receivedAt, 17000);
+    assert.deepEqual(client.subscribed, subscribed); assert.equal(client.unsubscribed.length, 0);
+  } finally { await mqtt.end(); }
+});

@@ -515,6 +515,12 @@
     },
     "support": {
       "dual_ct_summary": "Dual CT-ondersteuningsoverzicht tonen",
+      "comparison_step_0": "Vergelijkingsbasis vastleggen",
+      "comparison_help_0": "Alleen voor een afgesproken supporttest. Houd deze instellingenpagina open. Laat het EcoFlow-meterscherm twee minuten gesloten en leg daarna de basis vast. Deze knoppen lezen alleen lokale Homey-diagnostiek.",
+      "comparison_step_1": "Resultaat met geopend scherm vastleggen",
+      "comparison_help_1": "Open het EcoFlow-meterscherm eenmaal en wacht twee minuten. Leg daarna het resultaat vast. Openen kan een EcoFlow-uploadopdracht versturen. Wijzig geen instellingen en koppel niet opnieuw. Uitgaande opdrachten worden niet vastgelegd.",
+      "comparison_step_2": "Vergelijking afronden",
+      "comparison_help_2": "Sluit het meterscherm, wacht vijf minuten en rond af. Kopieer het integratierapport en controleer het voor verzending. Houd deze pagina open tot het kopiëren. Fasen beschrijven uw acties, geen geverifieerde apparaatstatus.",
       "show": "Integratierapport tonen",
       "copy": "Integratierapport kopiëren",
       "check": "Huidige batterijbron controleren (alleen lezen)",

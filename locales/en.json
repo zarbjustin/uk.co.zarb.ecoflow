@@ -516,6 +516,12 @@
     },
     "support": {
       "dual_ct_summary": "Show Dual CT support summary",
+      "comparison_step_0": "Record comparison baseline",
+      "comparison_help_0": "Only for an agreed support test. Keep this settings page open. Leave the native EcoFlow meter screen closed for two minutes, then record the baseline. These buttons only read local Homey diagnostics; they do not operate the meter.",
+      "comparison_step_1": "Record screen-open result",
+      "comparison_help_1": "Open the native EcoFlow meter screen once and wait two minutes, then record the screen-open result. Opening that screen may send an EcoFlow upload command. Do not change settings or re-pair. This report does not observe outgoing commands.",
+      "comparison_step_2": "Finish comparison",
+      "comparison_help_2": "Close the native meter screen and wait five minutes, then finish. Copy the integration support report and review it before sending. Keep this page open until copied. Phase labels record your actions, not verified device state.",
       "show": "Show integration support report",
       "copy": "Copy integration support report",
       "check": "Check current battery reporter (read-only)",

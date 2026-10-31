@@ -410,7 +410,7 @@ test('rejected preview frames advance transport health but cannot renew accepted
   try {
     await h.device.onInit(); const handler = [...h.handlers][0];
     handler(frame(), topic); await h.device.chain;
-    now += 95000; handler(Buffer.from('invalid'), topic); await h.device.chain;
+    now += 95000; handler(Buffer.from('PRIVATE_PAYLOAD_SENTINEL'), topic); await h.device.chain;
     h.device.render(h.device.generation); await h.device.chain;
     const health = h.device.getDualCtPreviewDiagnostics();
     assert.equal(h.device.available, false);
@@ -419,7 +419,7 @@ test('rejected preview frames advance transport health but cannot renew accepted
     assert.equal(health.receivedFrames, 2); assert.equal(health.rejectedFrames, 1);
     assert.equal(health.acceptedPackets, 1); assert.equal(health.lastFrameAgeSec, 0);
     assert.equal(health.lastReceiptAgeSec, 95);
-    assert.doesNotMatch(JSON.stringify(health), /invalid|SYNTHETIC|account|payload/);
+    assert.doesNotMatch(JSON.stringify(health), /PRIVATE_PAYLOAD_SENTINEL|SYNTHETIC|account|payload/);
     await h.device.onUninit(); handler(frame(), topic);
     assert.equal(h.device.getDualCtPreviewDiagnostics().receivedFrames, 0);
     assert.equal(h.device.getDualCtPreviewDiagnostics().lastFrameAgeSec, null);

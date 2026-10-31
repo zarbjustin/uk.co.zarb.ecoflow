@@ -1,5 +1,6 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { DualCtMessageEvidence } from '../../lib/dualCtMessageEvidence';
 import { DualCtEnergyDetails } from '../../lib/dualCtEnergyDetails';
 import { DUAL_CT_DISPLAY_SETTINGS } from '../../lib/dualCtDisplaySettings';
 import { DualCtCommunityFeedback } from '../../lib/dualCtCommunityFeedback';
@@ -18,6 +19,7 @@ import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
 const authority = new DualCtEnergyAuthority();
 
 module.exports = class DualCtEnergyDevice extends Homey.Device {
+  private readonly messageEvidence = new DualCtMessageEvidence();
   private readonly communityFeedback = new DualCtCommunityFeedback();
   private readonly details = new DualCtEnergyDetails(this);
   private generation = 0;
@@ -131,6 +133,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         if (generation === this.generation && this.handler === handler) {
           this.details.observe(payload, topic, delivery, Date.now());
           const result = deliveryGuard.inspect(payload, topic, `/app/device/property/${source.device}`, delivery, Date.now());
+          let topicKind = 'other';
+          if (topic === `/app/device/property/${source.device}`) topicKind = 'property';
+          else if (topic.endsWith(`/${source.device}/thing/property/get_reply`)) topicKind = 'get_reply';
+          this.messageEvidence.record(payload, topicKind,
+            result.accepted ? 'delivery_eligible' : result.status);
           if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' && !result.accepted) {
             this.communityFeedback.record('delivery_rejected'); this.communityFeedback.record(result.status);
           }
@@ -224,6 +231,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (this.getStoreValue('dualCtEnergyMode') !== 'three_phase_community') return null;
     return {
       ...this.communityFeedback.snapshot(),
+      messageEvidence: this.messageEvidence.snapshot(),
       retryScheduled: this.retry !== null,
       transport: (this.homey.app as any).getAppRealtimeDiagnostics?.(this.getData().sn) || null,
     };

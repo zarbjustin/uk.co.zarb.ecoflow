@@ -815,3 +815,32 @@ test('Dual CT support summary requests local diagnostics once and copies only re
  const summary=JSON.parse(copied);assert.equal(summary.scope,'dual_ct_support_summary');assert.equal(summary.dualCtPreviews.length,1);
  assert.doesNotMatch(copied,/PRIVATE|privateUnrelated/);
 });
+
+test('three-stage Dual CT comparison copies one local report and clears on navigation', async () => {
+ const context=loadSettingsScript();const homey=fakeHomey();const calls=[];let copied='';
+ context.navigator={clipboard:{writeText:async text=>{copied=text;}}};
+ homey.api=(method,url,body,cb)=>{calls.push({method,url,body});cb(null,{appVersion:'1.11.18',dualCtPreviews:[{status:'recent'}],dualCtCommunityTrials:[],privateUnrelated:'PRIVATE'});};
+ context.onHomeyReady(homey);
+ const button=context.document.getElementById('dualCtComparisonStep');
+ await button.click();await button.click();await button.click();
+ await context.document.getElementById('copySupportSnapshot').click();
+ const report=JSON.parse(copied);assert.equal(report.completed,true);assert.equal(report.outgoingRequestsObserved,false);
+ assert.deepEqual(report.snapshots.map(x=>x.phase),['baseline','native_screen_open','native_screen_closed']);
+ assert.equal(calls.length,3);assert.ok(calls.every(x=>x.method==='GET'&&x.url==='/support-snapshot'&&x.body===null));
+ assert.doesNotMatch(copied,/PRIVATE|privateUnrelated/);
+ context.events.pagehide();await button.click();await context.document.getElementById('copySupportSnapshot').click();
+ assert.equal(JSON.parse(copied).snapshots.length,1);
+});
+
+test('comparison failure does not advance phase and late callbacks cannot replace a completed request', async () => {
+ const context=loadSettingsScript();const homey=fakeHomey();const calls=[];let copied='';
+ context.navigator={clipboard:{writeText:async text=>{copied=text;}}};
+ homey.api=(method,url,body,cb)=>calls.push(cb);context.onHomeyReady(homey);
+ const button=context.document.getElementById('dualCtComparisonStep');
+ await button.click();calls[0](true,null);await button.click();
+ calls[1](null,{appVersion:'1.11.18',dualCtPreviews:[],dualCtCommunityTrials:[]});
+ calls[0](null,{appVersion:'OLD',dualCtPreviews:[],dualCtCommunityTrials:[]});
+ await context.document.getElementById('copySupportSnapshot').click();
+ const report=JSON.parse(copied);assert.equal(report.snapshots.length,1);assert.equal(report.snapshots[0].phase,'baseline');
+ assert.equal(report.snapshots[0].report.appVersion,'1.11.18');
+});

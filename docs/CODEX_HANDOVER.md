@@ -1,5 +1,72 @@
 # Codex cross-machine handover
 
+## 1.11.19 diagnostic Test release preparation — 31 October 2026
+
+Owner approved committing/pushing the targeted comparison, publishing to Test and
+sending Robert the reviewed steps. Version 1.11.19 contains the bounded incoming
+metadata and three-stage comparison, plus the sparse-feed replay tests. Existing
+message admission, counters, source binding and freshness rules remain unchanged.
+Local Node 22 locked install, all 1,364 tests, lint and release:check pass.
+CI, archive and Test activation remain to be verified. Live and installed app
+are outside this release scope. Local AI workflow edits remain unstaged.
+
+## Targeted Dual CT comparison candidate — 31 October 2026
+
+Added bounded incoming message metadata to detailed-monitor and community-trial
+support evidence: command IDs including rejected 39, fixed topic class, CT1 field
+presence, outcome, receipt gaps and counts. No values, IDs, payloads or new network
+operations. 32 groups / 15 minutes; decoder admission and Energy rules unchanged.
+Added EN/DE/NL three-stage local-GET comparison workflow producing one copyable
+report. User-labelled phases do not prove native actions; outgoing commands remain
+unobserved. See [tester draft and interpretation](DUAL_CT_TARGETED_COMPARISON.md).
+
+Source remains local and unversioned relative to Test 1.11.18. No push/publication,
+installation or tester message. Preserve earlier sparse-feed tests and local AI
+workflow edits. New Test release and instructions require the next reviewed step.
+
+Local validation: committed-lockfile npm ci, all 1,364 tests, lint, release:check,
+git diff --check and pinned Homey CLI 4.5.3 verified validation passed. Hardware
+acceptance gates remain pending; no new remote CI or field result is claimed.
+
+
+## Dual CT native bridge trace and validation proposal — 31 October 2026
+
+Static trace now reaches EFSmartDeviceModule.sendMsg. Product-specific request is
+ConfigWrite 254/17, dst 2, ddst 1, V3, field 71 true only, needAck false, 6000 ms.
+Device-scoped session supplies same selected src/dest serial and actionId 0. Actual
+wire framing/topic/transport and firmware persistence remain inside native code or
+hardware; no MQTT encoder or command is qualified by this trace.
+
+Correction: Dual CT UI handles custom legacy 21 AND shared display 39. No field
+command-ID evidence yet shows that 39 caused a rejection; acceptance unchanged.
+Prepared [review protocol and vendor draft](DUAL_CT_TELEMETRY_REQUEST_REVIEW.md).
+Opening the native meter screen may send an upload command, so the proposed
+observation is approval-gated and not represented as purely read-only hardware work.
+No runtime/source behaviour change, hardware operation, install, publication or
+external message. Prior 1,358-test result remains applicable; this step changes docs
+only. Test/Live/installed state not freshly queried and unchanged by this work.
+
+
+## Sparse-feed replay and native telemetry lead — 31 October 2026
+
+Read-only research and offline tests following the latest 1.11.18 field summary.
+Two new regressions reproduce busy shared traffic versus sparse target delivery,
+recent detail versus expired Energy, checkpoint preservation and gap-safe recovery.
+All 1,358 tests, Node 22 locked install, lint and release:check pass. No new delivery
+bug confirmed; runtime and fingerprint unchanged. See
+[the investigation](DUAL_CT_SPARSE_FEED_INVESTIGATION.md) for evidence and next steps.
+
+Static native Dual CT code has a concrete on-demand upload lead: its online hook
+sends activeDisplayPropertyFullUpload through ConfigWrite (254/17, dst 2, field 71).
+This is NOT a qualified read-only GET. Outer envelope, persistent effects and
+snapshot-versus-stream behaviour must be resolved before proposing execution.
+No encoder/publish path or broadened message acceptance was added. Official 5000
+API and upstream HA research do not establish a Dual CT live-reporting contract.
+No hardware request, settings change, installation, publication or message sent.
+Sprint 1 complete; Sprint 2 qualification remains open. Test 1.11.18/build 85,
+Live and installed Development remain as previously recorded, not freshly queried.
+
+
 ## Test 1.11.18 / build 85 verified — 31 October 2026
 
 Source `5c453f709a14725e73a87560038de086554fe884` committed/pushed; exact CI
