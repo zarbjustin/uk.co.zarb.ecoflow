@@ -1,5 +1,33 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.11 / build 78 published — 31 October 2026
+
+Owner authorised immediate Test publication for community recovery testing and
+replies. Runtime source `5e326c910be50194a937747e9c7c53cb097c4268` was committed
+and pushed on the diagnostic branch. Exact [CI 41189319263](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41189319263)
+passed all 1,311 tests, lint, release checks, full audit and pinned Homey 4.5.3
+verified validation. The frozen archive contains 2,028 files matching the validated
+build and excludes private/env/work/output paths. SHA-256:
+`8992d8fef6250a23dddcfaddceb6bd57b594aec32b22d8bd97adeeb5f9a213f0`.
+Runtime fingerprint: `fdd7e89a2d6d3310968e4773c7aefa20b3f00bdf9bfe983ab2294baa116be225`.
+
+Build 78 is confirmed active as Test 1.11.11; en/de/nl listing and changelog match
+the source. Live remains 1.10.3/build 18. Installed Development remains running
+1.11.10 with the same devkit session. Read-only before/after checks preserve all
+14 EcoFlow device definitions/settings, app settings, 101 Flows, 1,204 Insights
+identities and all device IDs. One unrelated device refreshed its own debug sync
+timestamp; that is not an EcoFlow preservation failure. No installation, restart,
+battery/Energy setting, Flow action, repair or re-pair was performed here.
+Mainline remains `66b1cb5f828a53333739798281fce86125f61c28`.
+
+Authorised private tester and public freeze-report replies were posted, signed JZ,
+and reopened to verify. They distinguish confirmed source defects from unproven
+field causes, request an in-place update/normal-use observations and preserve
+existing devices/counters/settings. No additional diagnostic capture requested.
+Private receipts and preservation evidence remain outside Git. Current recovery,
+three-phase complete-frame coverage and import/export reference acceptance still
+await community evidence; this Test publication is not a full-release signoff.
+
 ## Test 1.11.11 preparation authorised — 31 October 2026
 
 Owner requests immediate Test publication for the community tester and a reply to
