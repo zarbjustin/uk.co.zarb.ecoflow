@@ -1,5 +1,40 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 1.11.10 exact CI/archive ready; local-first deployment held — 31 October 2026
+
+Runtime source `9217c3e38bb4088ff7cbd2654037fd42703b55e6` is committed/pushed on
+the diagnostic branch. Exact [CI 41160015772](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41160015772)
+passed all 1,308 tests, lint, release checks, full dependency audit (zero findings)
+and pinned Homey 4.5.3 verified validation. Local locked-tooling checks also pass.
+The development matcher compatibility bridge has regression coverage for actual
+legacy import-rule allow/deny behaviour as well as callable/named matcher APIs;
+audit was not weakened and prior lint file coverage is retained.
+
+Frozen 1.11.10 archive SHA-256:
+`6b06405b7a1ff8c0755377f671c9aeb3285f01f5015a5097f205641cd539adab`.
+Runtime fingerprint: `50b89f04742d0ba4829a5a27a024571b517819e38a545ba05966671fbd19d370`.
+All 2,027 packed files match the validated build; private/env/work/output paths
+were excluded. The private manifest/archive and preservation baseline are outside
+Git. Do not rebuild/substitute this archive silently during maintenance.
+
+Fresh preflight confirms installed Development 1.11.5 running, Test 1.11.9/build
+76, Live 1.10.3/build 18, 14 EcoFlow devices, 101 Flows and 1,204 Insights identities.
+The coordinator is actively renewing a reserve hold above restoration level.
+Battery power is idle, but the control lease is not: a restart may lose guard
+freshness and initiate restoration. Installation was not attempted. A request
+for permission to contact the automation task is pending; no message, runner
+pause, reserve release or battery-setting change has been performed here.
+
+The forecast first suggests 17:00–17:30 GMT for natural release, subject to
+replanning and fresh validation. Preserve the owner-requested order: non-clean
+Development update with preservation/SOC readback first, then publish the same
+candidate to Test only after local validation passes. No Test upload/activation
+has been attempted. Mainline remains `66b1cb5f828a53333739798281fce86125f61c28`.
+This is a ready software candidate and a held deployment, not installed UI or
+hardware acceptance. SOC still needs native favourite-tile verification after
+an approved safe installation window.
+
+
 ## Development 1.11.10 then Test preparation authorised — 31 October 2026
 
 Versioned local checks completed: all 1,308 tests, lint, release checks, full
