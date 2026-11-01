@@ -1,5 +1,88 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## Test 1.11.20 / build 87 verified — 1 November 2026
+
+Owner authorised Test publication of the locally validated recovery-only archive.
+Build 87 activated and read back as Test 1.11.20; EN/DE/NL listing/changelog match.
+Source fb053dbf401d7d36d59f9423cd4714c39f1bfe24; exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41322550578 passed.
+Archive SHA256 5304493340c456e352b4f72f3776f304676bf582e4059839d68f6cd764bdc439.
+Post-publication readback at 15:53 UTC confirms installed Development 1.11.20,
+same devkit session, all device IDs/definitions, settings, Flows and Insights
+unchanged. Live remains 1.10.3/build 18. Coordinator remains paused under the
+approved maintenance procedure; no resumption or battery operation for publication.
+Separate consumer-queue diagnostics remain uncommitted/source-only, excluded from
+this archive. Do not confuse their 1,368-test local result with recovery archive
+validation (1,366 tests plus exact CI). No field resolution of Stefan/Ed/Robert
+is claimed. Next: review fresh coordinator replan/resumption; obtain Stefan's
+normal-use result on this recovery build, Ed's version/driver confirmation and
+Robert's bounded comparison. Review diagnostics before another candidate.
+
+## Development 1.11.20 installed; coordinator left paused — 1 November 2026
+
+Owner approved outputs/ecoflow-1.11.20-maintenance-review.txt. Fresh baseline
+confirmed the recorded ownership (House 0 / Office 7), self-powered mode and
+empty House tasks. Paused the owned execution Flow and configuration, checked
+no active run/command, then used the existing office-only stop path once. It
+verified Office reserve 3% and grid-charge stop; House reserve remained 0%.
+Preserved the old lease/fault and intent in private snapshots and maintenance
+history. Reconciled to House 0 / Office 3, emptied the obsolete intent and set
+old plan null without replay. Both execution switches remain disabled.
+
+Exact recovery-only archive SHA256
+5304493340c456e352b4f72f3776f304676bf582e4059839d68f6cd764bdc439 installed once,
+non-clean Development/debug false. Source fb053dbf401d7d36d59f9423cd4714c39f1bfe24,
+exact CI 41322550578 passed. Archive-provenance runtime fingerprint:
+70bdb73e630ead99f24349d902acb80f64231fd8964e7863124c098412c7a1eb.
+This is not an independent installed-filesystem rehash.
+
+Initial readback at 15:49 UTC: Development 1.11.20 running/devkit_install;
+14 EcoFlow definitions, all device identities, 101 Flows and Insights identities
+preserved. No app-setting drift from reconciled installation baseline. Ten
+reported cumulative capability counters known and nondecreasing within exposed
+precision. Original aggregate verified its main and receives natural MQTT/REST
+readings; batteries and CT1 available. House 0 / Office 3, fresh readings,
+completed nonfaulted lease, no intent and invalidated plan confirmed. Mobile UI,
+forced recovery and 48-hour soak not claimed. No forced disconnect or pairing.
+Test 1.11.19/build 86 and Live 1.10.3/build 18 remain unchanged. Separate uncommitted
+consumer-queue diagnostics remain source-only and are not installed.
+
+Second readback at 15:50:58 UTC passed the same preservation, fresh-reading,
+counter and paused-ownership checks. This is short continuity only, not a soak.
+
+Next: review local candidate before Test, and separately review a fresh
+coordinator replan/resumption. Never resume the
+old intent or elevated reserve automatically. Other tasks may read this status;
+no cross-task mutation authority is implied.
+
+## 1.11.20 recovery release held; queue diagnostics prepared — 1 November 2026
+
+Recovery fix committed/pushed as fb053dbf401d7d36d59f9423cd4714c39f1bfe24.
+Clean exact-source 1.11.20 archive validated with pinned CLI 4.5.3; manifest is
+outputs/ecoflow-recovery-1.11.20-build.json outside Git. Archive SHA256
+5304493340c456e352b4f72f3776f304676bf582e4059839d68f6cd764bdc439.
+Installation and then Test publication held: fresh private coordinator preflight
+found faulted/incomplete expired lease, an outstanding intent, Office reserve
+held above restoration and discharge in progress. No app restart, runner pause,
+lease/intent/fault edit or battery operation performed. Owner authorised a note
+asking the Homey automation task to investigate read-only and propose safe
+reconciliation for review; note delivered. No installation can proceed from a
+forecast alone. Test remains 1.11.19/build 86; Live and installed unchanged.
+
+Separate uncommitted engineering work instruments the existing original-driver
+consumer queue: bounded per-source queued/started/completed/failed/skipped counts,
+pending/running counts and relative receipt ages. Fixed metadata only; no raw
+payloads, identities, exception text, new subscribers or device requests. Export
+is allowlisted through reportingSnapshot; completion is not acceptance or valid
+telemetry. This distinguishes callback receipt awaiting processing from absence
+of consumer delivery; it does not distinguish broker silence from upstream
+routing loss. Queue draining/shutdown behavior remains unchanged. Diagnostics
+are NOT included in the already-built archive or its CI evidence.
+
+Exact recovery CI passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41322550578 .
+Separate queue-diagnostic work passes all 1,368 tests, lint, release:check, diff
+check and pinned verified validation locally; no remote CI for that work yet.
+
 ## Original STREAM overlap recovery candidate — 1 November 2026
 
 Reproduced duplicate main verification across overlapping polls; base quota
