@@ -291,3 +291,34 @@ test('backup-reserve quarantine errors are rethrown unchanged without warning or
   assert.strictEqual(warningCalls, 0);
   assert.strictEqual(timeoutCalls, 0);
 });
+
+
+test('legacy ES22 upgrade preserves both actual driver identities, history and counters without starting network work', async () => {
+  const StreamUnitDevice = loadWithHomeyMock('../.homeybuild/drivers/stream_unit/device.js');
+  for (const Driver of [StreamDevice, StreamUnitDevice]) {
+    const device = new Driver();
+    const saved = {
+      data: { sn: 'ES22SYNTHETIC0001' },
+      store: { mainSn: 'ES22SYNTHETIC0001', checkpoint: { chargedKwh: 4.381, dischargedKwh: 3.146 } },
+      settings: { note: 'existing installation', capacity: 5 },
+      capabilities: ['measure_battery', 'measure_power', 'meter_power.charged', 'meter_power.discharged'],
+      values: { measure_battery: 0, 'meter_power.charged': 4.381, 'meter_power.discharged': 3.146 },
+    };
+    const before = structuredClone(saved);
+    let message;
+    const forbidden = () => { assert.fail('Quarantined legacy pairing must not mutate state or start device work'); };
+    device.homey = { __: key => key, settings: { get: forbidden }, setInterval: forbidden, setTimeout: forbidden };
+    device.getData = () => saved.data;
+    device.getStoreValue = key => saved.store[key];
+    device.setUnavailable = async value => { message = value; };
+    device.log = () => {};
+    for (const method of ['setSettings', 'setStoreValue', 'setCapabilityValue', 'addCapability', 'removeCapability', 'onReady', 'poll']) {
+      device[method] = forbidden;
+    }
+    await device.onInit();
+    assert.match(message, /STREAM 5000 Series Unit/);
+    assert.deepStrictEqual(saved, before);
+    await device.onSettings({ newSettings: { poll_interval: 10 }, changedKeys: ['poll_interval'] });
+    assert.deepStrictEqual(saved, before);
+  }
+});

@@ -1,5 +1,62 @@
 # Original STREAM freeze investigation — 31 October 2026
 
+## Recovery audit — 1 November 2026, source candidate only
+
+Confirmed overlapping-poll defect: the base quota request was coalesced, but the
+aggregate's prerequisite fresh-main verification ran outside that guard. Timer
+and manual refresh could launch competing identity checks in the same lifecycle.
+A delayed failure can invalidate binding and clear live readings after a newer
+check/read succeeded. This is an implementation race, not a proven cause of
+Stefan's field report. The new regression fails on the previous source (two
+identity lookups instead of one).
+
+The candidate coalesces the complete identity-verification/REST operation for
+one lifecycle generation. All callers await the same operation. The pending slot
+clears after failure or success; a later normal poll can reverify the same source.
+A lifecycle check also precedes entering the base poll. A prior generation cannot
+clear a newer pending slot. Changed-main conflicts, startup-unverified blocking,
+control preflights and source identity rules are retained. No new timer, network
+endpoint, battery operation, MQTT reconnect or accounting algorithm is introduced.
+
+Regression covers overlapping refreshes through a lookup failure and subsequent
+same-source recovery: one verification per operation, one quota read on recovery,
+correct unavailable/available state, retained monotonic counters and one recovery.
+The full suite also exercises delayed REST versus newer MQTT fields/counters,
+credential rotation, changed main identity, old lifecycle completions and shared
+MQTT listener/session isolation. Those tests are replay evidence, not hardware
+proof. A persistent initial unverified binding is still intentionally fail-closed;
+this patch does not silently qualify a new main after failed startup verification.
+
+### Diagnostic assessment
+
+The integration support snapshot contains source-binding state (including
+startup_unverified versus identity_changed), bounded failure/recovery counts,
+per-field REST/MQTT receipt ages, freshness and accounting/checkpoint evidence.
+This can distinguish a blocked source from stale applied readings. The detailed
+shared app-MQTT transport diagnostics in Dual CT reports do NOT constitute
+original Developer API MQTT transport evidence. Original diagnostics still cannot
+fully distinguish no broker delivery from a queue blocked before application.
+Do not infer a socket failure from a missing capability receipt. If Stefan still
+freezes on a reviewed updated candidate, first inspect one existing integration
+support snapshot and compare current native versus Homey behaviour; add targeted
+original transport/queue evidence only if the snapshot leaves that boundary
+unresolved. No generic raw capture or repeated restart is justified now.
+
+
+Validation for this candidate: Node 22 committed-lockfile npm ci, all 1,366 tests,
+lint, release:check, git diff --check and pinned Homey CLI 4.5.3 verified validation
+passed. No new remote CI or physical acceptance claimed.
+
+### Acceptance and release boundary
+
+Physical acceptance is still pending on the eventual candidate. Preserve previous
+runtime-specific hardware observations; do not copy their pass flags to this
+changed runtime. Keep separate ES21, ES22, original STREAM, single-phase CT1 and
+community three-phase qualification. No publication/installation or request to
+Stefan is part of this source audit. Test remains 1.11.19/build 86; installed and
+Live were not queried or changed by this work.
+
+
 Publication update: the reviewed fixes are now on Test 1.11.13/build 80, from
 runtime source `8adf1908e0837c7531accdb98fc88161978d740f` with passing exact CI.
 See [current handover](CODEX_HANDOVER.md) for archive and preservation evidence.

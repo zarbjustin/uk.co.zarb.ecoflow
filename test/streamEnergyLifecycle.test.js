@@ -650,3 +650,32 @@ test('startup verification failure is distinguishable from a previously verified
     await assert.rejects(d.flowSetFeedIn(false), /unverified/);
   } finally { await d.onTeardown(); }
 });
+
+test('overlapping original STREAM polls share source verification and recover once without counter loss', async () => {
+  const d = await harness({ chargedWh: 12000, dischargedWh: 34000,
+    chargedRawWh: 1000, dischargedRawWh: 2000, countersAvailable: true });
+  preparePolling(d);
+  const main = 'BK61TEST00000001';
+  let rejectLookup; let lookups = 0; let reads = 0;
+  d.client = { getMainSn: async () => main, getQuotaAll: async () => {
+    reads++; return { accuChgEnergy: 1100, accuDsgEnergy: 2000, powGetBpCms: -200 };
+  } };
+  await d.beforeFirstPoll();
+  const gate = new Promise((_resolve, reject) => { rejectLookup = reject; });
+  d.client.getMainSn = () => { lookups++; return gate; };
+  try {
+    const first = d.poll(); const second = d.poll();
+    assert.equal(lookups, 1, 'timer/manual overlap must not launch competing identity lookups');
+    rejectLookup(new Error('synthetic timeout'));
+    await Promise.all([first, second]);
+    assert.equal(reads, 0); assert.equal(d.getAvailable(), false);
+    assert.equal(d.getReportingDiagnostics().aggregateRecovery.verificationFailures, 1);
+    d.client.getMainSn = async () => { lookups++; return main; };
+    await Promise.all([d.poll(), d.poll()]);
+    assert.equal(lookups, 2); assert.equal(reads, 1);
+    assert.equal(d.getAvailable(), true);
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, 12.1);
+    assert.equal(d.getEnergyDiagnostics().dischargedKWh, 34);
+    assert.equal(d.getReportingDiagnostics().aggregateRecovery.recoveries, 1);
+  } finally { await d.onTeardown(); }
+});

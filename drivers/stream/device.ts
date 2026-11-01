@@ -515,8 +515,27 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
   }
 
+  private aggregatePollPending: { generation: number; promise: Promise<void> } | null = null;
+
   protected async poll(): Promise<void> {
     const generation = this.controlGeneration;
+    if (this.controlStopped || this.isShuttingDown()) return;
+    if (this.aggregatePollPending?.generation === generation) {
+      await this.aggregatePollPending.promise;
+      return;
+    }
+    // Coalesce the identity prerequisite as well as the base quota request.
+    // Competing lookups can otherwise clear a newer successful poll's readings.
+    const pending = { generation, promise: this.pollVerifiedAggregate(generation) };
+    this.aggregatePollPending = pending;
+    try {
+      await pending.promise;
+    } finally {
+      if (this.aggregatePollPending === pending) this.aggregatePollPending = null;
+    }
+  }
+
+  private async pollVerifiedAggregate(generation: number): Promise<void> {
     if (this.controlStopped || this.isShuttingDown()) return;
     if (!this.monitoringEnabled && !this.monitoringRollbackPending) {
       try {
@@ -531,6 +550,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         return;
       }
     }
+    if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) return;
     await super.poll();
   }
 

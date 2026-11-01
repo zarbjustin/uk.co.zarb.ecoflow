@@ -1,5 +1,39 @@
 # Codex cross-machine handover
 
+## Original STREAM overlap recovery candidate — 1 November 2026
+
+Reproduced duplicate main verification across overlapping polls; base quota
+coalescing did not protect the aggregate prerequisite. Coalesce the entire poll
+per lifecycle and fence entry to the base poll. Regression verifies transient
+failure, retry recovery, availability and counters. Not proven as Stefan's cause.
+See [audit and diagnostic limitations](ORIGINAL_STREAM_FREEZE_INVESTIGATION.md).
+Source-only changes; no commit/push, Test/Live change, installation or message.
+Sprint 1 preservation regression and unrelated local AI edits retained.
+Ed's reviewed reply was posted and reopened at public post 85:
+https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/85 .
+Field confirmation of Ed's installed version/device type remains pending.
+
+Validation for this candidate: Node 22 committed-lockfile npm ci, all 1,366 tests,
+lint, release:check, git diff --check and pinned Homey CLI 4.5.3 verified validation
+passed. No new remote CI or physical acceptance claimed.
+
+## Sprint 1: ES22 legacy-runtime mismatch — 1 November 2026
+
+Reviewed the new AC 5000 blank-telemetry report against its diagnostic email:
+user states 1.11.19; diagnostic identifies 1.10.3/build 18 and original STREAM
+pairings. Current source already excludes/quarantines those pairings. No new
+1.11.19 telemetry defect confirmed. Added preservation regression for both real
+legacy drivers; field confirmation remains pending. See
+[review and unsent reply](STREAM_5000_LEGACY_PAIRING_REVIEW.md).
+Correction to the earlier publication checkpoint: Robert's approved 1.11.19
+instructions WERE posted and reopened in Chrome; permanent private post is
+https://community.homey.app/t/dual-ct-error-2/161570/30 . No new response was present
+at the 1 November review. Test/Live/installed unchanged by this sprint.
+
+Validation: Node 22 committed-lockfile npm ci, all 1,365 tests, lint, release:check,
+git diff --check and pinned Homey CLI 4.5.3 verified validation passed.
+Runtime fingerprint remains unchanged; no new field acceptance is claimed.
+
 ## Test 1.11.19 / build 86 verified — 31 October 2026
 
 Diagnostic source `4aeb5c91187bc5c1654562d9caa108dbc2ce3351` pushed; exact CI

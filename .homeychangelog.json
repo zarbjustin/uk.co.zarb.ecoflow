@@ -362,5 +362,10 @@
     "en": "Adds a focused three-stage Dual CT support comparison with bounded message metadata to investigate sparse readings. Preserves counters, source binding and stale-data safeguards.",
     "de": "Ergänzt einen gezielten dreistufigen Dual-CT-Supportvergleich mit begrenzten Nachrichtendaten zur Untersuchung seltener Messwerte. Zähler, Quellenbindung und Aktualitätsprüfungen bleiben erhalten.",
     "nl": "Voegt een gerichte Dual CT-supportvergelijking in drie stappen toe met begrensde berichtmetadata voor onderzoek naar schaarse metingen. Tellers, bronbinding en controles op verouderde gegevens blijven behouden."
+  },
+  "1.11.20": {
+    "en": "Prevents overlapping original STREAM refreshes from competing over source verification. Preserves counters and stale-data safeguards.",
+    "de": "Verhindert konkurrierende Quellenprüfungen bei überlappenden STREAM-Aktualisierungen. Zähler und Aktualitätsprüfungen bleiben erhalten.",
+    "nl": "Voorkomt concurrerende broncontroles bij overlappende STREAM-verversingen. Tellers en controles op verouderde gegevens blijven behouden."
   }
 }
