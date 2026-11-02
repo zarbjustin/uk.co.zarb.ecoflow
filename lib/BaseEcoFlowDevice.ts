@@ -1,6 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
+import { StreamDeliveryDiagnostics } from './streamDeliveryDiagnostics';
 import { EcoFlowApiError, EcoFlowClient } from './EcoFlowClient';
 import { EcoFlowAppApi, getApp } from './appApi';
 import { QuotaHandler, StatusHandler } from './EcoFlowMqtt';
@@ -271,7 +272,14 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     return this.applyChain;
   }
 
+  private deliveryDiagnostics = new StreamDeliveryDiagnostics();
+
+  getDeliveryDiagnostics() {
+    return this.deliveryDiagnostics.evidence();
+  }
+
   async onInit(): Promise<void> {
+    this.deliveryDiagnostics = new StreamDeliveryDiagnostics();
     this.stopping = false;
     const quarantineReason = this.getDeveloperApiQuarantineReason();
     if (quarantineReason) {
@@ -428,17 +436,20 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     newerFields: ReadonlySet<string> = new Set()): Promise<void> {
     if (this.stopping) return Promise.resolve();
     const context = { receivedAt: Date.now(), source };
-    const run = async () => {
-      if (this.developerApiQuarantineReason) return;
+    const diagnostics = this.deliveryDiagnostics;
+    diagnostics.queued(source, context.receivedAt);
+    const run = () => diagnostics.run(source, async () => {
+      if (this.developerApiQuarantineReason) return false;
       let selected = quota;
       if (source === 'rest' && requestedRevision !== this.realtimeRevision) {
         const reconciled = this.reconcileRestQuota(quota, newerFields);
-        if (!reconciled || !Object.keys(reconciled).length) return;
+        if (!reconciled || !Object.keys(reconciled).length) return false;
         selected = reconciled;
       }
       await this.applyQuota(selected, context);
       if (source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
-    };
+      return true;
+    });
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
   }

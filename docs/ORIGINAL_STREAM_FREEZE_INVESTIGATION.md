@@ -1,5 +1,26 @@
 # Original STREAM freeze investigation — 31 October 2026
 
+## Bounded consumer queue diagnostics — 1 November 2026
+
+The separate source candidate now records REST/MQTT callbacks queued, started,
+completed, skipped and failed, pending/running counts, and receipt/start/completion/
+failure ages. Scope is consumer_queue; completionIsReadingAcceptance is false.
+Counts saturate at 65535, storage is fixed, state is session-only, timestamps are
+exported only as relative ages (future/invalid times become unknown). A second
+projection strips arbitrary keys, raw values, identities and exception text.
+Failures still propagate and subsequent queue work recovers. Existing queue-drain
+and field-aware REST/MQTT tests remain authoritative; no change to shutdown,
+reconciliation, counter or freshness semantics is intended.
+
+A queued/pending callback while applied observations stop indicates processing
+backlog. A running count while completions stop indicates an in-flight operation.
+Zero queued callbacks is only absence at the consumer boundary, not proof of
+broker silence. Compare with existing per-field observations and binding states.
+This replaces the earlier queue-evidence gap below, but does not claim broker-level
+transport qualification or identify Stefan's exact failure. Regression blocks
+maintenance ahead of a delivered callback, checks failure/recovery and verifies
+privacy/invalid input projection. No new field capture requested.
+
 ## Recovery audit — 1 November 2026, source candidate only
 
 Confirmed overlapping-poll defect: the base quota request was coalesced, but the
@@ -142,3 +163,6 @@ locally. This is not exact-commit CI or a hardware acceptance claim. Test, Live,
 Mainline and the installed Development app have not been changed. Review the
 candidate before versioning/publishing a further Test build; do not ask the tester
 to restart/re-pair or submit another generic capture as a substitute for diagnosis.
+
+Queue diagnostic validation: 1,368 tests, lint, release:check, diff check and pinned
+Homey verified validation pass locally. Recovery-only CI passed separately.

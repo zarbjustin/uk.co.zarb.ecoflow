@@ -1,5 +1,558 @@
 # Codex cross-machine handover
 
+## 2 November 2026 — GitHub source sync and consolidated handover
+
+Start with [HANDOVER-2026-11-02.md](HANDOVER-2026-11-02.md). It records both active
+branches, the last observed deployed state (18:13 GMT), exact runtime hashes,
+source-only queue diagnostics, fresh offline validation, private continuity and
+the ordered next checks. This sync does not refresh live observations or authorise
+new controls, task resumption, releases or deployments. HomeyPro frozen-backup
+parity remains a known 12-card failure; its evidence and CI gate are unchanged.
+
+## 2 November 2026 18:13 GMT — final cheap/expensive cycle audit and attended two-member repair
+
+Current resident house execution is enabled, unbroken and fault-free at policy
+revision 12. At 18:13 fresh installation readings showed 4% SOC, reserve 0%,
+about -1.04 kW supplying local load and zero grid charging. The native lease was
+completed. One active Homey reserve writer remains: the coordinated execution
+runner; legacy Agile/Dump Load reserve cards are delegates and the observation
+Flow stays disabled. Codex watcher/archive/backup tasks remain paused. Office
+scheduled control remains disabled pending its separate supply confirmation.
+
+The readiness recursion correction described at 17:39 is installed. A second
+forecast correction explicitly uses whole-property house CT1 demand: office net
+imports are not subtracted while office planning is disabled. House-only forecast
+transport no longer depends on the office meter or office Insights. The prior
+separate provisional 0.50 + 0.15 kW missing-hour baselines were explicitly summed
+to 0.65 kW, not described as measured demand. Native settings, charging limits,
+95% house readiness and the office 10% policy were not changed by this migration.
+
+Attended validation exposed additional multi-member issues rather than proving
+the first source update sufficient. Native aggregate SOC can age between changes,
+and a first reserve ACK can precede a delayed older member status reply. Immediate
+watchdog handoff then sees disagreement and stops a valid charge. Controller-only
+restoration also failed to prove both physical members stopped. Earlier failure
+receipts, the restoration fault and intermediate archives are retained privately.
+Only the fault created by this session's attended test was reviewed for recovery;
+its original lease is preserved privately and recorded in maintenance history.
+No historical/manual/office/heating fault was cleared.
+
+The installed private bridge now checks and targets every explicitly enrolled
+physical member separately when a reserve change/restoration is needed, never
+unreviewed devices. It preserves a member's unexpected manual target. Group write
+verification requires sixteen consecutive half-second agreeing polls before
+releasing the command owner to the native watchdog; stale receipts are refreshed
+without replaying SET. The acknowledgement path remains wall-clock bounded at
+45 seconds at loop entry (one bounded read may finish after that deadline).
+Restoration also handles a controller already restored while the
+second member still needs its owned stop. A generic guard-loss stop records its
+reason rather than appearing as an unexplained completed lease.
+
+For private execution only, when aggregate SOC is stale, fresh (<=10 second)
+exact-member SOC readings supply their minimum as an explicitly labelled lower
+bound. This is neither an averaged system SOC nor a replacement Homey capability,
+physical watt tile or Energy reading. The original aggregate SOC age remains
+separate. Missing/stale member SOC, topology, power, native configuration or identity
+still blocks. Signed power/grid-charge receipts remain independently fresh and
+system-scoped, consumed once. This supports planning and charging from empty and
+between sparse nonzero aggregate updates without pretending the aggregate refreshed.
+
+Final attended cycle: sustained approximately 4.9–5.0 kW grid charging, around
+6.1 kW whole-Space import below the retained 7.2 kW ceiling; both fresh member SOCs
+increased. The first fresh pre-charge receipt was 3%/2%, later 4%/3%, and both were
+4% after stopping. Explicit stop restored both reserves to 0%, charging fell to
+zero, native expiry completed, and local-demand discharge resumed. No office
+control command or CT1/feed-in/output/grid-limit write was sent. The scratch
+commission script's original pass flag was false: it took persisted pre-refresh
+SOC as its baseline and missed the last SOC packet at its charging-loop deadline.
+A separate evidence review passed against the first fresh exact-member receipt
+before positive grid charging, sustained power, SOC rise and completed stop/expiry.
+Both the original result and the reviewed derivation remain preserved; do not
+silently relabel the original script as a pass.
+
+Final installed non-clean Development 1.11.20 archive SHA256:
+`33457061b26f8a28ae6e3b23d1ccc6b8ff7a36448ce435df5cdad0bca0414667`.
+Final resident execution source SHA256 (read back exactly):
+`4bcf7ceca1ff7959ab2890b381ee52e1a9f46abc8e81a2854628aaf2c8d48b6b`.
+Validation: 454 HomeyPro tests/security/whitespace, 1392 shared STREAM tests,
+1390 isolated installed-package tests, lint, release-boundary checks and verified
+Homey packaging passed. Public monitoring/CT1/soak acceptance gates remain open;
+this is acceptance of the scoped private control cycle, not blanket app acceptance.
+No Git commit/push, Store publication, clean install or device re-pair occurred.
+Unrelated working-tree changes were preserved and excluded from the runtime package.
+
+Fresh 18:13 conditional 19:00-rollover replay used 168 house-history points, no
+office-history reads, current rates through 3 November 23:00 and projected 0% at
+rollover. Proposed charging: a small 0.15 kWh top-up within 22:30–23:00, full rate
+23:00–00:30, then 13:00–14:00 on 3 November (about 32.04–33.75p/kWh). It forecasts
+12.45 kWh grid charging for GBP 4.08, morning higher-price supply around
+06:30–09:00, and 95% before the 16:00–19:00 peak. The horizon closes with about
+4.47 kWh still stored; its truncated net metric includes wear and does not credit
+that stock, so it is not a full-bill profit/loss result. This replay is conditional,
+not a prematurely committed overnight plan: the live provider rolls at 19:00 and
+replans against actual SOC, ownership and flags. Full overnight delivery and
+billing savings have not yet been observed.
+
+Preservation readback passed: all 15 EcoFlow device definitions, 10 monotonic
+counters, Insights identities, unrelated Flows and native boundaries. House has
+10 kWh installed planning capacity, conservative 4.9 kW charging, owner-confirmed
+7.2 kW shared Space ceiling and 2.5 kW output assumption; house floor 0%, office
+floor 3%, office legacy allowance 2.8 kW remain. Undelivered batteries stay planned.
+Frozen backup and Master cursor hashes remain unchanged; old parity evidence stays
+untouched. Native settings/manual changes continue to take precedence.
+
+## 2 November 2026 17:39 GMT — conflict audit and cheap-to-expensive cycle correction
+
+Read-only live audit found one active Homey reserve writer: the coordinated
+execution runner. The legacy Agile planner/watchdog and Dump Load reserve cards
+are delegates with no competing reserve write. Remaining office feed-in guard
+cards preserve the owner's choice, and the 07:30 daily report returns the
+coordinated-state report while execution is enabled. The observation-only Flow
+remains disabled. No additional referenced or unreferenced HomeyScript reserve
+writer was found. Both native member mode/task/limit receipts remain checked by
+the scoped bridge. This is Homey-visible ownership evidence, not a guarantee
+against future external/manual native-app changes; those still inhibit control.
+
+Physical expensive-period operation verified: after holding the shared reserve
+at 14%, the runner stepped it down to 6% at 17:00 and released to the retained
+0% floor at 17:30. At 17:17 fresh system power was about -2.47 kW (61.73p/kWh
+current tariff); at 17:35 it was about -2.21 kW with 4% system SOC, reserve 0%,
+zero grid charging and no execution/native fault. Homey's Octopus current price
+matched the configured direct Agile feed in the audit. Negative battery flow is
+local-demand supply, not forced grid export; CT1 anti-export remains unchanged.
+
+The offline 19:00-rollover replay exposed a planning defect: taking the maximum
+of readiness stock and later higher-priced demand did not reserve both when that
+demand occurred before the readiness deadline. Additional cheap replenishment
+could then free energy for a lower-priced interval, preventing a profitable
+pre-peak cycle. The house backward recursion now imposes readiness stock AT the
+service boundary, after processing that interval's demand/PV/charge, then carries
+that stock together with earlier higher-price demand through actual replenishment.
+It does not change the owner's 95% readiness target or the office dispatch policy.
+Two regression tests failed before the correction and passed afterward: direct
+stock accounting, and a chronological cheap-charge/expensive-discharge/refill
+cycle that retains 95% readiness and energy conservation. Quantized surplus may
+serve cheaper load only after the more valuable forecast demand is covered.
+
+451 HomeyPro tests, security and whitespace checks passed. Updated execution,
+observation and both existing preview sources were deployed/read back in place;
+execution policy revision is 11. The short source update sent no native reserve
+command and preserved fault/intent history. Current-peak behavior has no readiness
+stock deadline and is unchanged by the correction. No EcoFlow app installation
+was performed in this audit; installed Development 1.11.20 remains the prior
+`de667c56d0faaf3a299bb70525acc79ad9875adecd2c652ea6550e707ee76a16` archive.
+New execution source SHA256:
+`a016c0d2576f2bf0fcc711e743e34cef99ffffbb9632d84e06994c76b2e72dcd`.
+
+Conditional rollover replay, using published rates through 3 November 23:00,
+projected 0% SOC at 19:00 and only demand history completed before actual capture:
+a small 0.15 kWh top-up in 22:30–23:00, full-rate 23:00–00:30, then 13:00–14:00
+on 3 November; prices approximately 32.04–33.75p/kWh. It serves the higher-priced
+06:30–09:00 demand, refills and projects 95% before the 16:00–19:00 peak. About
+12.45 kWh / GBP 4.08 charging includes the extra morning cycle. This is NOT an
+already committed live overnight plan: the resident provider rolls from today's
+remaining peak to tomorrow after 19:00, then replans against actual SOC/ownership.
+The replay assumes no intervening manual/Free/Dump Load/Saving Session change.
+
+Reporting limitation: the 19:00 horizon ends with about 5.46 kWh stored. Its horizon
+net metric (including modeled wear) does NOT credit that retained energy, so neither its negative truncated
+horizon metric nor the charging cost alone is a full-bill profit/loss statement.
+Future-period value and physical billing reconciliation remain unproven. Do not
+present a preview, a target or an ACK as completed overnight delivery/savings.
+
+10 kWh installed house capacity, measured conservative 4.9 kW planning rate,
+owner-confirmed 7.2 kW shared House Space ceiling, 2.5 kW house output assumption,
+house 0% / office 3% minimums and all manual/office safeguards remain. Office
+scheduled control still requires its own supply confirmation. Codex watcher,
+archive and backup tasks remain paused. No new monitor, Store publication, Git
+commit/push, device/Insight/counter change or historical-fault clearance. Full
+night-through-next-peak physical acceptance remains pending. Frozen backup and
+Master watcher cursor hashes are unchanged; the 12 old source-parity gaps remain
+preserved. Latest preservation check passed for all 15 EcoFlow device definitions,
+10 monotonic counters, Insights identities, unrelated Flows and native boundaries.
+
+## 2 November 2026 16:36 GMT — two house units enrolled; shared 7.2 kW ceiling verified
+
+Owner confirmed the newly paired STREAM 5000 is a second physical battery in the
+same EcoFlow House Space, and explicitly confirmed setting Max Power from Grid
+to 7200 W for that whole Space. Both ES21 units are now explicitly enrolled;
+private Homey identities/serials remain outside Git. Planning capacity is 10 kWh
+(two installed 5 kWh units). Undelivered AC 5000/expansion entries stay planned
+and uncounted. Model family/capacity cross-check: https://www.ecoflow.com/uk/stream-series-solar-battery-storage
+
+Adding the unit invalidated the old unit-power scope and the runner's single-
+paired-driver assumption; the prior lease expired safely and released reserve.
+The repair now consumes the existing controller's system SOC and signed system
+flow once, from a private identity-bound installation receipt. It never adds
+unit tiles or averages their SOCs, uses array order as identity, or copies system
+watts into physical tiles/Energy. The existing aggregate and all device identities,
+Insights/counters remain. Public physical-monitoring sign/scope acceptance remains
+separate and open; linked unit watt tiles are not execution evidence.
+
+Enrollment binds both Homey IDs and serials, corroborates their exact live peer
+membership, and checks fresh native configuration on both. Additional/missing/
+changed members, divergent reserves, manual changes on either unit, stale SOC,
+system power or grid-limit fields inhibit control. Group requests and each lease
+carry the exact member list; stale callers and unleased direct group writes are
+rejected. Polling refreshes independently ageing member SOC and max-grid-input
+configuration, even while other packets remain fresh. Native expiry verifies
+both restored reserves and fresh post-stop grid-charge evidence. Solar charging
+alone is not mistaken for excessive grid charging.
+
+The reviewed House Space ceiling is applied ONCE: private gate
+houseSiteChargeKw=7.2 / houseSpaceGridLimitW=7200. The legacy office allowance
+siteChargeKw=2.8 is retained separately. No native grid/output/feed-in/CT1 setting
+was written. Both native input limits still report the owner's 7200 W; shared
+house output/discharge assumption remains the owner's existing 2500 W. The native
+watchdog stops/latches charging if the house battery-charge allowance or whole
+reported Space grid-import ceiling is exceeded. Member manual changes remain
+authoritative during restoration; no generic automatic fault clearing is added.
+
+Attended no-charge reserve probe confirmed one main-controller target reaches
+both units and native expiry restores both. Attended charge test 16:28–16:31
+then showed approximately 5.0 kW combined battery charging, approximately 6.0 kW
+reported total Space import, SOC increases on BOTH reported physical members,
+and verified stop/0% reserve restoration across both with no native fault.
+The conservative measured planning charge rate is 4.9 kW; 7.2 kW is a ceiling,
+not a claimed measured charging rate. Source receipts and every intermediate
+before-state remain ignored/private, including the earlier failed/inhibited starts.
+
+Execution policy revision 10 is enabled, with house grid charging enabled and
+house-only scope retained. House readiness 95% / floor 0%, office readiness 10%
+/ floor 3%, owner feed-in choices and CT1 anti-export are retained. At 16:33 the
+fresh plan held the shared reserve at 14%, scheduled no expensive current charge,
+and retained energy for later peak slots. At 16:40 the fresh installation receipt
+confirmed 14% system SOC, shared reserve 14%, 0 W system battery flow and 0 W
+grid charging, with healthy routine lease renewal and no execution/native fault.
+Preservation targets are capped by the
+lowest fresh member SOC so a hold cannot force the weaker unit to recharge at
+peak prices; the stronger unit may supply its excess above that common target.
+The old one-unit forecast is invalidated. A complete overnight charging/peak
+cycle with both units is still unobserved; do not claim long-term acceptance.
+
+Office scheduled control remains disabled pending its OWN supply-capacity
+confirmation; the house 7200 W confirmation does not approve office resumption.
+Native office minimum-reserve maintenance was observed independently of the
+paused office automation. Do not silently change its native floor or mode.
+Codex watcher/archive/backup tasks remain paused; no duplicate monitor was added.
+
+Installed isolated non-clean Development 1.11.20 archive SHA256:
+`de667c56d0faaf3a299bb70525acc79ad9875adecd2c652ea6550e707ee76a16`.
+Resident execution runner exact readback SHA256:
+`a4ef3da94d8ebf385417899275499264121e296899f9dbf2e2042066d1d651ed`.
+Observation and both existing preview scripts were updated in place to the same
+identity-bound telemetry contract; no new or re-enabled observer Flow was added.
+Unrelated shared diagnostic edits remain preserved and excluded from the archive.
+Validation: 449 HomeyPro tests, 1384 exact isolated-app tests and 1386 shared
+STREAM tests passed, along with lint, release-boundary checks, pinned CLI verified
+validation, HomeyPro security and whitespace checks. General hardware release gates
+and 12 frozen-backup source-parity mismatches remain open/untouched. Preservation
+readback at 16:36 passed for 15 device definitions, 10 monotonic counters, Insights,
+unrelated Flows and native settings outside the explicitly reviewed house gate.
+No Git commit/push, Store publication, re-pairing or counter reset was performed.
+
+## 2 November 2026 15:20 GMT — house-only control dependency repair deployed
+
+This checkpoint supersedes the earlier overnight restoration claims. Actual
+history proves the 03:30–04:00 house charge reached 24%, but an unconditional
+native office-stop check blocked the 04:30 higher target. The native watchdog
+restored house reserve to 0% at 04:36; a new attempt failed the same office check
+at 04:37 and latched execution. House SOC reached 0% around 06:05; later slots
+were missed. The 95% objective was NOT achieved. Planner-only office exclusion
+was insufficient: native command, restoration and freshness paths still depended
+on office. Tests had not covered that complete transition with office excluded.
+
+The repair adds explicit `controlScope: house-only` on the private scoped gate,
+on each native lease and on verified transport receipts. The resident runner
+requests `houseOnly: true` only when office execution is disabled. Scope must
+agree in the app and runner; stale/mismatched callers cannot re-enrol office.
+House-only reads require actual fresh house packets and report officeFresh=false
+/ officeRequired=false. They do not read office hardware or invent office data.
+House-only target changes, lease renewal and expiry do not call office stop/read
+or write office settings. The planner/observer/coordinator also exclude disabled
+office observations, commands and freshness requirements. Active coordinated
+leases cannot be adopted as house-only; transition requires reviewed quiescence.
+Coordinated mode retains existing stop-office-first, verified house no-discharge,
+physical stop, freshness, power-budget and manual-ownership safeguards.
+
+The known 04:37 fault and uncertain intent were archived before explicit review;
+the completed native restoration and current 0%/3% baseline were checked. The old
+intent was NOT replayed. Config is policy revision 7, house-only execution enabled,
+office execution and planner charging disabled. No allowance increase: office
+full-fleet 3.33 kW still exceeds declared 2.8 kW. Owner confirmation of supply
+capacity remains pending before office re-enablement. House native output 2500 W,
+CT1 anti-export, feed-in ownership, modes, limits and manual choices are retained.
+
+Installed isolated non-clean Development 1.11.20 archive SHA256:
+`e0db5e9ae3b4ce2b03f9c5c3d6a27524fcf94d9b589c7b811897c92212a76e17`.
+Resident runner exact readback SHA256:
+`01021823f0d8c46270296cc31cbe5efecf40026f190c10e2b1724d49aaffa138`.
+Unrelated shared diagnostic edits were excluded from the installed archive.
+No Git commit/push, Store publication, re-pairing, new Flow or counter reset.
+
+Attended physical test 15:16–15:19 passed: actual ~2.5 kW charge, SOC 0→1→2%,
+a higher house target accepted, charge power then 0 W at target, and a one-off
+30-second native lease expired restoring house reserve 0%. Office remained 3%
+and no office command was sent. Routine execution resumed at 15:19 with fresh
+forecast: remaining charging to 16:00 projects ~34.1% SOC, ~GBP 0.74 further cost,
+and explicitly reports readiness shortfall. This cannot recover the missed 95%
+target today. At 15:30 the unassisted scheduled target change from 11% to 34%
+was acknowledged and read back, with physical charging continuing at ~2.5 kW,
+SOC 11%, office reserve 3%, and no execution/native fault. This directly exercises
+the higher-target transition that failed overnight. A full scheduled day, future
+peak delivery and general release acceptance remain unproven. Do not turn this
+bounded commissioning and transition proof into a long-term stability claim.
+
+Validation: 441 HomeyPro tests; 1374 tests on the exact isolated installed STREAM
+source; the final shared STREAM tree also passed 1376 tests. Lint, release-boundary checks, Homey CLI 4.5.3 verified validation, HomeyPro
+security and whitespace checks passed. The 12 existing frozen-baseline embedded
+script parity failures remain evidence; none was replaced. Preservation readback
+found 14 device definitions, 10 monotonic counters, Insights and unrelated Flows
+unchanged outside reviewed scope. Private evidence remains ignored; frozen backup
+and Master cursor are preserved. Codex watcher/archive/backup tasks remain paused.
+
+## 2 November 2026 01:47 GMT — office fleet power mismatch; house-only scheduling restored
+
+This checkpoint supersedes the deployment/state claims in earlier entries below.
+The real 01:30 scheduled office start charged all six units and reached about
+3.33 kW, exceeding the configured 2.8 kW shared battery-charge allowance. The
+watchdog correctly requested office reserve 3%; the previous resident runner
+mistook its in-progress native stop for an ownership change and latched a fault.
+The smaller attended subset test did not establish full-fleet power requirements.
+Do not describe the complete house/office installation as stable or accepted yet.
+
+The native stop completed fault-free at approximately 01:34 GMT, with house
+reserve 0%, office reserve 3%, and explicit physical-member noncharging evidence.
+The known owned fault was explicitly reviewed against the exact completed lease
+and current reserves; its full before-state and historical fault were preserved.
+No generic or automatic fault clearing was introduced. The runner now recognises
+an exact owned watchdog stop in progress and sends no new commands until it ends.
+Unknown/manual changes and native stop failures still block execution.
+
+Installed isolated non-clean Development app archive SHA256:
+`7504649e51057f1950ceb4d08eabbbd34ef1d66234c7c5cf620f7f5063fde3e0`.
+Resident runner exact readback SHA256:
+`580be7500846064cd15442b7f3e11d3ce0fcd0cef99dc52de5c35f0fd07ea789`.
+The native maintenance-loss proof allows at most 150 W only with all six exact
+physical members reporting noncharging, net member power <=0, applied readings
+<=90 s old and received after the stop anchor. It also requires three independent
+fresh aggregate/balance receipts over >=6 s, reserve 3%, self-powered mode and no
+alarm. This distinguishes AC conversion/idle draw from active DC battery charge.
+Missing/stale/charging members cannot establish that proof. App-start unavailability
+only defers an already pending stop within its existing ten-minute bound.
+
+Office charging is explicitly disabled pending the owner's confirmation of supply
+capacity: execution `officeControlEnabled=false`, planner office
+`chargingEnabled=false`, policy revision 6. The office plan reports blocked with
+its reason; house planning/control remains independent. Repeated ticks reuse the
+current house plan instead of needlessly fetching forecasts because office was
+intentionally disabled. The 2.8 kW allowance has NOT been raised. The old 2.3 kW
+office native assumption must be corrected before office charging is re-enabled.
+The capacity question is pending; do not infer approval from elapsed time.
+
+House-only execution config and its existing resident Flow are enabled again;
+no new Flow was created. Fresh plan at 01:45 proposes 03:30–04:00,
+04:30–05:00, 10:00–11:30 and 12:30–13:00 charging, about GBP 2.18 estimated
+charging cost, aiming for 95% before peak. These are plans, not delivered energy.
+The earlier bounded house test proved actual charge power and SOC 0% to 1%; the
+next automatic house slot and full daily peak discharge remain unobserved here.
+House minimum 0%, office minimum 3%, office readiness 10%, provisional office
+100 W depletion/150 W demand inputs, no-house-discharge safeguard and native
+watchdog remain. Owner-confirmed house output 2500 W is retained; no native
+output, CT1 anti-export or feed-in setting was written by this repair.
+
+Validation: HomeyPro 437 tests; isolated installed STREAM source 1371 tests;
+shared STREAM tree including preserved unrelated diagnostics 1373 tests. Security
+and whitespace checks pass. Preservation readback at 01:46 found no differences
+outside the explicitly reviewed scope across 14 EcoFlow device definitions,
+10 monotonic counters, Insights identities and unrelated Flows. Private evidence,
+frozen backup and Master watcher cursor stay ignored and preserved. Codex
+watcher/archive/backup tasks stay paused. No commit, push or Store publication.
+General release and physical energy-delivery acceptance gates remain open.
+
+## 2 November 2026 — current deployed reliability build / owner-confirmed output
+
+This is the current checkpoint; preceding repair iterations below are historical.
+Owner confirmed the native house output change to 2500 W was intentional. That
+setting was retained, and planner-only house discharge power updated from 0.8 to
+2.5 kW (policy revision 5). No native grid/output-limit command was sent. House
+readiness remains 95% / minimum 0%, office readiness 10% / minimum 3%, with the
+0.1 kW provisional battery depletion allowance and 150 W office AC demand baseline.
+
+Installed local non-clean Development 1.11.20 archive SHA256:
+`99a15eb82762d0883ed9b774b6aefb72804fb7d8c8acf4ff1249e709b5a5e1de`.
+Resident runner SHA256:
+`440b9980febd738805437ba1b1726f4a155830908a86f08e5e2082ef10e65275`.
+Source remains uncommitted; no Store/Test/Live publication or Mainline merge.
+Unrelated shared diagnostic edits were excluded from the isolated installed app.
+
+Repairs cover verified native-watchdog restoration handoff; bounded delayed stop
+progress while preserving house hold; no new starts during stopping; and a
+no-write native busy response that cannot become a blind command replay or
+permanent transport fault. A physical stop timeout still faults after ten minutes;
+manual changes, unknown telemetry and unrelated faults remain authoritative.
+
+Stop evidence now explicitly scopes the six existing office physical units using
+IDs from the already reviewed office membership; the house/modern aggregate is
+excluded. This is an intentional read-only member binding on the scoped gate.
+All member power receipts must be applied, available and <=90 s old; each must
+show <=5 W charging and fleet net power <=0. Combined with three independent
+aggregate receipts spanning >=6 s, aggregate/grid/load receipts <=5 s old,
+self-powered mode, reserve 3%, SOC >=3%, and <=50 W battery-branch/grid-load
+residual, converter/maintenance draw can be distinguished from active bulk charge
+at high SOC too. Stale/missing/charging members do not establish this evidence.
+Existing direct noncharging/PV balance evidence remains. No historical power is
+relabelled fresh or injected into Energy/counters. The normal house power guard
+remains <=30 s and requires nonnegative flow while office charging is requested.
+
+Validation: 433 HomeyPro tests, 1371 tests against matching isolated deployed-app
+source, and 1373 shared-checkout app tests pass; lint, release boundary checks,
+pinned Homey CLI verified validation, security and whitespace checks pass. This
+includes high-SOC idle-loss regression, invalid/stale/missing/charging member
+rejection, pending/busy no-replay, bounded timeout, exact watchdog-proof handoff,
+and the owner-confirmed 2.5 kW planner input removing the old 800 W bottleneck.
+
+Attended physical evidence from this repair: house ~2.5 kW, SOC 0% to 1%,
++0.023 kWh observed, stop/restoration verified; office ~2.45–2.72 kW and at least
++0.020 kWh observed while house power stayed 0 W, then delayed bulk stop verified.
+A natural native lease expiry at 00:42:14 was recognised by the runner without
+latching a false ownership fault. The final scoped-member build resumed at 01:06,
+with normal automatic cycles subsequently verified. A foreground read-only soak
+is observing the 01:30–02:00 office charging window and its stop; it is not a
+new scheduled Codex task. Full-night and whole-bill savings remain unproven.
+
+Preservation readback: all 14 EcoFlow device identities/definitions/settings,
+Insights identities, 10 sampled monotonic counters and other Flows retained.
+The only scoped-gate addition is the six office read-only member IDs. The output
+limit discrepancy is resolved by the owner's confirmation; remaining native
+mode/tasks/input/SOC/socket boundaries matched. CT1 settings were not commanded.
+Frozen baseline and Master cursor hashes still match their preserved originals.
+Private evidence remains ignored. Codex monitoring tasks were not resumed.
+
+## 2 November 2026 — charging handoff/slow-stop repair installed and commissioned
+
+Owner authorised continued repair, local deployment and attended proof. Previous
+healthy-cycle checks were insufficient: a successful native watchdog restoration
+was mistaken for a manual ownership change, and a 15-second physical office-stop
+window did not cover the measured multi-minute ramp-down.
+
+Runner now accepts only a recent matching completed native lease with exact
+configured device identities, expected/restored reserves and fresh device fields.
+It records the event, never clears a pre-existing fault automatically, and still
+rejects manual/old/faulted mismatches. The app/runner support an explicit stopping
+phase: preserve house hold, reject new starts, wait for physical office stop,
+then restore house. A native busy response guarantees no command was attempted;
+the runner preserves prior ownership and waits without latching or replaying an
+uncertain command. Ten minutes is the bounded maximum before a genuine fault;
+this does not renew a charging lease. Unknown/stale power remains unknown.
+Native BMS maintenance is explicitly distinguished from bulk charge: at reserve
+3% and reported SOC <=4%, three independent fresh samples must show battery draw
+<=50 W and grid-minus-local-load <=50 W in self-powered mode without a reported
+alarm. This permits a small maintenance draw; it does not mean zero AC charging.
+
+Non-clean local Development 1.11.20 patch, archive SHA256
+`b68d9f6248988b7ce2e92298125e7f62057949a54b9a06f7875c7f55ee9aaa43`.
+Runner SHA256
+`440b9980febd738805437ba1b1726f4a155830908a86f08e5e2082ef10e65275`.
+No Store/Test/Live publication or Mainline merge. Built in an isolated copy of
+ce2aaf9 plus this app/test repair, excluding unrelated local diagnostic edits.
+Validation: 432 HomeyPro tests, 1369 isolated deployed-app tests, 1371 shared-app
+checkout tests, lint/release-boundary/pinned CLI verified checks, security and
+whitespace checks passed. General monitoring/energy release gates remain open.
+
+Attended house charge: SOC 0% to 1%, approximately 2.5 kW and +0.023 kWh observed;
+scoped stop/native restoration verified. Further house holding tests reached 2%.
+Office charge: approximately 2.45–2.72 kW, +0.020 kWh counter increment observed,
+with house battery power 0 W throughout office charging. Office reserve restoration
+3% acknowledged before physical ramp-down finished; the old stop check faulted,
+and that evidence was preserved/reviewed. Physical stop was subsequently verified,
+house restored to 0%, and histories retained. Source/state replay was not used as
+physical proof. Both charge and restoration paths were exercised.
+
+Live native-watchdog handoff test: paused only the execution Flow, left the owned
+lease to expire naturally at 00:42:05 GMT, and verified completion at 00:42:14.
+After resuming, the runner at 00:42:19 recognised the exact completion receipt,
+recorded watchdog history, dispatched normally and did not latch an ownership
+fault. The following natural 00:43 run verified healthy. Routine execution is
+active again. House 95%/0% and office 10%/3% policy remain; Codex monitoring tasks
+were not resumed. No claim of a full-night soak or whole-bill savings is made.
+
+Preservation comparison retained 14 EcoFlow device identities/definitions/settings,
+all Insights identities, 10 sampled monotonic counters, other Flows and native scope
+gate. One native telemetry discrepancy remains under investigation: reported house
+maxGridOutputW changed from 800 to 2500 W during tests, while the separate output
+ceiling was already 2500 W. No grid-limit command was sent: source envelope writes
+only reserve field 30. Owner was asked about a native-app change. Do not reset it
+or claim that native limit unchanged; retain planner discharge assumption 0.8 kW.
+Other observed native mode/tasks/input/SOC/socket boundaries matched. Raw before,
+commissioning, stop, native-expiry and post-deploy evidence remain ignored/private.
+
+
+Final no-write busy handling deployed at 00:50–00:52 GMT with the archive/source
+hashes above; first final-build run verified at 00:52:04. All targets/reserves,
+manual-change guards and native stop requirements retained. Current published-price
+plan: office 01:30–02:00, 09:30–10:00, 11:00–11:30, 13:00–13:30 (2.8 kWh,
+£0.947); house 03:30–04:00, 04:30–05:00, 10:00–11:00 (5.0 kWh, £1.673).
+Projected pre-16:00 SOC remains office 10%, house 95%, no readiness shortfall.
+These are forecasts. The native-expiry proof above preceded the final busy-only
+addition; final-build readback/automatic cycles are separate evidence.
+
+## Stefan updated; Ed confirms Live runtime — 1 November 2026
+
+Public post 87: Stefan installed the new version and will report back; sustained
+stability is not yet confirmed. Public post 88: Ed confirms installed 1.10.3 on
+Homey Pro 2023 and no intervening changes, resolving the diagnostic-version
+mismatch. Owner requested instructions; posted as JZ and reopened public post 89:
+https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/89 .
+Instructions: update same app/Homey in place from Test; confirm installed 1.11.20;
+retain legacy devices/history/Flows; use dedicated STREAM 5000 Series Unit with
+EcoFlow app-account pairing (do not duplicate an existing dedicated unit); leave
+battery/MQTT/Energy settings and aggregate Energy pairing unchanged. Old history
+and Flow identities do not transfer automatically to a new monitor. Request one
+private integration support report only if dedicated monitoring remains blank.
+Field telemetry pass remains pending. No app/source publication or local hardware
+change made for these community instructions.
+
+## Existing coordinator resumed and first scheduled run verified — 1 November 2026
+
+Owner explicitly approved re-enabling existing coordinator after the fresh replan
+review. Rechecked the deployed runner SHA256, paused Flow/config, no active
+fault/intent/run lock, completed lease, matching House 0 / Office 3 ownership,
+fresh native fields, self-powered/empty House tasks and manual-hold state.
+Preserved private baseline and enabled only existing execution config and Flow;
+readback confirms policy/app settings unchanged. No manual Flow/runner execution,
+code deployment or replay of the expired pre-16:00 plan. Test/Live unchanged.
+
+First natural scheduled run: plan evaluated 16:02:03 UTC, run 16:02:04,
+verified 16:02:07. At 16:02:19, status hold for higher-value periods, expected and
+actual House reserve 0 / Office 6, available batteries, House idle and Office
+discharging. No fault, outstanding intent or active run lock. Native routine
+lease is active as expected; execution is NO LONGER paused. This is a fresh
+routine preservation hold, not the old 7% intent. Office 10% readiness/depletion
+proposal remains undeployed. One-run readback is not a long soak or proof that
+watchdog unavailability cannot recur. Private receipts retained outside Git.
+
+## Fresh coordinator replan and Stefan update — 1 November 2026
+
+Read-only replan at 15:57 UTC used current installed policy and fresh app field
+receipts. No live Logic/device writes or script execution/deployment. Expected
+ownership House 0 / Office 3; no intent/fault; both execution switches still off.
+Office planned without charge slots; House reports readiness shortfall. The tiny
+pre-16:00 House opportunity cannot restore today's 95% target and must not be
+replayed. Resumption must calculate a new plan at its actual execution time.
+Live runner hash 7641cfcd446302109ad2222080df81f3b0c82171618ca3f4421068c1b2d406a4
+matches the HomeyPro recorded deployed runner; local Office-readiness proposal is
+not deployed. Proposed resumption is in outputs/coordinator-resumption-review-2026-11-01.txt
+outside Git. Existing 2.8 kW site allowance and native-rate/ownership/lease guards
+remain; no policy change proposed. Prior maintenance step 8 requires separate
+fresh replan/resumption review; execution remains paused pending approval.
+
+Owner authorised Stefan update; posted as JZ and reopened permanent public post:
+https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/86 .
+Requests normal-use feedback on Test 1.11.20, preserves devices/capacity/settings,
+and asks time/affected devices/native readings/self-recovery if freezing recurs.
+No new broad raw capture or re-pair request. No installation/publication here.
+
 ## Test 1.11.20 / build 87 verified — 1 November 2026
 
 Owner authorised Test publication of the locally validated recovery-only archive.

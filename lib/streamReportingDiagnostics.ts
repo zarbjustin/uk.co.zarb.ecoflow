@@ -1,5 +1,6 @@
 'use strict';
 
+import { streamDeliverySnapshot } from './streamDeliveryDiagnostics';
 import { mainResolutionSnapshot } from './streamReporterEvidence';
 
 /** Fixed projection: never include quota objects, names, serials or exception text. */
@@ -25,6 +26,10 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
       currentReadings[key] = null;
     }
   }
+  let delivery: Record<string, unknown> | null = null;
+  try {
+    delivery = streamDeliverySnapshot(device.getDeliveryDiagnostics?.(), now);
+  } catch { /* Optional evidence. */ }
   let observations: Record<string, unknown> = {};
   let readAddressMatchesSavedMain: boolean | null = null;
   let lastControlFailure: Record<string, unknown> | null = null;
@@ -79,6 +84,7 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   }
   return {
     currentReadings,
+    delivery,
     aggregateRecovery,
     lastControlFailure,
     mainResolution,

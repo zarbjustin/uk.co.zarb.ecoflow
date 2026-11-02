@@ -49,3 +49,11 @@ remain open; do not weaken their checks to obtain a green release.
 
 For changes, update the current repository handover/status without copying raw
 evidence. Keep handover useful without this machine's Codex memory or REPL state.
+
+## Shared local AI workflow
+
+The owner uses this same canonical checkout from Codex and AnythingLLM. Read
+[`docs/LOCAL_AI_WORKFLOW.md`](docs/LOCAL_AI_WORKFLOW.md) before editing. Acquire
+the shared project editing lease, preserve dirty work, and refresh the local
+knowledge index after updating source/handover. This grants no Homey, release,
+publishing, installation, device-control or external-message authority.

@@ -322,3 +322,43 @@ test('legacy ES22 upgrade preserves both actual driver identities, history and c
     assert.deepStrictEqual(saved, before);
   }
 });
+
+test('original consumer diagnostics distinguish queued delivery, blocked application, failure and recovery without payloads', async () => {
+  const { reportingSnapshot } = require('../.homeybuild/lib/streamReportingDiagnostics.js');
+  const d = new TestDevice('BK31SYNTHETIC0001');
+  let release; let entered;
+  const began = new Promise(resolve => { entered = resolve; });
+  const blocked = d.queueDeviceWork(async () => { entered(); await new Promise(resolve => { release = resolve; }); });
+  await began;
+  let fail = true;
+  d.applyQuota = async () => { if (fail) throw new Error('PRIVATE_PAYLOAD'); };
+  const pending = d.queueQuota({ secret: 'PRIVATE_PAYLOAD' }, 'mqtt');
+  let report = reportingSnapshot(d, Date.now());
+  assert.equal(report.delivery.mqtt.queued, 1);
+  assert.equal(report.delivery.mqtt.pending, 1);
+  assert.equal(report.delivery.mqtt.started, 0);
+  release(); await blocked;
+  await assert.rejects(pending, /PRIVATE_PAYLOAD/);
+  report = reportingSnapshot(d, Date.now());
+  assert.equal(report.delivery.mqtt.pending, 0);
+  assert.equal(report.delivery.mqtt.failed, 1);
+  assert.equal(report.delivery.mqtt.running, 0);
+  fail = false; d.mqttOffline = true;
+  await d.queueQuota({ secret: 'PRIVATE_PAYLOAD' }, 'mqtt');
+  report = reportingSnapshot(d, Date.now());
+  assert.equal(report.delivery.mqtt.completed, 1);
+  assert.equal(report.delivery.completionIsReadingAcceptance, false);
+  assert.ok(!JSON.stringify(report.delivery).includes('PRIVATE_PAYLOAD'));
+  assert.equal(report.delivery.rest.queued, 0);
+});
+
+test('consumer evidence export rejects injected identities, timestamps and invalid counts', () => {
+  const { streamDeliverySnapshot } = require('../.homeybuild/lib/streamDeliveryDiagnostics.js');
+  const report = streamDeliverySnapshot({ mqtt: { queued: 999999, pending: -1, completed: 2,
+    lastQueuedAt: 1000, lastCompletedAt: 5000, secret: 'PRIVATE' }, privateTopic: 'PRIVATE' }, 2000);
+  assert.equal(report.mqtt.queued, 0); assert.equal(report.mqtt.pending, 0);
+  assert.equal(report.mqtt.completed, 2); assert.equal(report.mqtt.lastQueuedAgeSec, 1);
+  assert.equal(report.mqtt.lastCompletedAgeSec, null);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+  assert.ok(!Object.hasOwn(report.mqtt, 'lastQueuedAt'));
+});
