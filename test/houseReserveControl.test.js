@@ -242,9 +242,9 @@ test('house-only refresh requires a fresh house packet without reading unavailab
 function twoMemberHarness(){
  const h=coordinatedHarness(),main=h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0],gate=h.store.houseReserveControl;
  gate.controlScope='house-only';gate.houseMemberDeviceIds=[gate.deviceId,'second'];gate.houseMemberSerials={[gate.deviceId]:gate.serial,second:'ES21SYNTHETIC0002'};
- let first=18,second=18,watts=0,grid=0;const field=value=>({value,stale:false,ageSec:0});
+ let first=18,second=18,watts=0,grid=0;const field=value=>({value,stale:false,ageSec:0});const topologyReceivedAt=Date.now();
  main.getConfigurationDiagnostics=()=>snapshot(true,first);
- main.getTopologyEvidence=()=>({addressSn:gate.serial,peers:[{sn:gate.houseMemberSerials.second,seenAt:Date.now()}],maxReportedRecordCount:2});
+ main.getTopologyEvidence=()=>({addressSn:gate.serial,peers:[{sn:gate.houseMemberSerials.second,seenAt:topologyReceivedAt}],maxReportedRecordCount:2});
  main.getSystemReporterDiagnostics=()=>({socPct:field(25),batteryW:field(watts)});main.getSystemFlowDiagnostics=()=>({fields:{batteryDerivedW:field(watts),gridToBatteryW:field(grid),gridFlowNetW:field(grid)}});
  const unit={getId:()=> 'second',getData:()=>({sn:gate.houseMemberSerials.second}),getAvailable:()=>true,getConfigurationDiagnostics:()=>snapshot(true,second),getReadingDiagnostics:()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:0}}),getCapabilityValue:()=>25};
  h.app.homey.drivers.getDriver=kind=>({getDevices:()=>kind==='stream'?[h.office]:[main,unit]});
@@ -327,4 +327,9 @@ test('group acknowledgement must remain stable after a delayed old member reply 
  const old=Date.now;let now=old();Date.now=()=>now;
  try{const h=twoMemberHarness();let polls=0,reads=0;h.app.homey.setTimeout=fn=>{polls++;now+=500;if(polls===5)h.setSecond(18);queueMicrotask(fn);return 1;};h.app.refreshCoordinatedReadings=async()=>{reads++;h.setSecond(20);return{houseFresh:true};};const r=await h.app.requestCoordinatedReserve(twoBody());assert.equal(r.verified,true);assert.ok(polls>=21);assert.equal(reads,1);assert.deepEqual(h.events,['house:20','second:20']);
  }finally{Date.now=old;}
+});
+
+test('house fixture records peer receipt time before snapshot evaluation across millisecond clock boundaries',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now++;
+ try{const h=twoMemberHarness(),received=h.main.getTopologyEvidence().peers[0].seenAt;assert.equal(h.main.getTopologyEvidence().peers[0].seenAt,received);const r=await h.app.requestCoordinatedReserve(twoBody());assert.equal(r.verified,true);assert.deepEqual(h.events,['house:20','second:20']);}finally{Date.now=old;}
 });

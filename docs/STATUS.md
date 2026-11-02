@@ -1,5 +1,28 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## GitHub CI follow-up — 2 November 2026 22:36 GMT
+
+Both initial source commits were pushed and branch tips verified: HomeyPro
+`997c52e` on `master`, STREAM `4b13c48` on its existing diagnostics branch.
+[HomeyPro CI run 44](https://github.com/zarbjustin/HomeyPro/actions/runs/41537797732)
+passed tests and security, then failed the preserved frozen-backup parity gate.
+Its dependency audit was skipped after that failure; no parity waiver was applied.
+
+[Initial STREAM CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41537800900)
+exposed a timing error in the synthetic house test fixture: its topology getter
+created a new receipt timestamp after the snapshot had sampled its clock, making
+that peer appear to be from the future. This also entered an unconfigured mock
+refresh path. The fixture now captures its receipt timestamp when constructed,
+and a monotonically advancing millisecond-clock regression covers the boundary.
+No production control/freshness check was weakened. Follow-up local validation
+passes **1,393 STREAM tests**, lint and release-boundary checks. Production app
+source and installed runtime hashes are unchanged by this test-only correction.
+The follow-up CI result belongs to the follow-up commit; inspect its Actions run
+rather than treating the initial run or local test pass as an exact-commit CI pass.
+
+The source-sync handover remains the entry point below. Paused tasks, private
+evidence and all Homey settings/Flows remain unchanged by this GitHub work.
+
 ## 2 November 2026 — GitHub source sync and consolidated handover
 
 Start with [HANDOVER-2026-11-02.md](HANDOVER-2026-11-02.md). It records both active
