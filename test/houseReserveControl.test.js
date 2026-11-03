@@ -375,6 +375,36 @@ test('normal staged Office stop retains bounded House restoration authority and 
  assert.equal(h.store.houseReserveLease.expectedPercent,18);
  assert.deepEqual(h.events,['house:20','second:20','office:3','office-stopped','office-stopped','house:18','second:18']);
 });
+test('expiry stop survives watchdog reentry but retains its own deadline and ownership checks',async t=>{
+ let now=Date.now();t.mock.method(Date,'now',()=>now);
+ for(const outcome of ['complete','deadline','ownership']){
+  const h=coordinatedHarness(),g=h.store.houseReserveControl;
+  const house=h.app.homey.drivers.getDriver('stream_5000_unit').getDevices()[0];
+  let value=snapshot(true,20),entered,resume;
+  house.getConfigurationDiagnostics=()=>value;
+  h.app.appMqtt.publishHouseReserve=async()=>{h.events.push('house:18');value=snapshot(true,18);};
+  h.setOffice(22);
+  h.store.houseReserveLease={until:now-1,officeDeviceId:g.officeDeviceId,officeExpectedReserve:22,officeRestoreReserve:3,
+   houseDeviceId:g.deviceId,serial:g.serial,expectedEnabled:true,expectedPercent:20,restoreEnabled:true,restorePercent:18};
+  const started=new Promise(resolve=>{entered=resolve;}),paused=new Promise(resolve=>{resume=resolve;});
+  const write=h.office.flowSetBackupReserve;
+  h.office.flowSetBackupReserve=async(n,options)=>{entered(options);await paused;options.assertActive();await write(n);};
+  const pending=h.app.expireHouseReserveLease(),options=await started;
+  if(outcome==='deadline')now+=45001;
+  if(outcome==='ownership')h.setOffice(55);
+  await h.app.expireHouseReserveLease();
+  if(outcome==='complete'){
+   assert.equal(options.signal.aborted,false);resume();await pending;
+   assert.deepEqual(h.events,['office:3','house:18']);assert.equal(h.store.houseReserveLease.completed,true);
+   assert.equal(h.store.houseReserveLease.fault,undefined);
+  }else{
+   assert.equal(options.signal.aborted,true);
+   await assert.rejects(pending,/cancelled|expired/);resume();
+   assert.deepEqual(h.events,[]);assert.equal(value.values.backupReservePct.value,20);
+   assert.match(h.store.houseReserveLease.fault,/cancelled|expired/);
+  }
+ }
+});
 test('dual read exposes diagnostic house hold without making Office availability a House dependency',async()=>{
  const old=Date.now;let now=old();Date.now=()=>now;
  try{const h=dualInstallationHarness();h.main.getAppliedReadingAt=()=>now;
@@ -392,6 +422,49 @@ test('dual read exposes diagnostic house hold without making Office availability
   h.setPower(2000,2000);r=await h.app.refreshCoordinatedReadings();
   assert.equal(r.house.houseChargingVerified,false);assert.equal(r.house.noDischargeHoldVerified,false);
  }finally{Date.now=old;}
+});
+test('dual read exposes independent signed Office discharge with source age, not control authority',async t=>{
+ let now=Date.now();t.mock.method(Date,'now',()=>now);
+ const h=dualInstallationHarness();
+ h.store.houseReserveControl.powerBudget.nativeChargeBounds.office=null;
+ h.main.getAppliedReadingAt=()=>now;h.app.appMqtt.requestHouseRead=async()=>{};
+ h.app.homey.setTimeout=(fn,ms)=>{if(ms<=1000){now+=1000;queueMicrotask(fn);}return 1;};
+ h.office.getReportingDiagnostics=()=>({aggregateRecovery:{state:'verified_original_main'},
+  observations:{measure_power:{value:-2000,receivedAt:now-2000}}});
+ const r=await h.app.refreshCoordinatedReadings();
+ assert.equal(r.officeFresh,false);assert.equal(r.officePowerBudgetReady,false);
+ assert.deepEqual(r.officeDischarge,{schemaVersion:1,qualified:true,deviceId:'office',
+  capturedAt:new Date(now).toISOString(),batteryW:-2000,powerAgeSec:2,powerAgeUncertaintySec:0});
+ assert.equal(r.settingsWrites,0);assert.deepEqual(h.events,[]);assert.equal(h.store.houseReserveLease,undefined);
+ for(const kind of ['stale','future','missing','unqualified','unavailable','invalid-budget']){
+  h.store.houseReserveControl.powerBudget.maxObservationAgeSec=kind==='invalid-budget'?undefined:5;
+  h.office.getAvailable=()=>kind!=='unavailable';
+  h.office.getReportingDiagnostics=()=>({aggregateRecovery:{state:kind==='unqualified'?'identity_changed':'verified_original_main'},
+   observations:kind==='missing'?{}:{measure_power:{value:0,receivedAt:now+(kind==='future'?1000:kind==='stale'?-6000:0)}}});
+  assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge,null,kind);
+ }
+});
+test('stalled post-write Office read expires without a verified ACK and invokes owned stop',async t=>{
+ let now=Date.now();t.mock.method(Date,'now',()=>now);
+ const h=dualInstallationHarness(),timers=new Map();let sequence=0,entered;
+ h.app.homey.setTimeout=(fn,ms)=>{
+  const id=++sequence;
+  if(ms<=1000){now+=1000;queueMicrotask(fn);}else timers.set(id,{fn,ms});
+  return id;
+ };
+ h.app.homey.clearTimeout=id=>timers.delete(id);
+ const started=new Promise(resolve=>{entered=resolve;});
+ h.office.flowRefresh=async()=>{
+  if(h.office.getCapabilityValue('backup_reserve_soc')===22){entered();return new Promise(()=>{});}
+ };
+ const pending=h.app.requestCoordinatedReserve(dualBody());
+ await started;
+ const deadline=[...timers.values()].at(-1);assert.ok(deadline);
+ now+=deadline.ms;deadline.fn();
+ await assert.rejects(pending,/read deadline expired/);
+ assert.deepEqual(h.events,['office:22','office:3','office-stopped']);
+ assert.equal(h.app.coordinatedReserveBusy,false);
+ assert.equal(h.store.houseReserveLease.completed,true);
 });
 test('property power capturedAt is read time and ageSec is source receipt age',async()=>{
  const old=Date.now;let now=old();Date.now=()=>now;

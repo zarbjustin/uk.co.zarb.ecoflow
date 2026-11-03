@@ -1,5 +1,37 @@
 # Codex cross-machine handover
 
+## Battery integration review follow-up - 3 November 2026
+
+The native endpoint now emits the caller's independent, identity-bound signed
+`officeDischarge` receipt with source age. Missing, stale, future, unavailable
+or unqualified observations stay unknown; this receipt grants no Office control
+authority. Office membership and command-path refresh reads now have deadlines.
+A stalled post-write read expires authority and attempts the owned stop without
+returning a verified acknowledgement.
+
+The independent GPT-6.1 Sol review identified two additional restoration defects.
+The watchdog now distinguishes dispatch from expiry restoration: an already
+expired charging lease cannot cancel its own bounded restoration command.
+Restoration still checks ownership and its separate 45-second deadline.
+The HomeyPro caller now updates only the acknowledged Office component of
+`stopExpected` after a verified staged stop, matching native completion while
+retaining exact House ownership checks. Regression cases cover watchdog reentry,
+restoration timeout/manual mutation, and mismatched completion receipts.
+
+Node 22 validation passes 1,434 native tests, lint, release-boundary checks and
+whitespace checks. The matching local HomeyPro source passes 515 tests and its
+security check. These are source results, not hardware acceptance. The earlier
+`e055672` checkpoint passed GitHub CI; that result does not cover this follow-up.
+HomeyPro working changes remain local and uncommitted.
+
+A fresh read-only Homey connection failed after three local timeouts; no live
+baseline was captured and no installation, restart, setting, Flow or battery
+command was attempted. Deployment/commissioning remain blocked by connectivity,
+fresh preservation evidence and physical power/ownership qualification. Native
+budget schema v1 still lacks qualified Office AC/net-meter receipts, so the caller
+keeps Office execution unavailable. The 7.2 kW per-Space settings and conservative
+7.2 kW incoming commissioning cap remain distinct.
+
 ## Battery repair source synchronization - 3 November 2026
 
 The owner requested synchronization of the current
@@ -22,9 +54,9 @@ authority checks, and separate staged-stop/manual-House-intervention semantics.
 The driver checks authority again at the actual command boundary. These are
 source repairs, not physical acceptance or a claim that integration is finished.
 
-Remaining sprint work includes independent review of the final candidate,
-completing the native `officeDischarge` read receipt expected by the HomeyPro
-caller, and reviewing bounded asynchronous stop/restoration paths. Office
+At this checkpoint, remaining sprint work included independent review,
+the native `officeDischarge` receipt and bounded asynchronous stop/restoration
+paths; see the follow-up above for their newer source status. Office
 control eligibility is separate from read-only discharge evidence. Keep the
 confirmed 7.2 kW per-Space settings distinct from the conservative 7.2 kW
 incoming commissioning budget; do not infer a 14.4 kW property allowance.

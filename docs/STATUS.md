@@ -1,13 +1,27 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 3 November 2026 - native/caller integration and review fixes
+
+Native signed Office discharge receipts and bounded membership/refresh reads
+are implemented. Independent GPT-6.1 Sol review found watchdog self-cancellation
+during expiry stopping and a caller/native staged-stop completion mismatch; both
+have focused regression fixes. Current local checks pass 1,434 native tests,
+lint, release boundaries and whitespace; matching HomeyPro checks pass 515 tests
+and security. The earlier `e055672` source checkpoint passed GitHub CI.
+
+Live Homey could not be reached after three local connection attempts. There is
+no fresh preservation baseline, deployment or hardware signoff. Office schema-v1
+control eligibility and physical commissioning remain blocked. See the latest
+[CODEX_HANDOVER.md](CODEX_HANDOVER.md) section; older counts/statuses are history.
+
 ## 3 November 2026 - battery repair branch synchronization
 
 The owner requested source synchronization on
 `copilot/battery-coordination-20261102`. Exact locked dependencies are recovered
 without downgrades; the native suite passes 1,431 tests. The five safety repairs
-are present in source, with final integration/review still pending; notably the
+were present in source, with integration/review still pending at that checkpoint; the
 HomeyPro caller's independent `officeDischarge` receipt is not yet emitted by
-the native readings endpoint. See the newest
+the native readings endpoint in that older checkpoint. See the newest
 [CODEX_HANDOVER.md](CODEX_HANDOVER.md) section for current boundaries.
 
 This is not deployment or hardware signoff. No Homey/Flow/device mutations,
