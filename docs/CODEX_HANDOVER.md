@@ -1,5 +1,34 @@
 # Codex cross-machine handover
 
+## Remaining sprint preflight - 3 November 2026
+
+The owner requested completion using GPT-6.1 Sol and GPT-6 Astra; requested
+Opus 5.5 was unavailable and was not substituted or claimed. Sol owns the
+HomeyPro source-candidate/parity work; Astra owns native and deployment preflight.
+
+Native runtime commit `a0beca958a648de71342e4c49e57cfb99da0d7e0` passed GitHub
+CI. Its offline Homey CLI 4.5.3 build and `validate --level verified` also pass
+under Node 22. A private 625-file build manifest and candidate archive were
+retained, with no environment configuration files or symlinks in the candidate.
+Archive SHA-256:
+`9280b9ffa48794039dda5da123246e452c88fe645d720bfebea1773c55feb0f1`.
+This archive has **not** been installed.
+
+The new live retry still failed: authenticated Homey discovery succeeded, but
+both advertised local endpoints resolved in DNS and timed out on unauthenticated
+identity probes. No fresh baseline, Homey setting/Flow change or device command
+was made. Restore routable local connectivity before installation or commissioning;
+do not bypass this with blind remote writes or cloud reauthentication.
+
+Office telemetry qualification remains a separate blocker, not a Space-limit
+change. `mapStreamQuota` maps aggregate battery flow from `powGetBpCms` and grid
+power from `powGetSysGrid`; the latter is house-meter scope, not charging-port AC.
+Existing tests explicitly prohibit substituting `gridConnectionPower` or
+`sysGridConnectionPower` for that meter. Neither field name nor battery DC flow
+establishes a qualified Office AC-charging/net-meter contract. Fresh original-main
+identity, six-member membership, meter boundary/sign and AC attribution evidence
+are required before extending the contract or enabling Office execution.
+
 ## Battery integration review follow-up - 3 November 2026
 
 The native endpoint now emits the caller's independent, identity-bound signed

@@ -1,5 +1,16 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 3 November 2026 - remaining sprint deployment preflight
+
+Native `a0beca9` passed exact-commit GitHub CI and offline Homey CLI 4.5.3
+verified-level validation; a private candidate archive/manifest is preserved.
+The renewed local Homey connection and both identity probes still timed out.
+No live baseline or deployment is available. Office AC/net-meter qualification
+cannot be inferred from its DC battery flow or house-meter observation.
+See the newest [CODEX_HANDOVER.md](CODEX_HANDOVER.md) section for candidate
+provenance and the precise remaining evidence gates. Opus 5.5 is unavailable;
+this round uses GPT-6.1 Sol and GPT-6 Astra only.
+
 ## 3 November 2026 - native/caller integration and review fixes
 
 Native signed Office discharge receipts and bounded membership/refresh reads
