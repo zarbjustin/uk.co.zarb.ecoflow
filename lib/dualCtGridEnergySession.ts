@@ -275,11 +275,17 @@ export class DualCtGridEnergySession {
       && (this.lastNow === null || now >= this.lastNow) && dualCtFreshAge(now - previous.receivedAt)
       && now - previous.receivedAt < (this.contract?.freshnessMs ?? 90000);
     if (fresh && previous!.timing === 'device_measurement') fresh = dualCtFreshAge(now - previous!.measuredAt!);
+    let powerObservedAt: number | null = null;
+    if (fresh) {
+      powerObservedAt = previous!.timing === 'device_measurement'
+        ? Math.min(previous!.receivedAt, previous!.measuredAt!) : previous!.receivedAt;
+    }
     return {
       status: this.status,
       projectionNow: now,
       powerFreshUntil: fresh ? Math.min(previous!.receivedAt + (this.contract?.freshnessMs ?? 90000),
         previous!.timing === 'device_measurement' ? previous!.measuredAt! + 90000 : Infinity) : null,
+      powerObservedAt,
       timingBasis: this.contract?.timing || null,
       measurementTimestampKnown: previous?.measuredAt != null,
       totalsBasis: 'derived_from_observed_power',

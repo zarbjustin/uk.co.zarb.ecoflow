@@ -1,5 +1,26 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 3 November 2026 - battery repair branch synchronization
+
+The owner requested source synchronization on
+`copilot/battery-coordination-20261102`. Exact locked dependencies are recovered
+without downgrades; the native suite passes 1,431 tests. The five safety repairs
+are present in source, with final integration/review still pending; notably the
+HomeyPro caller's independent `officeDischarge` receipt is not yet emitted by
+the native readings endpoint. See the newest
+[CODEX_HANDOVER.md](CODEX_HANDOVER.md) section for current boundaries.
+
+This is not deployment or hardware signoff. No Homey/Flow/device mutations,
+store publication, Mainline merge or fault clearance are part of the sync.
+
+## Source-only dual-installation work — 2 November 2026
+
+Uncommitted dual-installation coordination changes are **not deployment-ready**.
+See [CODEX_HANDOVER.md](CODEX_HANDOVER.md) for the private gate contract, offline
+results, provenance differences, unresolved identity recovery, timing limitations,
+and mandatory physical verification. No Homey or device changes were made by
+this source-only work; no hardware acceptance is claimed.
+
 ## GitHub CI follow-up — 2 November 2026 22:36 GMT
 
 Both initial source commits were pushed and branch tips verified: HomeyPro

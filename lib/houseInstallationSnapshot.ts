@@ -5,7 +5,8 @@ import { freshReserveSnapshot } from './houseReserveControl';
 /** Private, explicitly enrolled installation view. Never summed unit power or Energy. */
 export function houseInstallationSnapshot(gate: any, units: any[], now = Date.now()): any {
   const ids = gate?.houseMemberDeviceIds;
-  if (gate?.controlScope !== 'house-only' || !Array.isArray(ids) || ids.length < 2 || ids.length > 16
+  if (!['house-only', 'coordinated-installations'].includes(gate?.controlScope) || !Array.isArray(ids) || ids.length < 2 || ids.length > 16
+    || (gate.controlScope === 'coordinated-installations' && ids.length !== 2)
     || ids.some((id: any) => typeof id !== 'string' || !id) || new Set(ids).size !== ids.length
     || !ids.includes(gate.deviceId)) throw new Error('Explicit house installation membership required');
   if (!gate.houseMemberSerials || Object.keys(gate.houseMemberSerials).length !== ids.length) throw new Error('House physical identity binding required');
@@ -70,11 +71,14 @@ export function houseInstallationSnapshot(gate: any, units: any[], now = Date.no
     socSource: memberLowerBound ? 'minimum-enrolled-member-soc-lower-bound' : 'app_protocol_system_soc',
     systemSocAgeSec: Number.isFinite(reporter.socPct?.ageSec) ? reporter.socPct.ageSec : null,
     noChargeReserveCeilingPercent: Math.floor(Math.min(...memberSoc)),
+    noDischargeReserveFloorPercent: Math.ceil(Math.max(...memberSoc)),
+    memberSocAgeSec: Math.max(...members.map((d: any) => d.getReadingDiagnostics().measure_battery.ageSec)),
     gridChargingEnabled: gate.houseGridChargingEnabled !== false,
     batteryW: reporter.batteryW.value,
     socAgeSec: memberLowerBound ? Math.max(...members.map((d: any) => d.getReadingDiagnostics().measure_battery.ageSec)) : reporter.socPct.ageSec,
     powerAgeSec: reporter.batteryW.ageSec,
     gridImportW: valid(flow?.gridFlowNetW, -100000, 100000) ? Math.max(0, flow.gridFlowNetW.value) : null,
+    gridImportAgeSec: valid(flow?.gridFlowNetW, -100000, 100000) ? flow.gridFlowNetW.ageSec : null,
     gridChargeW: flow.gridToBatteryW.value,
     gridChargeAgeSec: flow.gridToBatteryW.ageSec,
     available: true,

@@ -210,6 +210,14 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     'measure_power.grid': 'stream_unit_power_grid',
   };
 
+  /** Private live identity proof; does not change this unit's saved main. */
+  async getCoordinationMainSn(): Promise<string> {
+    if (!this.client || this.isShuttingDown() || !this.getAvailable()) throw new Error('Office member unavailable');
+    const main = await this.client.getMainSn(this.getData().sn, { fresh: true, signal: AbortSignal.timeout(10000) });
+    if (this.isShuttingDown()) throw new Error('Office member lookup interrupted');
+    return main.toUpperCase();
+  }
+
   protected async onReady(): Promise<void> {
     this.unitComparison = new StreamUnitComparison();
     this.controlGeneration += 1;

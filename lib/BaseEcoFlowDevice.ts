@@ -468,12 +468,13 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   /** All supported STREAM control writes pass through this compatibility gate. */
-  protected async writeQuota(payload: Record<string, any>): Promise<Record<string, any>> {
+  protected async writeQuota(payload: Record<string, any>, options: { signal?: AbortSignal; beforeWrite?: () => void } = {}): Promise<Record<string, any>> {
     const targetSn = typeof payload.sn === 'string' ? payload.sn : undefined;
     this.assertDeveloperApiSupported(targetSn);
     if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
     this.refreshClientCredentials();
-    return this.client.setQuota(payload);
+    options.beforeWrite?.();
+    return this.client.setQuota(payload, options);
   }
 
   protected isShuttingDown(): boolean {
@@ -481,13 +482,13 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   /** Target-specific uncached control readback; failures must propagate. */
-  protected async readControlQuota(sn: string, fields?: string[]): Promise<Record<string, any>> {
+  protected async readControlQuota(sn: string, fields?: string[], signal?: AbortSignal): Promise<Record<string, any>> {
     this.assertDeveloperApiSupported(sn);
     if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
     this.refreshClientCredentials();
     const quota = fields
       ? await this.client.getQuota(sn, fields)
-      : await this.client.getQuotaAll(sn, { fresh: true });
+      : await this.client.getQuotaAll(sn, { fresh: true, ...(signal ? { signal } : {}) });
     if (this.stopping) throw new Error('Device is shutting down; control cancelled.');
     return quota;
   }

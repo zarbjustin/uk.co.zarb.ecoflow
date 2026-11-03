@@ -93,8 +93,8 @@ export class EcoFlowClient {
    * Pass the full payload (e.g. the STREAM cmdFunc-254 envelope or a
    * { sn, cmdCode, params } object for PowerStream).
    */
-  async setQuota(payload: Record<string, any>): Promise<Quota> {
-    return (await this.request('PUT', '/iot-open/sign/device/quota', { body: payload })) as Quota;
+  async setQuota(payload: Record<string, any>, options: { signal?: AbortSignal; beforeWrite?: () => void } = {}): Promise<Quota> {
+    return (await this.request('PUT', '/iot-open/sign/device/quota', { body: payload, ...options })) as Quota;
   }
 
   /** GET /iot-open/sign/certification — MQTT broker credentials. */
@@ -152,7 +152,7 @@ export class EcoFlowClient {
   private async request(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal } = {},
+    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal; beforeWrite?: () => void } = {},
   ): Promise<any> {
     return withRetry(() => this.requestOnce(method, path, opts), {
       // Only idempotent GETs are retried; real API rejections carry a code.
@@ -165,7 +165,7 @@ export class EcoFlowClient {
   private requestOnce(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal } = {},
+    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal; beforeWrite?: () => void } = {},
   ): Promise<any> {
     const isJson = method === 'POST' || method === 'PUT';
     // Per the signing rule: JSON body => sign the body; otherwise sign the query.
@@ -282,6 +282,7 @@ export class EcoFlowClient {
       if (opts.signal?.aborted) abort();
       else {
         try {
+          opts.beforeWrite?.();
           if (payload) req.write(payload);
           req.end();
         } catch (error) {

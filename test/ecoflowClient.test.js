@@ -22,6 +22,29 @@ function response(t, body, statusCode = 200, event) {
   });
 }
 
+test('command authority is checked immediately before writing HTTP body and failures are never retried', async t => {
+ let requests=0,writes=0,ended=0;
+ t.mock.method(https,'request',()=>{
+  requests++;const req=new EventEmitter();
+  req.write=()=>{writes++;};req.end=()=>{ended++;};req.destroy=()=>{};
+  return req;
+ });
+ await assert.rejects(client().setQuota({sn:'BK61SYNTHETIC',params:{}},{beforeWrite:()=>{throw new Error('lease expired');}}),/lease expired/);
+ assert.equal(requests,1);assert.equal(writes,0);assert.equal(ended,0);
+});
+
+test('aborting an outstanding command destroys transport and cannot acknowledge a later response', async t => {
+ const controller=new AbortController();let request,destroyed=0;
+ t.mock.method(https,'request',()=>{
+  request=new EventEmitter();request.write=()=>{};request.end=()=>{};request.destroy=()=>{destroyed++;};
+  return request;
+ });
+ const pending=client().setQuota({sn:'BK61SYNTHETIC',params:{}},{signal:controller.signal});
+ controller.abort();
+ await assert.rejects(pending,/cancelled/);
+ assert.equal(destroyed,1);assert.ok(request);
+});
+
 test('invalid JSON errors never include raw server content', async (t) => {
   response(t, 'PRIVATE-SERVER-CONTENT');
   await assert.rejects(client().requestOnce('GET', '/test'), (e) => {

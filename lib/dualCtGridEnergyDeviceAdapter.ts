@@ -42,6 +42,17 @@ export class DualCtGridEnergyDeviceAdapter {
     return generation === this.generation && this.active && this.runtimeEnabled() === true;
   }
 
+  /** Private, independently aged CT1 observation for an explicitly bound control gate. */
+  coordinationPower(now = Date.now()): { signedImportW: number; observedAt: number } | null {
+    if (!this.current(this.generation)) return null;
+    const view = this.session.view(now);
+    const value = view.candidateCapabilities.measure_power;
+    const at = view.powerObservedAt;
+    if (!Number.isFinite(value) || !Number.isFinite(at) || at! > now || now - at! > 30000
+      || view.powerFreshUntil === null || now >= view.powerFreshUntil) return null;
+    return { signedImportW: value!, observedAt: at! };
+  }
+
   private async guard(generation: number): Promise<boolean> {
     if (this.current(generation)) {
       const view = this.session.view();

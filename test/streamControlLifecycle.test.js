@@ -199,6 +199,45 @@ async function harness() {
   return { device, reads, writes, state };
 }
 
+test('coordinated reserve guard is rechecked after asynchronous main lookup at the actual write boundary', async t => {
+ const h=await harness();const start=Date.now();let now=start,calls=0;
+ t.mock.method(Date,'now',()=>now);
+ h.device.client.getMainSn=async()=>{if(++calls===3)now+=61000;return MAIN;};
+ await assert.rejects(h.device.flowSetBackupReserve(30,{assertActive:()=>{
+  if(now>=start+60000)throw new Error('Coordinated lease expired before transport write');
+ }}),/expired/);
+ assert.equal(h.writes.length,0);
+ await h.device.onTeardown();
+});
+
+test('coordinated reserve does not acknowledge an accepted write after its deadline', async t => {
+ const h=await harness();const start=Date.now();let now=start;
+ t.mock.method(Date,'now',()=>now);
+ const write=h.device.client.setQuota;
+ h.device.client.setQuota=async(payload,options)=>{options.beforeWrite();await write(payload);now+=61000;};
+ await assert.rejects(h.device.flowSetBackupReserve(30,{assertActive:()=>{
+  if(now>=start+60000)throw new Error('Coordinated lease expired before acknowledgement');
+ }}),/expired/);
+ assert.equal(h.writes.length,1);
+ assert.notEqual(h.device.values.backup_reserve_soc,30);
+ await h.device.onTeardown();
+});
+
+test('coordinated cancellation aborts pending transport and disallows late writes', async () => {
+ const h=await harness(),controller=new AbortController();let entered;
+ const started=new Promise(resolve=>{entered=resolve;});
+ h.device.client.setQuota=async(payload,options)=>{
+  entered(options);
+  await new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new Error('cancelled')),{once:true}));
+  h.writes.push(payload);
+ };
+ const pending=h.device.flowSetBackupReserve(30,{signal:controller.signal});
+ const options=await started;controller.abort();
+ await assert.rejects(pending);
+ assert.equal(options.signal.aborted,true);assert.equal(h.writes.length,0);
+ await h.device.onTeardown();
+});
+
 test('all BK Flow controls and capability listeners use fresh main-target readback and normalized values', async () => {
   const h = await harness();
   await h.device.flowSetOperatingMode('tou');
@@ -330,6 +369,17 @@ test('relinked main is used for controls and a later membership change prevents 
  assert.ok(h.writes.length>0);assert.ok(h.writes.every(w=>w.sn===next));assert.ok(h.reads.every(r=>r.sn===next));
  h.writes.length=0;h.device.client.getMainSn=async()=>MAIN;
  await assert.rejects(h.device.flowSetFeedIn(false),/unverified/);assert.equal(h.writes.length,0);
+ await h.device.onTeardown();
+});
+
+test('coordinated office startup refuses a changed main even when new main is configured', async () => {
+ const h=await harness();const next='BK61RELINKMAIN01';
+ h.device.getId=()=> 'office';h.device.homey.settings.get=key=>key==='houseReserveControl'
+  ?{controlScope:'coordinated-installations',officeDeviceId:'office',officeMainSerial:next}:undefined;
+ h.device.client.getMainSn=async()=>next;await h.device.beforeFirstPoll();
+ assert.equal(h.device.getReportingDiagnostics().aggregateRecovery.state,'identity_changed');
+ await assert.rejects(h.device.flowSetBackupReserve(80),/unverified/);
+ assert.equal(h.writes.length,0);assert.equal(h.device.store.energySourceSn,MAIN);
  await h.device.onTeardown();
 });
 

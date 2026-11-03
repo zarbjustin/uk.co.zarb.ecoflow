@@ -57,6 +57,17 @@ test('real session persists CT1-only energy before projection, expires watts and
   await h.adapter.close(); assert.equal(h.caps.get('measure_power'), null);
 });
 
+test('private coordination receipt is source-qualified, independently aged and revoked with runtime', async () => {
+  const h = harness(); await h.adapter.start(); assert.equal(h.adapter.coordinationPower(1000), null);
+  await h.sample(1000, 3600);
+  assert.deepEqual(h.adapter.coordinationPower(1000), { signedImportW: 3600, observedAt: 1000 });
+  assert.equal(h.adapter.coordinationPower(31001), null);
+  await h.sample(32000, 2000);
+  assert.deepEqual(h.adapter.coordinationPower(32000), { signedImportW: 2000, observedAt: 32000 });
+  h.disable(); assert.equal(h.adapter.coordinationPower(32000), null);
+  await h.adapter.close();
+});
+
 test('consent revoked during a slow SDK write prevents remaining projection and clears watts', async () => {
   const h = harness(); await h.adapter.start(); await h.sample(1000, 3600);
   const entered = deferred(); const released = deferred(); const original = h.port.setCapabilityValue;

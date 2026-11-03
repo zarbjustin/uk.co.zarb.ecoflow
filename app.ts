@@ -2,6 +2,7 @@
 
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { isDeepStrictEqual } from 'util';
 import { houseInstallationSnapshot } from './lib/houseInstallationSnapshot';
 import { houseReserveFrame, freshReserveSnapshot, assertHouseNoDischarge } from './lib/houseReserveControl';
 import type { ReportingObservation } from './lib/streamReportingDiagnostics';
@@ -429,6 +430,176 @@ module.exports = class EcoFlowApp extends Homey.App {
   private coordinatedReserveBusy = false;
   private houseReserveTimer: NodeJS.Timeout | null = null;
   private coordinatedReadInFlight: Promise<Record<string, unknown>> | null = null;
+  private coordinatedOfficeReadInFlight: Promise<void> | null = null;
+  private officeCoordinationProof: { binding: string; until: number } | null = null;
+  private officeReserveOperation: { controller: AbortController; deadline: number; assertActive: () => void } | null = null;
+
+  private async writeOwnedOfficeReserve(office: any, percent: number, assertAuthority: () => void, deadline: number): Promise<void> {
+    if (this.officeReserveOperation) throw new Error('Office reserve command already pending');
+    const controller = new AbortController();
+    const operation = { controller, deadline: Math.min(deadline, Date.now() + 45000), assertActive: () => {} };
+    const assertActive = () => {
+      if (controller.signal.aborted || Date.now() >= operation.deadline) throw new Error('Office reserve command deadline expired');
+      assertAuthority();
+    };
+    operation.assertActive = assertActive;
+    this.officeReserveOperation = operation;
+    let timer: NodeJS.Timeout | undefined;
+    let cancelled: (() => void) | undefined;
+    const expired = new Promise<never>((_, reject) => {
+      cancelled = () => reject(new Error('Office reserve command cancelled or deadline expired'));
+      controller.signal.addEventListener('abort', cancelled, { once: true });
+      timer = this.homey.setTimeout(() => {
+        controller.abort();
+      }, Math.max(1, operation.deadline - Date.now()));
+    });
+    try {
+      assertActive();
+      await Promise.race([office.flowSetBackupReserve(percent, { signal: controller.signal, assertActive }), expired]);
+      assertActive();
+    } finally {
+      if (cancelled) controller.signal.removeEventListener('abort', cancelled);
+      controller.abort();
+      if (timer) this.homey.clearTimeout(timer);
+      if (this.officeReserveOperation === operation) this.officeReserveOperation = null;
+    }
+  }
+
+  private officeLeaseOwned(gate: any, reserve: number): boolean {
+    const lease = this.homey.settings.get('houseReserveLease');
+    return !!lease && !lease.completed && !lease.fault && lease.controlScope !== 'house-only'
+      && lease.officeDeviceId === gate.officeDeviceId && lease.officeRestoreReserve === gate.officeRestoreReserve
+      && lease.officeExpectedReserve === reserve
+      && (gate.controlScope !== 'coordinated-installations'
+        || (lease.guardScope === gate.controlScope && lease.guardBinding === JSON.stringify(gate)));
+  }
+
+  private async boundedReserveRead<T>(read: Promise<T>, deadline: number): Promise<T> {
+    let timer: NodeJS.Timeout | undefined;
+    const until = Math.min(deadline, Date.now() + 45000);
+    try {
+      const result = await Promise.race([read, new Promise<never>((_, reject) => {
+        timer = this.homey.setTimeout(() => reject(new Error('Coordinated read deadline expired')), Math.max(1, until - Date.now()));
+      })]);
+      if (Date.now() >= until) throw new Error('Coordinated read deadline expired');
+      return result;
+    } finally {
+      if (timer) this.homey.clearTimeout(timer);
+    }
+  }
+
+  private validateCoordinatedPowerBudget(gate: any, requireOffice = false): any {
+    const budget = gate?.powerBudget;
+    if (budget?.schemaVersion !== 1 || !Number.isFinite(budget.wholePropertyImportLimitKw)
+      || budget.wholePropertyImportLimitKw <= 0 || budget.wholePropertyImportLimitKw > 7.2
+      || budget.wholePropertyImportLimitKw * 1000 !== gate.wholePropertyGridLimitW
+      || (budget.spaceImportLimitKw?.house ?? NaN) * 1000 !== gate.houseSpaceGridLimitW
+      || (budget.spaceImportLimitKw?.office ?? NaN) * 1000 !== gate.officeSpaceGridLimitW
+      || !Number.isFinite(budget.marginKw) || budget.marginKw < 0
+      || budget.marginKw >= budget.wholePropertyImportLimitKw
+      || !Number.isFinite(budget.maxObservationAgeSec) || budget.maxObservationAgeSec <= 0
+      || budget.maxObservationAgeSec > 30
+      || (budget.houseSpaceBoundary !== undefined && !['whole-property', 'house-excluding-office'].includes(budget.houseSpaceBoundary))
+      || (budget.houseSpaceBoundary === 'house-excluding-office' && gate.houseSpaceBoundaryReviewed !== true)
+      || !Number.isFinite(budget.maxPowerSkewSec ?? 1) || (budget.maxPowerSkewSec ?? 1) < 0
+      || (budget.maxPowerSkewSec ?? 1) > 30) throw new Error('Reviewed coordinated power budget required');
+    const validateBound = (bound: any, maxKw: number) => {
+      const commissioned = Date.parse(bound?.commissionedAt);
+      const expires = Date.parse(bound?.validUntil);
+      if (!Number.isFinite(bound?.maxKw) || bound.maxKw <= 0 || bound.maxKw !== maxKw
+        || typeof bound.evidenceId !== 'string' || !bound.evidenceId.trim()
+        || typeof bound.commissionedAt !== 'string' || typeof bound.validUntil !== 'string'
+        || !Number.isFinite(commissioned) || commissioned > Date.now()
+        || !Number.isFinite(expires) || expires <= Date.now() || expires <= commissioned) {
+        throw new Error('Commissioned native charging bound missing or expired');
+      }
+    };
+    validateBound(budget.nativeChargeBounds?.house, gate.houseNativeChargeKw);
+    if (requireOffice) {
+      validateBound(budget.nativeChargeBounds?.office, gate.officeNativeChargeKw);
+      if (gate.officeNativeChargeKw * 1000 > gate.officeSpaceGridLimitW) throw new Error('Office native charge bound exceeds Space limit');
+    }
+    return budget;
+  }
+
+  private coordinatedGridReading(gate: any): { signedImportW: number; observedAt: number } {
+    if (gate?.controlScope !== 'coordinated-installations'
+      || !Number.isFinite(gate.wholePropertyGridLimitW) || gate.wholePropertyGridLimitW <= 0
+      || gate.wholePropertyGridLimitW > 7200 || typeof gate.wholePropertyMeterDeviceId !== 'string'
+      || gate.wholePropertyMeterScopeReviewed !== true
+      || !Number.isFinite(gate.houseSpaceGridLimitW) || gate.houseSpaceGridLimitW <= 0
+      || gate.houseSpaceGridLimitW > 7200 || !Number.isFinite(gate.officeSpaceGridLimitW)
+      || gate.officeSpaceGridLimitW <= 0 || gate.officeSpaceGridLimitW > 7200
+      || !Number.isFinite(gate.houseNativeChargeKw) || gate.houseNativeChargeKw <= 0
+      || gate.houseNativeChargeKw * 1000 > gate.houseSpaceGridLimitW) throw new Error('Reviewed coordinated power boundaries required');
+    const budget = this.validateCoordinatedPowerBudget(gate);
+    const matches = (this.homey.drivers.getDriver('smartmeter_dual_ct_energy').getDevices() as any[])
+      .filter((d) => d.getId() === gate.wholePropertyMeterDeviceId);
+    if (matches.length !== 1 || !matches[0].getAvailable()) throw new Error('Whole-property meter unavailable');
+    const reading = matches[0].getCoordinatedGridReading?.();
+    const now = Date.now();
+    if (!reading || !Number.isFinite(reading.signedImportW) || !Number.isFinite(reading.observedAt)
+      || reading.observedAt > now || now - reading.observedAt > budget.maxObservationAgeSec * 1000) throw new Error('Whole-property meter receipt stale');
+    return reading;
+  }
+
+  private async verifyOfficeCoordinationMembership(office: any, gate: any): Promise<void> {
+    const ids = gate.officeMemberDeviceIds;
+    if (!Array.isArray(ids) || ids.length !== 6 || new Set(ids).size !== ids.length
+      || ids.some((id: any) => typeof id !== 'string' || !id)
+      || !gate.officeMemberSerials || Object.keys(gate.officeMemberSerials).length !== ids.length) {
+      throw new Error('Explicit six-member office binding required');
+    }
+    const units = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
+    const members = ids.map((id: string) => {
+      const matches = units.filter((d) => d.getId() === id);
+      if (matches.length !== 1 || !matches[0].getAvailable()
+        || matches[0].getData()?.sn !== gate.officeMemberSerials[id]
+        || typeof matches[0].getCoordinationMainSn !== 'function') throw new Error('Office member unavailable or changed');
+      const soc = matches[0].getCapabilityValue('measure_battery');
+      const receipt = matches[0].getReadingDiagnostics()?.measure_battery;
+      if (!Number.isFinite(soc) || soc < 0 || soc > 100 || receipt?.stale !== false
+        || receipt.applicationStatus !== 'applied' || !Number.isFinite(receipt.ageSec)
+        || receipt.ageSec < 0 || receipt.ageSec > 300) throw new Error('Office member SOC receipt stale');
+      return matches[0];
+    });
+    const serials = ids.map((id: string) => gate.officeMemberSerials[id]);
+    if (serials.some((sn: any) => typeof sn !== 'string' || !sn) || new Set(serials).size !== ids.length
+      || typeof office?.getCoordinationMainSn !== 'function') throw new Error('Office member identity unverified');
+    const main = await office.getCoordinationMainSn();
+    if (!serials.includes(main) || main !== gate.officeMainSerial) throw new Error('Office main differs from reviewed membership');
+    const resolved = await Promise.all(members.map((member: any) => member.getCoordinationMainSn()));
+    if (resolved.some((sn) => sn !== main)) throw new Error('Office membership topology changed');
+    const binding = {
+      ids, serials, main, officeId: gate.officeDeviceId,
+    };
+    this.officeCoordinationProof = { binding: JSON.stringify(binding), until: Date.now() + 90000 };
+  }
+
+  private officeCoordinationMembershipCurrent(office: any, gate: any): boolean {
+    const proof = this.officeCoordinationProof;
+    if (!proof || proof.until < Date.now()) return false;
+    const ids = gate.officeMemberDeviceIds;
+    if (!Array.isArray(ids) || ids.length !== 6 || !gate.officeMemberSerials) return false;
+    const serials = ids.map((id: string) => gate.officeMemberSerials[id]);
+    const { main } = JSON.parse(proof.binding);
+    const binding = {
+      ids, serials, main, officeId: gate.officeDeviceId,
+    };
+    if (proof.binding !== JSON.stringify(binding)
+      || office?.getReportingDiagnostics?.()?.aggregateRecovery?.state !== 'verified_original_main') return false;
+    const units = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
+    return ids.every((id: string) => {
+      const matches = units.filter((d) => d.getId() === id);
+      if (matches.length !== 1 || !matches[0].getAvailable()
+        || matches[0].getData()?.sn !== gate.officeMemberSerials[id]) return false;
+      const soc = matches[0].getCapabilityValue('measure_battery');
+      const receipt = matches[0].getReadingDiagnostics()?.measure_battery;
+      return Number.isFinite(soc) && soc >= 0 && soc <= 100 && receipt?.stale === false
+        && receipt.applicationStatus === 'applied' && Number.isFinite(receipt.ageSec)
+        && receipt.ageSec >= 0 && receipt.ageSec <= 300;
+    });
+  }
 
   async refreshCoordinatedReadings(): Promise<Record<string, unknown>> {
     if (this.coordinatedReadInFlight) return this.coordinatedReadInFlight;
@@ -443,12 +614,24 @@ module.exports = class EcoFlowApp extends Homey.App {
     const houseOnly = gate?.controlScope === 'house-only';
     const house = (this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[]).find((d) => d.getId() === gate?.deviceId && d.getData()?.sn === gate?.serial);
     const office = (this.homey.drivers.getDriver('stream').getDevices() as any[]).find((d) => d.getId() === gate?.officeDeviceId);
-    if (!house || (!houseOnly && !office) || !/^ES21[A-Z0-9]{4,60}$/.test(gate.serial)) throw new Error('Explicit coordinated read mapping required');
+    const dual = gate?.controlScope === 'coordinated-installations';
+    if (!house || (!houseOnly && !office && !dual) || !/^ES21[A-Z0-9]{4,60}$/.test(gate.serial)) throw new Error('Explicit coordinated read mapping required');
     const installation = Array.isArray(gate.houseMemberDeviceIds);
     const powerKey = 'stream_unit_power_battery_flow';
     const previousPowerAt = house.getAppliedReadingAt(powerKey);
     const requestedAt = Date.now();
-    if (!houseOnly) await office.flowRefresh();
+    let officeRead: Promise<void> | null = null;
+    if (!houseOnly && office) {
+      if (dual && office.getAvailable()) {
+        if (!this.coordinatedOfficeReadInFlight) {
+          const pending: Promise<void> = Promise.resolve().then(() => office.flowRefresh()).catch(() => {}).finally(() => {
+            if (this.coordinatedOfficeReadInFlight === pending) this.coordinatedOfficeReadInFlight = null;
+          });
+          this.coordinatedOfficeReadInFlight = pending;
+        }
+        officeRead = this.coordinatedOfficeReadInFlight;
+      } else if (!dual) await office.flowRefresh();
+    }
     const houseFresh = (): boolean => {
       if (installation) {
         try {
@@ -487,28 +670,80 @@ module.exports = class EcoFlowApp extends Homey.App {
         this.homey.setTimeout(resolve, 500);
       });
     }
-    const observations: Record<string, ReportingObservation> = houseOnly ? {} : office.getReportingDiagnostics()?.observations || {};
-    const officeFresh = ['measure_battery', 'measure_power'].every((key) => {
-      const f = observations[key];
-      return f && Number.isFinite(f.value) && Number.isFinite(f.receivedAt) && f.receivedAt > 0 && f.receivedAt <= Date.now() && Date.now() - f.receivedAt <= 10000;
-    });
+    if (officeRead) {
+      let timeout: NodeJS.Timeout;
+      await Promise.race([officeRead, new Promise<void>((resolve) => {
+        timeout = this.homey.setTimeout(resolve, 1000);
+      })]);
+      this.homey.clearTimeout(timeout!);
+    }
+    const observations: Record<string, ReportingObservation> = houseOnly ? {} : office?.getReportingDiagnostics()?.observations || {};
+    const officeFresh = (!dual || (office?.getAvailable() === true
+      && office?.getReportingDiagnostics()?.aggregateRecovery?.state === 'verified_original_main'))
+      && ['measure_battery', 'measure_power'].every((key) => {
+        const f = observations[key];
+        return f && Number.isFinite(f.value) && Number.isFinite(f.receivedAt) && f.receivedAt > 0 && f.receivedAt <= Date.now() && Date.now() - f.receivedAt <= 10000;
+      });
+    let wholeProperty: { signedImportW: number; observedAt: number } | null = null;
+    if (dual) {
+      try {
+        wholeProperty = this.coordinatedGridReading(gate);
+      } catch {
+        // Missing meter never authorizes control.
+      }
+    }
+    const freshHouse = houseFresh();
+    const houseView = installation && freshHouse
+      ? houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices()) : null;
+    if (dual && houseView) {
+      houseView.noDischargeHoldVerified = this.houseGroupNoDischargeVerified(gate, houseView);
+      houseView.houseChargingVerified = wholeProperty !== null && this.houseChargingAuthorityVerified(gate, houseView);
+    }
+    let officePowerBudgetReady = false;
+    if (dual && wholeProperty) {
+      try {
+        this.validateCoordinatedPowerBudget(gate, true);
+        officePowerBudgetReady = true;
+      } catch {
+        // An uncommissioned Office bound does not block House-only charging.
+      }
+    }
+    const reportedAt = Date.now();
     return {
-      houseFresh: houseFresh(),
-      ...(installation
-        && houseFresh() ? { house: houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices()) } : {}),
+      houseFresh: freshHouse,
+      ...(houseView ? { house: houseView } : {}),
       officeFresh,
       officeRequired: !houseOnly,
+      ...(dual ? {
+        wholeProperty,
+        powerBudgetSupported: wholeProperty !== null,
+        officePowerBudgetReady,
+        powerBudgetReceipt: wholeProperty ? {
+          schemaVersion: 1,
+          wholePropertyImportLimitKw: gate.powerBudget.wholePropertyImportLimitKw,
+          spaceImportLimitKw: { ...gate.powerBudget.spaceImportLimitKw },
+          marginKw: gate.powerBudget.marginKw,
+          maxObservationAgeSec: gate.powerBudget.maxObservationAgeSec,
+          houseMaxKw: gate.powerBudget.nativeChargeBounds.house.maxKw,
+          officeMaxKw: officePowerBudgetReady ? gate.powerBudget.nativeChargeBounds.office.maxKw : null,
+        } : null,
+        propertyPower: wholeProperty ? {
+          capturedAt: new Date(reportedAt).toISOString(),
+          ageSec: (reportedAt - wholeProperty.observedAt) / 1000,
+          propertyImportW: Math.max(0, wholeProperty.signedImportW),
+        } : null,
+      } : {}),
       requested: true,
       checkedAt: Date.now(),
       settingsWrites: 0,
     };
   }
 
-  private officeChargingWatts(office: any): number {
+  private officeChargingWatts(office: any, maxAgeMs = 30000): number {
     const fields = office.getReportingDiagnostics()?.observations;
     const power: ReportingObservation | undefined = fields?.measure_power;
     if (!power || !Number.isFinite(power.value) || !Number.isFinite(power.receivedAt)
-      || power.receivedAt <= 0 || power.receivedAt > Date.now() || Date.now() - power.receivedAt > 30000) throw new Error('Office battery power receipt unavailable');
+      || power.receivedAt <= 0 || power.receivedAt > Date.now() || Date.now() - power.receivedAt > maxAgeMs) throw new Error('Office battery power receipt unavailable');
     return Math.max(0, power.value);
   }
 
@@ -577,14 +812,121 @@ module.exports = class EcoFlowApp extends Homey.App {
     throw new Error('Office grid charging stop unverified; preserve house hold');
   }
 
+  private houseGroupNoDischargeVerified(gate: any, view: any): boolean {
+    const maxAgeSec = gate.powerBudget?.maxObservationAgeSec;
+    if (!Number.isFinite(maxAgeSec) || gate.houseMemberPowerScopeReviewed !== true || view.memberSocAgeSec > 30
+      || !Number.isFinite(view.powerAgeSec) || view.powerAgeSec + 1 > maxAgeSec
+      || view.batteryW < 0 || view.batteryW > 50
+      || view.noDischargeReserveFloorPercent > view.reservePercent
+      || view.reservePercent > view.noChargeReserveCeilingPercent) return false;
+    const units = this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[];
+    return gate.houseMemberDeviceIds.every((id: string) => {
+      const member = units.find((d) => d.getId() === id);
+      const field = member?.getReadingDiagnostics()?.stream_unit_power_battery_flow;
+      const power = member?.getCapabilityValue('stream_unit_power_battery_flow');
+      return field?.stale === false && field.applicationStatus === 'applied' && Number.isFinite(field.ageSec)
+        && field.ageSec >= 0 && field.ageSec + 1 <= maxAgeSec && Number.isFinite(power) && power >= 0;
+    });
+  }
+
+  private houseChargingAuthorityVerified(gate: any, view: any): boolean {
+    const lease = this.homey.settings.get('houseReserveLease');
+    return !!lease && !lease.completed && !lease.fault && lease.until > Date.now()
+      && lease.guardScope === gate.controlScope && lease.guardBinding === JSON.stringify(gate)
+      && lease.houseDeviceId === gate.deviceId && lease.serial === gate.serial
+      && lease.expectedEnabled === true && lease.expectedPercent === view.reservePercent
+      && JSON.stringify(lease.houseMemberDeviceIds) === JSON.stringify(gate.houseMemberDeviceIds)
+      && JSON.stringify(lease.houseMemberSerials) === JSON.stringify(gate.houseMemberSerials)
+      && view.reservePercent > view.noDischargeReserveFloorPercent && view.memberSocAgeSec <= 30
+      && view.powerAgeSec + 1 <= gate.powerBudget.maxObservationAgeSec
+      && view.gridChargeAgeSec + 1 <= gate.powerBudget.maxObservationAgeSec
+      && view.gridChargeW > 50 && view.batteryW > 50;
+  }
+
+  private assertFreshHouseBudgetReceipts(gate: any, view: any): void {
+    const maxAge = gate.powerBudget.maxObservationAgeSec;
+    if ([view.powerAgeSec, view.gridChargeAgeSec, view.gridImportAgeSec].some((age) => !Number.isFinite(age)
+      || age < 0 || age + 1 > maxAge)) throw new Error('House power budget receipt stale');
+  }
+
   private assertCoordinatedPower(house: any, office: any, gate: any): void {
     if (office.getCapabilityValue('operating_mode') !== 'self_powered' || office.getCapabilityValue('alarm_generic') === true) throw new Error('Office mode/fault safety guard');
+    if (gate.controlScope === 'coordinated-installations') {
+      this.validateCoordinatedPowerBudget(gate, true);
+      if (office.getCapabilityValue('alarm_generic') !== false || !this.officeCoordinationMembershipCurrent(office, gate)) throw new Error('Office membership or alarm unverified');
+      const view = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
+      const grid = this.coordinatedGridReading(gate);
+      this.assertFreshHouseBudgetReceipts(gate, view);
+      const fields: Record<string, ReportingObservation> = office.getReportingDiagnostics()?.observations || {};
+      const officeGrid = fields['measure_power.grid'];
+      if (!officeGrid || !Number.isFinite(officeGrid.value) || !Number.isFinite(officeGrid.receivedAt)
+        || officeGrid.receivedAt > Date.now() || Date.now() - officeGrid.receivedAt > gate.powerBudget.maxObservationAgeSec * 1000) throw new Error('Office grid receipt stale');
+      const officePower = this.officeChargingWatts(office, gate.powerBudget.maxObservationAgeSec * 1000);
+      if (Math.max(0, grid.signedImportW) > gate.wholePropertyGridLimitW - gate.powerBudget.marginKw * 1000
+        || view.gridImportW > gate.houseSpaceGridLimitW - gate.powerBudget.marginKw * 1000
+        || Math.max(0, officeGrid.value) > gate.officeSpaceGridLimitW - gate.powerBudget.marginKw * 1000
+        || officePower > gate.officeNativeChargeKw * 1000
+        || view.gridChargeW > gate.houseNativeChargeKw * 1000) throw new Error('Coordinated charging exceeds reviewed boundary');
+      if (!this.houseChargingAuthorityVerified(gate, view) && !this.houseGroupNoDischargeVerified(gate, view)) {
+        throw new Error('House charging or no-discharge hold unverified');
+      }
+      return;
+    }
     assertHouseNoDischarge(house, Math.max(0, (gate.siteChargeKw - gate.officeNativeChargeKw) * 1000));
     const reserve = freshReserveSnapshot(house.getConfigurationDiagnostics());
     if (reserve.percent > house.getCapabilityValue('measure_battery')
       && gate.siteChargeKw < gate.officeNativeChargeKw + gate.houseNativeChargeKw) throw new Error('House charging pending; sequential headroom required');
     const watts = this.officeChargingWatts(office) + Math.max(0, house.getCapabilityValue('stream_unit_power_battery_flow'));
     if (watts > gate.siteChargeKw * 1000) throw new Error('Actual coordinated charging exceeds allowance');
+  }
+
+  private assertCoordinatedStartHeadroom(gate: any, houseTarget: number, officeStarts: boolean, office: any): void {
+    const view = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
+    const grid = this.coordinatedGridReading(gate);
+    this.assertFreshHouseBudgetReceipts(gate, view);
+    const lease = this.homey.settings.get('houseReserveLease');
+    const now = Date.now();
+    const chargeIntervalStart = now - (view.gridChargeAgeSec + 1) * 1000;
+    const chargeIntervalEnd = now - view.gridChargeAgeSec * 1000;
+    const worstSkewMs = Math.max(Math.abs(grid.observedAt - chargeIntervalStart), Math.abs(grid.observedAt - chargeIntervalEnd));
+    const powerIntervalStart = now - (view.powerAgeSec + 1) * 1000;
+    const powerIntervalEnd = now - view.powerAgeSec * 1000;
+    const maxSkewMs = (gate.powerBudget.maxPowerSkewSec ?? 1) * 1000;
+    if (Math.max(Math.abs(grid.observedAt - powerIntervalStart), Math.abs(grid.observedAt - powerIntervalEnd)) > maxSkewMs) {
+      throw new Error('House power and property receipt skew unverified');
+    }
+    const ownedHouseCharging = houseTarget > view.noChargeReserveCeilingPercent && lease
+      && !lease.completed && !lease.fault && lease.until > Date.now() && lease.expectedPercent === view.reservePercent
+      && lease.expectedEnabled === true && lease.houseDeviceId === gate.deviceId && lease.serial === gate.serial
+      && lease.guardScope === 'coordinated-installations' && lease.guardBinding === JSON.stringify(gate)
+      && worstSkewMs <= maxSkewMs
+      && JSON.stringify(lease.houseMemberDeviceIds) === JSON.stringify(gate.houseMemberDeviceIds)
+      && JSON.stringify(lease.houseMemberSerials) === JSON.stringify(gate.houseMemberSerials);
+    const houseExtra = (houseTarget >= view.noChargeReserveCeilingPercent || view.batteryW > 50)
+      ? Math.max(0, gate.houseNativeChargeKw * 1000 - (ownedHouseCharging ? view.gridChargeW : 0)) : 0;
+    const officeExtra = officeStarts ? gate.officeNativeChargeKw * 1000 : 0;
+    const houseOutput = Math.max(0, -view.batteryW);
+    const officeDevice = office ?? (this.homey.drivers.getDriver('stream').getDevices() as any[])
+      .find((d) => d.getId() === gate.officeDeviceId);
+    const officeDiagnostics = officeDevice?.getReportingDiagnostics();
+    const officePower: ReportingObservation | undefined = officeDiagnostics?.observations?.measure_power;
+    if (!officeDevice?.getAvailable() || officeDiagnostics?.aggregateRecovery?.state !== 'verified_original_main'
+      || !officePower || !Number.isFinite(officePower.value) || !Number.isFinite(officePower.receivedAt)
+      || officePower.receivedAt <= 0 || officePower.receivedAt > now
+      || now - officePower.receivedAt > gate.powerBudget.maxObservationAgeSec * 1000
+      || Math.abs(grid.observedAt - officePower.receivedAt) > maxSkewMs) throw new Error('Office discharge receipt unavailable or unaligned');
+    const officeOutput = Math.max(0, -officePower.value);
+    const propertyProspective = Math.max(0, grid.signedImportW) + houseOutput + officeOutput + houseExtra + officeExtra;
+    const houseProspective = view.gridImportW + houseOutput + houseExtra
+      + (gate.powerBudget.houseSpaceBoundary === 'house-excluding-office' ? 0 : officeOutput + officeExtra);
+    if (propertyProspective > gate.wholePropertyGridLimitW - gate.powerBudget.marginKw * 1000
+      || houseProspective > gate.houseSpaceGridLimitW - gate.powerBudget.marginKw * 1000) throw new Error('Insufficient whole-property or house headroom');
+    if (officeStarts) {
+      const gridField: ReportingObservation | undefined = office?.getReportingDiagnostics()?.observations?.['measure_power.grid'];
+      if (!gridField || !Number.isFinite(gridField.value) || !Number.isFinite(gridField.receivedAt)
+        || gridField.receivedAt > Date.now() || Date.now() - gridField.receivedAt > gate.powerBudget.maxObservationAgeSec * 1000
+        || Math.max(0, gridField.value) + officeOutput + officeExtra > gate.officeSpaceGridLimitW - gate.powerBudget.marginKw * 1000) throw new Error('Insufficient office headroom');
+    }
   }
 
   private ensureHouseReserveWatchdog(): void {
@@ -597,6 +939,14 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   private async expireHouseReserveLease(): Promise<void> {
     const lease = this.homey.settings.get('houseReserveLease');
+    if (this.officeReserveOperation) {
+      try {
+        this.officeReserveOperation.assertActive();
+        if (lease?.until <= Date.now()) this.officeReserveOperation.controller.abort();
+      } catch {
+        this.officeReserveOperation.controller.abort();
+      }
+    }
     if (!lease || lease.completed || lease.fault || this.houseReserveBusy || this.coordinatedReserveBusy) return;
     let guardLost = false;
     let houseBudgetExceeded = false;
@@ -605,6 +955,8 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (Array.isArray(lease.houseMemberDeviceIds)) {
       const gate = this.homey.settings.get('houseReserveControl');
       try {
+        if (lease.guardScope === 'coordinated-installations'
+          && JSON.stringify(gate) !== lease.guardBinding) throw new Error('Coordinator configuration changed');
         if (JSON.stringify(gate?.houseMemberDeviceIds) !== JSON.stringify(lease.houseMemberDeviceIds)
           || JSON.stringify(gate?.houseMemberSerials) !== JSON.stringify(lease.houseMemberSerials)) throw new Error('House membership changed');
         let view;
@@ -613,8 +965,22 @@ module.exports = class EcoFlowApp extends Homey.App {
         } catch {
           await this.refreshCoordinatedReadings(); view = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
         }
+        if (gate.controlScope === 'coordinated-installations') {
+          try {
+            this.assertFreshHouseBudgetReceipts(gate, view);
+          } catch {
+            await this.refreshCoordinatedReadings();
+            view = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
+            this.assertFreshHouseBudgetReceipts(gate, view);
+          }
+        }
         houseBudgetExceeded = view.gridChargeW > (gate.houseSiteChargeKw ?? gate.siteChargeKw) * 1000
           || (view.gridChargeW > 50 && Number.isFinite(gate.houseSpaceGridLimitW) && view.gridImportW > gate.houseSpaceGridLimitW);
+        if (gate.controlScope === 'coordinated-installations') {
+          const upstream = this.coordinatedGridReading(gate);
+          houseBudgetExceeded ||= Math.max(0, upstream.signedImportW) > gate.wholePropertyGridLimitW - gate.powerBudget.marginKw * 1000
+            || view.gridImportW > gate.houseSpaceGridLimitW - gate.powerBudget.marginKw * 1000;
+        }
         houseChargeProhibited = gate.houseGridChargingEnabled === false && view.gridChargeW > 50;
         guardLost = houseBudgetExceeded || houseChargeProhibited;
       } catch (error: any) {
@@ -659,9 +1025,17 @@ module.exports = class EcoFlowApp extends Homey.App {
         const reserve = office.getCapabilityValue('backup_reserve_soc');
         if (reserve !== lease.officeRestoreReserve) {
           if (reserve !== lease.officeExpectedReserve) throw new Error('Office manual ownership changed');
-          await office.flowSetBackupReserve(lease.officeRestoreReserve);
+          await this.writeOwnedOfficeReserve(office, lease.officeRestoreReserve, () => {
+            const currentLease = this.homey.settings.get('houseReserveLease');
+            const currentReserve = office.getCapabilityValue('backup_reserve_soc');
+            if (JSON.stringify(currentLease) !== JSON.stringify(lease)
+              || ![lease.officeExpectedReserve, lease.officeRestoreReserve].includes(currentReserve)) throw new Error('Office manual ownership changed');
+          }, Date.now() + 45000);
         }
-        await this.verifyOfficeChargeStopped(office);
+        await this.boundedReserveRead(this.verifyOfficeChargeStopped(office), Date.now() + 45000);
+      } else if (lease.guardScope === 'coordinated-installations'
+        && lease.restorePercent < lease.expectedPercent) {
+        await this.verifyUnownedOfficeStopped(lease.officeDeviceId, lease.officeRestoreReserve);
       }
       const houses = this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[];
       const house = houses.find((d) => d.getId() === lease.houseDeviceId && d.getData()?.sn === lease.serial);
@@ -741,6 +1115,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       let stopFault: string | undefined;
       if (houseBudgetExceeded) stopFault = 'House installation charging exceeds allowance';
       else if (houseChargeProhibited) stopFault = 'House grid charging not enabled';
+      else if (guardLost && lease.guardScope === 'coordinated-installations') stopFault = houseGuardFailure || 'Coordinated safety guard lost';
       this.homey.settings.set('houseReserveLease', {
         ...lease, completed: true, restoredAt: Date.now(), ...(guardLost ? { stopReason: houseGuardFailure || stopFault || 'House guard lost' } : {}), ...(stopFault ? { fault: stopFault } : {}),
       });
@@ -758,25 +1133,66 @@ module.exports = class EcoFlowApp extends Homey.App {
     }
   }
 
+  private assertCoordinatedRuntimeBoundary(gate: any, snapshot: string, leaseUntil: number): void {
+    if (gate.controlScope !== 'coordinated-installations') return;
+    if (JSON.stringify(this.homey.settings.get('houseReserveControl')) !== snapshot) throw new Error('Coordinator configuration changed');
+    if (!Number.isFinite(leaseUntil) || leaseUntil <= Date.now()) throw new Error('Coordinated lease expired before next write or acknowledgement');
+    const grid = this.coordinatedGridReading(gate);
+    if (!grid || Math.max(0, grid.signedImportW) > gate.wholePropertyGridLimitW - gate.powerBudget.marginKw * 1000) {
+      throw new Error('Fresh whole-property grid import must be within allowance');
+    }
+  }
+
+  private async verifyUnownedOfficeStopped(officeId: string, restoreReserve: number): Promise<void> {
+    const offices = this.homey.drivers.getDriver('stream').getDevices() as any[];
+    const office = offices.find((d) => d.getId() === officeId);
+    if (!office?.getAvailable() || office.getCapabilityValue('backup_reserve_soc') !== restoreReserve) {
+      throw new Error('Unowned office stop unverified; preserve house hold');
+    }
+    try {
+      await this.verifyOfficeChargeStopped(office);
+    } catch {
+      throw new Error('Unowned office stop unverified; preserve house hold');
+    }
+  }
+
   /** Single scoped coordinator: stop office before house changes; never touch feed-in/CT. */
   async requestCoordinatedReserve(body: any): Promise<Record<string, unknown>> {
     if (this.coordinatedReserveBusy || this.houseReserveBusy) return { verified: false, busy: true };
     const gate = this.homey.settings.get('houseReserveControl');
+    const isolatedDual = gate?.controlScope === 'coordinated-installations' && body?.houseOnly === true;
     if (gate?.enabled !== true || gate.mode !== 'routine' || gate.expiresAt !== null
-      || !Number.isFinite(gate.siteChargeKw) || !Number.isFinite(gate.officeNativeChargeKw)
+      || !Number.isFinite(gate.siteChargeKw) || gate.siteChargeKw <= 0
       || !Number.isFinite(gate.houseNativeChargeKw) || gate.houseNativeChargeKw <= 0
-      || gate.officeNativeChargeKw <= 0 || gate.siteChargeKw < gate.officeNativeChargeKw) throw new Error('Routine coordinator disabled/unconfigured');
+      || (!isolatedDual && (!Number.isFinite(gate.officeNativeChargeKw)
+        || gate.officeNativeChargeKw <= 0 || gate.siteChargeKw < gate.officeNativeChargeKw))) throw new Error('Routine coordinator disabled/unconfigured');
     const pendingStop = this.homey.settings.get('houseReserveLease');
     if (pendingStop?.stoppingSince && !pendingStop.completed && !pendingStop.fault) return { verified: false, stopping: true, stoppingSince: pendingStop.stoppingSince };
     const targetKeys = ['housePercent', 'expectedHousePercent', 'officePercent', 'expectedOfficePercent', 'leaseUntil',
-      'releaseOfficeOnly', 'houseOnly', 'houseMemberDeviceIds'];
+      'releaseOfficeOnly', 'releaseOfficeReason', 'acquireOfficeLease', 'houseOnly', 'houseMemberDeviceIds', 'tariffDeadline', 'powerBudget', 'controlScope'];
+    const tariffDeadline = typeof body?.tariffDeadline === 'number' ? body.tariffDeadline : Date.parse(body?.tariffDeadline);
     if (!body || Object.keys(body).some((k) => !targetKeys.includes(k))
+      || (body.acquireOfficeLease !== undefined && typeof body.acquireOfficeLease !== 'boolean')
+      || (body.releaseOfficeOnly === true && !['staged-stop', 'manual-house-intervention'].includes(body.releaseOfficeReason))
+      || (body.releaseOfficeOnly !== true && body.releaseOfficeReason !== undefined)
       || !Number.isFinite(body.leaseUntil) || body.leaseUntil <= Date.now() || body.leaseUntil > Date.now() + 180000
+      || (body.tariffDeadline !== undefined && (!Number.isFinite(tariffDeadline) || body.leaseUntil > tariffDeadline))
       || ![body.officePercent, body.expectedOfficePercent].every((v) => Number.isSafeInteger(v) && v >= gate.officeRestoreReserve && v <= 100)) throw new Error('Invalid coordinated target');
     // Scope is explicit on both sides. A disabled office is not a dependency
     // of house control, and cannot be silently re-enrolled by a stale runner.
-    if ((body.houseOnly === true) !== (gate.controlScope === 'house-only')
+    const dual = gate.controlScope === 'coordinated-installations';
+    const requestScope = body.houseOnly === true ? 'house-only' : gate.controlScope;
+    if (body.controlScope !== undefined && body.controlScope !== requestScope) throw new Error('Coordinator control scope mismatch');
+    if (body.powerBudget !== undefined && (!dual || !isDeepStrictEqual(body.powerBudget, gate.powerBudget))) {
+      throw new Error('Requested power budget differs from native configuration');
+    }
+    const gateSnapshot = dual ? JSON.stringify(gate) : '';
+    const assertGateUnchanged = () => {
+      if (dual && JSON.stringify(this.homey.settings.get('houseReserveControl')) !== gateSnapshot) throw new Error('Coordinator configuration changed');
+    };
+    if ((!dual && (body.houseOnly === true) !== (gate.controlScope === 'house-only'))
       || (body.houseOnly !== undefined && typeof body.houseOnly !== 'boolean')) throw new Error('Coordinator control scope mismatch');
+    if (dual && (!Array.isArray(gate.houseMemberDeviceIds) || gate.houseMemberDeviceIds.length !== 2)) throw new Error('Explicit two-member house binding required');
     if (Array.isArray(gate.houseMemberDeviceIds) && JSON.stringify(body.houseMemberDeviceIds) !== JSON.stringify(gate.houseMemberDeviceIds)) throw new Error('Requested house membership changed');
     if (body.houseOnly === true) {
       if (body.releaseOfficeOnly === true || body.officePercent !== gate.officeRestoreReserve
@@ -785,6 +1201,11 @@ module.exports = class EcoFlowApp extends Homey.App {
       if (prior && (!prior.completed || prior.fault) && prior.controlScope !== 'house-only') throw new Error('House-only transition requires reviewed quiescence');
       this.coordinatedReserveBusy = true;
       try {
+        if (dual && body.housePercent < body.expectedHousePercent) {
+          await this.verifyUnownedOfficeStopped(gate.officeDeviceId, gate.officeRestoreReserve);
+          assertGateUnchanged();
+        }
+        if (dual && body.housePercent >= body.expectedHousePercent) this.assertCoordinatedStartHeadroom(gate, body.housePercent, false, null);
         await this.requestHouseReserve({
           deviceId: gate.deviceId,
           enabled: true,
@@ -793,6 +1214,7 @@ module.exports = class EcoFlowApp extends Homey.App {
           expectedPercent: body.expectedHousePercent,
           leaseUntil: body.leaseUntil,
           officeExpectedReserve: gate.officeRestoreReserve,
+          ...(dual ? { houseOnly: true } : {}),
           ...(Array.isArray(gate.houseMemberDeviceIds) ? { houseMemberDeviceIds: body.houseMemberDeviceIds } : {}),
         });
         return {
@@ -802,6 +1224,19 @@ module.exports = class EcoFlowApp extends Homey.App {
           controlScope: 'house-only',
           leaseUntil: body.leaseUntil,
         };
+      } catch (error) {
+        const lease = this.homey.settings.get('houseReserveLease');
+        if (lease && !lease.completed) this.homey.settings.set('houseReserveLease', { ...lease, until: Date.now() - 1 });
+        if (error instanceof Error && error.message === 'Unowned office stop unverified; preserve house hold') {
+          return {
+            verified: false,
+            releaseBlocked: true,
+            interventionRequired: true,
+            reason: error.message,
+            controlScope: 'house-only',
+          };
+        }
+        throw error;
       } finally {
         this.coordinatedReserveBusy = false;
       }
@@ -810,19 +1245,57 @@ module.exports = class EcoFlowApp extends Homey.App {
     const house = (this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[]).find((d) => d.getId() === gate.deviceId && d.getData()?.sn === gate.serial);
     if (!office?.getAvailable() || (body.releaseOfficeOnly !== true && !house?.getAvailable())) throw new Error('Coordinated device unavailable');
     if (office.getCapabilityValue('backup_reserve_soc') !== body.expectedOfficePercent) throw new Error('Office manual ownership changed');
+    const officeOwned = this.officeLeaseOwned(gate, body.expectedOfficePercent);
+    const officeAcquisition = body.acquireOfficeLease === true && gate.officeAcquisitionPolicy === 'restore-reserve-only'
+      && body.expectedOfficePercent === gate.officeRestoreReserve && body.officePercent > gate.officeRestoreReserve;
+    if (body.releaseOfficeOnly !== true && (body.expectedOfficePercent !== gate.officeRestoreReserve || body.officePercent !== gate.officeRestoreReserve)
+      && !officeOwned && !officeAcquisition) throw new Error('Office write requires native ownership or explicit floor acquisition');
+    const assertOfficeAuthority = () => {
+      if (!this.officeLeaseOwned(gate, body.expectedOfficePercent)
+        && !this.officeLeaseOwned(gate, body.officePercent)) throw new Error('Office native ownership changed');
+      const current = office.getCapabilityValue('backup_reserve_soc');
+      if (![body.expectedOfficePercent, body.officePercent, gate.officeRestoreReserve].includes(current)) throw new Error('Office manual ownership changed');
+    };
     if (body.releaseOfficeOnly === true) {
       if (body.officePercent !== gate.officeRestoreReserve) throw new Error('Office-only action must stop charging');
+      const owned = this.homey.settings.get('houseReserveLease');
+      if (!officeOwned) throw new Error('Office-only stop requires matching active ownership');
+      const staged = body.releaseOfficeReason === 'staged-stop';
+      if (staged && (!owned.houseDeviceId || !owned.serial || !Number.isFinite(owned.until))) throw new Error('House restoration authority unavailable');
       this.coordinatedReserveBusy = true;
       try {
-        if (body.expectedOfficePercent !== gate.officeRestoreReserve) await office.flowSetBackupReserve(gate.officeRestoreReserve);
+        if (body.expectedOfficePercent !== gate.officeRestoreReserve) {
+          await this.writeOwnedOfficeReserve(office, gate.officeRestoreReserve, assertOfficeAuthority, body.leaseUntil);
+        }
         await this.verifyOfficeChargeStopped(office);
+        assertOfficeAuthority();
         const lease = this.homey.settings.get('houseReserveLease');
-        if (lease) this.homey.settings.set('houseReserveLease', { ...lease, completed: true, fault: 'Manual house ownership preserved; office stopped' });
+        if (lease) {
+          this.homey.settings.set('houseReserveLease', staged
+            ? { ...lease, officeExpectedReserve: gate.officeRestoreReserve, officeStopped: true }
+            : { ...lease, completed: true, fault: 'Manual house ownership preserved; office stopped' });
+        }
         return {
-          verified: true, officePercent: gate.officeRestoreReserve, housePercent: body.expectedHousePercent, leaseUntil: body.leaseUntil,
+          verified: true,
+          officePercent: gate.officeRestoreReserve,
+          housePercent: body.expectedHousePercent,
+          houseVerified: false,
+          houseOwnershipPreserved: true,
+          leaseUntil: body.leaseUntil,
+          officeStopped: true,
+          houseRestorationPending: staged,
+          ...(dual ? { controlScope: 'coordinated-installations' } : {}),
         };
+      } catch (error) {
+        const lease = this.homey.settings.get('houseReserveLease');
+        if (lease && !lease.completed) this.homey.settings.set('houseReserveLease', { ...lease, until: Date.now() - 1 });
+        throw error;
       } finally {
         this.coordinatedReserveBusy = false;
+        const lease = this.homey.settings.get('houseReserveLease');
+        if (lease && !lease.completed && !lease.fault && lease.until <= Date.now()) {
+          await this.expireHouseReserveLease().catch(() => this.error?.('Coordinated reserve stop requires attention'));
+        }
       }
     }
     const oldHouse = freshReserveSnapshot(house.getConfigurationDiagnostics());
@@ -832,10 +1305,18 @@ module.exports = class EcoFlowApp extends Homey.App {
     try {
       // Existing office action includes its native fleet readback verification.
       if (body.expectedOfficePercent !== gate.officeRestoreReserve && oldHouse.percent !== body.housePercent) {
-        await office.flowSetBackupReserve(gate.officeRestoreReserve);
+        await this.writeOwnedOfficeReserve(office, gate.officeRestoreReserve, assertOfficeAuthority, body.leaseUntil);
       }
       if (oldHouse.percent !== body.housePercent) await this.verifyOfficeChargeStopped(office);
       const officeCurrent = office.getCapabilityValue('backup_reserve_soc');
+      if (dual && body.officePercent > gate.officeRestoreReserve) {
+        await this.verifyOfficeCoordinationMembership(office, gate);
+        assertGateUnchanged();
+        this.assertCoordinatedPower(house, office, gate);
+        this.assertCoordinatedStartHeadroom(gate, body.housePercent, true, office);
+      } else if (dual && body.housePercent >= oldHouse.percent) {
+        this.assertCoordinatedStartHeadroom(gate, body.housePercent, false, office);
+      }
       await this.requestHouseReserve({
         deviceId: gate.deviceId,
         enabled: true,
@@ -844,20 +1325,37 @@ module.exports = class EcoFlowApp extends Homey.App {
         expectedPercent: oldHouse.percent,
         leaseUntil: body.leaseUntil,
         officeExpectedReserve: Math.max(officeCurrent, body.officePercent),
+        ...(dual ? { houseMemberDeviceIds: body.houseMemberDeviceIds } : {}),
       });
       if (body.officePercent > gate.officeRestoreReserve) {
         await office.flowRefresh();
+        if (dual) await this.verifyOfficeCoordinationMembership(office, gate);
+        assertGateUnchanged();
         this.assertCoordinatedPower(house, office, gate);
+        if (dual) this.assertCoordinatedStartHeadroom(gate, body.housePercent, true, office);
       }
-      if (office.getCapabilityValue('backup_reserve_soc') !== body.officePercent) await office.flowSetBackupReserve(body.officePercent);
+      this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
+      if (office.getCapabilityValue('backup_reserve_soc') !== officeCurrent) throw new Error('Office manual ownership changed');
+      if (office.getCapabilityValue('backup_reserve_soc') !== body.officePercent) {
+        await this.writeOwnedOfficeReserve(office, body.officePercent, () => {
+          this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
+          assertOfficeAuthority();
+        }, body.leaseUntil);
+      }
       if (body.officePercent > gate.officeRestoreReserve) {
         await office.flowRefresh();
+        assertGateUnchanged();
         this.assertCoordinatedPower(house, office, gate);
       }
       const lease = this.homey.settings.get('houseReserveLease');
+      this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
       this.homey.settings.set('houseReserveLease', { ...lease, officeExpectedReserve: body.officePercent });
       return {
-        verified: true, housePercent: body.housePercent, officePercent: body.officePercent, leaseUntil: body.leaseUntil,
+        verified: true,
+        housePercent: body.housePercent,
+        officePercent: body.officePercent,
+        leaseUntil: body.leaseUntil,
+        ...(dual ? { controlScope: 'coordinated-installations' } : {}),
       };
     } catch (error: any) {
       if (error.message === 'Office grid charging stop unverified; preserve house hold') {
@@ -874,6 +1372,10 @@ module.exports = class EcoFlowApp extends Homey.App {
       throw error;
     } finally {
       this.coordinatedReserveBusy = false;
+      const lease = this.homey.settings.get('houseReserveLease');
+      if (lease && !lease.completed && !lease.fault && lease.until <= Date.now()) {
+        await this.expireHouseReserveLease().catch(() => this.error?.('Coordinated reserve stop requires attention'));
+      }
     }
   }
 
@@ -882,11 +1384,15 @@ module.exports = class EcoFlowApp extends Homey.App {
     this.houseReserveBusy = true;
     try {
       const gate = this.homey.settings.get('houseReserveControl');
+      const gateSnapshot = JSON.stringify(gate);
       if (gate?.enabled !== true || (gate.mode !== 'routine' && (!Number.isFinite(gate.expiresAt) || gate.expiresAt <= Date.now()))
         || (gate.mode === 'routine' && gate.expiresAt !== null)
         || !Number.isSafeInteger(gate.minPercent) || !Number.isSafeInteger(gate.maxPercent)
         || gate.minPercent < 0 || gate.maxPercent > 100 || gate.minPercent > gate.maxPercent) throw new Error('House reserve bridge disabled/expired');
-      if (!body || Object.keys(body).some((k) => !['deviceId', 'enabled', 'percent', 'expectedEnabled', 'expectedPercent', 'leaseUntil', 'officeExpectedReserve', 'houseMemberDeviceIds'].includes(k))
+      if (gate.controlScope === 'coordinated-installations' && !this.coordinatedReserveBusy) throw new Error('Dual-scope reserve requires coordinated owner');
+      const requestKeys = ['deviceId', 'enabled', 'percent', 'expectedEnabled', 'expectedPercent', 'leaseUntil',
+        'officeExpectedReserve', 'houseMemberDeviceIds', 'houseOnly'];
+      if (!body || Object.keys(body).some((k) => !requestKeys.includes(k))
         || body.deviceId !== gate.deviceId || typeof body.enabled !== 'boolean'
         || !Number.isSafeInteger(body.percent) || body.percent < gate.minPercent || body.percent > gate.maxPercent) throw new Error('House reserve scope/target rejected');
       if (Array.isArray(gate.houseMemberDeviceIds)
@@ -906,6 +1412,10 @@ module.exports = class EcoFlowApp extends Homey.App {
           || !Number.isSafeInteger(gate.restorePercent) || gate.restorePercent < 0 || gate.restorePercent > 100
           || !Number.isSafeInteger(gate.officeRestoreReserve) || gate.officeRestoreReserve < 3 || gate.officeRestoreReserve > 100) throw new Error('Invalid coordinated reserve lease');
         const previousLease = this.homey.settings.get('houseReserveLease');
+        if (previousLease && !previousLease.completed && previousLease.guardScope === 'coordinated-installations'
+          && previousLease.guardBinding !== gateSnapshot) throw new Error('Coordinator configuration changed during active lease');
+        if (body.houseOnly !== undefined && (body.houseOnly !== true || gate.controlScope !== 'coordinated-installations')) throw new Error('House-only lease scope invalid');
+        const leaseHouseOnly = gate.controlScope === 'house-only' || body.houseOnly === true;
         if (Array.isArray(gate.houseMemberDeviceIds)) {
           const view = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
           if (gate.houseGridChargingEnabled === false && body.percent > view.noChargeReserveCeilingPercent) throw new Error('House grid charging disabled pending power confirmation');
@@ -914,13 +1424,19 @@ module.exports = class EcoFlowApp extends Homey.App {
             && !previousLease.completed
             && JSON.stringify(previousLease.houseMemberDeviceIds) !== JSON.stringify(gate.houseMemberDeviceIds))) throw new Error('House installation ownership changed');
         }
-        if (gate.controlScope === 'house-only' && (body.officeExpectedReserve !== gate.officeRestoreReserve
+        if (leaseHouseOnly && (body.officeExpectedReserve !== gate.officeRestoreReserve
           || (previousLease && !previousLease.completed && previousLease.controlScope !== 'house-only'))) throw new Error('House-only transition requires reviewed quiescence');
+        if (gate.controlScope === 'coordinated-installations' && !leaseHouseOnly
+          && previousLease && !previousLease.completed && previousLease.controlScope !== 'coordinated-installations') throw new Error('Coordinated transition requires reviewed quiescence');
         if (previousLease?.fault) throw new Error('Prior coordinated reserve fault requires review');
+        let controlScope = {};
+        if (leaseHouseOnly) controlScope = { controlScope: 'house-only' };
+        else if (gate.controlScope === 'coordinated-installations') controlScope = { controlScope: gate.controlScope };
         this.homey.settings.set('houseReserveLease', {
           until: body.leaseUntil,
           ...(Array.isArray(gate.houseMemberDeviceIds) ? { houseMemberDeviceIds: gate.houseMemberDeviceIds.slice(), houseMemberSerials: { ...gate.houseMemberSerials } } : {}),
-          ...(gate.controlScope === 'house-only' ? { controlScope: 'house-only' } : {}),
+          ...(gate.controlScope === 'coordinated-installations' ? { guardScope: gate.controlScope, guardBinding: gateSnapshot } : {}),
+          ...controlScope,
           houseDeviceId: gate.deviceId,
           serial: gate.serial,
           officeDeviceId: gate.officeDeviceId,
@@ -950,6 +1466,7 @@ module.exports = class EcoFlowApp extends Homey.App {
         if (!((own.enabled === body.expectedEnabled && own.percent === body.expectedPercent)
           || (own.enabled === body.enabled && own.percent === body.percent))) throw new Error('House member manual ownership changed');
         if (own.enabled !== body.enabled || own.percent !== body.percent) {
+          this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
           await mqtt.publishHouseReserve(sn, houseReserveFrame(sn, body.enabled, body.percent, ((Date.now() + targets.indexOf(id)) & 0x7fffffff) || 1));
         }
       }
@@ -958,6 +1475,7 @@ module.exports = class EcoFlowApp extends Homey.App {
         await new Promise<void>((resolve) => {
           this.homey.setTimeout(resolve, 500);
         });
+        this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
         const after = read();
         if (after.enabled !== body.enabled || after.percent !== body.percent) stableMemberPasses = 0;
         if (after.enabled === body.enabled && after.percent === body.percent && (before.enabled === body.enabled || after.enabledAgeSec <= (Date.now() - started) / 1000 + 1)

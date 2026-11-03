@@ -6,7 +6,7 @@ try { Module._load = function load(request, ...args) { if (request === 'homey') 
 const snapshot = (enabled = true, percent = 18) => ({ values: { maxGridInputW: { value: 7200, ageSec: 0, stale: false }, backupReserveEnabled: { value: enabled, ageSec: 0, stale: false }, backupReservePct: { value: percent, ageSec: 0, stale: false }, mode: { value: 'self_powered', ageSec: 0, stale: false }, tasks: { value: [], ageSec: 0, stale: false } } });
 function harness() {
  const app = new App(); let value = snapshot(); const gate = { enabled: true, expiresAt: Date.now() + 60000, deviceId: 'synthetic-house', serial: 'ES21SYNTHETIC0001', minPercent: 3, maxPercent: 100 }; let publishes = 0;
- app.homey = { settings: { get: () => gate }, drivers: { getDriver: () => ({ getDevices: () => [{ getId: () => gate.deviceId, getData: () => ({ sn: gate.serial }), getAvailable: () => true, getConfigurationDiagnostics: () => value }] }) }, setTimeout: fn => { queueMicrotask(fn); return 1; } };
+ app.homey = { settings: { get: () => gate }, drivers: { getDriver: () => ({ getDevices: () => [{ getId: () => gate.deviceId, getData: () => ({ sn: gate.serial }), getAvailable: () => true, getConfigurationDiagnostics: () => value }] }) }, setTimeout: (fn, ms) => { if (ms <= 1000) queueMicrotask(fn); return 1; }, clearTimeout: () => {} };
  app.appMqtt = { connected: true, publishHouseReserve: async () => { publishes++; value = snapshot(true, 17); } };
  return { app, gate, setValue: v => { value = v; }, publishes: () => publishes };
 }
@@ -67,7 +67,7 @@ test('loss of house hold stops owned office before the unexpired lease ends', as
 });
 function coordinatedHarness() {
  const h = harness(); let reserve = 3; let power = 0; let houseValue = snapshot(); const events = [];
- const store = { houseReserveControl: { ...h.gate, mode: 'routine', expiresAt: null, officeDeviceId: 'office', restoreEnabled: true, restorePercent: 18, officeRestoreReserve: 3, siteChargeKw: 2.8, houseNativeChargeKw: 2.5, officeNativeChargeKw: 2.3 } };
+ const store = { houseReserveControl: { ...h.gate, officeAcquisitionPolicy: 'restore-reserve-only', mode: 'routine', expiresAt: null, officeDeviceId: 'office', restoreEnabled: true, restorePercent: 18, officeRestoreReserve: 3, siteChargeKw: 2.8, houseNativeChargeKw: 2.5, officeNativeChargeKw: 2.3 } };
  const office = { getId: () => 'office', getAvailable: () => true, getCapabilityValue: key => key === 'operating_mode' ? 'self_powered' : key === 'alarm_generic' ? false : reserve, flowRefresh: async () => {}, getReportingDiagnostics: () => ({ observations: { measure_power: { value: -1, receivedAt: Date.now(), source: 'rest' } } }), flowSetBackupReserve: async n => { events.push('office:' + n); reserve = n; } };
  const house = { getId: () => h.gate.deviceId, getData: () => ({ sn: h.gate.serial }), getAvailable: () => true, getConfigurationDiagnostics: () => houseValue, getReadingDiagnostics: () => Object.fromEntries(['measure_battery', 'stream_unit_power_battery_flow'].map(k => [k, { ageSec: 0, stale: false, applicationStatus: 'applied' }])), getCapabilityValue: k => k === 'measure_battery' ? 18 : power };
  h.app.homey.settings = { get: key => store[key], set: (key, val) => { store[key] = val; } }; h.app.homey.setInterval = () => 1;
@@ -77,16 +77,16 @@ function coordinatedHarness() {
 }
 test('coordinated endpoint starts office only at verified house hold with a native lease', async () => {
  const h = coordinatedHarness();
- const body = { housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 };
+ const body = { acquireOfficeLease: true, housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 };
  const r = await h.app.requestCoordinatedReserve(body); assert.equal(r.verified, true); assert.deepEqual(h.events, ['office:22']); assert.equal(h.store.houseReserveLease.officeExpectedReserve, 22);
 });
 test('coordinated start refuses insufficient headroom before sending an office command', async () => {
  const h = coordinatedHarness(); h.setPower(2500);
- await assert.rejects(h.app.requestCoordinatedReserve({ housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /hold unverified/);
+ await assert.rejects(h.app.requestCoordinatedReserve({ acquireOfficeLease: true, housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /hold unverified/);
  assert.deepEqual(h.events, []); assert.ok(h.store.houseReserveLease.until < Date.now());
 });
 test('coordinated change releases office before changing house reserve', async () => {
- const h = coordinatedHarness(); h.setOffice(22);
+ const h = coordinatedHarness(); h.setOffice(22); h.store.houseReserveLease = { until: Date.now()+60000, officeDeviceId:'office', officeRestoreReserve:3, officeExpectedReserve:22 };
  await h.app.requestCoordinatedReserve({ housePercent: 20, expectedHousePercent: 18, officePercent: 3, expectedOfficePercent: 22, leaseUntil: Date.now() + 60000 });
  assert.deepEqual(h.events, ['office:3', 'house:20']);
 });
@@ -104,7 +104,7 @@ test('old zero power cannot prove an office stop, and actual combined watts enfo
  assert.throws(() => h.app.assertCoordinatedPower(house, h.office, h.store.houseReserveControl), /exceeds allowance/);
 });
 test('a house reserve change cannot precede a fresh physical office stop', async () => {
- const h = coordinatedHarness(); h.setOffice(22); let watts = 2611; let refreshes = 0;
+ const h = coordinatedHarness(); h.setOffice(22); h.store.houseReserveLease = { until: Date.now()+60000, officeDeviceId:'office', officeRestoreReserve:3, officeExpectedReserve:22 }; let watts = 2611; let refreshes = 0;
  h.office.flowRefresh = async () => { refreshes++; if (refreshes >= 3) watts = -10; };
  h.office.getReportingDiagnostics = () => ({ observations: { measure_power: { value: watts, receivedAt: Date.now(), source: 'rest' } } });
  const publish = h.app.appMqtt.publishHouseReserve;
@@ -126,14 +126,14 @@ test('a zero power reading before a pending house charge cannot start office wit
 });
 test('house reserve must be established in an earlier phase before office start', async () => {
  const h = coordinatedHarness();
- await assert.rejects(h.app.requestCoordinatedReserve({ housePercent: 20, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /Establish house reserve/);
+ await assert.rejects(h.app.requestCoordinatedReserve({ acquireOfficeLease:true, housePercent: 20, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /Establish house reserve/);
  assert.deepEqual(h.events, []);
 });
 test('office manual mode and native alarm retain their charging safety guard', async () => {
  for (const fault of [false, true]) {
   const h = coordinatedHarness();const old = h.office.getCapabilityValue;
   h.office.getCapabilityValue = key => key === 'operating_mode' ? (fault ? 'self_powered' : 'custom') : key === 'alarm_generic' ? fault : old(key);
-  await assert.rejects(h.app.requestCoordinatedReserve({ housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /mode\/fault/);
+  await assert.rejects(h.app.requestCoordinatedReserve({ acquireOfficeLease:true, housePercent: 18, expectedHousePercent: 18, officePercent: 22, expectedOfficePercent: 3, leaseUntil: Date.now() + 60000 }), /mode\/fault/);
   assert.deepEqual(h.events, []);
  }
 });
@@ -253,6 +253,369 @@ function twoMemberHarness(){
  return{...h,main,unit,setSecond:v=>{second=v;},setPower:(v,g=v)=>{watts=v;grid=g;}};
 }
 const twoBody=()=>({houseOnly:true,houseMemberDeviceIds:['synthetic-house','second'],housePercent:20,expectedHousePercent:18,officePercent:3,expectedOfficePercent:3,leaseUntil:Date.now()+60000});
+
+function dualInstallationHarness(){
+ const h=twoMemberHarness(),g=h.store.houseReserveControl;
+ h.app.homey.clearTimeout=()=>{};
+ g.controlScope='coordinated-installations';g.siteChargeKw=7.2;g.houseNativeChargeKw=1.5;g.officeNativeChargeKw=3.65;
+ g.houseSiteChargeKw=7.2;g.houseSpaceGridLimitW=7200;g.officeSpaceGridLimitW=7200;g.wholePropertyGridLimitW=7200;g.wholePropertyMeterDeviceId='synthetic-ct1';g.wholePropertyMeterScopeReviewed=true;
+ const bound=maxKw=>({maxKw,commissionedAt:new Date(Date.now()-60000).toISOString(),validUntil:new Date(Date.now()+3600000).toISOString(),evidenceId:'synthetic-review'});
+ g.powerBudget={schemaVersion:1,wholePropertyImportLimitKw:7.2,spaceImportLimitKw:{house:7.2,office:7.2},marginKw:0.3,maxObservationAgeSec:5,
+  nativeChargeBounds:{house:bound(1.5),office:bound(3.65)}};
+ g.officeMemberDeviceIds=Array.from({length:6},(_,i)=>'office-unit-'+i);
+ g.officeMemberSerials=Object.fromEntries(g.officeMemberDeviceIds.map((id,i)=>[id,'SYNTHETIC-OFFICE-'+i]));
+ const main=g.officeMemberSerials[g.officeMemberDeviceIds[0]];
+ g.officeMainSerial=main;
+ g.houseMemberPowerScopeReviewed=true;
+ const members=g.officeMemberDeviceIds.map(id=>({getId:()=>id,getAvailable:()=>true,getData:()=>({sn:g.officeMemberSerials[id]}),getCapabilityValue:()=>3,getReadingDiagnostics:()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:0},stream_unit_power_battery_flow:{stale:false,applicationStatus:'applied',ageSec:0}}),getCoordinationMainSn:async()=>main}));
+ h.main.getCapabilityValue=()=>18;h.unit.getCapabilityValue=()=>18;
+ h.unit.getReadingDiagnostics=()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:0},
+   stream_unit_power_battery_flow:{stale:false,applicationStatus:'applied',ageSec:0}});
+ let upstream=1000,officeWatts=0;
+ h.office.getCoordinationMainSn=async()=>main;
+ h.office.getReportingDiagnostics=()=>({aggregateRecovery:{state:'verified_original_main'},observations:{measure_power:{value:officeWatts,receivedAt:Date.now()},'measure_power.grid':{value:500,receivedAt:Date.now()},measure_battery:{value:3,receivedAt:Date.now()}}});
+ const prior=h.app.homey.drivers.getDriver;
+ h.app.homey.drivers.getDriver=k=>k==='stream_unit'?{getDevices:()=>members}:k==='smartmeter_dual_ct_energy'?{getDevices:()=>[{getId:()=>g.wholePropertyMeterDeviceId,getAvailable:()=>true,getCoordinatedGridReading:()=>({signedImportW:upstream,observedAt:Date.now()})}]}:prior(k);
+ h.app.verifyOfficeChargeStopped=async()=>{h.events.push('office-stopped');};
+ return {...h,members,setUpstream:n=>{upstream=n;},setOfficeWatts:n=>{officeWatts=n;}};
+}
+const dualBody=()=>({acquireOfficeLease:true,houseMemberDeviceIds:['synthetic-house','second'],housePercent:18,expectedHousePercent:18,officePercent:22,expectedOfficePercent:3,leaseUntil:Date.now()+60000});
+
+test('House-only admission includes disappearing Office discharge and refuses unknown power even at its floor', async () => {
+ for (const kind of ['discharge', 'missing', 'unavailable', 'unqualified']) {
+  const h=dualInstallationHarness(),g=h.store.houseReserveControl;
+  g.houseNativeChargeKw=4.9;g.powerBudget.nativeChargeBounds.house.maxKw=4.9;g.powerBudget.marginKw=0;
+  h.setUpstream(650);h.setOfficeWatts(-2000);
+  if(kind==='missing')h.office.getReportingDiagnostics=()=>({aggregateRecovery:{state:'verified_original_main'},observations:{}});
+  if(kind==='unavailable')h.office.getAvailable=()=>false;
+  if(kind==='unqualified')h.office.getReportingDiagnostics=()=>({observations:{measure_power:{value:0,receivedAt:Date.now()}}});
+  await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:100,officePercent:3}),/headroom|Office discharge receipt/);
+  assert.deepEqual(h.events,[]);
+ }
+});
+
+test('ordinary dual paths cannot adopt manual Office 100 by matching expected state', async () => {
+ for(const changeHouse of [false,true]) {
+  const h=dualInstallationHarness();h.setOffice(100);
+  await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),expectedOfficePercent:100,officePercent:3,
+   ...(changeHouse?{housePercent:20}:{})}),/native ownership/);
+  assert.deepEqual(h.events,[]);assert.equal(h.office.getCapabilityValue('backup_reserve_soc'),100);
+ }
+ for(const missing of ['request','policy']) {
+  const h=dualInstallationHarness(),body=dualBody();
+  if(missing==='request')delete body.acquireOfficeLease;else delete h.store.houseReserveControl.officeAcquisitionPolicy;
+  await assert.rejects(h.app.requestCoordinatedReserve(body),/explicit floor acquisition/);assert.deepEqual(h.events,[]);
+ }
+});
+
+test('solar surplus cannot replace House charging authority or a full physical hold', async () => {
+ const h=dualInstallationHarness(),g=h.store.houseReserveControl;
+ h.main.getCapabilityValue=()=>40;h.unit.getCapabilityValue=()=>40;h.setPower(100,0);
+ g.houseMemberPowerScopeReviewed=false;
+ await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/hold unverified/);assert.deepEqual(h.events,[]);
+ h.main.getConfigurationDiagnostics=()=>snapshot(true,60);h.unit.getConfigurationDiagnostics=()=>snapshot(true,60);h.setPower(100,100);
+ h.store.houseReserveLease={until:Date.now()+60000,guardScope:g.controlScope,guardBinding:JSON.stringify(g),controlScope:g.controlScope,
+  houseDeviceId:g.deviceId,serial:g.serial,houseMemberDeviceIds:g.houseMemberDeviceIds,houseMemberSerials:g.houseMemberSerials,
+  expectedEnabled:true,expectedPercent:60,officeDeviceId:g.officeDeviceId,officeExpectedReserve:3,officeRestoreReserve:3};
+ assert.equal((await h.app.requestCoordinatedReserve({...dualBody(),housePercent:60,expectedHousePercent:60})).verified,true);
+ assert.deepEqual(h.events,['office:22']);
+});
+
+test('Office dispatch and acknowledgement crossing the deadline fail closed with owned stop', async t => {
+ const originalNow=Date.now;let now=originalNow();t.mock.method(Date,'now',()=>now);
+ for(const phase of ['dispatch','ack']) {
+  const h=dualInstallationHarness(),write=h.office.flowSetBackupReserve;
+  h.app.homey.setTimeout=(fn,ms)=>{if(ms<=1000){now+=1000;queueMicrotask(fn);}return 1;};
+  h.office.flowSetBackupReserve=async(n,options)=>{
+   if(n===22) {
+    if(phase==='ack')await write(n);
+    now+=61000;options.assertActive();
+   }else await write(n);
+  };
+  await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/deadline|expired/);
+  assert.deepEqual(h.events,phase==='dispatch'?['office-stopped']:['office:22','office:3','office-stopped']);
+  assert.equal(h.store.houseReserveLease.completed,true);
+  assert.equal(h.app.coordinatedReserveBusy,false);
+ }
+});
+
+test('watchdog cancels a busy Office writer on expiry and bounds stalled work', async t => {
+ let now=Date.now();t.mock.method(Date,'now',()=>now);
+ const h=dualInstallationHarness(),write=h.office.flowSetBackupReserve;let entered;
+ h.app.homey.setTimeout=(fn,ms)=>{if(ms<=1000){now+=1000;queueMicrotask(fn);}return 1;};
+ const started=new Promise(resolve=>{entered=resolve;});
+ h.office.flowSetBackupReserve=async(n,options)=>{
+  if(n===22){entered(options);return new Promise(()=>{});}
+  return write(n);
+ };
+ const pending=h.app.requestCoordinatedReserve(dualBody());
+ const options=await started;
+ h.store.houseReserveLease.until=Date.now()-1;
+ await h.app.expireHouseReserveLease();
+ await assert.rejects(pending,/cancelled|expired/);
+ assert.equal(options.signal.aborted,true);assert.equal(h.app.coordinatedReserveBusy,false);
+ assert.equal(h.store.houseReserveLease.completed,true);assert.deepEqual(h.events,['office-stopped']);
+});
+
+test('normal staged Office stop retains bounded House restoration authority and permits the next phase', async () => {
+ const h=dualInstallationHarness();
+ await h.app.requestCoordinatedReserve({...dualBody(),housePercent:20,houseOnly:true,officePercent:3});
+ // A reviewed dual acquisition is represented by the native lease, not caller equality.
+ const g=h.store.houseReserveControl;
+ h.store.houseReserveLease={...h.store.houseReserveLease,controlScope:g.controlScope,officeExpectedReserve:22};
+ h.setOffice(22);h.setPower(100,100);
+ const until=h.store.houseReserveLease.until;
+ const result=await h.app.requestCoordinatedReserve({...dualBody(),housePercent:20,expectedHousePercent:20,
+  officePercent:3,expectedOfficePercent:22,releaseOfficeOnly:true,releaseOfficeReason:'staged-stop'});
+ assert.equal(result.houseVerified,false);assert.equal(result.houseOwnershipPreserved,true);
+ assert.equal(result.houseRestorationPending,true);assert.equal(h.store.houseReserveLease.completed,undefined);
+ assert.equal(h.store.houseReserveLease.fault,undefined);assert.equal(h.store.houseReserveLease.until,until);
+ assert.equal(h.store.houseReserveLease.officeExpectedReserve,3);
+ await h.app.requestCoordinatedReserve({...dualBody(),housePercent:18,expectedHousePercent:20,officePercent:3});
+ assert.equal(h.store.houseReserveLease.expectedPercent,18);
+ assert.deepEqual(h.events,['house:20','second:20','office:3','office-stopped','office-stopped','house:18','second:18']);
+});
+test('dual read exposes diagnostic house hold without making Office availability a House dependency',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.main.getAppliedReadingAt=()=>now;
+  h.office.flowRefresh=async()=>{throw new Error('offline');};
+  h.app.appMqtt.requestHouseRead=async()=>{};h.app.homey.setTimeout=fn=>{now+=1000;queueMicrotask(fn);return 1;};
+  let r=await h.app.refreshCoordinatedReadings();
+  assert.equal(r.houseFresh,true);assert.equal(r.house.noDischargeHoldVerified,true);
+  assert.equal(r.house.houseChargingVerified,false);assert.equal(r.wholeProperty.signedImportW,1000);
+  assert.equal(r.powerBudgetSupported,true);assert.equal(r.officePowerBudgetReady,true);assert.equal(r.propertyPower.propertyImportW,1000);
+  assert.equal(Date.parse(r.propertyPower.capturedAt)-r.wholeProperty.observedAt,r.propertyPower.ageSec*1000);
+  assert.deepEqual(r.powerBudgetReceipt,{schemaVersion:1,wholePropertyImportLimitKw:7.2,spaceImportLimitKw:{house:7.2,office:7.2},
+   marginKw:0.3,maxObservationAgeSec:5,houseMaxKw:1.5,officeMaxKw:3.65});
+  h.unit.getCapabilityValue=key=>key==='measure_battery'?17:18;
+  r=await h.app.refreshCoordinatedReadings();assert.equal(r.house.noDischargeHoldVerified,false);
+  h.setPower(2000,2000);r=await h.app.refreshCoordinatedReadings();
+  assert.equal(r.house.houseChargingVerified,false);assert.equal(r.house.noDischargeHoldVerified,false);
+ }finally{Date.now=old;}
+});
+test('property power capturedAt is read time and ageSec is source receipt age',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness(),prior=h.app.homey.drivers.getDriver;
+  h.main.getAppliedReadingAt=()=>now;h.app.appMqtt.requestHouseRead=async()=>{};
+  h.app.homey.setTimeout=fn=>{now+=1000;queueMicrotask(fn);return 1;};
+  h.app.homey.drivers.getDriver=k=>k==='smartmeter_dual_ct_energy'
+   ?{getDevices:()=>[{getId:()=>h.store.houseReserveControl.wholePropertyMeterDeviceId,getAvailable:()=>true,getCoordinatedGridReading:()=>({signedImportW:1000,observedAt:now-2000})}]}
+   :prior(k);
+  const r=await h.app.refreshCoordinatedReadings();
+  assert.equal(r.propertyPower.ageSec,2);assert.equal(Date.parse(r.propertyPower.capturedAt),now);
+  assert.equal(Date.parse(r.propertyPower.capturedAt)-r.wholeProperty.observedAt,2000);
+ }finally{Date.now=old;}
+});
+test('dual native budget validates provenance, age, margin and tariff deadline independently',async()=>{
+ for(const change of [
+  h=>{h.store.houseReserveControl.powerBudget.nativeChargeBounds.house.validUntil=new Date(Date.now()-1).toISOString();},
+  h=>{h.store.houseReserveControl.powerBudget.nativeChargeBounds.office.evidenceId='';},
+  h=>{h.store.houseReserveControl.powerBudget.wholePropertyImportLimitKw=7.1;},
+  h=>{h.main.getSystemReporterDiagnostics=()=>({socPct:{value:18,stale:false,ageSec:0},batteryW:{value:0,stale:false,ageSec:5}});},
+  h=>h.setUpstream(3251),
+  h=>{const prior=h.app.homey.drivers.getDriver;h.app.homey.drivers.getDriver=k=>k==='smartmeter_dual_ct_energy'
+   ?{getDevices:()=>[{getId:()=>h.store.houseReserveControl.wholePropertyMeterDeviceId,getAvailable:()=>true,getCoordinatedGridReading:()=>({signedImportW:1000,observedAt:Date.now()-6000})}]}
+   :prior(k);},
+ ]){
+  const h=dualInstallationHarness();change(h);await assert.rejects(h.app.requestCoordinatedReserve(dualBody()));assert.deepEqual(h.events,[]);
+ }
+ const h=dualInstallationHarness();
+ await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),tariffDeadline:new Date(Date.now()+1000).toISOString()}),/Invalid coordinated target/);
+ await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),tariffDeadline:Date.now()+1000}),/Invalid coordinated target/);
+ await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),powerBudget:{schemaVersion:1}}),/differs from native configuration/);
+ assert.deepEqual(h.events,[]);
+});
+test('dual budget requires reviewed narrower House boundary and reserves Space margin',async()=>{
+ const h=dualInstallationHarness();h.store.houseReserveControl.powerBudget.houseSpaceBoundary='house-excluding-office';
+ await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/power budget/);
+ h.store.houseReserveControl.houseSpaceBoundaryReviewed=true;
+ assert.equal((await h.app.requestCoordinatedReserve(dualBody())).verified,true);
+ const x=dualInstallationHarness(),g=x.store.houseReserveControl;
+ g.officeSpaceGridLimitW=4000;g.powerBudget.spaceImportLimitKw.office=4;
+ x.office.getReportingDiagnostics=()=>({aggregateRecovery:{state:'verified_original_main'},observations:{
+  measure_power:{value:0,receivedAt:Date.now()},'measure_power.grid':{value:100,receivedAt:Date.now()}}});
+ await assert.rejects(x.app.requestCoordinatedReserve(dualBody()),/office headroom/);assert.deepEqual(x.events,[]);
+});
+test('uncommissioned Office bound is independent, but unavailable Office discharge blocks House-only charge',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.store.houseReserveControl.powerBudget.nativeChargeBounds.office=null;
+  await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/bound missing or expired/);
+  h.store.houseReserveControl.officeNativeChargeKw=null;
+  delete h.store.houseReserveControl.officeMemberDeviceIds;delete h.store.houseReserveControl.officeMemberSerials;
+  delete h.store.houseReserveControl.officeMainSerial;h.office.getAvailable=()=>false;
+  h.app.homey.setTimeout=fn=>{now+=1000;queueMicrotask(fn);return 1;};
+  await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3}),/Office discharge receipt/);
+  assert.deepEqual(h.events,[]);
+ }finally{Date.now=old;}
+});
+test('dual House reads do not wait indefinitely on a stalled or unavailable Office',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.main.getAppliedReadingAt=()=>now;let calls=0;
+  h.office.flowRefresh=()=>{calls++;return new Promise(()=>{});};
+  h.app.appMqtt.requestHouseRead=async()=>{};h.app.homey.setTimeout=fn=>{now+=1000;queueMicrotask(fn);return 1;};
+  assert.equal((await h.app.refreshCoordinatedReadings()).houseFresh,true);
+  assert.equal((await h.app.refreshCoordinatedReadings()).houseFresh,true);assert.equal(calls,1);
+  h.office.getAvailable=()=>false;
+  const third=await h.app.refreshCoordinatedReadings();assert.equal(third.houseFresh,true);assert.equal(third.officeFresh,false);assert.equal(calls,1);
+ }finally{Date.now=old;}
+});
+test('Office-only stop preserves House and requires the native owned lease',async()=>{
+ const h=dualInstallationHarness();h.setOffice(22);
+ const body={...dualBody(),housePercent:100,expectedHousePercent:100,officePercent:3,expectedOfficePercent:22,releaseOfficeOnly:true,releaseOfficeReason:'manual-house-intervention',controlScope:'coordinated-installations'};
+ await assert.rejects(h.app.requestCoordinatedReserve(body),/matching active ownership/);assert.deepEqual(h.events,[]);
+ h.store.houseReserveLease={until:Date.now()+60000,controlScope:'coordinated-installations',guardScope:'coordinated-installations',guardBinding:JSON.stringify(h.store.houseReserveControl),
+  officeDeviceId:'office',officeRestoreReserve:3,officeExpectedReserve:22};
+ const result=await h.app.requestCoordinatedReserve(body);
+ assert.equal(result.verified,true);assert.equal(result.controlScope,'coordinated-installations');assert.equal(result.houseVerified,false);assert.equal(result.houseOwnershipPreserved,true);assert.deepEqual(h.events,['office:3','office-stopped']);
+ assert.equal(h.store.houseReserveLease.completed,true);assert.match(h.store.houseReserveLease.fault,/Manual house ownership preserved/);
+});
+test('dual scope charges office only at verified group hold and stops office before house release',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
+  const first=await h.app.requestCoordinatedReserve({...dualBody(),controlScope:'coordinated-installations',tariffDeadline:now+120000,powerBudget:JSON.parse(JSON.stringify(h.store.houseReserveControl.powerBudget))});assert.equal(first.verified,true);assert.equal(first.controlScope,'coordinated-installations');assert.deepEqual(h.events,['office:22']);assert.equal(h.store.houseReserveLease.controlScope,'coordinated-installations');
+  await h.app.requestCoordinatedReserve({...dualBody(),housePercent:15,expectedHousePercent:18,officePercent:3,expectedOfficePercent:22,leaseUntil:now+60000});
+  assert.deepEqual(h.events,['office:22','office:3','office-stopped','house:15','second:15']);
+ }finally{Date.now=old;}
+});
+test('dual scope defers office without inventing house pulse when member SOC differs',async()=>{
+ const h=dualInstallationHarness();h.unit.getCapabilityValue=()=>17;
+ await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/no-discharge hold unverified/);
+ assert.deepEqual(h.events,[]);
+});
+test('dual scope rejects unverified office membership, unsafe office maximum and insufficient whole-property headroom',async()=>{
+ for(const change of [h=>{h.members[5].getAvailable=()=>false;},h=>{h.members[5].getCoordinationMainSn=async()=>'OTHER-SYNTHETIC';},h=>{h.store.houseReserveControl.officeMainSerial='OTHER-SYNTHETIC';},h=>{h.members[5].getReadingDiagnostics=()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:301}});},h=>{h.setOfficeWatts(3650);h.store.houseReserveControl.officeNativeChargeKw=2.8;},h=>h.setUpstream(4000),h=>{h.store.houseReserveControl.wholePropertyMeterScopeReviewed=false;},h=>{h.store.houseReserveControl.houseMemberPowerScopeReviewed=false;},h=>{h.unit.getCapabilityValue=key=>key==='measure_battery'?18:-10;},h=>{h.store.houseReserveControl.houseNativeChargeKw=NaN;}]){
+  const h=dualInstallationHarness();change(h);await assert.rejects(h.app.requestCoordinatedReserve(dualBody()));assert.deepEqual(h.events,[]);
+ }
+});
+test('dual scope supports house-only operation without office and rejects direct group writes',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
+  h.office.getCoordinationMainSn=async()=>assert.fail('office lookup');h.office.flowRefresh=async()=>assert.fail('office refresh');
+  await assert.rejects(h.app.requestHouseReserve({}),/coordinated owner/);
+  await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,controlScope:'coordinated-installations',housePercent:20,officePercent:3}),/scope mismatch/);
+  const r=await h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,controlScope:'house-only',housePercent:20,officePercent:3});assert.equal(r.verified,true);assert.equal(h.store.houseReserveLease.controlScope,'house-only');assert.deepEqual(h.events,['house:20','second:20']);
+ }finally{Date.now=old;}
+});
+test('dual house-only never releases House while the unowned office is charging or unknown',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
+  await h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3});
+  h.setOffice(100);
+  const denied=await h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:18,expectedHousePercent:20,officePercent:3});
+  assert.equal(denied.verified,false);assert.equal(denied.releaseBlocked,true);assert.equal(denied.interventionRequired,true);
+  assert.equal(denied.controlScope,'house-only');assert.match(denied.reason,/Unowned office stop unverified/);
+  assert.deepEqual(h.events,['house:20','second:20']);
+  await assert.rejects(h.app.expireHouseReserveLease(),/Unowned office stop unverified/);
+  assert.match(h.store.houseReserveLease.fault,/Unowned office stop unverified/);
+  assert.deepEqual(h.events,['house:20','second:20']);
+ }finally{Date.now=old;}
+});
+test('dual scope aborts subsequent writes and expires lease on mid-flight gate or deadline change',async()=>{
+ for(const change of ['gate','deadline','grid']){
+  const old=Date.now;let now=old();Date.now=()=>now;
+  try{const h=dualInstallationHarness(),publish=h.app.appMqtt.publishHouseReserve;
+   h.app.appMqtt.publishHouseReserve=async(...args)=>{await publish(...args);if(change==='gate')h.store.houseReserveControl.siteChargeKw=7.1;if(change==='deadline')now+=61000;if(change==='grid')h.setUpstream(7300);};
+   await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3}),/configuration changed|lease expired|within allowance/);
+   assert.deepEqual(h.events,['house:20']);assert.ok(h.store.houseReserveLease.until<now);
+  }finally{Date.now=old;}
+ }
+});
+test('dual scope rechecks office ownership, membership and headroom after refresh',async()=>{
+ for(const change of ['manual','identity','headroom']){
+  const h=dualInstallationHarness();
+  h.office.flowRefresh=async()=>{if(change==='manual')h.setOffice(55);if(change==='headroom')h.setUpstream(5000);};
+  if(change==='identity')h.office.flowRefresh=async()=>{h.members[5].getCoordinationMainSn=async()=> 'OTHER-SYNTHETIC';};
+  await assert.rejects(h.app.requestCoordinatedReserve(dualBody()));
+  assert.ok(h.events.every(e=>e==='office-stopped'));assert.ok(h.store.houseReserveLease.until<Date.now());
+ }
+});
+test('dual renewal reserves unobserved Office AC charge ramp conservatively',async()=>{
+ const h=dualInstallationHarness();await h.app.requestCoordinatedReserve(dualBody());
+ h.setUpstream(5000);
+ await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),expectedOfficePercent:22}),/headroom/);
+ assert.deepEqual(h.events,['office:22','office:3','office-stopped']);assert.ok(h.store.houseReserveLease.until<Date.now());
+});
+test('dual headroom retains unowned House charging and reserves the hold ramp',async()=>{
+ for(const owned of [false,true]){
+  const h=dualInstallationHarness();h.setPower(1000,1000);h.setUpstream(2500);
+  if(owned)h.store.houseReserveLease={until:Date.now()+60000,expectedPercent:18,houseMemberDeviceIds:['synthetic-house','second'],controlScope:'coordinated-installations'};
+  await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/headroom|hold unverified/);
+  assert.deepEqual(h.events,[]);
+ }
+});
+test('dual headroom adds displaced House discharge before admitting charge',async()=>{
+ const h=dualInstallationHarness(),g=h.store.houseReserveControl;
+ g.houseNativeChargeKw=5.2;g.powerBudget.nativeChargeBounds.house.maxKw=5.2;
+ h.setPower(-3000,0);h.setUpstream(650);
+ await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3}),/headroom/);
+ assert.deepEqual(h.events,[]);
+});
+test('dual Office admission adds fresh displaced Office discharge',async()=>{
+ const h=dualInstallationHarness();h.setUpstream(1600);h.setOfficeWatts(-200);
+ await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/headroom/);
+ assert.deepEqual(h.events,[]);
+});
+test('dual admission rejects fresh but unaligned signed battery power',async()=>{
+ for(const kind of ['house','office']){
+  const h=dualInstallationHarness();
+  if(kind==='house')h.main.getSystemReporterDiagnostics=()=>({socPct:{value:18,ageSec:0,stale:false},batteryW:{value:0,ageSec:1,stale:false}});
+  else h.office.getReportingDiagnostics=()=>({aggregateRecovery:{state:'verified_original_main'},observations:{
+   measure_power:{value:-200,receivedAt:Date.now()-2000},'measure_power.grid':{value:500,receivedAt:Date.now()}}});
+  await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/skew|unaligned/);assert.deepEqual(h.events,[]);
+ }
+});
+test('dual headroom credits owned House draw only when receipt skew is bounded',()=>{
+ const h=dualInstallationHarness(),g=h.store.houseReserveControl;let age=0;
+ h.setUpstream(5700);
+ h.main.getSystemFlowDiagnostics=()=>({fields:{batteryDerivedW:{value:0,ageSec:0,stale:false},
+  gridToBatteryW:{value:1000,ageSec:age,stale:false},gridFlowNetW:{value:1000,ageSec:0,stale:false}}});
+ h.store.houseReserveLease={until:Date.now()+60000,expectedPercent:18,expectedEnabled:true,houseDeviceId:g.deviceId,serial:g.serial,
+  houseMemberDeviceIds:g.houseMemberDeviceIds,houseMemberSerials:g.houseMemberSerials,guardScope:g.controlScope,guardBinding:JSON.stringify(g)};
+ assert.doesNotThrow(()=>h.app.assertCoordinatedStartHeadroom(g,20,false,null));
+ age=1;assert.throws(()=>h.app.assertCoordinatedStartHeadroom(g,20,false,null),/headroom/);
+});
+test('factory House and Office maxima cannot be admitted under the combined commissioning cap',async()=>{
+ const h=dualInstallationHarness(),g=h.store.houseReserveControl;
+ g.houseNativeChargeKw=6;g.officeNativeChargeKw=6.6;
+ g.powerBudget.nativeChargeBounds.house.maxKw=6;g.powerBudget.nativeChargeBounds.office.maxKw=6.6;
+ await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/headroom/);assert.deepEqual(h.events,[]);
+});
+test('dual watchdog stops office first and latches upstream budget violation',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};await h.app.requestCoordinatedReserve(dualBody());h.setUpstream(7300);await h.app.expireHouseReserveLease();
+  assert.deepEqual(h.events,['office:22','office:3','office-stopped']);assert.equal(h.store.houseReserveLease.completed,true);assert.match(h.store.houseReserveLease.fault,/exceeds allowance/);
+ }finally{Date.now=old;}
+});
+test('dual watchdog does not silently downgrade safety scope after a gate change',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
+  await h.app.requestCoordinatedReserve(dualBody());
+  h.store.houseReserveControl.controlScope='house-only';await h.app.expireHouseReserveLease();
+  assert.deepEqual(h.events,['office:22','office:3','office-stopped']);
+  assert.equal(h.store.houseReserveLease.completed,true);
+  assert.match(h.store.houseReserveLease.fault,/configuration changed/);
+ }finally{Date.now=old;}
+});
+test('dual renewal cannot adopt an altered gate before watchdog detects it',async t=>{
+ let now=Date.now();t.mock.method(Date,'now',()=>now);
+ const h=dualInstallationHarness();await h.app.requestCoordinatedReserve(dualBody());
+ h.app.homey.setTimeout=(fn,ms)=>{if(ms<=1000){now+=1000;queueMicrotask(fn);}return 1;};
+ const binding=h.store.houseReserveLease.guardBinding;h.store.houseReserveControl.powerBudget.marginKw=0.4;
+ await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),expectedOfficePercent:22}),/native ownership/);
+ assert.equal(h.store.houseReserveLease.guardBinding,binding);
+ await h.app.expireHouseReserveLease();
+ assert.equal(h.store.houseReserveLease.completed,true);assert.deepEqual(h.events,['office:22','office:3','office-stopped']);
+});
+test('dual watchdog stops Office and latches an expired native bound',async()=>{
+ const old=Date.now;let now=old();Date.now=()=>now;
+ try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
+  h.store.houseReserveControl.powerBudget.nativeChargeBounds.office.validUntil=new Date(now+5000).toISOString();
+  await h.app.requestCoordinatedReserve(dualBody());now+=6000;
+  await h.app.expireHouseReserveLease();
+  assert.deepEqual(h.events,['office:22','office:3','office-stopped']);
+  assert.equal(h.store.houseReserveLease.completed,true);assert.match(h.store.houseReserveLease.fault,/safety guard lost/);
+ }finally{Date.now=old;}
+});
 test('two-member control persists physical bindings and restores the shared target without office calls',async()=>{
  const old=Date.now;let now=old();Date.now=()=>now;
  try{const h=twoMemberHarness();h.app.homey.setTimeout=fn=>{now+=1000;queueMicrotask(fn);return 1;};await h.app.requestCoordinatedReserve(twoBody());assert.deepEqual(h.store.houseReserveLease.houseMemberDeviceIds,h.store.houseReserveControl.houseMemberDeviceIds);h.store.houseReserveLease.until=now-1;await h.app.expireHouseReserveLease();assert.equal(h.store.houseReserveLease.completed,true);assert.equal(h.store.houseReserveLease.fault,undefined);assert.deepEqual(h.events,['house:20','second:20','house:18','second:18']);}finally{Date.now=old;}

@@ -237,6 +237,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     };
   }
 
+  /** Internal receipt only; no new Energy contributor or public telemetry contract. */
+  getCoordinatedGridReading() {
+    return this.adapter?.coordinationPower() ?? null;
+  }
+
   async resumeAppAccountAfterRepair(): Promise<void> {
     await this.connect();
   }

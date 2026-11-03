@@ -454,7 +454,15 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.aggregateBound = false;
     if (this.client && !this.monitoringEnabled && !this.monitoringRollbackPending) {
       try {
-        this.mainSn = await this.resolveAggregateMain();
+        const resolvedMain = await this.resolveAggregateMain();
+        const gate = this.homey.settings?.get('houseReserveControl');
+        if (gate?.controlScope === 'coordinated-installations' && gate.officeDeviceId === (this as any).getId()
+          && (resolvedMain !== this.mainSn || resolvedMain !== gate.officeMainSerial
+            || (this.energySourceSn && resolvedMain !== this.energySourceSn))) {
+          this.aggregateIdentityConflict = true;
+          throw Error('Coordinated office main requires explicit identity review');
+        }
+        this.mainSn = resolvedMain;
         if (this.energySourceSn !== this.mainSn) {
           // Rebase new reporter lifetime counters without importing history or bridging power gaps.
           this.chargedRawWh = undefined;
@@ -475,18 +483,19 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
   }
 
-  private async resolveAggregateMain(): Promise<string> {
+  private async resolveAggregateMain(signal?: AbortSignal): Promise<string> {
     const generation = this.controlGeneration;
-    const main = await this.client.getMainSn(this.getData().sn, { fresh: true, signal: AbortSignal.timeout(10000) });
+    const timeout = AbortSignal.timeout(10000);
+    const main = await this.client.getMainSn(this.getData().sn, { fresh: true, signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
     if (this.isShuttingDown() || generation !== this.controlGeneration
       || streamTopologyFamily(main) !== 'original_stream') throw Error('Original aggregate main unavailable or unsupported');
     return main.toUpperCase();
   }
 
-  private async requireAggregateMain(allowTelemetryRecovery = false): Promise<string> {
+  private async requireAggregateMain(allowTelemetryRecovery = false, signal?: AbortSignal): Promise<string> {
     const generation = this.controlGeneration;
     try {
-      const main = await this.resolveAggregateMain();
+      const main = await this.resolveAggregateMain(signal);
       if (main !== this.mainSn) this.aggregateIdentityConflict = true;
       if (this.aggregateIdentityConflict) throw Error('Aggregate main changed; reinitialization required');
       if (!this.aggregateBound && allowTelemetryRecovery && this.aggregateVerifiedMain === main) {
@@ -496,9 +505,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         this.aggregateRecoveries = Math.min(65535, this.aggregateRecoveries + 1);
         this.log('Original STREAM telemetry source reverified');
       }
+
       if (!this.aggregateBound) throw Error('Aggregate main unverified; reinitialization required');
       return main;
     } catch {
+      if (signal?.aborted) throw Error('Aggregate lookup cancelled');
       if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) throw Error('Aggregate lookup interrupted');
       if (this.aggregateBound) this.log('Original STREAM source verification interrupted', this.aggregateIdentityConflict ? 'identity_changed' : 'lookup_failed');
       this.aggregateBound = false;
@@ -513,6 +524,11 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       }
       throw Error('Aggregate main unverified; no controls or legacy readings allowed');
     }
+  }
+
+  /** Private live identity proof; never repairs or adopts a changed aggregate. */
+  async getCoordinationMainSn(): Promise<string> {
+    return this.requireAggregateMain();
   }
 
   private aggregatePollPending: { generation: number; promise: Promise<void> } | null = null;
@@ -862,26 +878,36 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   /** Fresh main-target state and readback for every command; no optimistic tiles. */
-  private async runControl(intent: StreamControlIntent): Promise<void> {
+  private async runControl(intent: StreamControlIntent, options: { signal?: AbortSignal; assertActive?: () => void } = {}): Promise<void> {
     if (this.monitoringEnabled || this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
       throw new Error(this.monitoringMessage('blocked'));
     }
     this.assertDeveloperApiSupported();
-    const target = await this.requireAggregateMain();
+    options.assertActive?.();
+    const target = await this.requireAggregateMain(false, options.signal);
     const generation = this.controlGeneration;
-    const active = () => !this.controlStopped && !this.isShuttingDown()
+    const active = () => {
+      options.assertActive?.();
+      return !options.signal?.aborted && !this.controlStopped && !this.isShuttingDown()
       && !this.monitoringEnabled && !this.monitoringRollbackPending
       && this.monitoringSettingsCount === 0
       && this.aggregateBound && generation === this.controlGeneration
-      && target === (this.mainSn || this.getData().sn);
+        && target === (this.mainSn || this.getData().sn);
+    };
     try {
       await executeStreamControl(target, intent, {
         active,
         read: async () => {
-          await this.requireAggregateMain(); return readStreamControlState(await this.readControlQuota(target));
+          await this.requireAggregateMain(false, options.signal);
+          return readStreamControlState(await this.readControlQuota(target, undefined, options.signal));
         },
         write: async (payload) => {
-          await this.requireAggregateMain(); await this.writeQuota(payload);
+          await this.requireAggregateMain(false, options.signal);
+          const beforeWrite = () => {
+            if (!active()) throw new Error('Control cancelled before transport write.');
+          };
+          beforeWrite();
+          await this.writeQuota(payload, { signal: options.signal, beforeWrite });
         },
         wait: () => this.waitForControlReadback(),
         observed: async (state) => {
@@ -1336,8 +1362,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     await this.runControl({ kind: 'mode', value: mode });
   }
 
-  async flowSetBackupReserve(level: number): Promise<void> {
-    await this.applyBackupReserve(level);
+  async flowSetBackupReserve(level: number, options: { signal?: AbortSignal; assertActive?: () => void } = {}): Promise<void> {
+    await this.runControl({ kind: 'reserve', value: level }, options);
   }
 
   async flowSetFeedIn(on: boolean): Promise<void> {

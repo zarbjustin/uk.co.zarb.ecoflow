@@ -1,5 +1,166 @@
 # Codex cross-machine handover
 
+## Battery repair source synchronization - 3 November 2026
+
+The owner requested synchronization of the current
+`copilot/battery-coordination-20261102` branch. This checkpoint supersedes the
+dependency and implementation status in the older source-only section below,
+not its deployment restrictions. The owner explicitly waived the unavailable
+external-drive editing helper for this repair; no external knowledge-index
+refresh is claimed.
+
+The original lockfile is restored locally on Node 22 without manifest changes
+or dependency downgrades. The recovered package archives matched the locked
+integrity hashes. Current native tests pass (1,431 tests). Lint defects in the
+new coordinator were corrected without weakening validation: missing Space
+limits still fail closed.
+
+Source now includes Office discharge displacement in prospective House
+headroom, explicit floor-only Office acquisition policy, native-owned House
+charging proof rather than positive solar flow alone, cancellable Office write
+authority checks, and separate staged-stop/manual-House-intervention semantics.
+The driver checks authority again at the actual command boundary. These are
+source repairs, not physical acceptance or a claim that integration is finished.
+
+Remaining sprint work includes independent review of the final candidate,
+completing the native `officeDischarge` read receipt expected by the HomeyPro
+caller, and reviewing bounded asynchronous stop/restoration paths. Office
+control eligibility is separate from read-only discharge evidence. Keep the
+confirmed 7.2 kW per-Space settings distinct from the conservative 7.2 kW
+incoming commissioning budget; do not infer a 14.4 kW property allowance.
+
+No app installation, restart, Homey setting/Flow change, physical battery
+command, fault clearance, store publication or Mainline merge accompanies this
+source synchronization. Version remains 1.11.20. Deployment and commissioning
+still need a reviewed reproducible candidate, fresh preservation evidence and
+the outstanding power/ownership acceptance checks.
+
+## Source-only dual-installation work — 2 November 2026
+
+The uncommitted `copilot/battery-coordination-20261102` work builds on `d21ffa9`;
+it has not been installed, published, tested on hardware or independently reviewed.
+Do not treat this section as authorization to change devices or clear faults.
+The installed Development 1.11.20 archive identified below is not this checkout:
+the branch already contains source-only consumer queue diagnostics, including
+`lib/streamDeliveryDiagnostics.ts`, BaseEcoFlowDevice integration and reporting
+projection. A future package needs a reviewed, reproducible manifest and hash;
+do not silently include or remove those changes. The version remains 1.11.20.
+
+The private `houseReserveControl` gate may explicitly use
+`controlScope: "coordinated-installations"`, with exact two House member IDs and
+serials and exact six Office IDs and serials, `officeMainSerial`, reviewed Space
+limits, positive native maximum charge assumptions, and the qualified CT1 device
+ID. It additionally requires `wholePropertyMeterScopeReviewed: true` and
+`wholePropertyGridLimitW` no greater than 7200 W. CT1 source qualification does
+not by itself prove it measures the whole incoming property: physical wiring and
+coverage need independent evidence. The two 7200 W branch confirmations are not
+an additive 14400 W whole-property limit. Native maximum charging assumptions are
+conservative safety bounds, not hardware rate limiters or forecast averages.
+The native-owned `powerBudget` v1 setting contains
+`wholePropertyImportLimitKw`, `spaceImportLimitKw.{house,office}`, `marginKw`,
+`maxObservationAgeSec`, and `nativeChargeBounds.{house,office}` entries with
+`maxKw`, `commissionedAt`, `validUntil` and a nonempty `evidenceId`. House bound
+is mandatory; a null Office bound and unknown Office native charge rate or member
+binding allow House-only increases but not Office charging. Bound values and import limits must match the corresponding native gate
+values. Freshness, expiry and the property ceiling minus margin are independently
+enforced at dispatch and by the native watchdog. Caller-supplied budget is not
+authoritative: if supplied it must exactly match the native setting. The grouped
+read returns `powerBudgetSupported`, `officePowerBudgetReady`,
+the numeric `powerBudgetReceipt`, and `propertyPower` with receipt time and age;
+these are hints and do not replace control-time verification. An optional caller
+`tariffDeadline` (epoch milliseconds or ISO) is checked against `leaseUntil`, but is not independently
+verified tariff data; the runner must reserve its own conservative stop margin.
+`propertyPower.capturedAt` is the response capture time and `ageSec` is the CT
+source age at capture; the separate `wholeProperty.observedAt` is source time.
+Each House battery, grid-charge and grid-import receipt, and Office grid and
+battery receipt when used, must meet the configured budget freshness horizon;
+rounded House field ages include a one-second conservative allowance. A fresh
+connection or temperature packet is not proof of fresh electrical power.
+The [STREAM 5000 manufacturer specifications](https://www.ecoflow.com/eu/stream-series-plug-and-play-solar-battery/specs)
+list 3000 W AC charging input per unit; 6000 W for two is only a candidate
+aggregate bound until the exact models and absence of expansion are verified.
+The prior 4.9 kW forecast is not an instantaneous maximum. A House Space grid
+setting alone is not proof of a whole-property hardware throttle.
+The [UK STREAM AC Pro comparison](https://uk.ecoflow.com/products/stream-ac-pro-ac)
+lists 1050 W AC charging input per AC Pro, or 4200 W for four, before the two
+Ultra X units. The [UK Ultra X specification](https://uk.ecoflow.com/products/stream-ultra-x)
+lists 1200 W AC charging input each: the six-unit factory sum is 6600 W.
+This remains uncommissioned until exact models, topology and simultaneous
+behaviour are independently verified. At a 7200 W property ceiling, roughly
+1000 W of background load leaves insufficient headroom for that full sum;
+an observed 3650 W charge is not a substitute for an enforced maximum.
+In the parent's 3 November 00:04 UTC read-only observation, the Office physical
+main showed reserve 3% and all six units reported net discharge, while the
+aggregate remained identity-conflicted and one member was marked unavailable.
+House remained at manual reserve 100%. Office had stopped charging since the
+earlier manual 100% observation; the actor and cause were not established.
+
+Office charging is gated on fresh six-member main lookups, an original-main
+aggregate binding, a verified House charge or no-discharge hold, current
+whole-property headroom and the Office Space boundary. A hold additionally
+requires `houseMemberPowerScopeReviewed: true`, fresh individually scoped
+nonnegative member battery flows, and a common reserve between the larger member
+SOC and smaller member SOC; otherwise it is deferred rather than pulsing House.
+That review flag must not be set merely because a tile displays a number.
+The grouped read reports `house.noDischargeHoldVerified` and
+`house.houseChargingVerified` as snapshot hints only; the native Office start
+and watchdog re-evaluate the evidence, so neither field is a control token.
+Because no independently scoped Office AC charging receipt is available, each
+Office-active renewal conservatively reserves the full Office native maximum on
+top of measured import. This is a worst-case headroom envelope, not extra
+measured energy; it may stop an otherwise safe Office charge unnecessarily.
+House hold likewise reserves its full possible grid-charge ramp. Existing House
+grid charge is replaced by its maximum only for the same prospectively charging
+role with a live, matching native lease; unowned and stopping load stays in the
+measured background. Prospective charging adds displaced fresh House discharge
+and, when starting or renewing Office, fresh Office discharge. Battery-power
+receipts must align with the upstream meter within `maxPowerSkewSec` (default
+one second). House-only operation does not obtain unavailable Office telemetry,
+so unknown Office discharge remains an unproven headroom risk; the native
+watchdog is reactive and is not a physical whole-property limiter.
+`houseOnly: true` permits a quiescent House-only lease in the dual gate without
+requiring Office telemetry to start House charging. Lowering its House reserve,
+including on lease expiry, requires read-only verification that an unowned Office
+is at its restoration reserve and physically stopped; missing or manually
+charging Office evidence blocks release and latches for review, not Office writes.
+An explicit House-only release attempt returns `releaseBlocked` and
+`interventionRequired` with a bounded reason when that stop cannot be proven.
+Group membership must be included in every request.
+An optional request `controlScope` must be `house-only` for a House-only
+request and `coordinated-installations` for a dual request, including an
+Office-only stop; successful replies carry the corresponding scope.
+Dual-scope reads skip unavailable Office refresh and bound waiting on a stalled
+refresh to one second after the House read; a pending Office refresh is coalesced.
+The watchdog checks the gate binding and stops Office before House restoration;
+guard failures latch. Neither 5-second watchdog scheduling nor an awaiting native
+SDK operation is a hard real-time cutoff: runner deadlines need conservative
+margin, and transport stalls require further fail-stop review before deployment.
+Office-only stop additionally requires a matching, active native Office lease;
+an asserted expected reserve alone cannot authorize stopping an unowned Office.
+
+The changed-main Office conflict is not automatically repaired. In dual scope a
+restart refuses to adopt a main different from saved binding, prior energy source
+or reviewed main; no identity migration endpoint or approval workflow exists.
+Confirm exact physical membership, authority and main migration before designing
+an explicitly approved repair. A matching read address alone is insufficient.
+Do not re-pair, reset, change bindings or clear latched faults to work around it.
+
+Offline local validation on Node 22.23.4: TypeScript build and 107 targeted grouped
+control, CT and identity tests pass; release-boundary checks pass with hardware
+acceptance still pending. Before the final snapshot test, the full suite had
+1403/1405 passing: the isolated IPv6 timeout and minimatch compatibility tests
+also failed individually. Existing local `node_modules` resolves `ip-address`
+10.2.0 and `minimatch` 3.1.5, whereas the lockfile requires 10.7.4 and 11.0.1
+respectively. The existing ESLint and TypeScript-ESLint versions also differ
+from the lockfile, and some locked packages are absent. These dependency
+mismatches are not release evidence; the older IPv6 parser is specifically what
+the security regression exercises. Reproducible locked dependency restoration
+and exact-package validation remain mandatory; do not weaken the lockfile.
+Lint reports the pre-existing `stream_unit/device.ts` indentation error, reproduced
+against `HEAD`; no unrelated correction was made. Exact CI remains unverified.
+Further independent review, reproducible package construction,
+identity recovery design and physical commissioning are release blockers.
+
 ## GitHub CI follow-up — 2 November 2026 22:36 GMT
 
 Both initial source commits were pushed and branch tips verified: HomeyPro
