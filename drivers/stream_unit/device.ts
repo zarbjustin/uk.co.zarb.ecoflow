@@ -1,7 +1,7 @@
 'use strict';
 
 import { BaseEcoFlowDevice, QuotaSampleContext } from '../../lib/BaseEcoFlowDevice';
-import { mapStreamQuota } from '../../lib/streamMapping';
+import { mapStreamQuota, STREAM_UNIT_SOC_KEYS } from '../../lib/streamMapping';
 import { streamModelFromSn, streamAcOutletCount } from '../../lib/streamModels';
 import { OperatingMode } from '../../lib/streamProtocol';
 import { executeStreamControl, readStreamControlState, StreamControlIntent } from '../../lib/streamControls';
@@ -19,6 +19,9 @@ type ControlWait = () => void;
 type TimedValue = { value: number; at: number };
 type DiagnosticBatch = { pv: Record<string, TimedValue>; limits: Record<string, TimedValue>;
   battery?: { reading: NonNullable<ReturnType<typeof decodeBkBatteryReading>>; at: number } };
+const SOC_RECEIPT_TTL_MS = 300000;
+type SocReceipt = { value: unknown; receivedAt: number; source: QuotaSampleContext['source'] | null; sn: string;
+  applicationStatus: 'unavailable' | 'applied' | 'write_failed' };
 
 /**
  * A single physical STREAM inverter/battery unit. The device is tailored to its
@@ -51,6 +54,8 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private limitObservations = new StreamLimitObservations();
   private powerHistory = new StreamPowerHistory();
   private pvWork?: CoalescedTelemetryQueue<DiagnosticBatch>;
+  // Qualification evidence only: never expires/clears the displayed SOC or persists across sessions.
+  private socReceipt: SocReceipt | null = null;
 
   getPowerHistoryDiagnostics() {
     return this.powerHistory.evidence();
@@ -65,7 +70,59 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   getReadingDiagnostics(): Record<string, unknown> {
-    return { ...this.pvReceipts.snapshot(Date.now()), ...this.getRemainingTimeFreshness(), ...this.getLiveReadingFreshness() };
+    const receipt = this.socReceipt;
+    const now = Date.now();
+    const receivedAgeSec = receipt && Number.isFinite(receipt.receivedAt) && receipt.receivedAt > 0 && receipt.receivedAt <= now
+      ? (now - receipt.receivedAt) / 1000 : null;
+    const applied = receipt?.applicationStatus === 'applied' && !this.isShuttingDown()
+      && receipt.sn === this.getData().sn && this.hasCapability('measure_battery')
+      && receipt.value === this.getCapabilityValue('measure_battery');
+    const stale = !applied || receivedAgeSec === null || receivedAgeSec * 1000 > SOC_RECEIPT_TTL_MS;
+    let applicationStatus = 'unavailable';
+    if (receipt?.applicationStatus === 'write_failed') applicationStatus = 'write_failed';
+    else if (applied) applicationStatus = stale ? 'stale' : 'applied';
+    return {
+      ...this.pvReceipts.snapshot(now),
+      ...this.getRemainingTimeFreshness(),
+      ...this.getLiveReadingFreshness(),
+      measure_battery: {
+        ageSec: applied ? receivedAgeSec : null,
+        receivedAgeSec,
+        stale,
+        applicationStatus,
+        source: receipt?.source ?? null,
+      },
+    };
+  }
+
+  private async applySocReading(value: unknown, receivedAt: number, source: QuotaSampleContext['source'] | null,
+    active: () => boolean): Promise<void> {
+    if (!active() || !this.hasCapability('measure_battery')) return;
+    const now = Date.now();
+    const previous = this.socReceipt;
+    // A queued older observation cannot replace a newer receipt, including a failed write.
+    if (previous && previous.receivedAt <= now && receivedAt < previous.receivedAt) return;
+    const receipt: SocReceipt = {
+      value, receivedAt, source, sn: this.getData().sn, applicationStatus: 'unavailable',
+    };
+    this.socReceipt = receipt;
+    if (!Number.isFinite(receivedAt) || receivedAt <= 0 || receivedAt > now || now - receivedAt > SOC_RECEIPT_TTL_MS) return;
+    try {
+      // Keep the existing mapper/display behavior, including no write for an unchanged value.
+      if (value !== undefined && this.getCapabilityValue('measure_battery') !== value) {
+        await this.setCapabilityValue('measure_battery', value);
+      }
+      if (!active() || this.socReceipt !== receipt) return;
+      if (value !== undefined) this.unitComparison.observe('measure_battery', value, receivedAt);
+      if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
+        && (source === 'mqtt' || source === 'rest') && this.getCapabilityValue('measure_battery') === value
+        && receivedAt <= Date.now() && Date.now() - receivedAt <= SOC_RECEIPT_TTL_MS) receipt.applicationStatus = 'applied';
+    } catch (error) {
+      if (!active() || this.socReceipt !== receipt) return;
+      receipt.applicationStatus = 'write_failed';
+      this.unitComparison.failed('measure_battery');
+      this.error('setCapabilityValue measure_battery', error);
+    }
   }
 
   private async startPvDiagnostics(sn: string): Promise<void> {
@@ -219,6 +276,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   protected async onReady(): Promise<void> {
+    this.socReceipt = null;
     this.unitComparison = new StreamUnitComparison();
     this.controlGeneration += 1;
     await this.startRemainingTime('unit');
@@ -378,6 +436,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.socReceipt = null;
     this.stopLiveReadings();
     this.stopRemainingTime();
     this.controlGeneration += 1;
@@ -420,9 +479,17 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    const generation = this.controlGeneration;
+    const { sn } = this.getData();
+    const receivedAt = context?.receivedAt ?? Date.now();
+    const active = () => !this.isShuttingDown() && generation === this.controlGeneration && sn === this.getData().sn;
     this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
     await this.applyRemainingTime(quota, context);
     const values = mapStreamQuota(quota, 'unit');
+    if (STREAM_UNIT_SOC_KEYS.some((key) => Object.prototype.hasOwnProperty.call(quota, key))) {
+      await this.applySocReading(values.measure_battery, receivedAt, context?.source ?? null, active);
+    }
+    delete values.measure_battery;
     delete values.charge_remaining;
     delete values.discharge_remaining;
     for (const [source, target] of Object.entries(StreamUnitDevice.POWER_CAP_MAP)) {

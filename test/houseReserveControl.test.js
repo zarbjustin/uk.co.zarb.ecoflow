@@ -892,7 +892,8 @@ test('dual scope rechecks office ownership, membership and headroom after refres
   assert.ok(h.events.every(e=>e==='office-stopped'));assert.ok(h.store.houseReserveLease.until<Date.now());
  }
 });
-test('dual renewal reserves unobserved Office AC charge ramp conservatively',async()=>{
+test('dual renewal reserves unobserved Office AC charge ramp conservatively',async t=>{
+ const now=Date.now();t.mock.method(Date,'now',()=>now);
  const h=dualInstallationHarness();await h.app.requestCoordinatedReserve(dualBody());
  h.setUpstream(5000);
  await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),expectedOfficePercent:22}),/headroom/);

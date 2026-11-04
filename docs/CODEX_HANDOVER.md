@@ -1,5 +1,65 @@
 # Codex cross-machine handover
 
+## SOC receipt correction reviewed - 4 November 2026
+
+GPT-6 Astra repaired the actual original-STREAM unit SOC diagnostic contract;
+GPT-6.1 Sol independently accepts it for a non-clean installation with both
+automatic controls disabled, not activation. Valid, successfully applied SOC
+observations now expose session-local receipt evidence through the real getter.
+An unchanged value can qualify only against the matching actual capability.
+Failed, invalid, expired, superseded and lifecycle-invalid observations cannot
+certify old SOC. Restart clears proof, not displayed SOC; the separate 300-second
+window does not inherit power expiry or introduce capability/settings/counter
+changes. Regression coverage exercises actual driver application and diagnostic
+getters through six-member membership and signed discharge.
+
+Node 22 build, 210 targeted tests, all 1,541 native tests, lint and release checks
+pass. Sol independently passed type-checking and 53 lifecycle tests. Its combined
+focused run initially passed 206/207, then unchanged 207/207; the identified
+existing fixture `dual renewal reserves unobserved Office AC charge ramp
+conservatively` generated timestamps after the caller captured its clock.
+The named fixture now uses a test-scoped fixed clock, without changing assertions
+or production guards. The final isolated run passes 207 focused and all 1,541
+native tests; reviewed production hashes are unchanged. This does not identify
+the older unidentified failure.
+
+The verified-level 2,048-file candidate package changes only
+`drivers/stream_unit/device.js` and `lib/streamMapping.js` relative to installed
+`9a116d0`; all 1,423 dependency files are unchanged, and compiled code matches the
+tested isolated build. Source synchronization, exact-commit CI and fresh
+non-clean installation/readback remain pending at this checkpoint. The 01:02 UTC
+maintenance capture still shows both controllers disabled and signed Office
+discharge unqualified. No positive battery command or fault clearance is issued.
+
+## Qualification correction installed; driver-contract follow-up - 4 November 2026
+
+Runtime `9a116d0e682a15dba08fa52c95f582fd3a7d5f13` was installed non-clean at
+**00:46:35 UTC**, with both automatic controllers disabled and faults retained.
+Exact-commit CI
+[41749035673](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41749035673)
+passed. Verified-level packaging produced a 2,048-file archive with SHA-256
+`fe22d3e7c13703e273fd33a0e123fff571ffd063e6cc2ef40fb222b37682407b`.
+Only `app.js` changed from the installed `a0beca9` artifact; it matches the
+independently reviewed/tested build. That preceding archive now provides an
+exact known recovery artifact, rather than the older unknown-binary limitation.
+
+Three complete postinstallation comparisons preserve 15 native definitions,
+278 device Energy configurations, ten counters, ten globals, six variables,
+all Flows and 1,217 Insights identities. House remains 0% and discharging;
+Office remains 3% and non-charging. No reserve or activation command accompanied
+installation. Saved store internals were not independently exported.
+
+The stronger real read path returns `officeDischarge:null`. Bounded diagnosis
+established a driver-contract defect: membership requires
+`getReadingDiagnostics().measure_battery`, but the actual `stream_unit` getter
+does not expose SOC diagnostics. The harness mocked that missing field, so
+coordinator tests did not exercise the real contract. Valid numeric member SOC
+and aggregate fresh power cannot replace the missing applied-SOC receipt.
+A driver-level freshness fix and real-getter regression are in progress; no
+checks are relaxed. Six-member main-resolution qualification is still unproven
+because rejection occurs before those lookups. Keep controls disabled and retain
+the separate headroom/AC relationship/Office contract/tariff gates.
+
 ## Office proof-boundary repair reviewed - 4 November 2026
 
 GPT-6 Astra implemented the additional native qualification repair in `app.ts`

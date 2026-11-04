@@ -1,5 +1,27 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026 - real SOC receipt correction reviewed
+
+Astra's real driver freshness correction passes 1,541 native tests; Sol
+independently accepts disabled non-clean deployment, not activation. Actual
+driver-to-membership regression coverage replaces reliance on an invented mock
+receipt. The discovered timestamp-sensitive fixture is stabilized with a
+test-scoped clock; 207 focused and 1,541 full tests pass without production guard
+changes. The complete candidate archive changes only
+two runtime files; installation, real qualification and economic commissioning
+remain pending. See [CODEX_HANDOVER.md](CODEX_HANDOVER.md).
+
+## 4 November 2026 - correction installed; actual SOC receipt contract blocked
+
+Reviewed, exact-CI-passing `9a116d0` is installed and running with three complete
+preservation readbacks. Both controllers remain disabled; House discharges at
+reserve 0 and Office remains at reserve 3 without bulk charging.
+
+Real membership qualification now exposes a missing `stream_unit` SOC diagnostic
+receipt that the test harness had mocked. The driver integration fix is in
+progress; numeric capability values are not substituted for freshness evidence.
+See [CODEX_HANDOVER.md](CODEX_HANDOVER.md) for archive provenance and limits.
+
 ## 4 November 2026 - Office proof correction independently accepted
 
 Astra's shared membership/read/release repair and follow-up slow-proof liveness

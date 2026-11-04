@@ -2,6 +2,8 @@
 
 import { Quota } from './types';
 
+export const STREAM_UNIT_SOC_KEYS = ['f32ShowSoc', 'soc', 'actSoc'];
+
 function num(q: Quota, keys: string[]): number | undefined {
   for (const k of keys) {
     const v = q[k];
@@ -87,7 +89,7 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
 
   // Battery / energy
   set('measure_battery', scope === 'unit'
-    ? num(q, ['f32ShowSoc', 'soc', 'actSoc']) // per-unit SoC (MQTT BMS); cmsBattSoc reads 0 on members
+    ? num(q, STREAM_UNIT_SOC_KEYS) // per-unit SoC (MQTT BMS); cmsBattSoc reads 0 on members
     : num(q, ['cmsBattSoc'])); // unit-only BMS deltas must not overwrite aggregate SOC
   set('battery_soh', num(q, ['soh', 'realSoh', 'cmsBattSoh', 'bmsBattSoh']));
   set('charge_limit', num(q, ['cmsMaxChgSoc']));

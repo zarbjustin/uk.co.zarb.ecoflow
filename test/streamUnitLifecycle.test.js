@@ -4,13 +4,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const originalLoad = Module._load;
-let StreamUnit;
+let StreamUnit; let App;
 try {
   Module._load = function load(request, ...args) {
-    if (request === 'homey') return { Device: class {} };
+    if (request === 'homey') return { Device: class {}, App: class {} };
     return originalLoad.call(this, request, ...args);
   };
   StreamUnit = require('../.homeybuild/drivers/stream_unit/device');
+  App = require('../.homeybuild/app');
 } finally { Module._load = originalLoad; }
 
 async function harness(sn, mainSn = sn, app, configure) {
@@ -52,6 +53,207 @@ async function harness(sn, mainSn = sn, app, configure) {
   await d.onReady();
   return { d, caps, values, listeners, writes, reads, intervals, setState: (next) => { state = next; } };
 }
+
+async function socHarness(t, index = 0) {
+  const h = await harness(`BK31SYNTHETIC000${index + 1}`, 'BK31SYNTHETIC0001', undefined, (d, caps, values) => {
+    caps.add('measure_battery'); values.measure_battery = 42;
+    d.getAvailable = () => true; d.getId = () => `synthetic-unit-${index}`;
+  });
+  t.after(() => h.d.onTeardown());
+  return h;
+}
+const socReceipt = h => h.d.getReadingDiagnostics().measure_battery;
+const deferredSoc = () => {
+  let resolve; let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
+
+test('real unit SOC receipts require a current-session observation, not persisted SOC or unrelated telemetry', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const h = await socHarness(t); const caps = [...h.caps];
+  assert.equal(h.values.measure_battery, 42);
+  assert.equal(socReceipt(h).applicationStatus, 'unavailable');
+  const sdkWrites = []; const write = h.d.setCapabilityValue;
+  h.d.setCapabilityValue = async (cap, value) => { sdkWrites.push([cap, value]); await write(cap, value); };
+  await h.d.applyQuota({ f32ShowSoc: 42 }, { receivedAt: now - 2500, source: 'mqtt' });
+  assert.deepEqual(socReceipt(h), { ageSec: 2.5, receivedAgeSec: 2.5, stale: false, applicationStatus: 'applied', source: 'mqtt' });
+  assert.deepEqual(sdkWrites, [], 'a genuinely observed unchanged value needs no redundant SDK write');
+  now += 1000;
+  await h.d.applyQuota({ temp: 30, cmsBattSoc: 99 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(socReceipt(h).ageSec, 3.5, 'neither temperature nor aggregate SOC renews unit SOC');
+  for (const [key, value] of [['soc', '0'], ['actSoc', 100], ['f32ShowSoc', 42]]) {
+    now += 1000;
+    await h.d.applyQuota({ [key]: value }, { receivedAt: now, source: 'rest' });
+    assert.equal(h.values.measure_battery, Number(value));
+    assert.equal(socReceipt(h).applicationStatus, 'applied'); assert.equal(socReceipt(h).source, 'rest');
+  }
+  now += 300000;
+  assert.equal(socReceipt(h).stale, false, 'the exact 300-second boundary remains usable');
+  now++;
+  assert.equal(socReceipt(h).stale, true); assert.equal(socReceipt(h).applicationStatus, 'stale');
+  await h.d.expireLiveReadings();
+  assert.equal(h.values.measure_battery, 42, 'SOC display is not on the live-power clearing path');
+  assert.deepEqual([...h.caps], caps); assert.deepEqual(h.writes, []);
+  await h.d.applyQuota({ soc: 42 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(socReceipt(h).stale, false);
+  await h.d.onTeardown(); await h.d.onReady();
+  assert.equal(socReceipt(h).applicationStatus, 'unavailable', 'restart cannot inherit the previous session receipt');
+  assert.equal(h.values.measure_battery, 42, 'restart preserves last-reported displayed SOC');
+});
+
+test('invalid SOC observations invalidate qualification without changing the existing mapper fallback', async t => {
+  for (const value of [-1, 101, NaN, Infinity, null, '', 'bad', undefined]) {
+    await t.test(String(value), async st => {
+      let now = 1000000; st.mock.method(Date, 'now', () => now);
+      const h = await socHarness(st);
+      await h.d.applyQuota({ soc: 42 }, { receivedAt: now, source: 'mqtt' });
+      now += 1000;
+      await h.d.applyQuota({ f32ShowSoc: value }, { receivedAt: now, source: 'mqtt' });
+      assert.equal(socReceipt(h).stale, true); assert.notEqual(socReceipt(h).applicationStatus, 'applied');
+      // The mapper still accepts a valid lower-priority unit alias.
+      now += 1000;
+      await h.d.applyQuota({ f32ShowSoc: null, soc: '43' }, { receivedAt: now, source: 'mqtt' });
+      assert.equal(h.values.measure_battery, 43); assert.equal(socReceipt(h).stale, false);
+    });
+  }
+});
+
+test('SOC observation timestamps and sources cannot be invented, renewed at processing time or rolled backwards', async t => {
+  for (const kind of ['missing-context', 'unknown-source', 'zero', 'nan', 'future', 'stale', 'queued-stale']) {
+    await t.test(kind, async st => {
+      let now = 1000000; st.mock.method(Date, 'now', () => now);
+      const h = await socHarness(st);
+      let context = { receivedAt: now, source: 'mqtt' };
+      if (kind === 'missing-context') context = undefined;
+      if (kind === 'unknown-source') context.source = 'unknown';
+      if (kind === 'zero') context.receivedAt = 0;
+      if (kind === 'nan') context.receivedAt = NaN;
+      if (kind === 'future') context.receivedAt++;
+      if (kind === 'stale') context.receivedAt -= 300001;
+      if (kind === 'queued-stale') h.d.applyRemainingTime = async () => { now += 300001; };
+      await h.d.applyQuota({ soc: 50 }, context);
+      assert.equal(socReceipt(h).stale, true); assert.notEqual(socReceipt(h).applicationStatus, 'applied');
+    });
+  }
+  await t.test('older observation and clock rollback', async st => {
+    let now = 1000000; st.mock.method(Date, 'now', () => now);
+    const h = await socHarness(st);
+    await h.d.applyQuota({ soc: 50 }, { receivedAt: now, source: 'mqtt' });
+    now += 1000;
+    await h.d.applyQuota({ soc: 60 }, { receivedAt: now - 1001, source: 'rest' });
+    assert.equal(h.values.measure_battery, 50); assert.equal(socReceipt(h).ageSec, 1);
+    now -= 2000;
+    assert.equal(socReceipt(h).stale, true);
+    await h.d.applyQuota({ soc: 51 }, { receivedAt: now, source: 'mqtt' });
+    assert.equal(socReceipt(h).stale, false); assert.equal(h.values.measure_battery, 51);
+  });
+});
+
+test('SOC receipts follow successful actual SDK application, including failed, no-op and expired writes', async t => {
+  for (const kind of ['failed', 'no-op', 'expired']) await t.test(kind, async st => {
+    let now = 1000000; st.mock.method(Date, 'now', () => now);
+    const h = await socHarness(st);
+    await h.d.applyQuota({ soc: 42 }, { receivedAt: now, source: 'mqtt' });
+    const write = h.d.setCapabilityValue;
+    h.d.setCapabilityValue = async (cap, value) => {
+      if (cap === 'measure_battery') {
+        if (kind === 'failed') throw new Error('synthetic SDK failure');
+        if (kind === 'no-op') return;
+        now += 300001;
+      }
+      await write(cap, value);
+    };
+    await h.d.applyQuota({ soc: 50 }, { receivedAt: now, source: 'mqtt' });
+    assert.equal(socReceipt(h).stale, true); assert.notEqual(socReceipt(h).applicationStatus, 'applied');
+    if (kind === 'failed') assert.equal(socReceipt(h).applicationStatus, 'write_failed');
+    assert.deepEqual(h.writes, []);
+  });
+});
+
+test('pending SOC writes cannot qualify after supersession, identity change or lifecycle reset', async t => {
+  for (const kind of ['newer-success', 'older-failure', 'identity-change', 'teardown', 'restart']) {
+    await t.test(kind, async st => {
+      let now = 1000000; st.mock.method(Date, 'now', () => now);
+      const h = await socHarness(st); const blocked = deferredSoc(); const started = deferredSoc();
+      const write = h.d.setCapabilityValue;
+      h.d.setCapabilityValue = async (cap, value) => {
+        if (cap === 'measure_battery' && value === 50) { started.resolve(); await blocked.promise; }
+        await write(cap, value);
+      };
+      const old = h.d.applyQuota({ soc: 50 }, { receivedAt: now, source: 'mqtt' });
+      await started.promise; assert.equal(socReceipt(h).stale, true);
+      now += 1000;
+      if (kind === 'newer-success' || kind === 'older-failure') {
+        await h.d.applyQuota({ soc: 60 }, { receivedAt: now, source: 'mqtt' });
+        assert.equal(socReceipt(h).stale, false);
+      }
+      if (kind === 'identity-change') h.d.getData = () => ({ sn: 'BK31SYNTHETIC0099' });
+      if (kind === 'teardown') await h.d.onUninit();
+      if (kind === 'restart') await h.d.onReady();
+      if (kind === 'older-failure') blocked.reject(new Error('synthetic late SDK failure'));
+      else blocked.resolve();
+      await old;
+      if (kind === 'older-failure') {
+        assert.equal(h.values.measure_battery, 60); assert.equal(socReceipt(h).stale, false);
+        assert.equal(socReceipt(h).ageSec, 0);
+      } else assert.equal(socReceipt(h).stale, true, 'old completion cannot qualify a changed/current session');
+      assert.deepEqual(h.writes, []);
+    });
+  }
+});
+
+test('real REST supersession guard cannot renew an applied unit SOC receipt', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const h = await socHarness(t);
+  await h.d.applyQuota({ soc: 42 }, { receivedAt: now, source: 'mqtt' });
+  now += 1000;
+  const old = h.d.queueQuota({ soc: 60 }, 'rest', 0);
+  h.d.realtimeRevision = 1; await old;
+  assert.equal(h.values.measure_battery, 42); assert.equal(socReceipt(h).ageSec, 1);
+});
+
+test('membership and signed discharge consume real stream_unit SOC getter/application receipts', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const fleet = [];
+  for (let i = 0; i < 6; i++) fleet.push(await socHarness(t, i));
+  const gate = {
+    officeDeviceId: 'synthetic-office', officeMainSerial: fleet[0].d.getData().sn,
+    officeMemberDeviceIds: fleet.map(h => h.d.getId()),
+    officeMemberSerials: Object.fromEntries(fleet.map(h => [h.d.getId(), h.d.getData().sn])),
+    powerBudget: { maxObservationAgeSec: 5 },
+  };
+  const office = {
+    getId: () => gate.officeDeviceId, getAvailable: () => true,
+    getCoordinationMainSn: async () => gate.officeMainSerial,
+    getReportingDiagnostics: () => ({ aggregateRecovery: { state: 'verified_original_main' },
+      observations: { measure_power: { value: -60, receivedAt: now } } }),
+  };
+  const app = new App();
+  app.homey = { settings: { get: key => key === 'houseReserveControl' ? gate : undefined },
+    drivers: { getDriver: id => ({ getDevices: () => id === 'stream' ? [office] : fleet.map(h => h.d) }) },
+    setTimeout, clearTimeout };
+  await assert.rejects(app.verifyOfficeCoordinationMembership(office, gate), /SOC receipt stale/);
+  for (let i = 0; i < 5; i++) await fleet[i].d.applyQuota({ f32ShowSoc: 42 }, { receivedAt: now, source: 'mqtt' });
+  await assert.rejects(app.verifyOfficeCoordinationMembership(office, gate), /SOC receipt stale/);
+  await fleet[5].d.applyQuota({ f32ShowSoc: 42 }, { receivedAt: now, source: 'mqtt' });
+  await app.verifyOfficeCoordinationMembership(office, gate);
+  assert.equal(app.officeDischargeReading(office, gate).value, -60);
+  // A failed SOC write invalidates an already-cached membership proof immediately.
+  fleet[5].d.setCapabilityValue = async () => { throw new Error('synthetic SDK failure'); };
+  now++;
+  await fleet[5].d.applyQuota({ f32ShowSoc: 43 }, { receivedAt: now, source: 'mqtt' });
+  assert.throws(() => app.officeDischargeReading(office, gate), /unavailable/);
+  await assert.rejects(app.verifyOfficeCoordinationMembership(office, gate), /SOC receipt stale/);
+  // A fresh unchanged observation can be verified without an unnecessary SDK write.
+  now++;
+  await fleet[5].d.applyQuota({ f32ShowSoc: 42 }, { receivedAt: now, source: 'mqtt' });
+  await app.verifyOfficeCoordinationMembership(office, gate);
+  assert.equal(app.officeDischargeReading(office, gate).value, -60);
+  now += 300001;
+  await assert.rejects(app.verifyOfficeCoordinationMembership(office, gate), /SOC receipt stale/);
+  for (const h of fleet) { assert.equal(h.values.measure_battery, 42); assert.deepEqual(h.writes, []); }
+});
 
 test('valid original units initialise when Homey rejects options lookup for a custom grid capability', async () => {
   for (const sn of ['BK11SYNTHETIC0001', 'BK31SYNTHETIC0001']) {
