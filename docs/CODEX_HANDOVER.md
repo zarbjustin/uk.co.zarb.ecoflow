@@ -1,5 +1,50 @@
 # Codex cross-machine handover
 
+## Approved cutover; Office fault telemetry blocked - 4 November 2026
+
+The owner's 13:14 approval resolves the previous takeover-consent blocker.
+Disabled caller/native configuration migration succeeded at 13:20: matched
+managed-power schema 2, routine authority with no expiry, fixed five daily
+slots, both roles and floor-only Office acquisition. Historical state was
+archived before explicit baseline adoption. No electrical limits changed.
+
+Following Sol's review, the actual native Office reserve Flow card performed
+the one-time 57-to-3 maintenance release. A fabricated/renewed ownership lease
+was not used. Fresh Office reserve/member/net-power evidence, unchanged Office
+discharge floor and House 0 were verified, with exact preservation passing.
+Caller expectations were reconciled to 0/3; the completed old native fault was
+cleared after preserving its history, without renewing that lease.
+
+Bounded native commissioning subsequently proved House charging at about
+3.76 kW and a no-discharge hold. Office acquisition failed with
+`Office membership or alarm unverified`. Its `alarm_generic` is null, and
+the otherwise qualified managed-power receipt does not prove a fresh
+fault-clear status. Investigate authoritative native fault fields rather than
+weakening this guard. The watchdog restored House 0; Office stayed at 3.
+Native admission was disabled again at 13:29 with preservation passing.
+
+Read-only vendor investigation at 13:34 UTC returned a full Office quota with
+15 fields and no known fault-code fields. Explicitly requesting the five known
+fault fields returned an empty object. API request success is not device
+fault-clear evidence; do not map absent values to zero/false.
+
+`app.ts` now shares `assertOfficeCoordinationPreflight` between managed readiness
+and dispatch. Wrong mode or an unknown/asserted alarm prevents a qualified
+Office command receipt, while signed read-only power and owned-stop restoration
+remain separate. Regression cases cover unknown and invalid alarm values,
+mode changes, dispatch-time rechecks and stop availability. Pinned Node 22
+validation passed 190 focused tests, all 1,577 native tests, build, lint, release
+checks and whitespace checks. This fixes misleading eligibility, not missing
+hardware telemetry or Office commissioning.
+
+Installed runtime remains `2550905`; this source repair has not been installed,
+and no additional restart is justified solely to seek missing vendor fields.
+Both controllers and the execution Flow remain disabled at 0/3.
+Consent/configuration are no longer blockers. Authoritative Office fault-clear
+telemetry is needed before Office charge/release and automatic activation;
+full-cycle acceptance remains unobserved. Historical installation continuity
+exceptions and caller frozen-parity CI failure below remain valid limitations.
+
 ## Five-slot native runtime installed disabled - 4 November 2026, 02:54 UTC
 
 This is the current deployment checkpoint; preparation statements below are

@@ -781,10 +781,13 @@ module.exports = class EcoFlowApp extends Homey.App {
     let officePowerBudgetReady = false;
     if (dual && (managed || wholeProperty)) {
       try {
-        this.validateCoordinatedPowerBudget(gate, true);
-        officePowerBudgetReady = !managed || this.officeCoordinationMembershipCurrent(office, gate);
+        // Fresh power/membership is not proof of an explicitly clear alarm.
+        // Advertise managed command eligibility using the dispatch guard itself.
+        if (managed) this.assertOfficeCoordinationPreflight(office, gate);
+        else this.validateCoordinatedPowerBudget(gate, true);
+        officePowerBudgetReady = true;
       } catch {
-        // An uncommissioned Office bound does not block House-only charging.
+        // An unqualified Office remains read-only; House-only proof is separate.
       }
     }
     const reportedAt = Date.now();
@@ -998,11 +1001,17 @@ module.exports = class EcoFlowApp extends Homey.App {
       || age < 0 || age + 1 > maxAge)) throw new Error('House power budget receipt stale');
   }
 
-  private assertCoordinatedPower(house: any, office: any, gate: any): void {
+  private assertOfficeCoordinationPreflight(office: any, gate: any): void {
     if (office.getCapabilityValue('operating_mode') !== 'self_powered' || office.getCapabilityValue('alarm_generic') === true) throw new Error('Office mode/fault safety guard');
     if (gate.controlScope === 'coordinated-installations') {
       this.validateCoordinatedPowerBudget(gate, true);
       if (office.getCapabilityValue('alarm_generic') !== false || !this.officeCoordinationMembershipCurrent(office, gate)) throw new Error('Office membership or alarm unverified');
+    }
+  }
+
+  private assertCoordinatedPower(house: any, office: any, gate: any): void {
+    this.assertOfficeCoordinationPreflight(office, gate);
+    if (gate.controlScope === 'coordinated-installations') {
       const view = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
       if (isEcoflowManagedPower(gate.powerBudget)) {
         this.assertFreshHouseBudgetReceipts(gate, view);

@@ -1,5 +1,30 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026 - approved cutover, Office fault telemetry blocked
+
+Owner approval now covers the explained reserve-ownership cutover and existing
+fixed-five script policy. Matched daily/managed-power/routine configuration was
+staged disabled, historical state archived, and the supported Office reserve
+card released 57 to 3 with actual readback and strict preservation.
+
+Bounded commissioning proved House charging at about 3.76 kW and its watchdog
+restoring reserve 0. Office acquisition was rejected because native admission
+could not verify membership/alarm; its Homey alarm is null. A qualified
+managed-power receipt is not fresh fault-clear evidence. No alarm guard was
+weakened. Office stayed at 3 and both controllers/Flow are disabled again.
+
+The supported full Office quota returned 15 fields with no known fault codes;
+explicit requests for the five fault-code fields returned an empty object.
+Missing telemetry cannot establish alarm-clear status. A source-only correction
+shares command preflight with managed readiness, removing the false-positive
+eligibility while retaining owned-stop behavior. All 1,577 native tests, 190
+focused tests, build, lint and release checks passed.
+
+Installed native source remains `2550905`; no further restart or charge attempt
+was made. Automatic operation and full-cycle acceptance remain blocked pending
+authoritative Office fault-clear telemetry. See [CODEX_HANDOVER.md](CODEX_HANDOVER.md)
+for the exact cutover, correction and retained historical limitations.
+
 ## 4 November 2026, 02:54 UTC - native/caller installed, activation blocked
 
 Exact-CI-passing native `2550905e6a6aa89a9709b5db5767124e80c2fb1d` was installed
