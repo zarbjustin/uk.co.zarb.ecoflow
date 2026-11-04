@@ -317,8 +317,23 @@ test('EcoFlow-managed House dispatch retains read-only Office proof and has no A
  assert.equal(result.verified,true);assert.equal(result.controlScope,'house-only');
  assert.deepEqual(h.events,['house:20','second:20']);
 });
-test('EcoFlow-managed Office readiness rejects unknown or asserted alarms despite fresh membership and power',async t=>{
- for(const alarm of [null,undefined,true,0,'false'])await t.test(String(alarm),async st=>{
+test('Only EcoFlow-managed policy delegates unavailable Office alarms without fabricating a clear value',async t=>{
+ for(const alarm of [null,undefined])await t.test(String(alarm),async st=>{
+  const h=managedHarness();proofClock(st,h);
+  const read=h.office.getCapabilityValue;
+  h.office.getCapabilityValue=k=>k==='alarm_generic'?alarm:read(k);
+  assert.equal((await h.app.refreshCoordinatedReadings()).office.qualified,true);
+  assert.equal((await h.app.requestCoordinatedReserve(managedBody())).verified,true);
+  assert.deepEqual(h.events,['office:22']);
+  assert.equal(h.office.getCapabilityValue('alarm_generic'),alarm);
+  const strict=dualInstallationHarness(),strictRead=strict.office.getCapabilityValue;
+  strict.office.getCapabilityValue=k=>k==='alarm_generic'?alarm:strictRead(k);
+  await assert.rejects(strict.app.requestCoordinatedReserve(dualBody()),/Office membership or alarm unverified/);
+  assert.deepEqual(strict.events,[]);
+ });
+});
+test('EcoFlow-managed Office readiness rejects malformed or asserted alarms despite fresh membership and power',async t=>{
+ for(const alarm of [true,0,'false'])await t.test(String(alarm),async st=>{
   const h=managedHarness();proofClock(st,h);
   const read=h.office.getCapabilityValue;
   h.office.getCapabilityValue=k=>k==='alarm_generic'?alarm:read(k);
@@ -342,8 +357,7 @@ test('EcoFlow-managed Office readiness rejects wrong mode and does not cache ala
  assert.equal((await h.app.refreshCoordinatedReadings()).office,undefined);
  await assert.rejects(h.app.requestCoordinatedReserve(managedBody()),/Office mode\/fault safety guard/);
  mode='self_powered';alarm=null;
- assert.equal((await h.app.refreshCoordinatedReadings()).office,undefined);
- await assert.rejects(h.app.requestCoordinatedReserve(managedBody()),/Office membership or alarm unverified/);
+ assert.equal((await h.app.refreshCoordinatedReadings()).office.qualified,true);
  alarm=false;
  assert.equal((await h.app.refreshCoordinatedReadings()).office.qualified,true);
  alarm=true; // Permission must be checked again at dispatch, not cached from the read.
@@ -357,7 +371,7 @@ test('EcoFlow-managed unknown or asserted alarm never obstructs an owned Office 
   await h.app.requestCoordinatedReserve(managedBody());
   const read=h.office.getCapabilityValue;
   h.office.getCapabilityValue=k=>k==='alarm_generic'?alarm:read(k);
-  assert.equal((await h.app.refreshCoordinatedReadings()).office,undefined);
+  assert.equal((await h.app.refreshCoordinatedReadings()).office?.qualified,alarm===null?true:undefined);
   const stopped=await h.app.requestCoordinatedReserve({...managedBody(),acquireOfficeLease:false,officePercent:3,
    expectedOfficePercent:22,releaseOfficeOnly:true,releaseOfficeReason:'staged-stop'});
   assert.equal(stopped.officeStopped,true);

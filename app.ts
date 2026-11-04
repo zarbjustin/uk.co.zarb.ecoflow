@@ -781,8 +781,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     let officePowerBudgetReady = false;
     if (dual && (managed || wholeProperty)) {
       try {
-        // Fresh power/membership is not proof of an explicitly clear alarm.
-        // Advertise managed command eligibility using the dispatch guard itself.
+        // Readiness and dispatch share the opted-in EcoFlow-managed alarm policy.
         if (managed) this.assertOfficeCoordinationPreflight(office, gate);
         else this.validateCoordinatedPowerBudget(gate, true);
         officePowerBudgetReady = true;
@@ -1002,10 +1001,13 @@ module.exports = class EcoFlowApp extends Homey.App {
   }
 
   private assertOfficeCoordinationPreflight(office: any, gate: any): void {
-    if (office.getCapabilityValue('operating_mode') !== 'self_powered' || office.getCapabilityValue('alarm_generic') === true) throw new Error('Office mode/fault safety guard');
+    const alarm = office.getCapabilityValue('alarm_generic');
+    if (office.getCapabilityValue('operating_mode') !== 'self_powered' || alarm === true) throw new Error('Office mode/fault safety guard');
     if (gate.controlScope === 'coordinated-installations') {
       this.validateCoordinatedPowerBudget(gate, true);
-      if (office.getCapabilityValue('alarm_generic') !== false || !this.officeCoordinationMembershipCurrent(office, gate)) throw new Error('Office membership or alarm unverified');
+      // The opted-in managed policy delegates unavailable fault telemetry to EcoFlow.
+      const managedUnknownAlarm = isEcoflowManagedPower(gate.powerBudget) && (alarm === null || alarm === undefined);
+      if ((alarm !== false && !managedUnknownAlarm) || !this.officeCoordinationMembershipCurrent(office, gate)) throw new Error('Office membership or alarm unverified');
     }
   }
 

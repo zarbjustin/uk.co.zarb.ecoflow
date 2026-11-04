@@ -1,5 +1,20 @@
 # Codex cross-machine handover
 
+## EcoFlow fault-management delegation approved - 4 November 2026, 15:04 UTC
+
+The owner explicitly requests deployment without blocking on unavailable Office
+alarm telemetry because EcoFlow manages it. The opted-in `ecoflow-managed`
+policy now accepts null/absent alarm telemetry without rewriting it as clear.
+Reported faults, malformed alarm values, wrong operating mode, identity/member
+checks, fresh power/SOC, ownership, leases and ordered watchdog restoration
+remain enforced. The conservative non-managed policy still requires explicit
+alarm-clear. Readiness and dispatch use the same policy.
+
+This supersedes the earlier missing-telemetry activation blocker, not the
+requirement to commission the actual charge/release path. The correction is
+being validated for non-clean Development deployment; installed source is
+still `2550905` and automatic execution remains disabled until verified.
+
 ## Approved cutover; Office fault telemetry blocked - 4 November 2026
 
 The owner's 13:14 approval resolves the previous takeover-consent blocker.

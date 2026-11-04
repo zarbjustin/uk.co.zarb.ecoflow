@@ -1,5 +1,13 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026, 15:04 UTC - owner authorizes EcoFlow-managed fault delegation
+
+The opted-in managed policy no longer treats missing Office alarm telemetry as
+a blocker. Known faults and all membership, mode, freshness, ownership and
+restoration checks remain; the conservative policy is unchanged. No false
+alarm-clear reading is manufactured. Source validation and attended deployment/
+commissioning are in progress. See [CODEX_HANDOVER.md](CODEX_HANDOVER.md).
+
 ## 4 November 2026 - approved cutover, Office fault telemetry blocked
 
 Owner approval now covers the explained reserve-ownership cutover and existing
