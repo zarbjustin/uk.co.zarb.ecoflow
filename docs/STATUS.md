@@ -1,5 +1,19 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026 - real SOC correction deployed and qualifying
+
+Exact-CI-passing runtime `1dc8f5a` is installed non-clean and running. Three full
+preservation comparisons pass. After initial startup uncertainty, two genuine
+signed Office receipts pass the actual SOC/member/main qualification; all reads
+report zero settings writes. A further qualified read beyond the original proof
+lifetime also passes complete preservation at 01:15 UTC.
+
+Both controllers stay disabled at House 0 / Office 3. This resolves the driver
+integration blocker, not physical power/PV calibration, charging admission or
+tariff acceptance. Those commissioning prerequisites and retained fault/ownership
+state are detailed in [CODEX_HANDOVER.md](CODEX_HANDOVER.md). No Mainline/store
+publication or new Energy activation occurred.
+
 ## 4 November 2026 - real SOC receipt correction reviewed
 
 Astra's real driver freshness correction passes 1,541 native tests; Sol

@@ -1,5 +1,48 @@
 # Codex cross-machine handover
 
+## SOC correction deployed; real membership qualification succeeds - 4 November 2026
+
+Runtime source `1dc8f5a00bf768dda77699451662e9fe05f3e138` passed exact-commit
+[CI 41751853338](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41751853338)
+and was installed once, non-clean, at **01:10:13 UTC**. The complete 2,048-file
+Development archive SHA-256 is
+`b4b357428c13b883057519ef08792f71ef5e4ee1aedbe6b30173638d72499e25`.
+Only the two reviewed SOC runtime files differ from the prior installed
+`9a116d0` archive, retained as the exact recovery artifact. Version remains
+1.11.20; this is not Mainline or store publication.
+
+Three complete postinstallation comparisons preserve all 15 native definitions,
+278 device Energy configurations, ten cumulative counters, ten globals, six
+variables, all Flows and 1,217 Insights identities. The app is running; both
+automatic controllers remain disabled, House reserve is 0 and Office reserve is
+3, with historical faults unchanged. No reserve command, re-pairing or new
+Energy contributor accompanies installation.
+
+The first startup read correctly lacked qualified Office evidence. Readbacks at
+**01:11:24 and 01:11:44 UTC** then returned a genuine
+`officeDischarge.qualified:true`, with fresh House/Office readings and
+`settingsWrites:0`. Thus real applied-SOC and configured six-member/main
+qualification now succeeds, rather than only a synthetic harness. This closes
+the implemented membership/driver integration blocker, not AC-power calibration
+or economic acceptance. A further qualified read at **01:15:03 UTC**, beyond the
+original 90-second proof lifetime, also passes complete preservation with zero
+settings writes. Private preservation remains a visible-state/counter
+comparison, not an independently exported full device-store backup.
+
+**Automatic tariff charging remains blocked.** Sol's bounded operating-state
+review establishes a conservative DC-discharge upper bound only if physical
+scope/sign/scale/completeness, absence of PV and no charging member are verified
+and freshly aligned with CT1. Existing installation-derived/net telemetry and
+missing/stale member values do not establish that contract; nighttime does not
+prove zero PV. Current headroom code does not enforce that proposed restricted
+state, so it must not be treated as an activation shortcut.
+
+Retain the full 6 kW House maximum, 300 W margin, 6.9 kW admission allowance and
+non-renewing 5 November 00:16:20.943 UTC bound expiry. Office AC charging remains
+uncommissioned. Physical member-level power/PV qualification, admissible aligned
+headroom, fresh fault/ownership reconciliation and a full tariff cycle remain
+separate prerequisites; old caller plans and 26/3 expectations are not replayed.
+
 ## SOC receipt correction reviewed - 4 November 2026
 
 GPT-6 Astra repaired the actual original-STREAM unit SOC diagnostic contract;
