@@ -1,5 +1,40 @@
 # Codex cross-machine handover
 
+## Runner deployed; aggregate qualification corrected - 4 November 2026, 01:53 UTC
+
+The native runtime remains installed `1dc8f5a`, with genuine Office SOC/member/main
+qualification. HomeyPro's existing resident execution script was discovered to
+be older than its canonical source and was updated in place at **01:53:33 UTC**.
+The exact read-back runner SHA-256 is
+`55b1b6ca7df35c8ae6022da687fc867af3bc5bca802432c1303672944d8931a3`.
+Actual Homey execution returns `disabled` with zero battery commands. Complete
+preservation passes; no native installation, reserve command, configuration/fault
+change, Flow replacement or expiry renewal accompanied this update.
+
+Independent Sol reassessment **retracts the no-opposing-members requirement**.
+For a complete common boundary, net AC support is at most net DC discharge plus
+complete PV input, allowing nonnegative losses. `max(0, -batteryW) + completePV`
+is conservative for charge-positive battery power when all future AC charging
+is independently bounded. House admission uses main system-flow evidence, not
+the individual power capability required by a separate no-discharge-hold path.
+
+Astra's focused trace finds no established hard AC-charging limit command:
+scheduled-task watts do not establish a reserve-mode cap. The main flow-derived
+battery value includes grid/solar/MPPT charging and battery home/grid/socket
+output edges, but does not prove complete PV coverage or AC-side edge semantics.
+Topology/SOC proof and agreement between values derived from the same source
+cannot independently establish that electrical contract.
+
+The owner's later **7.2 kW per-Space** instruction does not independently verify
+the retained 7.2 kW whole-property commissioning ceiling. Incoming supply rating,
+connected PV and AC-socket loads were requested to resolve the physical scope;
+the owner was unavailable. Do not guess a larger property limit or lower the
+6 kW House charging maximum. Both controllers stay disabled, with historical
+faults and stale plans/expectations retained. The existing bound expires
+**5 November 00:16:20.943 UTC**, without renewal. Office AC eligibility and tariff
+acceptance remain open. See the HomeyPro handover for caller-only validation and
+the explicitly still-failing frozen-backup parity CI check.
+
 ## SOC correction deployed; real membership qualification succeeds - 4 November 2026
 
 Runtime source `1dc8f5a00bf768dda77699451662e9fe05f3e138` passed exact-commit
@@ -29,17 +64,16 @@ original 90-second proof lifetime, also passes complete preservation with zero
 settings writes. Private preservation remains a visible-state/counter
 comparison, not an independently exported full device-store backup.
 
-**Automatic tariff charging remains blocked.** Sol's bounded operating-state
-review establishes a conservative DC-discharge upper bound only if physical
-scope/sign/scale/completeness, absence of PV and no charging member are verified
-and freshly aligned with CT1. Existing installation-derived/net telemetry and
-missing/stale member values do not establish that contract; nighttime does not
-prove zero PV. Current headroom code does not enforce that proposed restricted
-state, so it must not be treated as an activation shortcut.
+**Automatic tariff charging remains blocked.** The initial restricted-state
+review was subsequently corrected as documented above: opposing member flows
+and nonzero PV do not inherently invalidate the aggregate bound. Correct scope,
+sign, scale, completeness and freshness remain necessary; nighttime alone does
+not prove zero PV. Do not confuse separately qualified main installation flow
+with individual-unit power capabilities.
 
 Retain the full 6 kW House maximum, 300 W margin, 6.9 kW admission allowance and
 non-renewing 5 November 00:16:20.943 UTC bound expiry. Office AC charging remains
-uncommissioned. Physical member-level power/PV qualification, admissible aligned
+uncommissioned. Aggregate power/PV qualification, admissible aligned
 headroom, fresh fault/ownership reconciliation and a full tariff cycle remain
 separate prerequisites; old caller plans and 26/3 expectations are not replayed.
 

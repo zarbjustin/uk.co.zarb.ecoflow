@@ -1,5 +1,21 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026 - actual caller updated; electrical clarification needed
+
+Homey's older resident execution script was replaced in place with the canonical
+power-budget-aware runner at 01:53 UTC. Exact source readback and actual disabled
+execution pass, with zero battery commands and complete preservation. Native
+runtime remains `1dc8f5a`; both automatic controls and historical faults remain
+unchanged. Caller frozen-backup parity CI is still failing, not reported green.
+
+Sol corrected an overly restrictive earlier analysis: opposing member flows do
+not invalidate a complete net-power bound. Actual aggregate electrical/PV scope
+and a supported lower charging-power cap remain unestablished. The requested
+7.2 kW per-Space setting must not be confused with a verified incoming supply
+rating. The owner was unavailable to confirm supply rating, PV and AC-socket
+loads; no higher site limit or activation was guessed. See
+[CODEX_HANDOVER.md](CODEX_HANDOVER.md).
+
 ## 4 November 2026 - real SOC correction deployed and qualifying
 
 Exact-CI-passing runtime `1dc8f5a` is installed non-clean and running. Three full
