@@ -1,5 +1,24 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026, 02:54 UTC - native/caller installed, activation blocked
+
+Exact-CI-passing native `2550905e6a6aa89a9709b5db5767124e80c2fb1d` was installed
+once, non-clean, at 02:52 UTC. The corrected 23:00-23:00 London fixed-five runner
+and matching report were installed at 02:49 UTC from caller `579ddb7`.
+Both controllers and **01 Energy > 01 Battery - Five Cheapest Slots (House +
+Office)** remain disabled. No reserve commands, configuration migration, fault
+clearance or pilot renewal occurred. Unknown reserve ownership still requires
+an informed takeover decision; physical and tariff-cycle acceptance are blocked.
+
+Native startup preservation has an exception: a counter briefly decreased and
+five heating Flow script bodies changed concurrently, without this installer's
+Flow writes. Later counters exceed baseline, but uninterrupted continuity is
+not proven and the strict comparison still fails on changed Flows. Device/Energy
+configuration, native settings, relevant variables and Insights identities
+compare unchanged. No unrelated Flow was reverted. Caller frozen-backup parity
+CI also remains failing. Exact provenance, limitations and next steps are in
+[CODEX_HANDOVER.md](CODEX_HANDOVER.md); do not report full commissioning complete.
+
 ## 4 November 2026 - five-slot daily setup authorized and Flow prepared
 
 The owner delegates property power management to EcoFlow and authorizes fixed

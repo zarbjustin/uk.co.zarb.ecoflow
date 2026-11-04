@@ -1,5 +1,51 @@
 # Codex cross-machine handover
 
+## Five-slot native runtime installed disabled - 4 November 2026, 02:54 UTC
+
+This is the current deployment checkpoint; preparation statements below are
+historical. Native source `2550905e6a6aa89a9709b5db5767124e80c2fb1d` passed exact
+[CI 41763060789](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41763060789)
+and was installed once, non-clean, at **02:52 UTC**. Development version remains
+1.11.20; no Mainline/store publication occurred. The verified 2,049-file archive
+includes 1,423 hash-checked production dependency files. Archive SHA-256:
+`c350e6801362ae98743cdfec22a56b8fade8d814c0a6345f2e711ae211ffbbaf`.
+The previous `1dc8f5a` recovery archive remains available privately.
+
+The app restarted and read-only readiness succeeded. **Full preservation did
+not pass:** initial readback showed one cumulative counter decreasing and five
+heating Flow script bodies changing concurrently. No Flow write was issued by
+this installer; their author is not established and no unrelated changes were
+reverted. Settled 02:54 UTC readings place all ten counters at/above baseline,
+which does not erase the initial continuity exception. The strict comparison
+still reports `advancedFlows changed`. All 15 native device definitions, 278
+device/Energy configurations, ten global settings, six relevant variables and
+1,217 Insights identities compare unchanged. Full accounting-store recovery is
+not proven. Intent, acknowledgement and both readbacks are retained privately.
+
+Caller source `579ddb7b3228d74b6aac010496ff50831d00dc55` and matching report were
+installed disabled at **02:49:39 UTC**, with exact runner SHA-256
+`874a2c6c69e1d488e9143a051290bd00fc118429302e7d94631c1bf963b4c8d7`.
+Actual runner execution returned `disabled`, zero battery commands; that
+script/report deployment passed preservation. The daily window is fixed
+**23:00-23:00 Europe/London**, with exactly five persisted half-hours and no
+rolling replacement of elapsed winners. It is a chosen scheduling boundary,
+not a verified universal vendor publication guarantee. Astra passed 1,567
+native and 589 caller tests; Sol approved disabled deployment. Caller
+[CI 41763060803](https://github.com/zarbjustin/HomeyPro/actions/runs/41763060803)
+still fails the pre-existing frozen-backup parity step.
+
+The execution Flow is **01 Energy > 01 Battery - Five Cheapest Slots (House +
+Office)**, disabled; the obsolete planner/watchdog are disabled in **99 Archive**.
+The updated **03 Battery - Daily Plan (07:30)** remains enabled in **01 Energy**.
+Both controllers, original fault/lease state and pilot expiry are unchanged.
+No managed-power/daily/routine-authority configuration migration or reserve
+command occurred. Unknown House 100 / Office 57 ownership still blocks activation:
+obtain informed takeover consent, resolve any competing reserve-changing
+schedule, then perform reviewed state cutover and physical charge/release checks.
+Do not enable the Flow alone or claim tariff-cycle acceptance. Electrical-limit
+management remains delegated to EcoFlow, not a reinstated external qualification
+prerequisite. See the HomeyPro handover for the caller source paths.
+
 ## Five-slot daily automation authorized; preparation only - 4 November 2026
 
 The owner explicitly delegates property power management to EcoFlow and requests
