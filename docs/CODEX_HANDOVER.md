@@ -1,5 +1,48 @@
 # Codex cross-machine handover
 
+## Five-slot automation commissioned and enabled - 4 November 2026, 15:12 UTC
+
+This checkpoint supersedes the disabled/blocker states below. Native source
+`d5e08140a06d07ab883013242dfe8605d173158d` passed exact
+[CI 41854400690](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41854400690)
+and was installed once, non-clean, at 15:09 UTC as Development 1.11.20.
+Archive SHA-256:
+`859e35d4149324ace2a557d4d72376e0bedae9586be550c95a3ba1dfe25f92c5`.
+The verified archive contains 2,049 files, including 1,423 hash-checked
+production dependency files. No Mainline/store publication occurred.
+
+After startup membership qualification, actual Office readiness succeeded with
+its alarm still null: missing telemetry was delegated, not fabricated as clear.
+The owner's bounded commissioning exception then proved House charging
+(about 3.48 kW initially), both spaces charging (House 4.99 kW and Office
+0.85 kW) with the House no-discharge hold, Office-first reserve release to 3,
+then House release to 0. Fresh restored power was approximately -25 W House
+and -281 W Office, demonstrating normal demand-driven discharge.
+Physical commissioning completed at 15:11 UTC.
+
+Native routine admission, the resident daily-five caller and the existing
+**Flows > 01 Energy > 01 Battery - Five Cheapest Slots (House + Office)**
+are now enabled. A genuine scheduled execution at 15:12:05 UTC persisted the
+five fixed slots and correctly reported `release / Outside charging windows`
+with expected and actual reserves 0/3 and no caller/native fault. The installed
+runner remains caller source `579ddb7`, SHA-256
+`874a2c6c69e1d488e9143a051290bd00fc118429302e7d94631c1bf963b4c8d7`.
+The 07:30 report remains enabled and obsolete archived writers remain disabled.
+
+Separate installation, commissioning and activation preservation checks passed:
+15 native / 278 total devices, 10 counters, 10 global settings, 6 variables and
+1,217 Insights identities, allowing only the declared configuration, lease,
+caller-state and execution-enabled changes. No electrical limits changed.
+This does not erase the earlier startup counter/Flow exceptions, prove historic
+accounting-store recovery, resolve the caller frozen-backup parity failure or
+constitute full store/hardware release acceptance.
+
+Local validation passed 191 focused tests, all 1,578 native tests, build, lint,
+release and whitespace checks. A complete automatic tariff cycle, tomorrow's
+selection and savings remain unobserved. Review those outcomes after the next
+23:00-23:00 London window; do not describe the bounded physical test as an
+automatically selected cheap-slot cycle.
+
 ## EcoFlow fault-management delegation approved - 4 November 2026, 15:04 UTC
 
 The owner explicitly requests deployment without blocking on unavailable Office
@@ -10,10 +53,9 @@ checks, fresh power/SOC, ownership, leases and ordered watchdog restoration
 remain enforced. The conservative non-managed policy still requires explicit
 alarm-clear. Readiness and dispatch use the same policy.
 
-This supersedes the earlier missing-telemetry activation blocker, not the
-requirement to commission the actual charge/release path. The correction is
-being validated for non-clean Development deployment; installed source is
-still `2550905` and automatic execution remains disabled until verified.
+This superseded the earlier missing-telemetry activation blocker, not the
+requirement to commission the actual charge/release path. Deployment and
+commissioning subsequently passed as recorded in the 15:12 checkpoint above.
 
 ## Approved cutover; Office fault telemetry blocked - 4 November 2026
 

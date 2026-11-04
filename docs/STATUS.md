@@ -1,12 +1,32 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026, 15:12 UTC - commissioned and automatically enabled
+
+Native `d5e0814` passed exact CI 41854400690 and was installed non-clean at
+15:09 UTC. Managed Office readiness succeeds without falsifying its null alarm.
+The bounded physical test proved both spaces charging, Office-first stop and
+House restoration, ending at reserves 0/3 with normal discharge observed.
+
+Native admission, the resident fixed-five runner and **01 Energy > 01 Battery -
+Five Cheapest Slots (House + Office)** are enabled. A real scheduled run at
+15:12:05 UTC persisted the five-slot plan and correctly released outside its
+charging windows. The 07:30 report is unchanged. Installation, commissioning
+and activation preservation all passed; electrical settings are untouched.
+
+All 1,578 native tests, 191 focused tests, build, lint and release checks passed.
+Full automatic tariff-cycle/savings acceptance is pending, not claimed.
+Historical counter/Flow exceptions, unverified accounting-store recovery and
+the caller frozen-backup parity limitation remain recorded. Exact provenance
+and physical evidence are summarised in [CODEX_HANDOVER.md](CODEX_HANDOVER.md).
+Earlier disabled/blocker entries below are historical.
+
 ## 4 November 2026, 15:04 UTC - owner authorizes EcoFlow-managed fault delegation
 
 The opted-in managed policy no longer treats missing Office alarm telemetry as
 a blocker. Known faults and all membership, mode, freshness, ownership and
 restoration checks remain; the conservative policy is unchanged. No false
-alarm-clear reading is manufactured. Source validation and attended deployment/
-commissioning are in progress. See [CODEX_HANDOVER.md](CODEX_HANDOVER.md).
+alarm-clear reading is manufactured. Subsequent deployment and commissioning
+succeeded as recorded above. See [CODEX_HANDOVER.md](CODEX_HANDOVER.md).
 
 ## 4 November 2026 - approved cutover, Office fault telemetry blocked
 
