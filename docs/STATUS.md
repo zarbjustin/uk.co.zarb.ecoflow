@@ -1,5 +1,44 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026 - Office proof correction independently accepted
+
+Astra's shared membership/read/release repair and follow-up slow-proof liveness
+correction pass 1,510 native tests, 154 targeted tests, build, lint and release
+checks under Node 22. Sol independently accepts the source for a non-clean
+installation with both controllers disabled, not activation. The older
+unidentified test failure is retained as a limitation in the handover.
+
+Installed runtime is still `a0beca9` at this source checkpoint. Deployment
+preservation/readback and commissioning remain open; see the newest
+[CODEX_HANDOVER.md](CODEX_HANDOVER.md) section.
+
+## 4 November 2026 - disabled House bound staged; proof-boundary fix in progress
+
+Sol review supports a 6 kW manufacturer AC-input maximum for the two enrolled
+House units. Matching native/caller budgets are staged disabled with 24-hour,
+non-renewing evidence. Fresh receipts support the House contract; Office remains
+unqualified. Existing headroom guards still reject the reviewed samples.
+
+Sol reproduced a separate Office membership/main-proof enforcement defect in
+House-only reads/releases. Astra is implementing the bounded native fix before
+further activation; installed `a0beca9` remains disabled and does not contain it.
+See the newest [CODEX_HANDOVER.md](CODEX_HANDOVER.md) section for exact boundaries.
+
+## 4 November 2026 - repaired native runtime installed; scheduling still held
+
+Owner-approved, non-clean Development installation of runtime `a0beca9` is
+complete and the app is running. The actual archive includes production
+dependencies; the earlier 625-file source-only archive was not installed.
+Complete postinstallation/handover preservation passed. Office bulk charging
+was stopped before a bounded House release, and fresh telemetry now demonstrates
+House discharge. Both caller and native automatic control are disabled;
+completed/historical faults remain for explicit review.
+
+See the newest [CODEX_HANDOVER.md](CODEX_HANDOVER.md) for the deployed archive
+hash, recovery limitations, physical observations and remaining budget/ownership
+commissioning gates. Office AC/net qualification and tariff-cycle acceptance
+are not complete. Older connectivity/no-install sections below are history.
+
 ## 3 November 2026 - remaining sprint deployment preflight
 
 Native `a0beca9` passed exact-commit GitHub CI and offline Homey CLI 4.5.3

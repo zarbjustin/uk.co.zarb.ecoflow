@@ -1,5 +1,113 @@
 # Codex cross-machine handover
 
+## Office proof-boundary repair reviewed - 4 November 2026
+
+GPT-6 Astra implemented the additional native qualification repair in `app.ts`
+and `test/houseReserveControl.test.js`; GPT-6.1 Sol independently reviewed it.
+Shared proof now binds the available aggregate, configured main and exact six
+members, rejects expired/changed/recovery-invalid/superseded evidence, and gates
+House-only signed discharge and unowned-Office stop. Asynchronous release and
+restoration retain absolute deadlines and final ownership/configuration checks.
+Owned Office stopping remains available without granting new charging authority.
+
+Sol's first review found that ordinary refresh discarded a still-current proof,
+making successful slow qualification unusable. The correction reuses current
+proof without renewing expiry and preserves newer proof against older failures.
+Sol accepted the corrected source for **non-clean deployment with both controls
+disabled**, explicitly not activation.
+
+Pinned Node 22.23.4: build, 154 targeted tests, all 1,510 native tests, lint,
+release-boundary/ledger checks and whitespace pass. Complete final output is
+retained privately. One earlier run reported an unidentified failure after its
+detailed output was lost; subsequent passes do not identify or erase that
+historical result. Sol verified source hashes and the retained passing log but
+did not independently execute Node 22 tests. The unchanged caller receipt
+rejection regression also passes under Node 22.
+
+At this source checkpoint, installed runtime remains `a0beca9`, automatic
+controls remain disabled and the reviewed correction is not yet deployed.
+Fresh installation preservation/readback, power/ownership commissioning and
+tariff acceptance remain separate. Older pending-review sections below record
+the progression, not the latest source verdict.
+
+## Disabled House budget staging; qualification repair pending - 4 November 2026
+
+Independent GPT-6.1 Sol review verified the two enrolled STREAM 5000 variants
+against the official 3,000 W AC Charging Input specification: House maximum
+6 kW, not an inference from battery DC flow. Matching native/caller budgets and
+exact existing CT1/six-member/main bindings were staged disabled at 00:16 UTC.
+The bound expires **5 November 2026, 00:16:20.943 UTC** with no automatic renewal.
+Office AC bound remains null and Office charging disabled. Both actual control
+gates remain disabled. Native readback supports the House budget while retaining
+`officePowerBudgetReady:false`; no new pairing/Energy change or battery command
+accompanies staging. Full preservation passed with only intended gate/config
+changes allowed.
+
+Positive admission is still **NO-GO**: all three reviewed settled samples exceed
+the 6.9 kW prospective-import allowance after the unchanged 300 W margin. The
+6 kW AC-input bound and 4.9 kW planning rate are different concepts. Do not use
+export credit, rounding or unqualified conversion losses to manufacture headroom.
+The applicable conservative net-flow/AC relationship also needs qualification.
+
+Sol additionally reproduced missing six-member/main qualification in House-only
+signed Office discharge and unowned-Office stop, plus cached-proof acceptance
+after changing only the configured main. A surgical shared-proof/deadline fix
+and independent review are in progress. The currently installed `a0beca9` does
+not contain that fix; keep it disabled. Current read-only receipt availability
+and configured bindings are not a substitute for enforcing proof at every
+relevant boundary. Caller/native historical faults remain retained. Opus 5.5
+was unavailable and is not claimed.
+
+## Approved Development deployment and House release - 4 November 2026
+
+The owner approved replacing the held reserve targets and proceeding. Secure LAN
+access and a complete preservation baseline were recovered. Runtime
+`a0beca958a648de71342e4c49e57cfb99da0d7e0` was installed once at
+23:57:26 UTC on 3 November using official SDK Development installation with
+`clean:false`, `debug:false` and no environment override. App `1.11.20` is running,
+and repaired native receipt fields are present. Mainline and store channels are
+unchanged. This supersedes the no-deployment/connectivity observations below.
+
+The earlier 625-file archive omitted production dependencies and is **not a
+deployable artifact**. It was not installed. The pinned official Homey CLI
+production copier and packer created the actual dependency-complete archive
+containing 2,048 files, SHA-256:
+`e11180c11453afe4f877b41c30f6ccc0bd04285e378de69796906ec77972c378`.
+Its 625 source/runtime/assets files match the reviewed candidate exactly; bundled
+MQTT loads offline. All 1,423 dependency files match the retained recovery
+archive. No lockfile, source or dependency version changed during packaging.
+
+The retained recovery alternative is source-proven against `d21ffa9`: all 150
+production TypeScript files transpile to byte-identical archived JavaScript,
+and package/lock/generated manifest match. It is not the unavailable exact
+preinstallation binary. Reviewed startup paths predict no original-STREAM
+capability/settings migration; checkpoint flush, projected counter floors and
+Dual CT rollback rejection retain their existing protections.
+
+Three postinstallation captures and a later complete handover comparison
+preserve 15 native definitions, 278 all-device Energy configurations, ten
+cumulative counters, ten globals, six battery variables, all Flows and
+1,217 Insights identities, apart from explicitly intended control/lease changes.
+Device-store internals were not separately exported; visible preservation is
+not a complete accounting-store backup or full energy-accuracy acceptance.
+
+Caller was disabled first. Office 100% -> 3% stopped bulk charging before House
+was released. One bounded zero-only House group command changed 100% -> 0% at
+00:08:28 UTC. Residual positive power during settling caused the conservative
+watchdog to complete/restore 0% and latch `House grid charging not enabled`.
+Three later fresh samples prove House discharging and Office non-charging.
+At 00:10 UTC the temporary gate was returned to the original disabled maintenance
+configuration; the completed stop fault and caller historical fault remain.
+No positive automatic charging or Office scheduling is enabled.
+
+Next: reviewed House AC bound and existing CT1 scope, matched native/caller
+budgets, explicit ownership reconciliation, then bounded commissioning if all
+guards pass. Office AC/net qualification and a full tariff cycle remain open.
+Do not transfer these observations into the older model/role monitoring ledger,
+claim full acceptance, replay stale caller expectations or clear faults blindly.
+The 7.2 kW per-Space limits and conservative 7.2 kW incoming cap are unchanged.
+Raw captures, recovery/deployment archives and exact identities remain private.
+
 ## Remaining sprint preflight - 3 November 2026
 
 The owner requested completion using GPT-6.1 Sol and GPT-6 Astra; requested

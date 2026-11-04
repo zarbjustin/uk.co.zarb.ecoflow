@@ -281,6 +281,290 @@ function dualInstallationHarness(){
 }
 const dualBody=()=>({acquireOfficeLease:true,houseMemberDeviceIds:['synthetic-house','second'],housePercent:18,expectedHousePercent:18,officePercent:22,expectedOfficePercent:3,leaseUntil:Date.now()+60000});
 
+const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+function proofClock(t,h){
+ let now=Date.now(),sequence=0;const timers=new Map();
+ t.mock.method(Date,'now',()=>now);
+ h.app.homey.setTimeout=(fn,ms)=>{
+  const id=++sequence;
+  if(ms<=1000){now+=1000;queueMicrotask(fn);}else timers.set(id,{fn,at:now+ms});
+  return id;
+ };
+ h.app.homey.clearTimeout=id=>timers.delete(id);
+ h.main.getAppliedReadingAt=()=>now;
+ h.app.appMqtt.requestHouseRead=async()=>{};
+ return{advance:ms=>{now+=ms;},expire:()=>{
+  const next=[...timers.values()].sort((a,b)=>a.at-b.at)[0];assert.ok(next,'bounded deadline scheduled');
+  now=Math.max(now,next.at);next.fn();
+ }};
+}
+function expiredHouseOnlyLease(h){
+ const g=h.store.houseReserveControl;
+ h.store.houseReserveLease={until:Date.now()-1,controlScope:'house-only',guardScope:g.controlScope,guardBinding:JSON.stringify(g),
+  houseDeviceId:g.deviceId,serial:g.serial,houseMemberDeviceIds:[...g.houseMemberDeviceIds],houseMemberSerials:{...g.houseMemberSerials},
+  officeDeviceId:g.officeDeviceId,officeRestoreReserve:3,officeExpectedReserve:3,
+  expectedEnabled:true,expectedPercent:18,restoreEnabled:true,restorePercent:15};
+ return h.store.houseReserveLease;
+}
+const houseLowerBody=()=>({...twoBody(),housePercent:15,expectedHousePercent:18});
+
+test('shared Office proof rejects invalid fleets for signed reads, House admission and unowned release',async t=>{
+ const mutations={
+  'missing binding':h=>{delete h.store.houseReserveControl.officeMemberDeviceIds;},
+  'duplicate ID':h=>{h.store.houseReserveControl.officeMemberDeviceIds[5]='office-unit-0';},
+  'duplicate serial':h=>{h.store.houseReserveControl.officeMemberSerials['office-unit-5']='SYNTHETIC-OFFICE-0';},
+  'wrong serial':h=>{h.members[5].getData=()=>({sn:'WRONG-SYNTHETIC'});},
+  'missing member':h=>{h.members.pop();},
+  'duplicate enrolled member':h=>{h.members.push(h.members[0]);},
+  'wrong configured main':h=>{h.store.houseReserveControl.officeMainSerial='SYNTHETIC-OFFICE-1';},
+  'different resolved main':h=>{h.members[5].getCoordinationMainSn=async()=>'OTHER-SYNTHETIC';},
+  'stale SOC':h=>{h.members[5].getReadingDiagnostics=()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:301}});},
+  'duplicate aggregate':h=>{const prior=h.app.homey.drivers.getDriver;h.app.homey.drivers.getDriver=k=>k==='stream'?{getDevices:()=>[h.office,h.office]}:prior(k);},
+ };
+ for(const [name,mutate] of Object.entries(mutations))await t.test(name,async st=>{
+  const h=dualInstallationHarness();proofClock(st,h);mutate(h);h.setOfficeWatts(-2000);
+  h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+  const reading=await h.app.refreshCoordinatedReadings();
+  assert.equal(reading.houseFresh,true);assert.equal(reading.officeDischarge,null);
+  assert.equal(h.app.officeCoordinationProof,null);
+  await assert.rejects(h.app.requestCoordinatedReserve({...twoBody(),housePercent:100}),/Office discharge receipt/);
+  const denied=await h.app.requestCoordinatedReserve(houseLowerBody());
+  assert.equal(denied.verified,false);assert.equal(denied.releaseBlocked,true);assert.equal(denied.interventionRequired,true);
+  expiredHouseOnlyLease(h);
+  await assert.rejects(h.app.expireHouseReserveLease(),/Unowned office stop unverified/);
+  assert.match(h.store.houseReserveLease.fault,/Unowned office stop unverified/);
+  assert.deepEqual(h.events,[]);
+ });
+});
+test('Office proof checks aggregate object, configured main, exact expiry and current member identity',async t=>{
+ const h=dualInstallationHarness(),clock=proofClock(t,h),g=h.store.houseReserveControl;
+ await assert.rejects(h.app.verifyOfficeCoordinationMembership({...h.office},g),/aggregate identity/);
+ await h.app.verifyOfficeCoordinationMembership(h.office,g);
+ assert.equal(h.app.officeCoordinationMembershipCurrent(h.office,g),true);
+ g.officeMainSerial='SYNTHETIC-OFFICE-1';
+ assert.equal(h.app.officeCoordinationMembershipCurrent(h.office,g),false);
+ assert.throws(()=>h.app.officeDischargeReading(h.office,g),/Office discharge receipt/);
+ g.officeMainSerial='SYNTHETIC-OFFICE-0';
+ clock.advance(90000);
+ assert.equal(h.app.officeCoordinationMembershipCurrent(h.office,g),false);
+ await h.app.verifyOfficeCoordinationMembership(h.office,g);
+ h.members[5]={...h.members[5]};
+ assert.equal(h.app.officeCoordinationMembershipCurrent(h.office,g),false);
+ assert.deepEqual(h.events,[]);
+});
+test('membership rechecks recovery and captured bindings after both lookup stages',async t=>{
+ for(const phase of ['aggregate','members'])for(const change of ['recovery','recovered-again','gate','lease','shutdown','member-replaced']){
+  await t.test(phase+' '+change,async st=>{
+   const h=dualInstallationHarness();proofClock(st,h);const paused=deferred(),entered=deferred(),g=h.store.houseReserveControl;
+   const target=phase==='aggregate'?h.office:h.members[5];
+   target.getCoordinationMainSn=async()=>{entered.resolve();return paused.promise;};
+   const pending=h.app.verifyOfficeCoordinationMembership(h.office,g);
+   const rejected=assert.rejects(pending);await entered.promise;
+   if(change==='recovery'||change==='recovered-again'){
+    const diagnostics=h.office.getReportingDiagnostics;
+    h.office.getReportingDiagnostics=()=>({...diagnostics(),aggregateRecovery:change==='recovery'
+     ?{state:'identity_changed'}:{state:'verified_original_main',recoveries:1}});
+   }
+   if(change==='gate')g.officeMainSerial='SYNTHETIC-OFFICE-1';
+   if(change==='lease')h.store.houseReserveLease={until:Date.now()+30000,controlScope:'house-only'};
+   if(change==='shutdown')h.app.stopping=true;
+   if(change==='member-replaced')h.members[5]={...h.members[5]};
+   paused.resolve('SYNTHETIC-OFFICE-0');await rejected;
+   assert.equal(h.app.officeCoordinationProof,null);assert.deepEqual(h.events,[]);
+  });
+ }
+});
+test('late rejected and superseded verification cannot resurrect or clear a newer proof',async t=>{
+ const h=dualInstallationHarness(),clock=proofClock(t,h),g=h.store.houseReserveControl;
+ const paused=deferred(),entered=deferred(),lookup=h.office.getCoordinationMainSn;
+ h.office.getCoordinationMainSn=async()=>{entered.resolve();return paused.promise;};
+ const old=h.app.verifyOfficeCoordinationMembership(h.office,g),rejected=assert.rejects(old,/deadline expired/);
+ await entered.promise;clock.expire();await rejected;assert.equal(h.app.officeCoordinationProof,null);
+ h.office.getCoordinationMainSn=lookup;
+ await h.app.verifyOfficeCoordinationMembership(h.office,g);const proof=h.app.officeCoordinationProof;
+ paused.reject(new Error('late failed lookup'));await flush();
+ assert.equal(h.app.officeCoordinationProof,proof);
+ const superseded=deferred();
+ h.office.getCoordinationMainSn=()=>superseded.promise;
+ const older=h.app.verifyOfficeCoordinationMembership(h.office,g),failed=assert.rejects(older,/superseded/);
+ h.office.getCoordinationMainSn=lookup;await h.app.verifyOfficeCoordinationMembership(h.office,g);
+ const newer=h.app.officeCoordinationProof;superseded.resolve('SYNTHETIC-OFFICE-0');await failed;
+ assert.equal(h.app.officeCoordinationProof,newer);assert.deepEqual(h.events,[]);
+});
+test('single-flight Office lookup leaves House reads short and null, including after its absolute deadline',async t=>{
+ for(const phase of ['refresh','aggregate','members','members-rejected-peer'])await t.test(phase,async st=>{
+  const h=dualInstallationHarness(),clock=proofClock(st,h),paused=deferred();let calls=0,refreshes=0;
+  h.office.flowRefresh=async()=>{refreshes++;if(phase==='refresh'){calls++;await paused.promise;}};
+  const target=phase.startsWith('members')?h.members[5]:h.office;
+  if(phase==='members-rejected-peer')h.members[0].getCoordinationMainSn=async()=>{throw new Error('lookup failed');};
+  if(phase!=='refresh')target.getCoordinationMainSn=async()=>{calls++;return paused.promise;};
+  const began=Date.now();
+  for(let i=0;i<3;i++){
+   const r=await h.app.refreshCoordinatedReadings();assert.equal(r.houseFresh,true);assert.equal(r.officeDischarge,null);
+  }
+  assert.ok(Date.now()-began<=12000);assert.equal(calls,1);assert.equal(refreshes,1);
+  clock.advance(45001);
+  assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge,null);
+  assert.equal(calls,1);assert.equal(refreshes,1);
+  paused.resolve('SYNTHETIC-OFFICE-0');await flush();
+  assert.equal(h.app.officeCoordinationProof,null);assert.equal(h.app.coordinatedOfficeReadInFlight,null);
+  assert.deepEqual(h.events,[]);assert.equal(h.store.houseReserveLease,undefined);
+ });
+});
+test('delayed Office qualification survives the next read without renewing or repeating membership proof',async t=>{
+ const h=dualInstallationHarness(),clock=proofClock(t,h),g=h.store.houseReserveControl,paused=deferred();
+ let aggregateLookups=0,memberLookups=0;
+ h.office.getCoordinationMainSn=async()=>{aggregateLookups++;return paused.promise;};
+ for(const member of h.members){
+  const lookup=member.getCoordinationMainSn;
+  member.getCoordinationMainSn=async()=>{memberLookups++;return lookup();};
+ }
+ const first=await h.app.refreshCoordinatedReadings();
+ assert.equal(first.houseFresh,true);assert.equal(first.officeDischarge,null);
+ assert.equal(aggregateLookups,1);assert.equal(memberLookups,0);
+ const background=h.app.coordinatedOfficeReadInFlight;assert.ok(background);
+ clock.advance(3000);paused.resolve('SYNTHETIC-OFFICE-0');await background;
+ const proof=h.app.officeCoordinationProof;assert.ok(proof);
+ assert.equal(memberLookups,6);
+ const second=await h.app.refreshCoordinatedReadings();
+ assert.equal(second.houseFresh,true);assert.equal(second.officeDischarge.qualified,true);
+ assert.equal(h.app.officeCoordinationProof,proof);
+ assert.equal(aggregateLookups,1);assert.equal(memberLookups,6);
+ const until=proof.until;
+ await h.app.refreshCoordinatedReadings();
+ assert.equal(h.app.officeCoordinationProof.until,until);
+ assert.equal(aggregateLookups,1);assert.equal(memberLookups,6);
+ // Expiry requires a new proof; it cannot borrow the previous successful lookup.
+ const renewed=deferred();
+ h.office.getCoordinationMainSn=async()=>{aggregateLookups++;return renewed.promise;};
+ clock.advance(until-Date.now());
+ assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge,null);
+ assert.equal(h.app.officeCoordinationProof,null);assert.equal(aggregateLookups,2);
+ const renewal=h.app.coordinatedOfficeReadInFlight;
+ renewed.resolve('SYNTHETIC-OFFICE-0');await renewal;
+ assert.equal(h.app.officeCoordinationMembershipCurrent(h.office,g),true);
+ // A different configured main must also reject a still-unexpired cached proof.
+ g.officeMainSerial='SYNTHETIC-OFFICE-1';
+ assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge,null);
+ assert.equal(h.app.officeCoordinationProof,null);
+ assert.deepEqual(h.events,[]);assert.equal(h.store.houseReserveLease,undefined);
+});
+test('failed ordinary refresh invalidates its cached proof without clearing a newer verification',async t=>{
+ for(const superseded of [false,true])await t.test(superseded?'newer proof preserved':'failed proof invalidated',async st=>{
+  const h=dualInstallationHarness();proofClock(st,h);const g=h.store.houseReserveControl,paused=deferred();
+  await h.app.verifyOfficeCoordinationMembership(h.office,g);
+  h.office.flowRefresh=()=>paused.promise;
+  assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge.qualified,true);
+  const background=h.app.coordinatedOfficeReadInFlight;
+  if(superseded)await h.app.verifyOfficeCoordinationMembership(h.office,g);
+  const proof=h.app.officeCoordinationProof;
+  paused.reject(new Error('refresh failed'));await background;
+  assert.equal(h.app.officeCoordinationProof,superseded?proof:null);
+  assert.deepEqual(h.events,[]);
+ });
+});
+test('read-only proof cannot complete after config, lease or shutdown changes during refresh',async t=>{
+ for(const change of ['gate','lease','shutdown'])await t.test(change,async st=>{
+  const h=dualInstallationHarness();proofClock(st,h);const paused=deferred();
+  h.office.flowRefresh=()=>paused.promise;
+  assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge,null);
+  if(change==='gate')h.store.houseReserveControl.officeMainSerial='SYNTHETIC-OFFICE-1';
+  if(change==='lease')h.store.houseReserveLease={until:Date.now()+30000};
+  if(change==='shutdown')h.app.stopping=true;
+  paused.resolve();await flush();
+  assert.equal(h.app.officeCoordinationProof,null);assert.deepEqual(h.events,[]);
+ });
+});
+test('valid membership cannot replace unknown physical Office stop',async t=>{
+ const h=dualInstallationHarness();proofClock(t,h);
+ h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+ const diagnostics=h.office.getReportingDiagnostics;
+ h.office.getReportingDiagnostics=()=>({...diagnostics(),observations:{}});
+ const result=await h.app.requestCoordinatedReserve(houseLowerBody());
+ assert.equal(result.releaseBlocked,true);assert.equal(result.interventionRequired,true);
+ assert.equal(h.app.officeCoordinationProof,null);assert.deepEqual(h.events,[]);
+});
+test('unowned release rechecks context and reserve across lookup and physical stop for manual and expiry paths',async t=>{
+ for(const expiry of [false,true])for(const phase of ['lookup','stop'])for(const change of ['recovery','gate','lease','reserve','shutdown']){
+  await t.test([expiry?'expiry':'manual',phase,change].join(' '),async st=>{
+   const h=dualInstallationHarness();proofClock(st,h);
+   h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+   const paused=deferred(),entered=deferred();
+   if(phase==='lookup')h.members[5].getCoordinationMainSn=async()=>{entered.resolve();return paused.promise;};
+   else h.office.flowRefresh=async()=>{entered.resolve();await paused.promise;};
+   if(expiry)expiredHouseOnlyLease(h);
+   const pending=expiry?h.app.expireHouseReserveLease():h.app.requestCoordinatedReserve(houseLowerBody());
+   const result=expiry?assert.rejects(pending,/Unowned office stop unverified/):pending;
+   await entered.promise;
+   const replacement={until:Date.now()+90000,controlScope:'house-only',owner:'replacement'};
+   if(change==='recovery'){
+    const diagnostics=h.office.getReportingDiagnostics;
+    h.office.getReportingDiagnostics=()=>({...diagnostics(),aggregateRecovery:{state:'identity_changed'}});
+   }
+   if(change==='gate')h.store.houseReserveControl.officeMainSerial='SYNTHETIC-OFFICE-1';
+   if(change==='lease')h.store.houseReserveLease=replacement;
+   if(change==='reserve')h.setOffice(100);
+   if(change==='shutdown')h.app.stopping=true;
+   paused.resolve('SYNTHETIC-OFFICE-0');
+   const denied=await result;
+   if(!expiry){assert.equal(denied.releaseBlocked,true);assert.equal(denied.interventionRequired,true);}
+   if(change==='lease')assert.equal(h.store.houseReserveLease,replacement);
+   assert.equal(h.app.officeCoordinationProof,null);assert.deepEqual(h.events,[]);
+  });
+ }
+});
+test('unowned stop shares one absolute deadline across membership, physical stop and House restoration',async t=>{
+ for(const expiry of [false,true])await t.test(expiry?'expiry restoration deadline':'manual request deadline',async st=>{
+  const h=dualInstallationHarness(),clock=proofClock(st,h),entered=deferred(),paused=deferred();
+  h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+  h.members[5].getCoordinationMainSn=async()=>{clock.advance(40000);return 'SYNTHETIC-OFFICE-0';};
+  h.office.flowRefresh=async()=>{entered.resolve();await paused.promise;};
+  if(expiry)expiredHouseOnlyLease(h);
+  const started=Date.now(),body={...houseLowerBody(),leaseUntil:started+43000};
+  const pending=expiry?h.app.expireHouseReserveLease():h.app.requestCoordinatedReserve(body);
+  const result=expiry?assert.rejects(pending,/Unowned office stop unverified/):pending;
+  await entered.promise;clock.expire();const denied=await result;
+  assert.equal(Date.now()-started,expiry?45000:43000);
+  if(!expiry)assert.equal(denied.releaseBlocked,true);
+  paused.resolve();await flush();assert.deepEqual(h.events,[]);assert.equal(h.app.officeCoordinationProof,null);
+ });
+});
+test('unowned expiry uses a restoration deadline, not the expired charging lease',async t=>{
+ const h=dualInstallationHarness();proofClock(t,h);
+ h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+ h.setOfficeWatts(-10);expiredHouseOnlyLease(h);
+ await h.app.expireHouseReserveLease();
+ assert.equal(h.store.houseReserveLease.completed,true);
+ assert.deepEqual(h.events,['house:15','second:15']);
+});
+test('House release rechecks lease and proof immediately before each member publish',async t=>{
+ for(const expiry of [false,true])for(const change of ['lease','gate','recovery','deadline','reserve'])await t.test([expiry,change].join(' '),async st=>{
+  const h=dualInstallationHarness(),clock=proofClock(st,h),publish=h.app.appMqtt.publishHouseReserve;
+  h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+  if(expiry)expiredHouseOnlyLease(h);
+  const replacement={until:Date.now()+60000,owner:'replacement',controlScope:'house-only'};
+  h.app.appMqtt.publishHouseReserve=async(...args)=>{
+   await publish(...args);
+   if(change==='lease')h.store.houseReserveLease=replacement;
+   if(change==='gate')h.store.houseReserveControl.officeMainSerial='SYNTHETIC-OFFICE-1';
+   if(change==='recovery'){
+    const diagnostics=h.office.getReportingDiagnostics;
+    h.office.getReportingDiagnostics=()=>({...diagnostics(),aggregateRecovery:{state:'identity_changed'}});
+   }
+   if(change==='deadline')clock.advance(45001);
+   if(change==='reserve')h.setOffice(100);
+  };
+  if(expiry)await assert.rejects(h.app.expireHouseReserveLease());
+  else{
+   const result=await h.app.requestCoordinatedReserve(houseLowerBody()).catch(()=>null);
+   assert.notEqual(result?.verified,true);
+  }
+  if(change==='lease')assert.equal(h.store.houseReserveLease,replacement);
+  assert.deepEqual(h.events,['house:15']);
+ });
+});
+
 test('House-only admission includes disappearing Office discharge and refuses unknown power even at its floor', async () => {
  for (const kind of ['discharge', 'missing', 'unavailable', 'unqualified']) {
   const h=dualInstallationHarness(),g=h.store.houseReserveControl;
@@ -359,6 +643,7 @@ test('watchdog cancels a busy Office writer on expiry and bounds stalled work', 
 
 test('normal staged Office stop retains bounded House restoration authority and permits the next phase', async () => {
  const h=dualInstallationHarness();
+ await h.app.verifyOfficeCoordinationMembership(h.office,h.store.houseReserveControl);
  await h.app.requestCoordinatedReserve({...dualBody(),housePercent:20,houseOnly:true,officePercent:3});
  // A reviewed dual acquisition is represented by the native lease, not caller equality.
  const g=h.store.houseReserveControl;
@@ -560,10 +845,13 @@ test('dual scope rejects unverified office membership, unsafe office maximum and
   const h=dualInstallationHarness();change(h);await assert.rejects(h.app.requestCoordinatedReserve(dualBody()));assert.deepEqual(h.events,[]);
  }
 });
-test('dual scope supports house-only operation without office and rejects direct group writes',async()=>{
+test('dual scope supports house-only operation with readonly Office proof but no Office commands',async()=>{
  const old=Date.now;let now=old();Date.now=()=>now;
  try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
-  h.office.getCoordinationMainSn=async()=>assert.fail('office lookup');h.office.flowRefresh=async()=>assert.fail('office refresh');
+  h.office.flowSetBackupReserve=async()=>assert.fail('Office command');
+  h.store.houseReserveControl.powerBudget.nativeChargeBounds.office=null;
+  h.main.getAppliedReadingAt=()=>now;h.app.appMqtt.requestHouseRead=async()=>{};
+  assert.equal((await h.app.refreshCoordinatedReadings()).officeDischarge.qualified,true);
   await assert.rejects(h.app.requestHouseReserve({}),/coordinated owner/);
   await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,controlScope:'coordinated-installations',housePercent:20,officePercent:3}),/scope mismatch/);
   const r=await h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,controlScope:'house-only',housePercent:20,officePercent:3});assert.equal(r.verified,true);assert.equal(h.store.houseReserveLease.controlScope,'house-only');assert.deepEqual(h.events,['house:20','second:20']);
@@ -572,6 +860,7 @@ test('dual scope supports house-only operation without office and rejects direct
 test('dual house-only never releases House while the unowned office is charging or unknown',async()=>{
  const old=Date.now;let now=old();Date.now=()=>now;
  try{const h=dualInstallationHarness();h.app.homey.setTimeout=(fn,ms)=>{if(ms>1000)return 1;now+=1000;queueMicrotask(fn);return 1;};
+  await h.app.verifyOfficeCoordinationMembership(h.office,h.store.houseReserveControl);
   await h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3});
   h.setOffice(100);
   const denied=await h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:18,expectedHousePercent:20,officePercent:3});
@@ -587,6 +876,7 @@ test('dual scope aborts subsequent writes and expires lease on mid-flight gate o
  for(const change of ['gate','deadline','grid']){
   const old=Date.now;let now=old();Date.now=()=>now;
   try{const h=dualInstallationHarness(),publish=h.app.appMqtt.publishHouseReserve;
+   await h.app.verifyOfficeCoordinationMembership(h.office,h.store.houseReserveControl);
    h.app.appMqtt.publishHouseReserve=async(...args)=>{await publish(...args);if(change==='gate')h.store.houseReserveControl.siteChargeKw=7.1;if(change==='deadline')now+=61000;if(change==='grid')h.setUpstream(7300);};
    await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3}),/configuration changed|lease expired|within allowance/);
    assert.deepEqual(h.events,['house:20']);assert.ok(h.store.houseReserveLease.until<now);
@@ -620,6 +910,7 @@ test('dual headroom adds displaced House discharge before admitting charge',asyn
  const h=dualInstallationHarness(),g=h.store.houseReserveControl;
  g.houseNativeChargeKw=5.2;g.powerBudget.nativeChargeBounds.house.maxKw=5.2;
  h.setPower(-3000,0);h.setUpstream(650);
+ await h.app.verifyOfficeCoordinationMembership(h.office,g);
  await assert.rejects(h.app.requestCoordinatedReserve({...dualBody(),houseOnly:true,housePercent:20,officePercent:3}),/headroom/);
  assert.deepEqual(h.events,[]);
 });
@@ -637,13 +928,14 @@ test('dual admission rejects fresh but unaligned signed battery power',async()=>
   await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/skew|unaligned/);assert.deepEqual(h.events,[]);
  }
 });
-test('dual headroom credits owned House draw only when receipt skew is bounded',()=>{
+test('dual headroom credits owned House draw only when receipt skew is bounded',async()=>{
  const h=dualInstallationHarness(),g=h.store.houseReserveControl;let age=0;
  h.setUpstream(5700);
  h.main.getSystemFlowDiagnostics=()=>({fields:{batteryDerivedW:{value:0,ageSec:0,stale:false},
   gridToBatteryW:{value:1000,ageSec:age,stale:false},gridFlowNetW:{value:1000,ageSec:0,stale:false}}});
  h.store.houseReserveLease={until:Date.now()+60000,expectedPercent:18,expectedEnabled:true,houseDeviceId:g.deviceId,serial:g.serial,
   houseMemberDeviceIds:g.houseMemberDeviceIds,houseMemberSerials:g.houseMemberSerials,guardScope:g.controlScope,guardBinding:JSON.stringify(g)};
+ await h.app.verifyOfficeCoordinationMembership(h.office,g);
  assert.doesNotThrow(()=>h.app.assertCoordinatedStartHeadroom(g,20,false,null));
  age=1;assert.throws(()=>h.app.assertCoordinatedStartHeadroom(g,20,false,null),/headroom/);
 });

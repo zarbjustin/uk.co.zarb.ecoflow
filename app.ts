@@ -431,7 +431,8 @@ module.exports = class EcoFlowApp extends Homey.App {
   private houseReserveTimer: NodeJS.Timeout | null = null;
   private coordinatedReadInFlight: Promise<Record<string, unknown>> | null = null;
   private coordinatedOfficeReadInFlight: Promise<void> | null = null;
-  private officeCoordinationProof: { binding: string; until: number } | null = null;
+  private officeCoordinationProof: { binding: string; office: any; members: any[]; until: number } | null = null;
+  private officeCoordinationRevision = 0;
   private officeReserveOperation: { controller: AbortController; deadline: number; purpose: 'dispatch' | 'restoration'; assertActive: () => void } | null = null;
 
   private async writeOwnedOfficeReserve(office: any, percent: number, assertAuthority: () => void, deadline: number, purpose: 'dispatch' | 'restoration' = 'dispatch'): Promise<void> {
@@ -545,15 +546,24 @@ module.exports = class EcoFlowApp extends Homey.App {
     return reading;
   }
 
-  private async verifyOfficeCoordinationMembership(office: any, gate: any, deadline = Date.now() + 45000): Promise<void> {
-    const ids = gate.officeMemberDeviceIds;
+  private officeCoordinationBinding(office: any, gate: any): string {
+    const offices = this.homey.drivers.getDriver('stream').getDevices() as any[];
+    const enrolled = offices.filter((d) => d.getId() === gate?.officeDeviceId);
+    const recovery = office?.getReportingDiagnostics?.()?.aggregateRecovery;
+    if (this.stopping || enrolled.length !== 1 || enrolled[0] !== office || !office?.getAvailable()
+      || recovery?.state !== 'verified_original_main') throw new Error('Office aggregate identity unverified');
+    const ids = gate?.officeMemberDeviceIds;
     if (!Array.isArray(ids) || ids.length !== 6 || new Set(ids).size !== ids.length
       || ids.some((id: any) => typeof id !== 'string' || !id)
       || !gate.officeMemberSerials || Object.keys(gate.officeMemberSerials).length !== ids.length) {
       throw new Error('Explicit six-member office binding required');
     }
+    const serials = ids.map((id: string) => gate.officeMemberSerials[id]);
+    if (serials.some((sn: any) => typeof sn !== 'string' || !sn) || new Set(serials).size !== ids.length
+      || !serials.includes(gate.officeMainSerial)
+      || typeof office?.getCoordinationMainSn !== 'function') throw new Error('Office member identity unverified');
     const units = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
-    const members = ids.map((id: string) => {
+    ids.forEach((id: string) => {
       const matches = units.filter((d) => d.getId() === id);
       if (matches.length !== 1 || !matches[0].getAvailable()
         || matches[0].getData()?.sn !== gate.officeMemberSerials[id]
@@ -563,44 +573,85 @@ module.exports = class EcoFlowApp extends Homey.App {
       if (!Number.isFinite(soc) || soc < 0 || soc > 100 || receipt?.stale !== false
         || receipt.applicationStatus !== 'applied' || !Number.isFinite(receipt.ageSec)
         || receipt.ageSec < 0 || receipt.ageSec > 300) throw new Error('Office member SOC receipt stale');
-      return matches[0];
     });
-    const serials = ids.map((id: string) => gate.officeMemberSerials[id]);
-    if (serials.some((sn: any) => typeof sn !== 'string' || !sn) || new Set(serials).size !== ids.length
-      || typeof office?.getCoordinationMainSn !== 'function') throw new Error('Office member identity unverified');
-    const main = await this.boundedReserveRead(office.getCoordinationMainSn(), deadline);
-    if (!serials.includes(main) || main !== gate.officeMainSerial) throw new Error('Office main differs from reviewed membership');
-    const resolved = await this.boundedReserveRead(Promise.all(members.map((member: any) => member.getCoordinationMainSn())), deadline);
-    if (resolved.some((sn) => sn !== main)) throw new Error('Office membership topology changed');
-    const binding = {
-      ids, serials, main, officeId: gate.officeDeviceId,
+    return JSON.stringify({
+      ids, serials, main: gate.officeMainSerial, officeId: gate.officeDeviceId, recovery,
+    });
+  }
+
+  // The raw work retains its lifetime after a timeout: transports are not cancelled
+  // by Promise.race. The read-only single flight tracks this work, not its timeout.
+  private async officeCoordinationMembershipWork(office: any, gate: any, deadline: number, assertActive: () => void): Promise<void> {
+    const revision = ++this.officeCoordinationRevision;
+    this.officeCoordinationProof = null;
+    const snapshot = JSON.stringify(gate);
+    const lease = JSON.stringify(this.homey.settings.get('houseReserveLease'));
+    const until = Math.min(deadline, Date.now() + 45000);
+    const check = () => {
+      if (this.stopping || revision !== this.officeCoordinationRevision || !Number.isFinite(until) || Date.now() >= until
+        || JSON.stringify(this.homey.settings.get('houseReserveControl')) !== snapshot
+        || JSON.stringify(this.homey.settings.get('houseReserveLease')) !== lease) throw new Error('Office membership verification expired or superseded');
+      assertActive();
     };
-    this.officeCoordinationProof = { binding: JSON.stringify(binding), until: Date.now() + 90000 };
+    try {
+      check();
+      const binding = this.officeCoordinationBinding(office, gate);
+      const units = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
+      const members = gate.officeMemberDeviceIds.map((id: string) => units.find((d) => d.getId() === id));
+      const main = await office.getCoordinationMainSn();
+      check();
+      if (binding !== this.officeCoordinationBinding(office, gate)) throw new Error('Office membership changed during verification');
+      if (main !== gate.officeMainSerial) throw new Error('Office main differs from reviewed membership');
+      // Keep the read-only flight occupied until every transport settles, even
+      // when one member rejects while another is still stalled.
+      const resolved = await Promise.allSettled(members.map((member: any) => {
+        try {
+          return Promise.resolve(member.getCoordinationMainSn());
+        } catch (error) {
+          return Promise.reject(error);
+        }
+      }));
+      check();
+      const currentUnits = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
+      if (binding !== this.officeCoordinationBinding(office, gate)
+        || members.some((member: any) => currentUnits.find((d) => d.getId() === member.getId()) !== member)
+        || resolved.some((result) => result.status !== 'fulfilled' || result.value !== main)) throw new Error('Office membership topology changed');
+      this.officeCoordinationProof = {
+        binding, office, members, until: Date.now() + 90000,
+      };
+    } catch (error) {
+      // An old failed lookup must not erase a newer successful verification.
+      if (revision === this.officeCoordinationRevision) this.officeCoordinationProof = null;
+      throw error;
+    }
+  }
+
+  private async verifyOfficeCoordinationMembership(office: any, gate: any, deadline = Date.now() + 45000, assertActive = () => {}): Promise<void> {
+    const until = Math.min(deadline, Date.now() + 45000);
+    const work = this.officeCoordinationMembershipWork(office, gate, until, assertActive);
+    const revision = this.officeCoordinationRevision;
+    try {
+      await this.boundedReserveRead(work, until);
+    } catch (error) {
+      if (revision === this.officeCoordinationRevision) {
+        this.officeCoordinationRevision += 1;
+        this.officeCoordinationProof = null;
+      }
+      throw error;
+    }
   }
 
   private officeCoordinationMembershipCurrent(office: any, gate: any): boolean {
     const proof = this.officeCoordinationProof;
-    if (!proof || proof.until < Date.now()) return false;
-    const ids = gate.officeMemberDeviceIds;
-    if (!Array.isArray(ids) || ids.length !== 6 || !gate.officeMemberSerials) return false;
-    const serials = ids.map((id: string) => gate.officeMemberSerials[id]);
-    const { main } = JSON.parse(proof.binding);
-    const binding = {
-      ids, serials, main, officeId: gate.officeDeviceId,
-    };
-    if (proof.binding !== JSON.stringify(binding)
-      || office?.getReportingDiagnostics?.()?.aggregateRecovery?.state !== 'verified_original_main') return false;
-    const units = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
-    return ids.every((id: string) => {
-      const matches = units.filter((d) => d.getId() === id);
-      if (matches.length !== 1 || !matches[0].getAvailable()
-        || matches[0].getData()?.sn !== gate.officeMemberSerials[id]) return false;
-      const soc = matches[0].getCapabilityValue('measure_battery');
-      const receipt = matches[0].getReadingDiagnostics()?.measure_battery;
-      return Number.isFinite(soc) && soc >= 0 && soc <= 100 && receipt?.stale === false
-        && receipt.applicationStatus === 'applied' && Number.isFinite(receipt.ageSec)
-        && receipt.ageSec >= 0 && receipt.ageSec <= 300;
-    });
+    if (!proof || proof.until <= Date.now() || proof.office !== office) return false;
+    try {
+      const units = this.homey.drivers.getDriver('stream_unit').getDevices() as any[];
+      return JSON.stringify(this.homey.settings.get('houseReserveControl')) === JSON.stringify(gate)
+        && proof.binding === this.officeCoordinationBinding(office, gate)
+        && proof.members.every((member) => units.find((d) => d.getId() === member.getId()) === member);
+    } catch {
+      return false;
+    }
   }
 
   async refreshCoordinatedReadings(): Promise<Record<string, unknown>> {
@@ -626,7 +677,29 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (!houseOnly && office) {
       if (dual && office.getAvailable()) {
         if (!this.coordinatedOfficeReadInFlight) {
-          const pending: Promise<void> = Promise.resolve().then(() => office.flowRefresh()).catch(() => {}).finally(() => {
+          const deadline = Date.now() + 45000;
+          const snapshot = JSON.stringify(gate);
+          const lease = JSON.stringify(this.homey.settings.get('houseReserveLease'));
+          const revision = ++this.officeCoordinationRevision;
+          // A proof completed after the short House wait must remain usable on
+          // the next read. Reusing it never renews its original 90-second expiry.
+          if (!this.officeCoordinationMembershipCurrent(office, gate)) this.officeCoordinationProof = null;
+          const assertActive = () => {
+            if (this.stopping || Date.now() >= deadline
+              || JSON.stringify(this.homey.settings.get('houseReserveControl')) !== snapshot
+              || JSON.stringify(this.homey.settings.get('houseReserveLease')) !== lease) throw new Error('Office read expired or superseded');
+          };
+          const pending: Promise<void> = Promise.resolve().then(async () => {
+            assertActive();
+            await office.flowRefresh();
+            assertActive();
+            if (revision !== this.officeCoordinationRevision) throw new Error('Office read superseded');
+            if (!this.officeCoordinationMembershipCurrent(office, gate)) {
+              await this.officeCoordinationMembershipWork(office, gate, deadline, assertActive);
+            }
+          }).catch(() => {
+            if (revision === this.officeCoordinationRevision) this.officeCoordinationProof = null;
+          }).finally(() => {
             if (this.coordinatedOfficeReadInFlight === pending) this.coordinatedOfficeReadInFlight = null;
           });
           this.coordinatedOfficeReadInFlight = pending;
@@ -773,6 +846,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     const maxAgeSec = gate.powerBudget?.maxObservationAgeSec;
     if (office?.getId() !== gate.officeDeviceId || !office?.getAvailable()
       || diagnostics?.aggregateRecovery?.state !== 'verified_original_main'
+      || !this.officeCoordinationMembershipCurrent(office, gate)
       || !Number.isFinite(maxAgeSec) || maxAgeSec <= 0 || maxAgeSec > 30
       || !power || !Number.isFinite(power.value) || !Number.isFinite(power.receivedAt)
       || power.receivedAt <= 0 || power.receivedAt > now
@@ -805,7 +879,7 @@ module.exports = class EcoFlowApp extends Homey.App {
     return total <= 0;
   }
 
-  private async verifyOfficeChargeStopped(office: any, deadline = Date.now() + 45000): Promise<void> {
+  private async verifyOfficeChargeStopped(office: any, deadline = Date.now() + 45000, assertActive = () => {}): Promise<void> {
     const lease = this.homey.settings.get('houseReserveLease');
     const stoppedAfter = lease?.stoppingSince ?? (lease?.officeExpectedReserve > lease?.officeRestoreReserve ? Date.now() : undefined);
     let floorSamples = 0;
@@ -816,7 +890,10 @@ module.exports = class EcoFlowApp extends Homey.App {
       // physical stop. Positive PV charging can continue when grid serves at
       // most the local load, but unknown/stale balance cannot release house.
       try {
+        assertActive();
+        if (this.stopping || Date.now() >= deadline) throw new Error('Office stop deadline expired');
         await this.boundedReserveRead(office.flowRefresh(), deadline);
+        assertActive();
       } catch {
         throw new Error('Office grid charging stop unverified; preserve house hold');
       }
@@ -844,9 +921,14 @@ module.exports = class EcoFlowApp extends Homey.App {
         floorSamples += 1; lastFloorReceipt = fields.measure_power.receivedAt;
         if (floorSamples >= 3 && lastFloorReceipt - firstFloorReceipt >= 6000) return;
       } else if (!floorMaintenance) floorSamples = 0;
-      await new Promise<void>((resolve) => {
-        this.homey.setTimeout(resolve, 1000);
-      });
+      try {
+        await this.boundedReserveRead(new Promise<void>((resolve) => {
+          this.homey.setTimeout(resolve, 1000);
+        }), deadline);
+        assertActive();
+      } catch {
+        throw new Error('Office grid charging stop unverified; preserve house hold');
+      }
     }
     throw new Error('Office grid charging stop unverified; preserve house hold');
   }
@@ -1051,6 +1133,13 @@ module.exports = class EcoFlowApp extends Homey.App {
       || JSON.stringify(this.homey.settings.get('houseReserveLease')) !== JSON.stringify(lease)) return;
     this.houseReserveBusy = true;
     const restorationStarted = Date.now();
+    const restorationDeadline = restorationStarted + 45000;
+    const leaseSnapshot = JSON.stringify(lease);
+    let unownedRelease: { assertActive: () => void; deadline: number } | undefined;
+    const assertRestorationOwned = () => {
+      if (this.stopping || Date.now() >= restorationDeadline
+        || JSON.stringify(this.homey.settings.get('houseReserveLease')) !== leaseSnapshot) throw new Error('House restoration expired or ownership changed');
+    };
     try {
       if (lease.controlScope !== 'house-only') {
         const offices = this.homey.drivers.getDriver('stream').getDevices() as any[];
@@ -1064,12 +1153,19 @@ module.exports = class EcoFlowApp extends Homey.App {
             const currentReserve = office.getCapabilityValue('backup_reserve_soc');
             if (JSON.stringify(currentLease) !== JSON.stringify(lease)
               || ![lease.officeExpectedReserve, lease.officeRestoreReserve].includes(currentReserve)) throw new Error('Office manual ownership changed');
-          }, Date.now() + 45000, 'restoration');
+          }, restorationDeadline, 'restoration');
         }
-        await this.verifyOfficeChargeStopped(office);
+        await this.verifyOfficeChargeStopped(office, restorationDeadline);
       } else if (lease.guardScope === 'coordinated-installations'
         && lease.restorePercent < lease.expectedPercent) {
-        await this.verifyUnownedOfficeStopped(lease.officeDeviceId, lease.officeRestoreReserve);
+        const gate = this.homey.settings.get('houseReserveControl');
+        const assertContext = () => {
+          assertRestorationOwned();
+          if (JSON.stringify(this.homey.settings.get('houseReserveControl')) !== lease.guardBinding
+            || gate.officeDeviceId !== lease.officeDeviceId
+            || gate.officeRestoreReserve !== lease.officeRestoreReserve) throw new Error('Coordinator configuration changed');
+        };
+        unownedRelease = await this.verifyUnownedOfficeStopped(gate, restorationDeadline, assertContext);
       }
       const houses = this.homey.drivers.getDriver('stream_5000_unit').getDevices() as any[];
       const house = houses.find((d) => d.getId() === lease.houseDeviceId && d.getData()?.sn === lease.serial);
@@ -1093,8 +1189,11 @@ module.exports = class EcoFlowApp extends Homey.App {
       try {
         freshReserveSnapshot(house.getConfigurationDiagnostics());
       } catch {
-        await this.refreshCoordinatedReadings();
+        assertRestorationOwned();
+        await this.boundedReserveRead(this.refreshCoordinatedReadings(), restorationDeadline);
       }
+      assertRestorationOwned();
+      unownedRelease?.assertActive();
       const current = freshReserveSnapshot(house.getConfigurationDiagnostics());
       const restoreIds = Array.isArray(lease.houseMemberDeviceIds) ? lease.houseMemberDeviceIds : [lease.houseDeviceId];
       const needsRestore = restoreIds.some((id: string) => {
@@ -1113,7 +1212,12 @@ module.exports = class EcoFlowApp extends Homey.App {
           if (!((own.enabled === lease.expectedEnabled && own.percent === lease.expectedPercent)
             || (own.enabled === lease.restoreEnabled && own.percent === lease.restorePercent))) throw new Error('House member manual ownership changed');
           if (own.enabled !== lease.restoreEnabled || own.percent !== lease.restorePercent) {
-            await this.appMqtt.publishHouseReserve(sn, houseReserveFrame(sn, lease.restoreEnabled, lease.restorePercent, ((Date.now() + restoreIds.indexOf(id)) & 0x7fffffff) || 1));
+            assertRestorationOwned();
+            unownedRelease?.assertActive();
+            const frame = houseReserveFrame(sn, lease.restoreEnabled, lease.restorePercent, ((Date.now() + restoreIds.indexOf(id)) & 0x7fffffff) || 1);
+            await this.boundedReserveRead(this.appMqtt.publishHouseReserve(sn, frame), restorationDeadline);
+            assertRestorationOwned();
+            unownedRelease?.assertActive();
           }
         }
         let verified = false;
@@ -1121,6 +1225,8 @@ module.exports = class EcoFlowApp extends Homey.App {
           await new Promise<void>((resolve) => {
             this.homey.setTimeout(resolve, 500);
           });
+          assertRestorationOwned();
+          unownedRelease?.assertActive();
           const after = freshReserveSnapshot(house.getConfigurationDiagnostics());
           if (after.enabled === lease.restoreEnabled && after.percent === lease.restorePercent) {
             verified = true; break;
@@ -1134,6 +1240,8 @@ module.exports = class EcoFlowApp extends Homey.App {
           || JSON.stringify(gate?.houseMemberSerials) !== JSON.stringify(lease.houseMemberSerials)) throw new Error('House membership changed; restoration requires review');
         let restored = false;
         for (let i = 0; i < 60; i++) {
+          assertRestorationOwned();
+          unownedRelease?.assertActive();
           try {
             const r = houseInstallationSnapshot(gate, this.homey.drivers.getDriver('stream_5000_unit').getDevices());
             if (r.reserveEnabled === lease.restoreEnabled && r.reservePercent === lease.restorePercent && r.gridChargeW <= 50 && Date.now() - (r.gridChargeAgeSec + 1) * 1000 >= restorationStarted) {
@@ -1150,10 +1258,14 @@ module.exports = class EcoFlowApp extends Homey.App {
       if (houseBudgetExceeded) stopFault = 'House installation charging exceeds allowance';
       else if (houseChargeProhibited) stopFault = 'House grid charging not enabled';
       else if (guardLost && lease.guardScope === 'coordinated-installations') stopFault = houseGuardFailure || 'Coordinated safety guard lost';
+      assertRestorationOwned();
+      unownedRelease?.assertActive();
       this.homey.settings.set('houseReserveLease', {
         ...lease, completed: true, restoredAt: Date.now(), ...(guardLost ? { stopReason: houseGuardFailure || stopFault || 'House guard lost' } : {}), ...(stopFault ? { fault: stopFault } : {}),
       });
     } catch (error: any) {
+      // Do not fault, expire or resurrect an owner that replaced this lease.
+      if (JSON.stringify(this.homey.settings.get('houseReserveLease')) !== leaseSnapshot) throw error;
       if ((error.message === 'Office grid charging stop unverified; preserve house hold'
         || (lease.stoppingSince && ['Office unavailable for expiry stop', 'House unavailable for expiry restoration'].includes(error.message)))
         && Date.now() - (lease.stoppingSince ?? Date.now()) < 600000) {
@@ -1177,15 +1289,42 @@ module.exports = class EcoFlowApp extends Homey.App {
     }
   }
 
-  private async verifyUnownedOfficeStopped(officeId: string, restoreReserve: number): Promise<void> {
+  private async verifyUnownedOfficeStopped(gate: any, deadline: number, assertContext: () => void): Promise<{ assertActive: () => void; deadline: number }> {
     const offices = this.homey.drivers.getDriver('stream').getDevices() as any[];
-    const office = offices.find((d) => d.getId() === officeId);
-    if (!office?.getAvailable() || office.getCapabilityValue('backup_reserve_soc') !== restoreReserve) {
-      throw new Error('Unowned office stop unverified; preserve house hold');
-    }
+    const office = offices.find((d) => d.getId() === gate?.officeDeviceId);
+    const until = Math.min(deadline, Date.now() + 45000);
+    const snapshot = JSON.stringify(gate);
+    let proof: typeof this.officeCoordinationProof = null;
+    const check = () => {
+      if (this.stopping || !Number.isFinite(until) || Date.now() >= until
+        || JSON.stringify(this.homey.settings.get('houseReserveControl')) !== snapshot
+        || !office?.getAvailable() || office.getCapabilityValue('backup_reserve_soc') !== gate.officeRestoreReserve) {
+        throw new Error('Unowned office stop unverified; preserve house hold');
+      }
+    };
+    const checkProof = () => {
+      check();
+      if (!proof || !this.officeCoordinationMembershipCurrent(office, gate)
+        || this.officeCoordinationProof?.binding !== proof.binding) throw new Error('Unowned office stop unverified; preserve house hold');
+    };
     try {
-      await this.verifyOfficeChargeStopped(office);
+      check();
+      assertContext();
+      await this.verifyOfficeCoordinationMembership(office, gate, until, () => {
+        check(); assertContext();
+      });
+      proof = this.officeCoordinationProof;
+      const assertActive = () => {
+        checkProof(); assertContext();
+      };
+      assertActive();
+      await this.boundedReserveRead(this.verifyOfficeChargeStopped(office, until, assertActive), until);
+      assertActive();
+      // The caller rechecks lease ownership separately after creating its own
+      // replacement House lease. This guard remains valid through every publish.
+      return { assertActive: checkProof, deadline: until };
     } catch {
+      if (proof && this.officeCoordinationProof === proof) this.officeCoordinationProof = null;
       throw new Error('Unowned office stop unverified; preserve house hold');
     }
   }
@@ -1234,12 +1373,21 @@ module.exports = class EcoFlowApp extends Homey.App {
       const prior = this.homey.settings.get('houseReserveLease');
       if (prior && (!prior.completed || prior.fault) && prior.controlScope !== 'house-only') throw new Error('House-only transition requires reviewed quiescence');
       this.coordinatedReserveBusy = true;
+      const priorSnapshot = JSON.stringify(prior);
+      let dispatched = false;
+      let release: { assertActive: () => void; deadline: number } | undefined;
       try {
         if (dual && body.housePercent < body.expectedHousePercent) {
-          await this.verifyUnownedOfficeStopped(gate.officeDeviceId, gate.officeRestoreReserve);
+          release = await this.verifyUnownedOfficeStopped(gate, body.leaseUntil, () => {
+            assertGateUnchanged();
+            if (JSON.stringify(this.homey.settings.get('houseReserveLease')) !== priorSnapshot) throw new Error('House lease ownership changed');
+          });
           assertGateUnchanged();
+          if (JSON.stringify(this.homey.settings.get('houseReserveLease')) !== priorSnapshot) throw new Error('House lease ownership changed');
+          release.assertActive();
         }
         if (dual && body.housePercent >= body.expectedHousePercent) this.assertCoordinatedStartHeadroom(gate, body.housePercent, false, null);
+        dispatched = true;
         await this.requestHouseReserve({
           deviceId: gate.deviceId,
           enabled: true,
@@ -1250,7 +1398,7 @@ module.exports = class EcoFlowApp extends Homey.App {
           officeExpectedReserve: gate.officeRestoreReserve,
           ...(dual ? { houseOnly: true } : {}),
           ...(Array.isArray(gate.houseMemberDeviceIds) ? { houseMemberDeviceIds: body.houseMemberDeviceIds } : {}),
-        });
+        }, release);
         return {
           verified: true,
           housePercent: body.housePercent,
@@ -1260,7 +1408,10 @@ module.exports = class EcoFlowApp extends Homey.App {
         };
       } catch (error) {
         const lease = this.homey.settings.get('houseReserveLease');
-        if (lease && !lease.completed) this.homey.settings.set('houseReserveLease', { ...lease, until: Date.now() - 1 });
+        if (lease && !lease.completed && (!dispatched ? JSON.stringify(lease) === priorSnapshot : !release
+          && lease.until === body.leaseUntil && lease.expectedPercent === body.housePercent && lease.guardBinding === gateSnapshot)) {
+          this.homey.settings.set('houseReserveLease', { ...lease, until: Date.now() - 1 });
+        }
         if (error instanceof Error && error.message === 'Unowned office stop unverified; preserve house hold') {
           return {
             verified: false,
@@ -1416,9 +1567,10 @@ module.exports = class EcoFlowApp extends Homey.App {
     }
   }
 
-  async requestHouseReserve(body: any): Promise<Record<string, unknown>> {
+  async requestHouseReserve(body: any, release?: { assertActive: () => void; deadline: number }): Promise<Record<string, unknown>> {
     if (this.houseReserveBusy) throw new Error('House reserve command already pending');
     this.houseReserveBusy = true;
+    let acquiredLeaseSnapshot: string | undefined;
     try {
       const gate = this.homey.settings.get('houseReserveControl');
       const gateSnapshot = JSON.stringify(gate);
@@ -1484,8 +1636,16 @@ module.exports = class EcoFlowApp extends Homey.App {
           expectedEnabled: body.enabled,
           expectedPercent: body.percent,
         });
+        acquiredLeaseSnapshot = JSON.stringify(this.homey.settings.get('houseReserveLease'));
         this.ensureHouseReserveWatchdog();
       }
+      const leaseSnapshot = JSON.stringify(this.homey.settings.get('houseReserveLease'));
+      const assertRelease = () => {
+        if (!release) return;
+        release.assertActive();
+        if (JSON.stringify(this.homey.settings.get('houseReserveLease')) !== leaseSnapshot) throw new Error('House lease ownership changed');
+      };
+      assertRelease();
       if (before.enabled === body.enabled && before.percent === body.percent) {
         return {
           verified: true, changed: false, enabled: before.enabled, percent: before.percent,
@@ -1504,7 +1664,11 @@ module.exports = class EcoFlowApp extends Homey.App {
           || (own.enabled === body.enabled && own.percent === body.percent))) throw new Error('House member manual ownership changed');
         if (own.enabled !== body.enabled || own.percent !== body.percent) {
           this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
-          await mqtt.publishHouseReserve(sn, houseReserveFrame(sn, body.enabled, body.percent, ((Date.now() + targets.indexOf(id)) & 0x7fffffff) || 1));
+          assertRelease();
+          const publish = mqtt.publishHouseReserve(sn, houseReserveFrame(sn, body.enabled, body.percent, ((Date.now() + targets.indexOf(id)) & 0x7fffffff) || 1));
+          if (release) await this.boundedReserveRead(publish, release.deadline);
+          else await publish;
+          assertRelease();
         }
       }
       let stableMemberPasses = 0;
@@ -1513,6 +1677,7 @@ module.exports = class EcoFlowApp extends Homey.App {
           this.homey.setTimeout(resolve, 500);
         });
         this.assertCoordinatedRuntimeBoundary(gate, gateSnapshot, body.leaseUntil);
+        assertRelease();
         const after = read();
         if (after.enabled !== body.enabled || after.percent !== body.percent) stableMemberPasses = 0;
         if (after.enabled === body.enabled && after.percent === body.percent && (before.enabled === body.enabled || after.enabledAgeSec <= (Date.now() - started) / 1000 + 1)
@@ -1532,7 +1697,10 @@ module.exports = class EcoFlowApp extends Homey.App {
               stableMemberPasses = 0;
               // Refresh independent member SOC/config receipts while waiting for
               // the shared acknowledgement; do not resend the reserve command.
-              await this.refreshCoordinatedReadings();
+              assertRelease();
+              if (release) await this.boundedReserveRead(this.refreshCoordinatedReadings(), release.deadline);
+              else await this.refreshCoordinatedReadings();
+              assertRelease();
               continue;
             }
           }
@@ -1542,6 +1710,12 @@ module.exports = class EcoFlowApp extends Homey.App {
         }
       }
       throw new Error('House reserve command unverified; no blind retry');
+    } catch (error) {
+      const lease = this.homey.settings.get('houseReserveLease');
+      if (release && acquiredLeaseSnapshot && JSON.stringify(lease) === acquiredLeaseSnapshot) {
+        this.homey.settings.set('houseReserveLease', { ...lease, until: Date.now() - 1 });
+      }
+      throw error;
     } finally {
       this.houseReserveBusy = false;
     }
