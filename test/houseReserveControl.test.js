@@ -281,6 +281,133 @@ function dualInstallationHarness(){
 }
 const dualBody=()=>({acquireOfficeLease:true,houseMemberDeviceIds:['synthetic-house','second'],housePercent:18,expectedHousePercent:18,officePercent:22,expectedOfficePercent:3,leaseUntil:Date.now()+60000});
 
+const managedBudget=()=>({schemaVersion:2,mode:'ecoflow-managed',maxObservationAgeSec:30,dispatchBufferSeconds:120,stopBufferSeconds:150});
+function managedHarness(){
+ const h=dualInstallationHarness(),g=h.store.houseReserveControl;
+ g.powerBudget=managedBudget();g.houseMemberPowerScopeReviewed=false;
+ g.mode='pilot';g.expiresAt=Date.now()+3600000;
+ // No application electrical/accounting approval; native limits stay untouched.
+ delete g.houseNativeChargeKw;delete g.officeNativeChargeKw;delete g.siteChargeKw;
+ delete g.wholePropertyMeterDeviceId;g.wholePropertyMeterScopeReviewed=false;
+ const flow=h.main.getSystemFlowDiagnostics;
+ h.main.getSystemFlowDiagnostics=()=>({fields:{...flow().fields,gridFlowNetW:{stale:true,ageSec:900,value:99999}}});
+ return h;
+}
+const managedBody=()=>({...dualBody(),powerBudget:managedBudget(),tariffDeadline:Date.now()+180000});
+
+test('EcoFlow-managed pilot publishes matched Office support without CT, AC bounds or member power accounting',async t=>{
+ const h=managedHarness();proofClock(t,h);h.setUpstream(99999);h.setPower(8000,8000);
+ const reading=await h.app.refreshCoordinatedReadings();
+ assert.equal(reading.houseFresh,true);assert.equal(reading.powerBudgetSupported,true);
+ assert.deepEqual(reading.powerBudgetReceipt,managedBudget());
+ assert.equal(reading.office.controlContract,'ecoflow-managed-v1');assert.equal(reading.office.qualified,true);
+ assert.equal(reading.nativeControlDeadline,h.store.houseReserveControl.expiresAt);
+ assert.equal(reading.house.gridImportW,null);assert.equal(reading.house.noDischargeHoldVerified,true);
+ assert.deepEqual(h.events,[]);assert.equal(h.store.houseReserveLease,undefined);
+ const r=await h.app.requestCoordinatedReserve(managedBody());
+ assert.equal(r.verified,true);assert.deepEqual(h.events,['office:22']);
+ assert.equal(h.store.houseReserveControl.mode,'pilot');
+ // High import/charging estimates are not a watchdog loss of authority.
+ await h.app.expireHouseReserveLease();assert.deepEqual(h.events,['office:22']);
+});
+test('EcoFlow-managed House dispatch retains read-only Office proof and has no AC evidence expiry',async t=>{
+ const h=managedHarness();proofClock(t,h);h.office.flowSetBackupReserve=async()=>assert.fail('Office write');
+ await h.app.refreshCoordinatedReadings();
+ const result=await h.app.requestCoordinatedReserve({...managedBody(),houseOnly:true,officePercent:3,housePercent:20});
+ assert.equal(result.verified,true);assert.equal(result.controlScope,'house-only');
+ assert.deepEqual(h.events,['house:20','second:20']);
+});
+test('EcoFlow-managed mode, tariff and pilot agreement fail closed before publishing',async t=>{
+ for(const change of ['missing contract','mismatched contract','unknown schema','old bound fields','missing tariff','tariff expired','pilot expired','lease past pilot','disabled']){
+  await t.test(change,async st=>{
+   const h=managedHarness();proofClock(st,h);const body=managedBody(),g=h.store.houseReserveControl;
+   if(change==='missing contract')delete body.powerBudget;
+   if(change==='mismatched contract')body.powerBudget.maxObservationAgeSec=5;
+   if(change==='unknown schema')g.powerBudget.schemaVersion=999;
+   if(change==='old bound fields')g.powerBudget.nativeChargeBounds={house:{validUntil:'2000-01-01T00:00:00Z'}};
+   if(change==='missing tariff')delete body.tariffDeadline;
+   if(change==='tariff expired')body.tariffDeadline=Date.now()-1;
+   if(change==='pilot expired')g.expiresAt=Date.now()-1;
+   if(change==='lease past pilot')g.expiresAt=Date.now()+30000;
+   if(change==='disabled')g.enabled=false;
+   await assert.rejects(h.app.requestCoordinatedReserve(body));assert.deepEqual(h.events,[]);
+  });
+ }
+});
+test('EcoFlow-managed Office still requires native membership, recovery, SOC, mode, hold and manual ownership',async t=>{
+ const changes={
+  member:h=>{h.members.pop();},
+  main:h=>{h.store.houseReserveControl.officeMainSerial='WRONG-SYNTHETIC';},
+  recovery:h=>{const read=h.office.getReportingDiagnostics;h.office.getReportingDiagnostics=()=>({...read(),aggregateRecovery:{state:'identity_changed'}});},
+  soc:h=>{h.members[5].getReadingDiagnostics=()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:301}});},
+  houseSoc:h=>{h.unit.getReadingDiagnostics=()=>({measure_battery:{stale:false,applicationStatus:'applied',ageSec:301}});},
+  manual:h=>h.setOffice(55),
+  mode:h=>{const read=h.office.getCapabilityValue;h.office.getCapabilityValue=k=>k==='operating_mode'?'custom':read(k);},
+  houseDischarge:h=>h.setPower(-1,0),
+  houseNativeChargingDisabled:h=>{h.store.houseReserveControl.houseGridChargingEnabled=false;h.unit.getCapabilityValue=()=>17;},
+ };
+ for(const [name,change]of Object.entries(changes))await t.test(name,async st=>{
+  const h=managedHarness();proofClock(st,h);change(h);
+  await assert.rejects(h.app.requestCoordinatedReserve(managedBody()));assert.deepEqual(h.events,[]);
+ });
+});
+test('EcoFlow-managed unowned House lowering still rejects unknown physical Office stop',async t=>{
+ const h=managedHarness();proofClock(t,h);
+ h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;
+ h.setOfficeWatts(500); // Neither nonpositive flow nor fresh grid/load stop proof.
+ h.app.officeMembersNotCharging=()=>false;
+ const r=await h.app.requestCoordinatedReserve({...managedBody(),houseOnly:true,housePercent:15,officePercent:3});
+ assert.equal(r.releaseBlocked,true);assert.equal(r.interventionRequired,true);
+ assert.deepEqual(h.events,[]);
+});
+test('EcoFlow-managed pilot expiry invokes watchdog restoration without renewing pilot authority',async t=>{
+ const h=managedHarness(),clock=proofClock(t,h);
+ await h.app.requestCoordinatedReserve(managedBody());
+ const expiry=h.store.houseReserveControl.expiresAt;
+ clock.advance(3600001);
+ const g=h.store.houseReserveControl;
+ h.main.getTopologyEvidence=()=>({addressSn:g.serial,peers:[{sn:g.houseMemberSerials.second,seenAt:Date.now()}],maxReportedRecordCount:2});
+ await h.app.expireHouseReserveLease();
+ assert.equal(h.store.houseReserveControl.expiresAt,expiry);
+ assert.ok(h.events.includes('office:3'));assert.equal(h.store.houseReserveLease.completed,true);
+});
+test('EcoFlow-managed routine accepts explicit ongoing authority with bounded individual leases and exact stop acknowledgement',async t=>{
+ const h=managedHarness(),clock=proofClock(t,h),gate=h.store.houseReserveControl;
+ gate.mode='routine';gate.expiresAt=null;
+ h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;h.setOfficeWatts(0);
+ const initial=await h.app.refreshCoordinatedReadings();
+ assert.equal(initial.nativeControlDeadline,null);assert.equal(initial.office.ownedStopAcknowledged,false);
+ await h.app.requestCoordinatedReserve(managedBody());
+ const stopped=await h.app.requestCoordinatedReserve({...managedBody(),acquireOfficeLease:false,officePercent:3,expectedOfficePercent:22,
+  releaseOfficeOnly:true,releaseOfficeReason:'staged-stop'});
+ assert.equal(stopped.officeStopped,true);assert.equal(stopped.houseRestorationPending,true);
+ assert.equal((await h.app.refreshCoordinatedReadings()).office.ownedStopAcknowledged,true);
+ h.setOffice(4);
+ assert.equal((await h.app.refreshCoordinatedReadings()).office.ownedStopAcknowledged,false);
+ h.setOffice(3);clock.advance(60001);
+ assert.equal((await h.app.refreshCoordinatedReadings()).office.ownedStopAcknowledged,false);
+ assert.equal(gate.expiresAt,null);
+});
+test('EcoFlow-managed routine performs bounded grouped House 100, Office 100 and ordered 3/0 release',async t=>{
+ const h=managedHarness();proofClock(t,h);const gate=h.store.houseReserveControl;
+ gate.mode='routine';gate.expiresAt=null;gate.minPercent=0;gate.restorePercent=0;
+ h.app.verifyOfficeChargeStopped=App.prototype.verifyOfficeChargeStopped;h.setOfficeWatts(0);
+ const body=()=>({...managedBody(),leaseUntil:Date.now()+120000});
+ await h.app.refreshCoordinatedReadings();
+ const house=await h.app.requestCoordinatedReserve({...body(),housePercent:100,officePercent:3,acquireOfficeLease:false});
+ assert.equal(house.verified,true);
+ h.setPower(8000,8000);
+ assert.equal((await h.app.refreshCoordinatedReadings()).house.houseChargingVerified,true);
+ const office=await h.app.requestCoordinatedReserve({...body(),housePercent:100,expectedHousePercent:100,officePercent:100});
+ assert.equal(office.verified,true);
+ assert.ok(h.store.houseReserveLease.until<=Date.now()+120000);
+ await h.app.requestCoordinatedReserve({...body(),acquireOfficeLease:false,housePercent:100,expectedHousePercent:100,
+  officePercent:3,expectedOfficePercent:100,releaseOfficeOnly:true,releaseOfficeReason:'staged-stop'});
+ const released=await h.app.requestCoordinatedReserve({...body(),acquireOfficeLease:false,housePercent:0,expectedHousePercent:100,officePercent:3});
+ assert.equal(released.verified,true);
+ assert.deepEqual(h.events,['house:100','second:100','office:100','office:3','house:0','second:0']);
+});
+
 const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function proofClock(t,h){

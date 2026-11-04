@@ -1,5 +1,37 @@
 # Codex cross-machine handover
 
+## Five-slot daily automation authorized; preparation only - 4 November 2026
+
+The owner explicitly delegates property power management to EcoFlow and requests
+five cheapest half-hours each day, releasing House to 0 and Office to 3 outside
+them. Earlier external AC/PV accounting requirements below are not prerequisites
+for the opted-in EcoFlow-managed policy. Native limits, membership, ownership,
+bounded command leases and stop/restoration protections remain required.
+
+The shared managed-power contract and fixed-day caller policy are implemented
+and tested, awaiting independent Sol review and exact CI, and not deployed.
+Pinned Node 22 native validation passed all 1,567 tests, build, lint and release
+checks. Explicit opt-in uses power-budget schema 2, `mode: ecoflow-managed`;
+the existing conservative default remains unchanged. Ongoing automation needs
+an explicit `routine` authority with no pilot expiry, staged disabled, and
+retains bounded per-command leases. No live configuration was migrated.
+The installed native runtime remains
+`1dc8f5a`; no new app or store release has occurred. At 02:20 UTC the existing
+execution Flow was prepared, disabled, in **01 Energy** as
+**01 Battery - Five Cheapest Slots (House + Office)**, preserving the resident
+script identity and adding restart reconciliation. Obsolete no-op planner and
+watchdog Flows were disabled and moved to **99 Archive**.
+
+A disabled-state historical-fault reconciliation aborted before writes: fresh
+02:22 UTC readings show House reserve 100 and Office 57, not the previous 0/3.
+The controllers remain disabled, the old native fault/lease remains intact,
+and the source of the reported reserve changes is not established. Do not
+adopt stale expected reserves, silently renew the existing pilot, or claim
+automatic five-slot operation before the reviewed cutover and live readback.
+Sol requires explicit takeover consent and resolution of any competing reserve
+schedule; the owner was unavailable when asked. Keep preparation disabled.
+See the HomeyPro handover for Flow-source paths and preservation evidence.
+
 ## Runner deployed; aggregate qualification corrected - 4 November 2026, 01:53 UTC
 
 The native runtime remains installed `1dc8f5a`, with genuine Office SOC/member/main

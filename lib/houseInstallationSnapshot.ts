@@ -1,9 +1,11 @@
 'use strict';
 
 import { freshReserveSnapshot } from './houseReserveControl';
+import { isEcoflowManagedPower } from './coordinatedPowerMode';
 
 /** Private, explicitly enrolled installation view. Never summed unit power or Energy. */
 export function houseInstallationSnapshot(gate: any, units: any[], now = Date.now()): any {
+  const managed = isEcoflowManagedPower(gate?.powerBudget);
   const ids = gate?.houseMemberDeviceIds;
   if (!['house-only', 'coordinated-installations'].includes(gate?.controlScope) || !Array.isArray(ids) || ids.length < 2 || ids.length > 16
     || (gate.controlScope === 'coordinated-installations' && ids.length !== 2)
@@ -26,7 +28,7 @@ export function houseInstallationSnapshot(gate: any, units: any[], now = Date.no
   if (!topology || topology.addressSn !== gate.serial || topology.truncated || topology.maxReportedRecordCount !== members.length) throw new Error('House installation topology unverified');
   const seen = new Set([topology.addressSn, ...topology.peers.filter((p: any) => Number.isFinite(p.seenAt) && p.seenAt <= now && now - p.seenAt <= 90000).map((p: any) => p.sn)]);
   if (seen.size !== serials.length || !serials.every((sn: string) => seen.has(sn))) throw new Error('House installation membership changed/stale');
-  if (gate.houseSpaceGridLimitW !== undefined) {
+  if (!managed && gate.houseSpaceGridLimitW !== undefined) {
     if (!Number.isFinite(gate.houseSpaceGridLimitW) || gate.houseSpaceGridLimitW <= 0
       || !Number.isFinite(gate.houseSiteChargeKw) || gate.houseSiteChargeKw <= 0 || gate.houseSiteChargeKw * 1000 > gate.houseSpaceGridLimitW) throw new Error('House Space grid allowance invalid');
     for (const d of members) {
@@ -61,9 +63,10 @@ export function houseInstallationSnapshot(gate: any, units: any[], now = Date.no
       || !valid(flow?.gridToBatteryW, 0, 100000)
       || !valid(flow?.batteryDerivedW, -100000, 100000)
       || Math.abs(flow.batteryDerivedW.value - reporter.batteryW.value) > 0.1) throw new Error('House installation SOC/power receipt unavailable');
-  if (gate.houseSpaceGridLimitW !== undefined && !valid(flow?.gridFlowNetW, -100000, 100000)) throw new Error('House Space grid-import receipt unavailable');
+  if (!managed && gate.houseSpaceGridLimitW !== undefined && !valid(flow?.gridFlowNetW, -100000, 100000)) throw new Error('House Space grid-import receipt unavailable');
   return {
     telemetryScope: 'house-installation-v1',
+    ...(managed ? { powerManagementMode: 'ecoflow-managed' } : {}),
     deviceId: gate.deviceId,
     memberDeviceIds: ids.slice(),
     capturedAt: new Date(now).toISOString(),
@@ -77,8 +80,8 @@ export function houseInstallationSnapshot(gate: any, units: any[], now = Date.no
     batteryW: reporter.batteryW.value,
     socAgeSec: memberLowerBound ? Math.max(...members.map((d: any) => d.getReadingDiagnostics().measure_battery.ageSec)) : reporter.socPct.ageSec,
     powerAgeSec: reporter.batteryW.ageSec,
-    gridImportW: valid(flow?.gridFlowNetW, -100000, 100000) ? Math.max(0, flow.gridFlowNetW.value) : null,
-    gridImportAgeSec: valid(flow?.gridFlowNetW, -100000, 100000) ? flow.gridFlowNetW.ageSec : null,
+    gridImportW: !managed && valid(flow?.gridFlowNetW, -100000, 100000) ? Math.max(0, flow.gridFlowNetW.value) : null,
+    gridImportAgeSec: !managed && valid(flow?.gridFlowNetW, -100000, 100000) ? flow.gridFlowNetW.ageSec : null,
     gridChargeW: flow.gridToBatteryW.value,
     gridChargeAgeSec: flow.gridToBatteryW.ageSec,
     available: true,

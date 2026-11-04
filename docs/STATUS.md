@@ -1,5 +1,24 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 4 November 2026 - five-slot daily setup authorized and Flow prepared
+
+The owner delegates property power management to EcoFlow and authorizes fixed
+five-cheapest-half-hour daily scheduling. The new policy/shared transport is
+implemented with 1,567 native tests, build, lint and release checks passing;
+independent review/CI remain pending. Installed runtime remains `1dc8f5a`.
+
+The existing execution Flow is now prepared but **disabled** in
+**01 Energy > 01 Battery - Five Cheapest Slots (House + Office)**. The obsolete
+no-op planner/watchdog Flows are disabled in **99 Archive**. Declared-change
+preservation and exact Flow readback passed.
+
+The proposed historical-state adoption aborted without writes because fresh
+reserves changed to House 100 / Office 57 while both controllers were disabled.
+Its source remains unestablished. Old faults and pilot expiry remain intact;
+reviewed ownership cutover and activation are not complete. The owner was
+unavailable for the required takeover decision; disabled preparation continues.
+See [CODEX_HANDOVER.md](CODEX_HANDOVER.md).
+
 ## 4 November 2026 - actual caller updated; electrical clarification needed
 
 Homey's older resident execution script was replaced in place with the canonical
