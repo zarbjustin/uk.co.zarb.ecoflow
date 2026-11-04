@@ -1056,7 +1056,8 @@ test('dual admission rejects fresh but unaligned signed battery power',async()=>
   await assert.rejects(h.app.requestCoordinatedReserve(dualBody()),/skew|unaligned/);assert.deepEqual(h.events,[]);
  }
 });
-test('dual headroom credits owned House draw only when receipt skew is bounded',async()=>{
+test('dual headroom credits owned House draw only when receipt skew is bounded',async t=>{
+ const now=Date.now();t.mock.method(Date,'now',()=>now);
  const h=dualInstallationHarness(),g=h.store.houseReserveControl;let age=0;
  h.setUpstream(5700);
  h.main.getSystemFlowDiagnostics=()=>({fields:{batteryDerivedW:{value:0,ageSec:0,stale:false},

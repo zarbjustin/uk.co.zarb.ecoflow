@@ -32,6 +32,14 @@ Sol requires explicit takeover consent and resolution of any competing reserve
 schedule; the owner was unavailable when asked. Keep preparation disabled.
 See the HomeyPro handover for Flow-source paths and preservation evidence.
 
+Independent Sol review approved disabled source deployment. Exact native CI
+then exposed a reproducible test-fixture timestamp race; the test clock is now
+frozen, with production receipt guards unchanged and all 1,567 tests/build/lint/
+release checks passing again. Updated exact CI is required before installation.
+The caller's fixed daily window is now 23:00-23:00 Europe/London: an actual
+overnight public response lacked the final hour of a midnight calendar day.
+Complete-window five-slot replay passed; no rolling refill is allowed.
+
 ## Runner deployed; aggregate qualification corrected - 4 November 2026, 01:53 UTC
 
 The native runtime remains installed `1dc8f5a`, with genuine Office SOC/member/main
