@@ -977,3 +977,73 @@ test('overlapping original STREAM polls share source verification and recover on
     assert.equal(d.getReportingDiagnostics().aggregateRecovery.recoveries, 1);
   } finally { await d.onTeardown(); }
 });
+
+test('startup floor recovers original battery totals and reanchors only the raised raw counter', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  for (const coherent of [false, true]) {
+    const record = { version: 1, chargedWh: 1000, dischargedWh: 2000, chargedRawWh: 10000,
+      dischargedRawWh: 20000, countersAvailable: true, energySourceSn: 'BK61TEST00000001' };
+    const saved = coherent ? { batteryEnergyCheckpoint: record } : { ...record };
+    const device = await harness(saved, d => { d.values['meter_power.charged'] = 1.004; d.values['meter_power.discharged'] = 2; });
+    assert.equal(device.values['meter_power.charged'], 1.004);
+    assert.equal(device.values['meter_power.discharged'], 2);
+    await device.energyCheckpoint.flush();
+    assert.equal(device.store.batteryEnergyCheckpoint.chargedRawWh, null, 'higher projection cannot retain an older raw baseline');
+    assert.equal(device.store.batteryEnergyCheckpoint.dischargedRawWh, 20000, 'unaffected direction keeps its coherent baseline');
+    await device.applyQuota({ accuChgEnergy: 10004, accuDsgEnergy: 20006 }, { source: 'mqtt', receivedAt: now });
+    assert.equal(device.values['meter_power.charged'], 1.004, 'first counter receipt reanchors without counting recovered energy twice');
+    assert.equal(device.values['meter_power.discharged'], 2.006);
+    now++;
+    await device.applyQuota({ accuChgEnergy: 10005, accuDsgEnergy: 20008 }, { source: 'mqtt', receivedAt: now });
+    assert.ok(Math.abs(device.values['meter_power.charged'] - 1.005) < 1e-12);
+    assert.equal(device.values['meter_power.discharged'], 2.008);
+    await device.onTeardown();
+  }
+});
+
+test('startup floor distinguishes rounded original battery projections from additional energy', async () => {
+  const device = await harness({ chargedWh: 1000.6, dischargedWh: 2000.125, chargedRawWh: 10000,
+    countersAvailable: true }, d => { d.values['meter_power.charged'] = 1.001; });
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 1.0006);
+  assert.equal(device.values['meter_power.charged'], 1.001);
+  await device.onTeardown();
+});
+
+test('startup floor recovery persists through restart without replaying either raw delta', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  for (const raised of ['charge', 'discharge', 'both']) {
+    const record = { version: 1, chargedWh: 1000, dischargedWh: 2000, chargedRawWh: 10000,
+      dischargedRawWh: 20000, countersAvailable: true, energySourceSn: 'BK61TEST00000001' };
+    const a = raised === 'discharge' ? 1 : 1.004; const b = raised === 'charge' ? 2 : 2.006;
+    const first = await harness({ batteryEnergyCheckpoint: record }, d => { d.values['meter_power.charged'] = a; d.values['meter_power.discharged'] = b; });
+    await first.onTeardown();
+    const second = await harness(structuredClone(first.store), d => { d.values['meter_power.charged'] = a; d.values['meter_power.discharged'] = b; });
+    await second.applyQuota({ accuChgEnergy: 10004, accuDsgEnergy: 20006 }, { source: 'mqtt', receivedAt: now });
+    assert.equal(second.values['meter_power.charged'], raised === 'discharge' ? 1.004 : a);
+    assert.equal(second.values['meter_power.discharged'], raised === 'charge' ? 2.006 : b);
+    await second.onTeardown();
+  }
+});
+
+test('startup floor never adopts higher capability totals into a different-source coherent checkpoint', async () => {
+  const record = { version: 1, chargedWh: 1000, dischargedWh: 2000, chargedRawWh: 10000,
+    dischargedRawWh: 20000, countersAvailable: true, energySourceSn: 'BK61OTHERINSTALLATION' };
+  for (const mainSn of [undefined, {}]) {
+    const device = await harness({ batteryEnergyCheckpoint: record, mainSn }, d => { d.values['meter_power.charged'] = 90; d.values['meter_power.discharged'] = 80; });
+    assert.equal(device.getEnergyDiagnostics().chargedKWh, 1);
+    assert.equal(device.getEnergyDiagnostics().dischargedKWh, 2);
+    assert.equal(device.values['meter_power.charged'], 90, 'unknown provenance is preserved, never merged into the other record');
+    await device.onTeardown(); assert.deepEqual(device.store.batteryEnergyCheckpoint, record);
+  }
+});
+
+test('startup floor keeps native counters authoritative when resetting the only legacy raw anchor', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const device = await harness({ chargedWh: 1000, chargedRawWh: 10000 }, d => { d.values['meter_power.charged'] = 1.004; });
+  await device.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now });
+  now += 60000; await device.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(device.values['meter_power.charged'], 1.004, 'clearing a raw anchor must not silently enable power fallback');
+  await device.applyQuota({ accuChgEnergy: 10004 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(device.values['meter_power.charged'], 1.004);
+  await device.onTeardown();
+});

@@ -1908,3 +1908,19 @@ test('5000 retry ticks coalesce a pending subscription and do not blame account 
   complete(true); await Promise.all([first, second]);
   await h.device.onUninit();
 });
+
+test('startup floor preserves STREAM 5000 fractional Wh instead of promoting rounded native bins', async () => {
+  let saved = { chargedWh: 1000.6, dischargedWh: 2000.125 };
+  for (let restart = 0; restart < 3; restart++) {
+    const { device } = await harness(classes.Stream5000UnitDevice, saved, undefined, {}, device => {
+      device.values['meter_power.charged'] = 1.001;
+      device.values['meter_power.discharged'] = 2;
+    });
+    assert.equal(device.getEnergyDiagnostics().chargedKWh, 1.0006);
+    assert.equal(device.values['meter_power.charged'], 1.001);
+    assert.equal(device.getEnergyDiagnostics().dischargedKWh, 2.000125);
+    await device.onUninit();
+    saved = structuredClone(device.store);
+    assert.equal(saved.chargedWh, 1000.6);
+  }
+});

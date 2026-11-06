@@ -1,5 +1,25 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 — micro/battery startup continuity fixed locally, not deployed
+
+[Counter-path report](STARTUP_COUNTER_PATHS_2026-11-06.md). Baseline `1167ff4`
+was clean/fetched 0/0. Reproduced four failures: microinverter older-store rollback,
+original battery higher-projection rollback, rounded original display decrease,
+and 5000 fractional Wh inflation. Source repairs protect same-source totals,
+independent raw counter anchors/native-counter authority, coherent micro persistence,
+receipt timing/lifecycle and rounded-display precision. Added 15 tests; full
+**1,471/1,471**, lint/release/whitespace and pinned verified validation pass.
+An extra candidate raw-mode double-count regression failed before its correction;
+evidence is retained. Previous solar repair remains unchanged and tested.
+
+New source/tests/docs are uncommitted locally; no new CI or multi-model approval
+is claimed. No API/UI/hardware/control operation, installation, publication,
+version bump or push. Installed Development remains the recorded earlier archive;
+native AI and paused Homey execution are untouched. Both acceptance JSONs remain
+unchanged. Next is review/source sync/CI, then a separately approved exact-artifact
+validation update with fresh preservation/quiescence; no automatic install/soak.
+External receipts: `../work/output/startup-counter-audit-2026-11-06/`.
+
 ## 6 November 2026 12:43 UTC - solar startup source repair independently approved
 
 [Repair/review report](SOLAR_STARTUP_CONTINUITY_2026-11-06.md): the synthetic

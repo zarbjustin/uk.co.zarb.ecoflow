@@ -676,22 +676,39 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       validWh(checkpoint?.[key]) ? checkpoint[key] : 0,
       projectedWh(capability),
     );
-    this.chargedWh = this.energyRecovery === 'ready' ? storedWh('chargedWh') ?? 0 : recoveredWh('chargedWh', 'meter_power.charged');
-    this.dischargedWh = this.energyRecovery === 'ready' ? storedWh('dischargedWh') ?? 0 : recoveredWh('dischargedWh', 'meter_power.discharged');
+    const restoredSource = (typeof checkpoint?.energySourceSn === 'string' && checkpoint.energySourceSn
+      ? checkpoint.energySourceSn : this.getStoreValue('energySourceSn')) || this.mainSn;
+    const sameSource = typeof restoredSource === 'string' && typeof this.mainSn === 'string'
+      && restoredSource.toUpperCase() === this.mainSn.toUpperCase();
+    const readyWh = (key: string, capability: string) => {
+      const stored = storedWh(key) ?? 0;
+      const projection = this.getCapabilityValue(capability);
+      // A native one-Wh rounded projection does not contain additional fractional energy.
+      if (!sameSource || projection === Math.round(stored) / 1000) return stored;
+      return Math.max(stored, projectedWh(capability));
+    };
+    this.chargedWh = this.energyRecovery === 'ready' ? readyWh('chargedWh', 'meter_power.charged') : recoveredWh('chargedWh', 'meter_power.charged');
+    this.dischargedWh = this.energyRecovery === 'ready' ? readyWh('dischargedWh', 'meter_power.discharged') : recoveredWh('dischargedWh', 'meter_power.discharged');
+    const chargedFloorRaised = this.energyRecovery === 'ready' && this.chargedWh > (storedWh('chargedWh') ?? 0);
+    const dischargedFloorRaised = this.energyRecovery === 'ready' && this.dischargedWh > (storedWh('dischargedWh') ?? 0);
     // Present-but-unreadable records cannot authorize a legacy raw/total pair.
-    this.chargedRawWh = coherent || absent ? storedWh('chargedRawWh') : undefined;
-    this.dischargedRawWh = coherent || absent ? storedWh('dischargedRawWh') : undefined;
+    this.chargedRawWh = !chargedFloorRaised && (coherent || absent) ? storedWh('chargedRawWh') : undefined;
+    this.dischargedRawWh = !dischargedFloorRaised && (coherent || absent) ? storedWh('dischargedRawWh') : undefined;
     this.countersAvailable = (typeof checkpoint?.countersAvailable === 'boolean'
       ? checkpoint.countersAvailable : this.getStoreValue('countersAvailable')) === true
-      || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined;
+      || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined
+      // Re-anchoring a raised floor cannot erase evidence that device counters were already authoritative.
+      || ((coherent || absent) && (storedWh('chargedRawWh') !== undefined || storedWh('dischargedRawWh') !== undefined));
     this.energySourceSn = (typeof checkpoint?.energySourceSn === 'string' && checkpoint.energySourceSn
       ? checkpoint.energySourceSn : this.getStoreValue('energySourceSn')) || this.mainSn;
     if (this.energyRecovery !== 'ready') this.log(`Energy checkpoint ${this.energyRecovery}; lifetime totals retained, legacy raw baselines rejected.`);
     this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistBatteryStore());
+    // Persist recovered totals with null raw anchors: retaining old raw values would recount the recovered interval.
+    if (chargedFloorRaised || dischargedFloorRaised) this.energyCheckpoint.mark();
 
     this.registerControlListeners();
-    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+    await this.projectBatteryEnergyCapability('meter_power.charged', this.chargedWh);
+    await this.projectBatteryEnergyCapability('meter_power.discharged', this.dischargedWh);
 
     if ((this.monitoringEnabled || this.monitoringRollbackPending) && this.getSetting('enable_history') !== false) this.startHistory();
     if (this.getSetting('solar_forecast') !== false) this.startSolarForecast();
@@ -1175,8 +1192,16 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private async updateBatteryEnergyCapabilities(): Promise<void> {
     this.energyCheckpoint.mark();
-    await this.setCapabilityValue('meter_power.charged', this.chargedWh / 1000).catch(() => {});
-    await this.setCapabilityValue('meter_power.discharged', this.dischargedWh / 1000).catch(() => {});
+    await this.projectBatteryEnergyCapability('meter_power.charged', this.chargedWh);
+    await this.projectBatteryEnergyCapability('meter_power.discharged', this.dischargedWh);
+  }
+
+  private async projectBatteryEnergyCapability(capability: string, wh: number): Promise<void> {
+    const current = this.getCapabilityValue(capability);
+    const total = wh / 1000;
+    // Keep a higher projected floor, including native rounding, without transferring it between sources.
+    if (typeof current === 'number' && Number.isFinite(current) && current >= total) return;
+    await this.setCapabilityValue(capability, total).catch(() => {});
   }
 
   private async persistBatteryStore(): Promise<void> {

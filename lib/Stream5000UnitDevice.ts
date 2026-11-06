@@ -772,6 +772,8 @@ export class Stream5000UnitDevice extends Homey.Device {
     const savedWh = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
     const projectedWh = typeof projected === 'number' && Number.isFinite(projected)
       && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : 0;
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0
+      && projected === Math.round(savedWh) / 1000) return savedWh;
     return Math.max(savedWh, projectedWh);
   }
 
@@ -827,7 +829,9 @@ export class Stream5000UnitDevice extends Homey.Device {
       ['meter_power.charged', this.chargedWh / 1000],
       ['meter_power.discharged', this.dischargedWh / 1000],
     ] as const) {
-      if (!this.hasCapability(capability) || this.getCapabilityValue(capability) === kWh) continue;
+      if (!this.hasCapability(capability)) continue;
+      const projected = this.getCapabilityValue(capability);
+      if (projected === kWh || projected === Math.round(kWh * 1000) / 1000) continue;
       // eslint-disable-next-line no-await-in-loop
       await this.setCapabilityValue(capability, kWh).catch((error) => this.error(capability, error));
     }

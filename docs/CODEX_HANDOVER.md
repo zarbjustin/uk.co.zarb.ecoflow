@@ -1,5 +1,34 @@
 # Codex cross-machine handover
 
+## 6 November 2026 — local microinverter and battery startup counter repairs
+
+[Targeted report](STARTUP_COUNTER_PATHS_2026-11-06.md). Clean/fetched baseline
+`1167ff46004fb2785dfd556613ea5fa268c59073`, ahead/behind 0/0. Owner authorised
+source investigation/fixes/tests only, retaining installed app, channels and AI.
+Four original real-driver regressions reproduced micro 4 Wh rollback, original
+battery newer-floor rollback, original rounded-display decrease and 5000 fractional
+rounding inflation. Local fixes validate source-bound micro state/persistence,
+own receipt/startup/teardown work, recover original battery floors with only the
+raised raw direction re-anchored, retain native-counter authority and preserve
+precise 5000 Wh across rounded displays. No shared Base/checkpoint/control or
+previous solar-driver source change. No blind cross-source total transfer.
+
+Added 15 regressions/matrices; **1,471/1,471** full suite passes. Lint, release
+boundaries, whitespace and isolated pinned Homey 4.5.3 verified validation pass.
+A candidate-only regression caught and fixed accidental power fallback after
+clearing the sole legacy raw anchor; its failing evidence is retained. This new
+diff has no exact-commit CI or new independent multi-model review yet.
+
+Changes remain local/uncommitted on the diagnostic branch; no push or artifact
+deployment. No Homey/EcoFlow API/UI/control call was made. The installed archive
+remains the last recorded `73c6aa47...df4`; keep both Homey execution switches off
+and native AI in charge. Acceptance ledgers unchanged; all runtime-specific
+hardware/continuity/rendering/soak/ES22/three-phase gates remain open. Evidence:
+`../work/output/startup-counter-audit-2026-11-06/`. External final receipt records
+current file hashes, source fingerprint, local checks and lease/index outcome.
+Next: review/source sync/CI and one separately approved combined validation
+candidate; do not reuse the older installation approval for this changed runtime.
+
 ## 6 November 2026 12:43 UTC - reviewed source-only solar continuity repair
 
 [Targeted report](SOLAR_STARTUP_CONTINUITY_2026-11-06.md) records the real-driver
