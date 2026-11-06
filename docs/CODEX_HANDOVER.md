@@ -1,6 +1,12 @@
 # Codex cross-machine handover
 
-## 6 November 2026 - Sprints 1-4 source candidate
+## 6 November 2026 - Sprints 1-4 reviewed source
+
+Reviewed source: `e8c48fea948ab3adc82c26bfd1a1db93215812aa`.
+[Exact-commit CI run 383](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42144534823)
+passed all steps, including fresh npm ci, audit and verified validation,
+at 01:34:03 UTC. This final documentation-only commit's SHA/CI and the
+lease/index outcomes belong to the external receipt below.
 
 Start with [SPRINTS_1_4_2026-11-06.md](SPRINTS_1_4_2026-11-06.md).
 Baseline was clean/synchronized `9425da2bb6bb3ae636af354a02f881d0e498b6da`
@@ -14,8 +20,8 @@ teardown-owned; retired availability continuations cannot emit a late online Flo
 
 Local candidate: **1,437 tests pass**, lint/release/diff checks, audit (zero
 vulnerabilities) and pinned Homey 4.5.3 verified validation pass. All three final
-independent reviews passed. Source commit/push and exact-commit CI remain pending
-at this checkpoint; engineering is complete, private-history coverage is not.
+independent reviews passed. Source is pushed and its exact-commit CI passed;
+engineering is complete, private-history coverage is not.
 Final receipt:
 `../work/output/copilot-bug-bash-2026-11-06/sprints-1-4/FINAL_RECEIPT.md`.
 
