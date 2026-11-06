@@ -41,6 +41,42 @@ function harness(store = {}, values = {}) {
 }
 const sample = (d, receivedAt, watts = 600) => d.applyQuota({ powGetPv: watts, powGetPv2: 0 }, { source: 'mqtt', sourceSn: source, receivedAt });
 
+test('micro partial PV reports are unknown totals, break accounting continuity and distinguish explicit zero', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness(); await device.onInit();
+  const deliver = quota => device.applyQuota(quota, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  await deliver({ powGetPv: 300, powGetPv2: 300 });
+  now += 60000; await deliver({ powGetPv: 300 });
+  assert.equal(device.values['measure_power.pv1'], 300);
+  assert.equal(device.values.measure_power, null);
+  assert.equal(device.values.stream_micro_power_solar, null);
+  assert.equal(device.values.meter_power, 0, 'an omitted channel cannot authorize a guessed interval');
+  now += 60000; await deliver({ powGetPv2: 300 });
+  assert.equal(device.values.measure_power, null);
+  now += 60000; await deliver({ powGetPv: 300, powGetPv2: 0 });
+  assert.equal(device.values.measure_power, 300, 'explicit zero is a complete channel reading');
+  assert.equal(device.values.meter_power, 0, 'recovery anchors without backfilling partial reports');
+  now += 60000; await deliver({ powGetPv: 300, powGetPv2: 0 });
+  assert.equal(device.values.meter_power, 0.005);
+  await device.onUninit();
+});
+
+test('micro partial reports cannot erase accepted receipt order or revive an older accounting anchor', async t => {
+  t.mock.method(Date, 'now', () => 2000000);
+  for (const partialAt of [1030000, 1090000]) {
+    const { device } = harness(); await device.onInit();
+    await sample(device, 1000000); await sample(device, 1060000);
+    await device.applyQuota({ powGetPv: 900 }, { source: 'mqtt', sourceSn: source, receivedAt: partialAt });
+    await sample(device, 1000000);
+    await sample(device, 1120000);
+    const expected = partialAt < 1060000 ? 0.02 : 0.01;
+    assert.equal(device.values.meter_power, expected, 'older receipts cannot revive an anchor cleared by partial PV');
+    await sample(device, 1180000);
+    assert.equal(device.values.meter_power, expected + 0.01);
+    await device.onUninit();
+  }
+});
+
 test('micro startup retains the higher same-device cumulative projection and persists it', async () => {
   const { device } = harness({ generatedWh: 123000 }, { meter_power: 123.004 });
   await device.onInit();

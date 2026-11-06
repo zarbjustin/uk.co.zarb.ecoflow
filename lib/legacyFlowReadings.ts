@@ -2,14 +2,15 @@
 export const LEGACY_FLOW_TTL_MS = 180000;
 export const LEGACY_SOLAR_SKEW_MS = 5000;
 const MODES = ['self_powered', 'ai', 'scheduled', 'tou'];
-const NUMERIC = ['measure_power', 'measure_battery', 'measure_power.grid', 'measure_power.pv', 'measure_power.load'];
+const PERCENTAGES = ['measure_battery', 'backup_reserve_soc', 'charge_limit', 'discharge_limit'];
+const NUMERIC = ['measure_power', ...PERCENTAGES, 'measure_power.grid', 'measure_power.pv', 'measure_power.load'];
 type Entry = { value: unknown; at: number };
 
 export function legacyFlowValueValid(cap: string, value: unknown): boolean {
   if (cap === 'operating_mode') return typeof value === 'string' && MODES.includes(value);
   if (cap === 'feed_in_control') return typeof value === 'boolean';
   if (!NUMERIC.includes(cap) || typeof value !== 'number' || !Number.isFinite(value)) return false;
-  if (cap === 'measure_battery') return value >= 0 && value <= 100;
+  if (PERCENTAGES.includes(cap)) return value >= 0 && value <= 100;
   if (['measure_power.pv', 'measure_power.load'].includes(cap)) return value >= 0 && value <= 100000;
   return Math.abs(value) <= 100000;
 }

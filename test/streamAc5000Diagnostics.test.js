@@ -10,7 +10,19 @@ const {
   formatEs22CapabilitySnapshot,
 } = require('../.homeybuild/lib/streamAc5000Diagnostics.js');
 
-test('describeEs22Frame caps samples and removes the full serial', () => {
+test('unparsed diagnostic metadata never exports novel private protobuf contents, including explicit sample requests', () => {
+  const secret = 'customer-private-token';
+  const value = Buffer.from(secret);
+  const payload = Buffer.concat([Buffer.from([0x0a, value.length]), value]);
+  for (const bytes of [undefined, 192, 1000000]) {
+    const diagnostic = describeEs22Frame(payload, 'ES22SYNTHETIC', bytes);
+    assert.strictEqual(diagnostic.sampleBase64, '');
+    assert.ok(!JSON.stringify(diagnostic).includes(secret));
+    assert.ok(!Buffer.from(diagnostic.sampleBase64, 'base64').includes(value));
+  }
+});
+
+test('describeEs22Frame keeps size and fingerprint without exposing raw serial-bearing bytes', () => {
   const sn = 'ES22ZEB1ABCD0001';
   const payload = Buffer.concat([
     Buffer.from('prefix:', 'utf8'),
@@ -24,15 +36,14 @@ test('describeEs22Frame caps samples and removes the full serial', () => {
   assert.strictEqual(diagnostic.bytes, payload.length);
   assert.strictEqual(diagnostic.sha256.length, 16);
   assert.strictEqual(diagnostic.truncated, true);
-  assert.ok(Buffer.from(diagnostic.sampleBase64, 'base64').length <= 192);
+  assert.strictEqual(diagnostic.sampleBase64, '');
   assert.ok(!sample.includes(sn));
-  assert.ok(sample.includes('*'.repeat(sn.length)));
 });
 
 test('describeEs22Frame reports malformed input without throwing', () => {
   const diagnostic = describeEs22Frame(Buffer.from([0xff, 0xff, 0xff]), 'ES22SECRET');
   assert.deepStrictEqual(diagnostic.commands, []);
-  assert.ok(diagnostic.sampleBase64);
+  assert.strictEqual(diagnostic.sampleBase64, '');
 });
 
 test('linked unit serials are redacted even in a malformed diagnostic frame', () => {

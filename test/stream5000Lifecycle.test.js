@@ -904,6 +904,86 @@ test('an optional reserve-status tile add failure does not lose the device or it
   assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
 });
 
+test('failed startup configuration clear preserves the subscription, clears other tiles and retries', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  let reject = true;
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, device => {
+    t.after(() => device.onUninit());
+    device.values.stream_5000_mode = 'custom';
+    const write = device.setCapabilityValue.bind(device);
+    device.setCapabilityValue = async (cap, value) => {
+      if (reject && cap === 'stream_5000_mode' && value === null) throw Error('synthetic startup clear failure');
+      await write(cap, value);
+    };
+  });
+  assert.equal(h.resources().subscriptions, 1);
+  assert.equal(h.device.values.stream_5000_backup_reserve, null);
+  assert.deepEqual(h.device.getConfigurationDiagnostics().values, {});
+  await assert.rejects(h.device.configurationModeIs('custom'), /unavailable/);
+  assert.ok(h.device.errors.some(args => args.join(' ').includes('startup clear')));
+  await h.device.queueTelemetry({ measure_battery: 50 }, 100000, true);
+  assert.equal(h.device.getAvailable(), false, 'fresh SOC cannot hide a persistent stale configuration tile');
+  assert.equal(h.device.getReadingDiagnostics().stream_5000_mode?.applicationStatus, 'write_failed');
+  reject = false;
+  await h.device.checkAvailability();
+  assert.equal(h.device.values.stream_5000_mode, null);
+  assert.equal(h.device.getAvailable(), false, 'a successful configuration clear is not a measurement');
+  await h.device.queueTelemetry({ measure_battery: 51 }, 100000, true);
+  assert.equal(h.device.getAvailable(), true);
+});
+
+test('failed startup live clear stays unavailable until that field recovers without inventing a receipt', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  let reject = true;
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, captures.pair.unit_a, {}, device => {
+    t.after(() => device.onUninit());
+    device.values['measure_power.load'] = 999;
+    const write = device.setCapabilityValue.bind(device);
+    device.setCapabilityValue = async (cap, value) => {
+      if (reject && cap === 'measure_power.load' && value === null) throw Error('synthetic startup live clear failure');
+      await write(cap, value);
+    };
+  });
+  assert.equal(h.resources().subscriptions, 1);
+  assert.equal(h.device.getReadingDiagnostics()['measure_power.load'].applicationStatus, 'write_failed');
+  assert.equal(h.device.getReadingDiagnostics()['measure_power.load'].receivedAgeSec, null);
+  await h.device.queueTelemetry({ measure_battery: 50 }, 100000, true);
+  assert.equal(h.device.getAvailable(), false, 'unrelated battery data cannot hide a failed live clear');
+  reject = false;
+  await h.device.checkAvailability();
+  assert.equal(h.device.values['measure_power.load'], null);
+  assert.equal(h.device.getAvailable(), false, 'a successful clear is not a measurement');
+  await h.device.queueTelemetry({ 'measure_power.load': 0 }, 100000, true);
+  assert.equal(h.device.getAvailable(), true);
+});
+
+test('5000 corrupt existing energy without a usable projection remains unknown and read-only', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  for (const invalid of [{ old: 'unknown format' }, '12', -1, Infinity]) {
+    const saved = { chargedWh: invalid, dischargedWh: 50, marker: 'preserve' };
+    const h = await harness(classes.Stream5000UnitDevice, structuredClone(saved), captures.pair.unit_a, {}, device => {
+      device.values['meter_power.charged'] = null;
+    });
+    assert.equal(h.device.values['meter_power.charged'], null);
+    await h.device.queueTelemetry({ measure_power: 600 }, now, true);
+    now += 60000;
+    await h.device.queueTelemetry({ measure_power: 600 }, now, true);
+    assert.equal(h.device.values.measure_power, 600, 'unrecoverable accounting must not disable live monitoring');
+    assert.equal(h.device.values['meter_power.charged'], null);
+    await h.device.onUninit();
+    assert.deepEqual(h.device.store, saved);
+  }
+});
+
+test('5000 failed terminal checkpoint leaves no retired timer and preserves explicit retry evidence', async () => {
+  const h = await harness(classes.Stream5000UnitDevice, { chargedWh: 1000 });
+  h.device.energyCheckpoint.mark();
+  h.device.setStoreValue = async () => { throw Error('synthetic terminal store failure'); };
+  await assert.rejects(h.device.onUninit(), /terminal store failure/);
+  assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+  assert.equal(h.device.energyCheckpoint.diagnostics().pending, true);
+});
+
 test('reconnect invalidates old configuration without guessing reserve state or changing identity and counters', async (t) => {
   let now = 100000;
   t.mock.method(Date, 'now', () => now);

@@ -63,6 +63,79 @@ async function harness(store = {}, configure) {
   return device;
 }
 
+test('original failed terminal checkpoint cannot leave a retired retry timer', async () => {
+  const device = await harness();
+  device.energyCheckpoint.mark();
+  device.setStoreValue = async () => { throw Error('synthetic terminal store failure'); };
+  await assert.rejects(device.onTeardown(), /terminal store failure/);
+  assert.equal(device.timers.size, 0);
+  assert.equal(device.energyCheckpoint.diagnostics().pending, true);
+});
+
+test('original unchanged native counters retry a failed projection without adding energy', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const device = await harness();
+  await device.applyQuota({ accuChgEnergy: 1000 }, { receivedAt: now, source: 'mqtt' });
+  const write = device.setCapabilityValue.bind(device);
+  let attempts = 0;
+  const errors = [];
+  device.error = (...args) => errors.push(args);
+  device.setCapabilityValue = async (cap, value) => {
+    if (cap === 'meter_power.charged' && value === 0.01 && ++attempts === 1) throw Error('synthetic projection failure');
+    await write(cap, value);
+  };
+  now += 1000;
+  await device.applyQuota({ accuChgEnergy: 1010 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(device.values['meter_power.charged'], 0);
+  now += 1000;
+  await device.applyQuota({ accuChgEnergy: 1010 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(device.values['meter_power.charged'], 0.01);
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 0.01);
+  assert.equal(attempts, 2);
+  assert.equal(errors.length, 1, 'projection failures remain visible');
+  await device.onTeardown();
+});
+
+test('original widget configuration freshness requires matching receipts and expires independently', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const fields = ['measure_battery', 'backup_reserve_soc', 'charge_limit', 'discharge_limit', 'feed_in_control'];
+  const device = await harness({}, d => {
+    const has = d.hasCapability.bind(d);
+    d.hasCapability = cap => fields.includes(cap) || has(cap);
+  });
+  device.values.measure_battery = 80;
+  assert.equal(device.getReadingDiagnostics().measure_battery.stale, true);
+  await device.applyQuota({ cmsBattSoc: 80, backupReverseSoc: 30, cmsMinDsgSoc: 10, cmsMaxChgSoc: 95, feedGridMode: 1 },
+    { source: 'mqtt', receivedAt: now });
+  for (const field of fields) assert.equal(device.getReadingDiagnostics()[field].stale, false, field);
+  now += 180001;
+  await device.applyQuota({ powGetBpCms: -600 }, { source: 'mqtt', receivedAt: now });
+  for (const field of fields) assert.equal(device.getReadingDiagnostics()[field].stale, true, field);
+  await device.onTeardown();
+});
+
+test('paired aggregate ownership survives unbound startup and trial read-source changes without moving history', async () => {
+  const source = 'BK61SYNTHETICMAIN';
+  const device = await harness({ mainSn: source, energySourceSn: source, chargedWh: 1000, dischargedWh: 2000 });
+  const identity = device.getData().sn;
+  const { observedAggregateSerials } = require('../.homeybuild/lib/stream5000Pairing');
+  const driver = { homey: device.homey, getDevices: () => [device] };
+  device.homey.drivers = { getDriver: id => id === 'stream' ? driver : { getDevices: () => [] } };
+  assert.equal(device.getAggregateSourceSn(), source, 'ownership survives before source revalidation');
+  assert.ok(observedAggregateSerials(driver, 'inventory unavailable').has(source));
+  device.aggregateBound = true;
+  device.monitoringEnabled = true;
+  assert.equal(device.getReadSn(), identity, 'trial read routing is not original accounting ownership');
+  assert.equal(device.getAggregateSourceSn(), source);
+  assert.ok(observedAggregateSerials(driver, 'inventory unavailable').has(source));
+  assert.equal(device.values['meter_power.charged'], 1);
+  assert.equal(device.values['meter_power.discharged'], 2);
+  assert.equal(device.getData().sn, identity);
+  await device.onTeardown();
+  assert.equal(device.store.energySourceSn, source);
+  assert.throws(() => new StreamDevice().getAggregateSourceSn(), /initialised/);
+});
+
 test('Live STREAM counter-store upgrade/restart preserves totals, identity and unrelated settings with no power fallback', async t => {
   let now=100000; t.mock.method(Date,'now',()=>now);
   const identity=Object.freeze({sn:'BK61SYNTHETICUPGRADE'});

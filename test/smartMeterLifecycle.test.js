@@ -92,6 +92,19 @@ test('meter subscribes to its own MQTT identity, keeps host REST, and releases t
   assert.equal(d.getCapabilityValue('measure_voltage.l1'), 240);
 });
 
+test('original meter failed teardown closes its checkpoint without scheduling a retired retry', async () => {
+  const d = new TestMeter();
+  let next = 0;
+  d.homey.setTimeout = fn => { d.timers.set(++next + 1000, fn); return next + 1000; };
+  d.homey.clearTimeout = id => d.timers.delete(id);
+  await d.onInit();
+  d.energyCheckpoint.mark();
+  d.setStoreValue = async () => { throw Error('synthetic terminal store failure'); };
+  await assert.rejects(d.onUninit(), /terminal store failure/);
+  assert.equal(d.timers.size, 0);
+  assert.equal(d.energyCheckpoint.diagnostics().pending, true);
+});
+
 test('home-load setting never replaces native grid power or import/export direction', async () => {
   const d = new TestMeter('load'); await d.onInit();
   await d.applyQuota({ powGetSysGrid: -100, powGetSysLoad: 500 });

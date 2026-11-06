@@ -107,6 +107,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private readonly commandStats = new Map<string, { frames: number; parsed: number; unparsed: number }>();
   private chargedWh = 0;
   private dischargedWh = 0;
+  private energyReadOnly = false;
   private lastEnergySampleAt = 0;
   private energyCheckpoint?: EnergyCheckpoint;
   private energySamples = 0;
@@ -116,6 +117,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private configurationTracker?: Stream5000ConfigurationTracker;
   private timeObserver?: Stream5000TimeObserver;
   private readonly readingAges = new Stream5000ReadingAges();
+  private readonly configurationWriteFailures = new Set<string>();
   private batteryPresentation = new Stream5000BatteryPresentation();
   private linkedPowerWarning = false;
   private lastOfflineMessage = '';
@@ -166,14 +168,18 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.mapTelemetry = this.telemetryAdapter.createMapper(sn, this.isEnergyAggregate() ? 'system' : 'unit');
     this.sampleGate = this.telemetryAdapter.createSampleGate();
     if (this.isEnergyAggregate()) {
-      this.chargedWh = this.storedEnergyWh('chargedWh');
-      this.dischargedWh = this.storedEnergyWh('dischargedWh');
+      const charged = this.storedEnergyWh('chargedWh');
+      const discharged = this.storedEnergyWh('dischargedWh');
+      this.energyReadOnly = charged === undefined || discharged === undefined;
+      this.chargedWh = charged ?? 0;
+      this.dischargedWh = discharged ?? 0;
+      if (this.energyReadOnly) this.error('STREAM 5000 energy history requires reconciliation; preserving existing counters and stores.');
       this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistEnergy());
       await this.initialiseEnergyCapabilities();
       // Homey may have projected a newer total than the coalesced checkpoint.
       // Keep that floor across upgrades/recovery; never reset existing history.
-      if ((this.chargedWh > 0 && this.chargedWh !== this.getStoreValue('chargedWh'))
-        || (this.dischargedWh > 0 && this.dischargedWh !== this.getStoreValue('dischargedWh'))) this.energyCheckpoint.mark();
+      if (!this.energyReadOnly && ((this.chargedWh > 0 && this.chargedWh !== this.getStoreValue('chargedWh'))
+        || (this.dischargedWh > 0 && this.dischargedWh !== this.getStoreValue('dischargedWh')))) this.energyCheckpoint.mark();
     } else {
       await this.initialisePhysicalUnitCapabilities();
       try {
@@ -214,15 +220,24 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       // Clear persisted observations until this session actually reports them.
       // eslint-disable-next-line no-await-in-loop
-      await this.setCapabilityValue(capability, null);
+      await this.setCapabilityValue(capability, null).then(() => {
+        this.configurationWriteFailures.delete(capability);
+      }).catch((e) => {
+        this.configurationWriteFailures.add(capability);
+        this.error(`configuration ${capability}`, e);
+      });
     }
     for (const capability of STREAM_5000_LIVE_CAPABILITIES) {
       if (this.isStopped()) return;
       if (this.hasCapability(capability)) {
         // eslint-disable-next-line no-await-in-loop
-        await this.setCapabilityValue(capability, null);
+        await this.setCapabilityValue(capability, null).catch((e) => {
+          this.readingAges.failed(capability);
+          this.error(capability, e);
+        });
       }
     }
+    if (this.hasApplicationFailures()) await this.setOffline(this.applicationFailedMessage());
     if (this.isStopped()) return;
     const messageKey = this.monitoringOnlyMessageKey();
     const localizedStatus = this.homey.__(messageKey);
@@ -452,7 +467,7 @@ export class Stream5000UnitDevice extends Homey.Device {
         applied = await this.applyTelemetry(group, at) && applied;
       }
       if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
-      if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
+      if (this.hasApplicationFailures()) await this.setOffline(this.applicationFailedMessage());
       else if (applied && Object.values(batch.readings).some((reading) => reading.usable)) await this.setOnline();
       await this.updateBatteryPresentation();
     });
@@ -544,17 +559,25 @@ export class Stream5000UnitDevice extends Homey.Device {
       const values = stream5000ConfigurationValues(this.configurationTracker?.snapshot());
       for (const [capability, value] of Object.entries(values)) {
         if (this.isStopped() || generation !== this.deliveryGeneration) return;
-        if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== value) {
-          // eslint-disable-next-line no-await-in-loop
-          try {
+        if (!this.hasCapability(capability)) {
+          this.configurationWriteFailures.delete(capability);
+          continue;
+        }
+        try {
+          if (this.getCapabilityValue(capability) !== value) {
+            // eslint-disable-next-line no-await-in-loop
             await this.setCapabilityValue(capability, value);
-          } catch (e) {
-            // One rejected tile must not keep the other expired/session-old
-            // observations visible. The watchdog retries the failed tile.
-            this.error(`configuration ${capability}`, e);
           }
+          if (this.isStopped() || generation !== this.deliveryGeneration) return;
+          this.configurationWriteFailures.delete(capability);
+        } catch (e) {
+          if (this.isStopped() || generation !== this.deliveryGeneration) return;
+          // Keep the device unavailable while a stale tile cannot be cleared.
+          this.configurationWriteFailures.add(capability);
+          this.error(`configuration ${capability}`, e);
         }
       }
+      if (this.hasApplicationFailures()) await this.setOffline(this.applicationFailedMessage());
     };
     return this.queueWork('configuration', run);
   }
@@ -595,7 +618,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       const success = await this.applyLiveReading(capability, value, receivedAt);
       applied = success && applied;
     }
-    if (!this.isStopped() && !applied && this.readingAges.hasWriteFailures()) {
+    if (!this.isStopped() && !applied && this.hasApplicationFailures()) {
       await this.setOffline(this.applicationFailedMessage());
     }
   }
@@ -661,6 +684,11 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   getReadingDiagnostics(): Record<string, unknown> {
     const readings = this.readingAges.snapshot(Date.now(), this.unavailableAfterMs());
+    for (const capability of this.configurationWriteFailures) {
+      readings[capability] = {
+        ageSec: null, receivedAgeSec: null, stale: true, applicationStatus: 'write_failed',
+      };
+    }
     if (this.officialSocEvidence && readings.measure_battery) {
       readings.measure_battery = {
         ...(readings.measure_battery as Record<string, unknown>),
@@ -765,16 +793,17 @@ export class Stream5000UnitDevice extends Homey.Device {
     return entry.value;
   }
 
-  private storedEnergyWh(key: string): number {
+  private storedEnergyWh(key: string): number | undefined {
     const value = this.getStoreValue(key);
     const capability = key === 'chargedWh' ? 'meter_power.charged' : 'meter_power.discharged';
     const projected = this.getCapabilityValue(capability);
-    const savedWh = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+    const savedWh = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
     const projectedWh = typeof projected === 'number' && Number.isFinite(projected)
-      && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : 0;
+      && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : undefined;
+    if (savedWh === undefined && projectedWh === undefined && (value != null || projected != null)) return undefined;
     if (typeof value === 'number' && Number.isFinite(value) && value >= 0
-      && projected === Math.round(savedWh) / 1000) return savedWh;
-    return Math.max(savedWh, projectedWh);
+      && savedWh !== undefined && projected === Math.round(savedWh) / 1000) return savedWh;
+    return Math.max(savedWh ?? 0, projectedWh ?? 0);
   }
 
   /** Add the meters defensively so devices paired with an older manifest migrate in place. */
@@ -802,6 +831,11 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async updateEnergy(batteryPowerW: number, sampleAt: number): Promise<void> {
+    if (this.energyReadOnly) {
+      this.lastEnergySampleAt = 0;
+      this.skippedEnergySamples += 1;
+      return;
+    }
     this.energySamples += 1;
     if (this.lastEnergySampleAt > 0
       && sampleAt - this.lastEnergySampleAt > Math.min(MAX_GAP_MS, stream5000ReadingLimitMs('measure_power', this.unavailableAfterMs()))) {
@@ -825,6 +859,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async projectEnergyCapabilities(): Promise<void> {
+    if (this.energyReadOnly) return;
     for (const [capability, kWh] of [
       ['meter_power.charged', this.chargedWh / 1000],
       ['meter_power.discharged', this.dischargedWh / 1000],
@@ -838,6 +873,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async persistEnergy(): Promise<void> {
+    if (this.energyReadOnly) return;
     const { chargedWh } = this;
     const { dischargedWh } = this;
     await this.setStoreValue('chargedWh', chargedWh);
@@ -864,8 +900,8 @@ export class Stream5000UnitDevice extends Homey.Device {
       chargedCounterSeen: false,
       dischargedCounterSeen: false,
       lastSampleAgeSec: this.lastEnergySampleAt > 0 ? Math.max(0, Math.round((Date.now() - this.lastEnergySampleAt) / 1000)) : null,
-      chargedKWh: this.chargedWh / 1000,
-      dischargedKWh: this.dischargedWh / 1000,
+      chargedKWh: this.energyReadOnly ? null : this.chargedWh / 1000,
+      dischargedKWh: this.energyReadOnly ? null : this.dischargedWh / 1000,
       checkpoint: this.energyCheckpoint?.diagnostics(),
     };
   }
@@ -888,7 +924,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.log(
       `[diag] ${this.telemetryAdapter.diagnosticLabel} unparsed frame shape=${shape} topic=${this.telemetryAdapter.topicKind(topic)} bytes=${diagnostic.bytes} `
           + `sha256=${diagnostic.sha256} commands=${diagnostic.commands.join(',') || 'none'} `
-          + `truncated=${diagnostic.truncated} sample=${diagnostic.sampleBase64}`,
+          + 'raw_omitted=true',
     );
   }
 
@@ -947,7 +983,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     await this.queueConfiguration();
     await this.queueReadingExpiry();
     if (this.isStopped()) return;
-    if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
+    if (this.hasApplicationFailures()) await this.setOffline(this.applicationFailedMessage());
     const limitMs = this.unavailableAfterMs();
     const reference = this.lastTelemetryAt || this.startedAt;
     const age = Date.now() - reference;
@@ -1032,9 +1068,13 @@ export class Stream5000UnitDevice extends Homey.Device {
     return translated && translated !== key ? translated : APPLICATION_FAILED_MESSAGE;
   }
 
+  private hasApplicationFailures(): boolean {
+    return this.readingAges.hasWriteFailures() || this.configurationWriteFailures.size > 0;
+  }
+
   /** Only transitions are applied, so a quiet device is not repeatedly flagged. */
   private async setOnline(): Promise<void> {
-    if (this.isStopped() || this.readingAges.hasWriteFailures() || this.getAvailable()) return;
+    if (this.isStopped() || this.hasApplicationFailures() || this.getAvailable()) return;
     await this.setAvailable().then(() => {
       this.lastOfflineMessage = '';
     }).catch(() => {});
@@ -1098,7 +1138,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.resubscribeTimer = null;
     }
     await this.applyChain.catch(() => {});
-    await this.energyCheckpoint?.flush();
+    await this.energyCheckpoint?.close();
   }
 
   private hasOtherFamilyDevices(): boolean {

@@ -1,5 +1,51 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 — full-release review: NO-GO, diagnostic source maintenance only
+
+[Full report](FULL_RELEASE_REVIEW_2026-11-06.md) separates engineering,
+product truth, packaging, installed validation, hardware and public-release
+verdicts. Baseline `211e022` fetched 0/0; inherited installation observations
+below preserved. Nine bounded source fix families and seventeen new regressions,
+including corrections for four independently reproduced final-review gaps:
+**1,488/1,488** tests, lint, structural release checks, zero-vulnerability audit
+and isolated pinned verified validation pass. Full/model hardware gates fail
+as expected; no ledger weakened. Raw-counter reset/order ambiguity, unbounded
+Developer queue and incomplete legacy field-expiry qualification remain.
+Store/API-permission eligibility and native rendering/translation review remain
+conditional. Actual configured Sol/Astra/MAI first passes were independent;
+exact upstream/MAI Preview mapping is unattested. Final same-diff findings and
+source-sync/CI identities: `../work/output/full-release-review-2026-11-06/FINAL_RECEIPT.md`.
+
+No new installation, live query/capture, observer, settings/control/Flow/Energy,
+restart/reconnect, publication or Mainline change. Installed Development is
+still the 14:31 archive/fingerprint below, not this source. Test/Live unchanged.
+Keep EcoFlow AI reserve ownership and both Homey execution switches off.
+Physical 5000 scope, native interval comparison, ES22/three-phase and 48-hour
+soak remain open; historical passes do not transfer to a changed runtime.
+
+## 6 November 2026 14:36 UTC — combined Development installed; sampled continuity passed
+
+[Delivery/preservation result](COMBINED_COUNTER_VALIDATION_RESULT_2026-11-06.md).
+One owner-approved non-clean install acknowledged 14:31:51.841 UTC; running
+Development 1.11.20. Exact archive SHA256 `5a8daa62475500e210991ea6428024b703a72b8f7529aa5ce8eca61da30955ff`,
+runtime source fingerprint `89ad4da2352e91baade7a0f5150688fe2d120faf832901abf62b6875c6e3f1af`.
+No decrease in ten cumulative meters across 100 startup samples and two full
+readbacks. Six transient unknowns retained; no errors/throttling. Earliest full
+numeric post-ack recovery observed 14:31:54.461 UTC. This cannot exclude unseen
+sub-sample dips or accept absolute physical interval accuracy.
+
+15 EcoFlow identities/settings/capability IDs, 101 Flows, 1217 Insights IDs,
+Energy definitions, global settings hashes and disabled execution preserved.
+Only icon URLs differ; packaged assets and other metadata match, and owner
+confirms phone icons/5000 battery indicator look correct. Native AI mode remains
+fresh in subscription receipts. Historical fault/lease/gate/runner left intact.
+Test 1.11.20/build 87 and Live 1.10.3/build 18 confirmed read-only; no publication.
+One 5000 physical power/state scope remains unverified. Independent native,
+ES22/three-phase and ordinary-use soak gates remain open; acceptance JSONs unchanged.
+No battery/settings/control/Flow/Energy action, extra restart, counter rewrite,
+rollback or soak; startup observer ended. Only local docs changed, no commit/push.
+Evidence and external receipt: `../work/output/combined-counter-installation-2026-11-06/`.
+
 ## 6 November 2026 — source synced/CI green; combined archive awaits review
 
 Reviewed source `003f2c4aee9c58aeeda7ad907b4c06f1dc8c832d` normally pushed;

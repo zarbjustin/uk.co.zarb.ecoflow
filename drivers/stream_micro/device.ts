@@ -21,6 +21,7 @@ function sourceSn(value: unknown): string | undefined {
 module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
   private generatedWh = 0;
   private lastTs = 0;
+  private lastReceiptTs = 0;
   private energyCheckpoint?: EnergyCheckpoint;
   private energySourceSn: string | undefined;
   private energyKnown = false;
@@ -45,6 +46,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
     await this.queueDeviceWork(async () => {
       await this.energyCheckpoint?.close();
       this.lastTs = 0;
+      this.lastReceiptTs = 0;
       this.generatedWh = 0;
       this.energyKnown = false;
       this.energySourceSn = sourceSn(this.getData().sn);
@@ -95,26 +97,34 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
     }
     const pv1 = perPvWatts(quota, 1);
     const pv2 = perPvWatts(quota, 2);
+    const completePv = pv1 !== undefined && pv2 !== undefined;
     // Anchor and account receipt time before any SDK await; live tile latency is not energy time.
-    if ((pv1 !== undefined || pv2 !== undefined) && !this.energyReadOnly) {
+    if (pv1 !== undefined || pv2 !== undefined) {
       const wallNow = Date.now();
       const now = context?.receivedAt ?? wallNow;
       if (!Number.isFinite(now) || now <= 0 || now > wallNow) {
         this.lastTs = 0;
         return;
       }
-      if (this.lastTs > wallNow) this.lastTs = 0;
-      if (this.lastTs > 0 && now <= this.lastTs) return;
-      const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
-      this.lastTs = now;
-      const wasKnown = this.energyKnown;
-      this.energyKnown = true;
-      const next = integratePositivePower(this.generatedWh, Math.max(0, (pv1 || 0) + (pv2 || 0)), dtMs);
-      if (validTotal(next) && next !== this.generatedWh) {
-        this.generatedWh = next;
-        this.energyCheckpoint?.mark();
+      if (this.lastReceiptTs > wallNow) {
+        this.lastReceiptTs = 0;
+        this.lastTs = 0;
       }
-      if (!wasKnown) this.energyCheckpoint?.mark();
+      if (now <= this.lastReceiptTs) return;
+      this.lastReceiptTs = now;
+      if (!completePv) this.lastTs = 0;
+      else if (!this.energyReadOnly) {
+        const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
+        this.lastTs = now;
+        const wasKnown = this.energyKnown;
+        this.energyKnown = true;
+        const next = integratePositivePower(this.generatedWh, Math.max(0, pv1 + pv2), dtMs);
+        if (validTotal(next) && next !== this.generatedWh) {
+          this.generatedWh = next;
+          this.energyCheckpoint?.mark();
+        }
+        if (!wasKnown) this.energyCheckpoint?.mark();
+      }
     }
     if (pv1 !== undefined && this.getCapabilityValue('stream_micro_power_pv1') !== pv1) {
       await this.setCapabilityValue('stream_micro_power_pv1', pv1).catch(() => {});
@@ -138,7 +148,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
     }
 
     if (pv1 !== undefined || pv2 !== undefined) {
-      const power = Math.max(0, (pv1 || 0) + (pv2 || 0));
+      const power = completePv ? Math.max(0, pv1 + pv2) : null;
       if (this.getCapabilityValue('stream_micro_power_solar') !== power) {
         await this.setCapabilityValue('stream_micro_power_solar', power).catch((e) => this.error('stream_micro_power_solar', e));
       }
@@ -151,6 +161,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
 
   protected async onTeardown(): Promise<void> {
     this.lastTs = 0;
+    this.lastReceiptTs = 0;
     await this.energyCheckpoint?.close();
   }
 

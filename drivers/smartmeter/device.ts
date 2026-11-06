@@ -178,7 +178,7 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   protected async onTeardown(): Promise<void> {
     if (this.detailTimer) this.homey.clearInterval(this.detailTimer);
     this.detailTimer = null;
-    await this.energyCheckpoint?.flush();
+    await this.energyCheckpoint?.close();
   }
 
   protected async onSettingsChanged(newSettings: any, changedKeys: string[]): Promise<void> {

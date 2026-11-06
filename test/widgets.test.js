@@ -20,6 +20,7 @@ function device(id, name, { capabilities = {}, settings = {} } = {}) {
     getName: () => name,
     getAvailable: () => true,
     getCapabilityValue: (capability) => capabilities[capability] ?? null,
+    getReadingDiagnostics: () => Object.fromEntries(Object.keys(capabilities).map(cap => [cap, { stale: false }])),
     getSetting: (setting) => settings[setting] ?? null,
   };
 }
@@ -37,6 +38,37 @@ function homey(streamDevices, unitDevices = [], stream5000Systems = []) {
     },
   };
 }
+
+test('widget feed-in and battery estimates preserve unknown or expired source evidence', () => {
+  for (const value of [null, undefined, 'true', 1]) {
+    const d = device('one', 'Battery', { capabilities: { feed_in_control: value } });
+    assert.equal(streamData(homey([d])).feedIn, null);
+  }
+  const d = device('one', 'Battery', { capabilities: {
+    feed_in_control: false, measure_battery: 80, measure_power: -1000, backup_reserve_soc: 20, discharge_limit: 10,
+  }, settings: { installed_capacity_kwh: 10 } });
+  d.getReadingDiagnostics = () => ({ measure_power: { stale: false } });
+  const report = streamData(homey([d]));
+  assert.equal(report.feedIn, null);
+  assert.equal(report.soc, null);
+  assert.equal(report.usableEnergyKwh, null);
+  assert.equal(report.timeToEmpty, null);
+});
+
+test('widget usable energy and calculated runtime require both independently fresh original limits', () => {
+  for (const expired of ['backup_reserve_soc', 'discharge_limit']) {
+    const capabilities = { measure_battery: 80, measure_power: -1000, backup_reserve_soc: 60, discharge_limit: 10 };
+    const d = device('one', 'Battery', { capabilities, settings: { installed_capacity_kwh: 10 } });
+    assert.equal(streamData(homey([d])).usableEnergyKwh, 2);
+    d.getReadingDiagnostics = () => Object.fromEntries(Object.keys(capabilities).map(cap => [cap, { stale: cap === expired }]));
+    const report = streamData(homey([d]));
+    assert.equal(report.soc, 80, 'SOC remains fresh when only a limit expires');
+    assert.equal(report.storedEnergyKwh, 8);
+    assert.equal(report.usableEnergyKwh, null);
+    assert.equal(report.effectiveFloorSoc, null);
+    assert.equal(report.timeToEmpty, null);
+  }
+});
 
 test('5000 widgets consume fresh reported settings and honour reserve enabled state', () => {
   const aggregate = device('five', '5000 Home Battery', { capabilities: { measure_battery: 80, measure_power: -400 },

@@ -3,6 +3,7 @@
 import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
+import { observedAggregateSerials } from '../../lib/stream5000Pairing';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -121,12 +122,14 @@ module.exports = class StreamDriver extends Homey.Driver {
     session.setHandler('list_devices', async () => {
       const client = clientFromSettings(this);
       const units = await collectStreamUnits(client);
+      const paired = observedAggregateSerials(this, 'Home Battery inventory could not be checked. Reopen pairing; existing devices are unchanged.');
       // A multi-unit STREAM installation is one household battery addressed by
       // its main SN. Only add the physical main-unit name when multiple systems
       // need to be distinguished from each other.
       const results: any[] = [];
       const groups = groupByMainSn(units);
       for (const [mainSn, groupUnits] of groups) {
+        if (paired.has(mainSn.toUpperCase()) || groupUnits.some((unit) => paired.has(unit.device.sn.toUpperCase()))) continue;
         results.push({
           name: householdBatteryName(groupUnits, mainSn, groups.size > 1),
           data: { sn: mainSn },

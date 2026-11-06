@@ -25,7 +25,7 @@ Pair **STREAM Unit** only when you also want separate per-device telemetry; phys
 do not contribute to Homey Energy and do not contain reliable whole-installation totals.
 
 ### STREAM 5000 Series — separate monitoring and Energy pairing
-The diagnostic source candidate offers **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** monitoring through EcoFlow's app connection, not a verified official Developer-key API. **STREAM 5000 Series Unit** needs no Beta switch or Energy opt-in and contributes no battery Energy. **STREAM 5000 Home Battery** has a separate, default-off **Allow Home Battery (5000) Energy pairing** opt-in in the Homey integration settings; use it only once per already combined installation, checking for overlap. The retired Beta flag does not grant this new consent. Existing paired devices keep working when the new gate is off. Both roles use your EcoFlow app-account sign-in. Available PV/socket/configuration views are read-only and depend on received fields; no 5000 command is sent. Model/role hardware acceptance remains separate. Mixed-generation trials, Dual CT community trials and expansion/3000/Gateway admission retain their own restrictions. See [delivery/installed status](docs/STATUS.md), [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
+The diagnostic source candidate offers **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** monitoring through EcoFlow's app connection using captured app protocols. This is separate from the official Developer API; an optional, narrow Developer-API fallback can supply system battery level, not missing power or configuration. **STREAM 5000 Series Unit** needs no Beta switch or Energy opt-in and contributes no battery Energy. **STREAM 5000 Home Battery** has a separate, default-off **Allow Home Battery (5000) Energy pairing** opt-in in the Homey integration settings; use it only once per already combined installation, checking for overlap. The retired Beta flag does not grant this new consent. Existing paired devices keep working when the new gate is off. Both roles use your EcoFlow app-account sign-in. Available PV/socket/configuration views are read-only and depend on received fields; no 5000 command is sent. Model/role hardware acceptance remains separate. Mixed-generation trials, Dual CT community trials and expansion/3000/Gateway admission retain their own restrictions. See [delivery/installed status](docs/STATUS.md), [current model scope](docs/STREAM_MODEL_COVERAGE.md), [connection details](docs/EXPERIMENTAL_STREAM_AC5000.md) and [architecture](docs/STREAM_5000_ARCHITECTURE.md).
 
 The socket/configuration update includes battery-to-backup-socket discharge in
 the installation's power and future energy totals. It adds read-only configuration
@@ -96,14 +96,15 @@ higher of backup reserve and discharge limit and applies the configurable discha
 (92% by default). Without capacity or active discharge, the widget clearly labels EcoFlow's
 device-reported fallback. Energy Flow and Battery Plan support both Developer-API and STREAM 5000
 app-connected Home Batteries; widgets that require history, solar forecasts or tariff controls
-remain limited to installations that expose those capabilities. Regenerate previews from the real widget HTML with `npm run widgets:preview`.
+remain limited to installations that expose those capabilities. Regenerate the purpose-built,
+text-free preview artwork with `npm run widgets:preview`; it is not a screenshot of the live HTML.
 
 ### Languages
 English, **German** and **Dutch**.
 
 ### Under the hood
 - Signed EcoFlow IoT Open Platform REST client (HMAC-SHA256, validated against the documented test vector), with bounded retry for transient blips.
-- Shared **MQTT** connection for realtime (~2 s) updates, with REST polling as a fallback.
+- Shared **MQTT** connection for near-realtime updates, with REST polling where supported. Cadence varies with the model, source and EcoFlow service; a two-second update is not guaranteed.
 - **Troubleshooting / logs:** view the app's live log (incl. `[mqtt]` connection events) via *Homey Developer Tools → your app → Log*.
 - **Local support report:** app Settings → **Show support report** provides installed
   versions, battery-driver registration and anonymous Energy accounting evidence,
@@ -119,15 +120,16 @@ English, **German** and **Dutch**.
 
 ## Development
 ```sh
-npm install
+npm ci             # Node 22; committed lockfile
 npm run build      # tsc
-npm test           # tsc && node --test (signer golden-vector tests)
+npm test           # tsc && node --test test/*.test.js
 npm run lint
 npm run release:check # identity, preview/permission and disabled Energy boundaries
-homey app validate --level publish
-homey app run --remote   # run on your Homey Pro
-homey app install        # install the current build on the selected Homey Pro
+npx --yes --package homey@4.5.3 homey app validate --level verified
+npm run release:full  # expected to fail until exact-runtime hardware gates pass
 ```
+Prepare Playwright Chromium as documented in CI. Validation does not authorise an
+installation, restart, publication or live test; each needs separate owner approval.
 
 ## Release & publish
 Read [`docs/STATUS.md`](docs/STATUS.md) and the [acceptance checklist](docs/RELEASE_CANDIDATE_CHECKLIST.md).
@@ -140,11 +142,11 @@ Never use a clean installation as an upgrade shortcut. Passing checks is not
 physical acceptance; [control commissioning remains gated](docs/STREAM_CONTROL_CONTRACT_AUDIT.md).
 
 ## Notes & limitations
-- The public API only reports *instantaneous* grid power for the Smart Meter (no kWh totals), so imported/exported energy is integrated locally into monotonic counters for the Energy dashboard.
+- This integration derives Smart Meter imported/exported energy locally from accepted grid-power readings. It does not adopt native counter candidates or fill unseen gaps; this is not a claim that every EcoFlow API/model lacks native kWh fields.
 - Per-phase Smart Meter values are only available on standalone meters; a meter integrated into a STREAM system reports a single whole-home grid figure.
 - Per-unit STREAM devices mainly expose their own grid feed and AC-output relays — full battery/solar/load aggregates are only reported on the system (main) device.
 - Power values use EcoFlow's documented public-API units (STREAM reports Watts directly).
-- **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** remain opt-in monitoring integrations on Test. Their app connection may change or stop working. There is no Developer REST fallback or 5000 control writer; available read-only reported-mode/reserve conditions do not grant control. Hardware and linked-system scope still require commissioning.
+- **STREAM AC 5000 (ES22)** and **STREAM 5000 (ES21)** physical monitoring needs no opt-in; aggregate Energy pairing has separate default-off consent. Their captured app connection may change or stop working. The optional official Developer REST fallback is limited to system SOC and is not independent native-time telemetry or a power fallback. There is no 5000 control writer; read-only reported-mode/reserve conditions do not grant control. Hardware and linked-system scope still require commissioning; source availability does not establish store publication or installation.
 
 ## Credits
 Field/command mappings cross-referenced against the community

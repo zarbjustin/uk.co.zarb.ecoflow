@@ -1,5 +1,77 @@
 # Codex cross-machine handover
 
+## 6 November 2026 — full-release review NO-GO; bounded source-only repairs
+
+Read [the full review](FULL_RELEASE_REVIEW_2026-11-06.md) and
+`../work/output/full-release-review-2026-11-06/FINAL_RECEIPT.md` for final
+common-diff reviewer returns, exact source/handover commits, CI and lease/index
+outcome. Baseline `211e022` was fetched 0/0 after preserving the three inherited
+installation documents below. Actual independent configured Sol/Astra/MAI
+first passes returned; upstream provider/exact MAI x1 Preview mapping is
+unattested. Coordinator alone owns the shared lease/canonical edits.
+
+Nine bounded repairs cover sparse micro PV totals, retired checkpoint retries,
+original meter projection retry, corrupt 5000 accounting quarantine, startup
+clear isolation, socket coercion, widget receipt freshness/unknown feed-in,
+active-source duplicate aggregate pairing and raw diagnostic payload removal.
+Seventeen new regressions; final reviewers' four reproduced edge gaps were
+corrected (PV receipt order, both widget floors, persistent configuration
+failure visibility and restored source ownership during startup/trial).
+Full suite **1,488/1,488**, lint, release:check,
+zero-vulnerability audit and isolated pinned Homey 4.5.3 verified validation
+pass. Full/model readiness commands each fail on pending hardware gates.
+Known raw-counter decrease ambiguity and unbounded Developer backlog remain
+source blockers; no guessed reset/coalescing policy or feature removal.
+README/store provenance and stale consent/preview claims were corrected.
+
+This is not a new installed candidate. Development remains the 14:31 delivery
+below (archive `5a8daa62...ff`, source fingerprint `89ad4da2...af`), with bounded
+startup/preservation and owner icon confirmation, not a soak or hardware pass.
+One physical 5000 power/state scope, independent native intervals, ES22 and
+three-phase acceptance remain open. No new live read/write, installation,
+restart/reconnect, controls, Flow/settings/Energy or publication occurred.
+EcoFlow AI retains reserves, both Homey execution switches stay disabled and
+historical state/lease/gate/runner remain untouched. Test/Live/Mainline unchanged.
+Next: bounded native-counter ordering/reset policy and Developer backlog/legacy
+field-expiry sprint. Any later exact-artifact physical validation needs fresh
+specific approval. Inspect Git/lease and the external receipt before continuing.
+
+## 6 November 2026 14:36 UTC — combined candidate installed; bounded preservation passed
+
+[Installed result](COMBINED_COUNTER_VALIDATION_RESULT_2026-11-06.md) supersedes
+the prepared/not-installed state below. Owner explicitly approved local delivery.
+Fresh preflight and full baseline passed with both Homey execution switches off,
+completed fault-free native lease, no intent/lock/stopping and native AI retained.
+Exactly one non-clean Development delivery was acknowledged **14:31:51.841 UTC**:
+archive SHA256 `5a8daa62475500e210991ea6428024b703a72b8f7529aa5ce8eca61da30955ff`,
+runtime source fingerprint `89ad4da2352e91baade7a0f5150688fe2d120faf832901abf62b6875c6e3f1af`,
+reviewed source `003f2c4aee9c58aeeda7ad907b4c06f1dc8c832d`. Running 1.11.20
+`devkit_install` confirmed; provenance is archive delivery, not filesystem rehash.
+
+Startup observer completed 100 samples over two minutes: no decrease in ten
+cumulative meters, zero read errors/throttling, six transient-unknown samples
+never mapped to zero. Offline last-numeric comparison across unknowns also
+passed. All ten first post-ack numeric readings were at/above baseline, observed
+by 14:31:54.461 UTC. Finite cadence cannot exclude shorter unseen dips.
+
+Full readbacks at 14:34/14:36 retain 15 EcoFlow identities/settings/capability IDs,
+101 Flow definitions, 1217 Insights identities, Energy definitions and global
+setting hashes. Fixed definitions match except expected icon URLs; all 94 packaged
+asset files match old/new and other icon metadata is unchanged. Owner confirms
+phone icons and 5000 battery indicator look correct. Both execution switches,
+historical fault/state, completed lease, app gate, other config and resident
+runner are preserved. Fresh subscription receipts still show `intelligent_plus`.
+
+One physical 5000 remains scope-unverified for power/state; do not infer values
+or close that gate. Independent native comparison, precise store/interval accuracy,
+ES22/three-phase and 48-hour soak remain open. No soak/extra observer was left
+running. No settings/control/Flow/Energy change, source push or store publication.
+Read-only Store metadata confirms Test 1.11.20/build 87, Live 1.10.3/build 18.
+Keep native AI in charge and both Homey execution switches disabled. Raw evidence
+stays private under `../work/output/combined-counter-installation-2026-11-06/`;
+sanitised projections and external final receipt preserve exact scope/lease outcome.
+Only local documentation is changed by this operation; hardware ledgers unchanged.
+
 ## 6 November 2026 — startup fixes pushed; combined validation candidate prepared
 
 Owner authorised final review, commit/push, CI and local candidate preparation.

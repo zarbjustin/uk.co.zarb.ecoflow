@@ -168,7 +168,18 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   getReadingDiagnostics(): Record<string, { stale: boolean }> {
-    if (!this.monitoringEnabled && !this.monitoringRollbackPending) return { ...this.getRemainingTimeFreshness(), ...this.getLiveReadingFreshness() };
+    if (!this.monitoringEnabled && !this.monitoringRollbackPending) {
+      const readings = { ...this.getRemainingTimeFreshness(), ...this.getLiveReadingFreshness() };
+      for (const cap of ['measure_battery', 'backup_reserve_soc', 'charge_limit', 'discharge_limit', 'operating_mode', 'feed_in_control']) {
+        try {
+          this.legacyFlowReadings.assert([cap], (key) => this.getCapabilityValue(key));
+          readings[cap] = { stale: false };
+        } catch {
+          readings[cap] = { stale: true };
+        }
+      }
+      return readings;
+    }
     const selected = this.monitoringEnabled && this.monitoringReporterId && this.monitoringStatus !== 'application_failed'
       ? selectMonitoringReporter(this.homey, this, Date.now(), this.monitoringReporterId)
       : null;
@@ -449,6 +460,12 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   protected getReadSn(): string {
     return this.aggregateBound && !this.monitoringEnabled ? this.mainSn : this.getData().sn;
+  }
+
+  /** Private ownership evidence for pairing, not authority to regroup or transfer history. */
+  getAggregateSourceSn(): string | null {
+    if (!this.energySourceSn) throw Error('Original aggregate accounting source is not initialised');
+    return this.energySourceSn;
   }
 
   protected async beforeFirstPoll(): Promise<void> {
@@ -1152,25 +1169,22 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       this.energyRecovery = 'ready';
       this.lastEnergyTs = receivedAt;
       this.countersAvailable = true;
-      let changed = false;
       if (hasChg) {
         if (this.chargedRawWh !== undefined && accuChg < this.chargedRawWh) this.counterResets += 1;
         const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
-        if (r.totalWh !== this.chargedWh) changed = true;
         this.chargedWh = r.totalWh;
         this.chargedRawWh = r.lastRawWh;
       }
       if (hasDsg) {
         if (this.dischargedRawWh !== undefined && accuDsg < this.dischargedRawWh) this.counterResets += 1;
         const r = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg as number);
-        if (r.totalWh !== this.dischargedWh) changed = true;
         this.dischargedWh = r.totalWh;
         this.dischargedRawWh = r.lastRawWh;
       }
       // Persist the first raw baselines and authoritative-source latch even
       // when the first sample adds no energy, or a restart can re-enable fallback.
       this.energyCheckpoint.mark();
-      if (changed) await this.updateBatteryEnergyCapabilities();
+      await this.projectBatteryEnergyCapabilities();
       return;
     }
 
@@ -1186,12 +1200,17 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (next.posWh !== this.chargedWh || next.negWh !== this.dischargedWh) {
       this.chargedWh = next.posWh;
       this.dischargedWh = next.negWh;
-      await this.updateBatteryEnergyCapabilities();
+      this.energyCheckpoint.mark();
     }
+    await this.projectBatteryEnergyCapabilities();
   }
 
   private async updateBatteryEnergyCapabilities(): Promise<void> {
     this.energyCheckpoint.mark();
+    await this.projectBatteryEnergyCapabilities();
+  }
+
+  private async projectBatteryEnergyCapabilities(): Promise<void> {
     await this.projectBatteryEnergyCapability('meter_power.charged', this.chargedWh);
     await this.projectBatteryEnergyCapability('meter_power.discharged', this.dischargedWh);
   }
@@ -1201,7 +1220,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     const total = wh / 1000;
     // Keep a higher projected floor, including native rounding, without transferring it between sources.
     if (typeof current === 'number' && Number.isFinite(current) && current >= total) return;
-    await this.setCapabilityValue(capability, total).catch(() => {});
+    await this.setCapabilityValue(capability, total).catch((e) => this.error(capability, e));
   }
 
   private async persistBatteryStore(): Promise<void> {
@@ -1617,7 +1636,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.controlWaits.clear();
     if (this.historyTimer) this.homey.clearInterval(this.historyTimer);
     if (this.solarForecastTimer) this.homey.clearInterval(this.solarForecastTimer);
-    await this.energyCheckpoint?.flush();
+    await this.energyCheckpoint?.close();
   }
 
   protected liveReadingsEnabled(): boolean {

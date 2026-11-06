@@ -55,8 +55,8 @@ export interface EnergyAccountingDiagnostic {
   chargedCounterSeen: boolean;
   dischargedCounterSeen: boolean;
   lastSampleAgeSec: number | null;
-  chargedKWh: number;
-  dischargedKWh: number;
+  chargedKWh: number | null;
+  dischargedKWh: number | null;
   checkpoint?: { pending: boolean; writing: boolean; failures: number };
 }
 

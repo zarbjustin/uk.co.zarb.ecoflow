@@ -69,7 +69,7 @@ export function pairedStream5000Serials(
 }
 
 /** Fresh shared serials are overlap evidence, never proof that other candidates are disjoint. */
-function observedAggregateSerials(driver: any, inventoryMessage: string): Set<string> {
+export function observedAggregateSerials(driver: any, inventoryMessage: string): Set<string> {
   const serials = new Set<string>();
   const visited = new Set<any>();
   const now = Date.now();
@@ -94,6 +94,15 @@ function observedAggregateSerials(driver: any, inventoryMessage: string): Set<st
         throw new Error(inventoryMessage);
       }
       serials.add(sn);
+      try {
+        const source = device.getAggregateSourceSn?.();
+        if (source != null) {
+          if (typeof source !== 'string' || !source.trim()) throw new Error('Unavailable source identity');
+          serials.add(source.trim().toUpperCase());
+        }
+      } catch {
+        throw new Error(inventoryMessage);
+      }
       const evidence = readStreamTopologyEvidence(device);
       if (evidence?.addressSn === sn) {
         for (const peer of evidence.peers) if (fresh(peer.seenAt)) serials.add(peer.sn);

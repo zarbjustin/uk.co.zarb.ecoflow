@@ -148,12 +148,13 @@ function streamData(homey, query = {}) {
   let diagnostics;
   try { diagnostics = d.getReadingDiagnostics?.(); } catch { diagnostics = null; }
   const read = id => cap(d, id, diagnostics);
+  const fresh = id => diagnostics?.[id]?.stale === false ? read(id) : null;
   const text = id => textCap(d, id, diagnostics);
   const grid = read('measure_power.grid');
   const battery = read('measure_power');
   const solar = read('measure_power.pv');
   const home = read('measure_power.load');
-  const soc = read('measure_battery');
+  const soc = fresh('measure_battery');
   const is5000 = typeof d.getConfigurationDiagnostics === 'function';
   let monitoring;
   try { monitoring = d.getMonitoringTrialDiagnostics?.(); } catch { monitoring = { enabled: true }; }
@@ -166,15 +167,15 @@ function streamData(homey, query = {}) {
     return entry?.stale === false ? entry.value : null;
   };
   const backupReserve = monitoringGuarded ? null
-    : is5000 ? percentage(finite(reported('backupReservePct'))) : read('backup_reserve_soc');
+    : is5000 ? percentage(finite(reported('backupReservePct'))) : fresh('backup_reserve_soc');
   const dischargeLimit = monitoringGuarded ? null
-    : is5000 ? percentage(finite(reported('minDischargeSocPct'))) : read('discharge_limit');
+    : is5000 ? percentage(finite(reported('minDischargeSocPct'))) : fresh('discharge_limit');
   const reserveEnabled = reported('backupReserveEnabled');
   let reserveForEstimate = backupReserve;
   if (is5000 && reserveEnabled === false) reserveForEstimate = 0;
   if (is5000 && reserveEnabled !== true && reserveEnabled !== false) reserveForEstimate = null;
   // Original-source control limits are not validated for the combined reporter.
-  const floorKnown = !monitoringGuarded && (!is5000 || (reserveForEstimate != null && dischargeLimit != null));
+  const floorKnown = !monitoringGuarded && reserveForEstimate != null && dischargeLimit != null;
   const dischargeRemaining = read('discharge_remaining');
   const energy = calculateEnergy({
     capacityKwh: setting(d, 'installed_capacity_kwh'),
@@ -210,10 +211,11 @@ function streamData(homey, query = {}) {
     soc,
     state: text('battery_charging_state'),
     mode: monitoringGuarded ? null : is5000 ? (['self_powered', 'intelligent_plus', 'custom'].includes(reported('mode')) ? reported('mode') : null)
-      : text('operating_mode'),
-    feedIn: monitoringGuarded ? null : d.getCapabilityValue('feed_in_control') === true,
+      : diagnostics?.operating_mode?.stale === false ? text('operating_mode') : null,
+    feedIn: monitoringGuarded || is5000 || diagnostics?.feed_in_control?.stale !== false
+      || typeof d.getCapabilityValue('feed_in_control') !== 'boolean' ? null : d.getCapabilityValue('feed_in_control'),
     backupReserve,
-    chargeLimit: monitoringGuarded ? null : is5000 ? percentage(finite(reported('maxChargeSocPct'))) : read('charge_limit'),
+    chargeLimit: monitoringGuarded ? null : is5000 ? percentage(finite(reported('maxChargeSocPct'))) : fresh('charge_limit'),
     dischargeLimit,
     chargeRemaining: read('charge_remaining'),
     dischargeRemaining,
