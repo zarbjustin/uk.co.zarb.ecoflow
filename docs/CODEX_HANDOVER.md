@@ -1,5 +1,35 @@
 # Codex cross-machine handover
 
+## 6 November 2026 — startup fixes pushed; combined validation candidate prepared
+
+Owner authorised final review, commit/push, CI and local candidate preparation.
+Reviewed source commit `003f2c4aee9c58aeeda7ad907b4c06f1dc8c832d` was normally
+pushed on the diagnostic branch after fresh 1-ahead/0-behind verification.
+[Exact CI 42224824156](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42224824156)
+passed every step, including audit and pinned verified validation. Source hashes
+matched the locally validated **1,471-test** files; no new production change.
+Publishing/version workflows were verified manual-only and not dispatched.
+
+[Combined candidate review](COMBINED_COUNTER_VALIDATION_REVIEW_2026-11-06.md)
+identifies the clean committed-source archive, containing solar plus micro/original
+battery/5000 startup repairs. Version remains 1.11.20; archive SHA256
+`5a8daa62475500e210991ea6428024b703a72b8f7529aa5ce8eca61da30955ff`,
+runtime source fingerprint `89ad4da2352e91baade7a0f5150688fe2d120faf832901abf62b6875c6e3f1af`.
+Node 22 lockfile install, isolated pinned CLI preprocess/verified validation and
+archive checks passed. App/API compiled entrypoints match the last-recorded
+installed archive; this does not certify every imported module or installed files.
+
+Exact local manifests/archive, frozen recovery artifact and target-specific
+`OWNER_REVIEW.md` are under `../work/output/combined-counter-candidate-2026-11-06/`.
+Final handover-only HEAD/CI, clean-tree and lease/index outcomes belong to its
+external final receipt, not a recursive Git receipt loop. No installation or
+Homey/EcoFlow API/UI/control/settings/Flow/Energy action was taken. Test/Live,
+Mainline and native AI were unchanged. Keep both Homey execution switches off.
+The installed archive remains the last recorded `73c6aa47...df4`; this candidate
+needs fresh exact-artifact approval and full preservation/quiescence preflight.
+Old recovery code contains known startup counter defects; no automatic rollback.
+Hardware/native/rendering/continuity/soak/ES22/three-phase gates remain open.
+
 ## 6 November 2026 — local microinverter and battery startup counter repairs
 
 [Targeted report](STARTUP_COUNTER_PATHS_2026-11-06.md). Clean/fetched baseline

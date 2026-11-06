@@ -1,5 +1,24 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 — source synced/CI green; combined archive awaits review
+
+Reviewed source `003f2c4aee9c58aeeda7ad907b4c06f1dc8c832d` normally pushed;
+[exact CI 42224824156](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42224824156)
+passed all steps. No production edits after the **1,471/1,471** local validation.
+Coordinator final review passed; no additional multi-model approval claimed.
+
+[Combined validation review](COMBINED_COUNTER_VALIDATION_REVIEW_2026-11-06.md):
+version 1.11.20, archive SHA256 `5a8daa62475500e210991ea6428024b703a72b8f7529aa5ce8eca61da30955ff`,
+source fingerprint `89ad4da2352e91baade7a0f5150688fe2d120faf832901abf62b6875c6e3f1af`.
+Clean committed export, lockfile build, pinned CLI verified and archive checks
+passed. Local artifacts/target review and final docs HEAD/CI/lease receipt:
+`../work/output/combined-counter-candidate-2026-11-06/`.
+No install/publication or Homey/EcoFlow read/write. Installed app, Test/Live,
+Mainline, native AI and disabled Homey reserve execution unchanged by this work.
+Candidate installation requires fresh exact approval and preservation/quiescence;
+the older recovery archive is not an automatically safe counter/store rollback.
+All acceptance ledgers and runtime-specific hardware gates remain unchanged/open.
+
 ## 6 November 2026 — micro/battery startup continuity fixed locally, not deployed
 
 [Counter-path report](STARTUP_COUNTER_PATHS_2026-11-06.md). Baseline `1167ff4`

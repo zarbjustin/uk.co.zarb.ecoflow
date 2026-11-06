@@ -122,3 +122,20 @@ precede generation masking a drop. Native rendering/independent comparisons,
 physical counter continuity, full normal-use soak, ES22 and three-phase gates
 remain open; software passes do not close them. Keep reserve execution disabled;
 never resume it or clear the historical fault as part of this source repair.
+
+## Subsequent owner-authorised source sync and candidate preparation
+
+The owner subsequently authorised final review, commit/push, CI and combined
+validation candidate preparation while retaining all live boundaries above.
+Production/test validation hashes were rechecked; coordinator final review found
+no further blocking issue. Nine intended source/test/handover files were explicitly
+staged and committed as `003f2c4aee9c58aeeda7ad907b4c06f1dc8c832d`, normally pushed
+after a fresh divergence check. [Exact source CI 42224824156](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42224824156)
+passed tests, lint, release checks, audit and pinned verified validation.
+
+The [combined candidate review](COMBINED_COUNTER_VALIDATION_REVIEW_2026-11-06.md)
+records clean-export packaging/provenance and the separately gated hardware plan.
+No installation, publication, version bump, live setting/control/Flow operation
+or hardware query occurred. Final documentation-only commit/CI, local receipt and
+lease/index outcome remain outside Git at
+`../work/output/combined-counter-candidate-2026-11-06/FINAL_RECEIPT.md`.
