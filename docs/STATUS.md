@@ -1,5 +1,25 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 - Sprint 5 passive hardware baseline
+
+[Baseline and gated continuation](SPRINT_5_BASELINE_2026-11-06.md).
+Existing Homey API authentication works. Fresh metadata reports **1.11.20,
+running**; installed source provenance remains unknown despite matching
+package versions. Two cached readbacks showed no captured device-definition/
+settings drift or projected meter decrease. Some stale fields recovered
+naturally; a unit's physical power remains scope-unverified. No new defect or
+hardware acceptance is claimed. Native EcoFlow UI/direct developer-API access
+has not been established.
+
+Production source is still reviewed `e8c48fea948ab3adc82c26bfd1a1db93215812aa`.
+This checkpoint is docs-only, based on clean synchronized `76db4ef3afb9`.
+No deployment/restart, control/settings/Energy/Flow change, publication or
+tester contact occurred. Acceptance ledgers remain open and unchanged.
+Local receipt/continuation:
+`../work/output/copilot-bug-bash-2026-11-06/sprint-5/HANDOVER.md`.
+Candidate deployment requires explicit target approval and a fresh complete
+preservation baseline. Final docs SHA/CI and lease/index outcomes are external.
+
 ## 6 November 2026 - Sprints 1-4 offline engineering
 
 Reviewed source `e8c48fea948ab3adc82c26bfd1a1db93215812aa` was normally pushed.

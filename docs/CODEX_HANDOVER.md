@@ -1,5 +1,25 @@
 # Codex cross-machine handover
 
+## 6 November 2026 - Sprint 5 read-only baseline
+
+Start with [SPRINT_5_BASELINE_2026-11-06.md](SPRINT_5_BASELINE_2026-11-06.md)
+and `../work/output/copilot-bug-bash-2026-11-06/sprint-5/HANDOVER.md`.
+Existing Homey API access works; at 08:38 UTC the app reported **1.11.20,
+running**. Two cached readbacks at 08:40-08:41 UTC showed no captured
+definition/settings drift or projected meter decrease, and some naturally
+recovering freshness. One unit remains scope-unverified. These observations
+do not establish exact installed-source provenance or candidate acceptance.
+Native EcoFlow UI/direct developer-API access has not been established.
+
+Reviewed production source remains `e8c48fea948ab3adc82c26bfd1a1db93215812aa`;
+baseline HEAD was clean/synchronized `76db4ef3afb94827c085ff8b1e2062e64fe2d1e0`.
+Current changes are sanitized documentation only; final SHA/CI and lease/index
+outcomes belong to the external Sprint 5 receipt. No acceptance JSON changed.
+No installation, restart, publication, settings, Energy, control, Flow or tester
+action was taken. Next gate: explicit target-specific candidate deployment
+approval plus a fresh full preservation baseline; native comparison needs
+owner assistance. Do not expose the restricted raw evidence to remote models.
+
 ## 6 November 2026 - Sprints 1-4 reviewed source
 
 Reviewed source: `e8c48fea948ab3adc82c26bfd1a1db93215812aa`.
