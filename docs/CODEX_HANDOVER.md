@@ -1,5 +1,144 @@
 # Codex cross-machine handover
 
+## 6 November 2026 12:43 UTC - reviewed source-only solar continuity repair
+
+[Targeted report](SOLAR_STARTUP_CONTINUITY_2026-11-06.md) records the real-driver
+4 Wh failing regression, source-bound precise restoration, lifecycle/persistence
+repair, review disagreements and their reproduced resolutions. Actual independent
+reviewers `gpt-6-sol`, `gpt-6-astra`, `mai-code-2` approved final v2; exact MAI x1
+Preview/provider endpoint is unattested. Node 22 full suite **1,456/1,456**, lint,
+release/diff checks and pinned Homey 4.5.3 verified validation passed. Additional
+local standalone audit encountered infrastructure failures; unchanged CI audit
+passed. Reviewed source `8f1ba3360615ad56f2e7b86cd83e5f251ce2568f` was normally
+pushed; [exact CI 42220029950](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42220029950)
+passed every step. Final handover SHA/CI and tree/lease/index outcome stay outside Git at
+`../work/output/copilot-solar-continuity-2026-11-06/FINAL_RECEIPT.md`.
+
+Installed Development remains the previously delivered `73c6aa47...df4` archive,
+not this source fix. Both Homey execution switches stay disabled; EcoFlow AI owns
+reserves. No installation/restart, API/UI/hardware read, settings/battery/Flow/
+Energy action, publication or Mainline change was made. Existing fault/history,
+lease/gate/runner and all owner corrections below are preserved. Installation,
+native/icon comparison, physical continuity and soak remain unaccepted; acceptance
+ledgers unchanged. Next source work is a separately bounded reproduction of
+micro/battery startup floors; any validation update needs new specific approval.
+
+## 6 November 2026 10:22 UTC — candidate installed, solar counter preservation failed
+
+[Delivery/readback result](SPRINT_5_AI_OWNER_INSTALLATION_RESULT.md) supersedes
+the pending/deferred installation state below. Owner approved the revised pause
+and exact candidate delivery. Both the dedicated execution Flow and execution
+config `enabled` are now false and **must stay disabled while native AI owns
+reserves**. Current resident source, old fault/history/expected values, completed
+native lease, app gate and all other config fields were retained. No fault clear,
+reserve/task/mode command or automatic execution resumption was performed.
+
+One non-clean Development delivery acknowledged **10:17:35.733 UTC**; running
+1.11.20 readback, archive SHA256 `73c6aa47496d745a2081af53ae19db442d5f8bc1fc4ca2a65503ac809b9d9df4`,
+source fingerprint `81fab286a28569d7c1bd7f9fb714ebf43ddaee296cca61c6a142c6a56adacbe0`.
+This is archive delivery provenance, not independent installed-file rehash.
+
+All 15 EcoFlow identities/settings/capability IDs, 101 Flow definitions, 1217
+Insights IDs, global settings hashes and whole-Homey Energy definitions retained.
+Definition differences are confined to 182 icon URLs across 14 records; visual
+icon acceptance is unverified. Critically the first post-update read observed
+**STREAM Solar `meter_power` 4 Wh below pre-install baseline**. Later normal
+generation recovered, but upgrade continuity remains FAILED/held. A synthetic
+replay of real packaged solar startup reproduces overwrite of a higher projected
+counter from an older stored value. The physical store/flush cause was not traced.
+Do not manually rewrite counters, roll back, reinstall or start the soak.
+
+Fresh 5000 subscription receipts continue reporting `intelligent_plus`. Native
+EcoFlow front-window text was accessible read-only but did not establish matching
+unit identity/mode; no independent native display/power pass. Store GET confirms
+Test 1.11.20/build 87 and Live 1.10.3/build 18 at 10:22 UTC; no publication.
+Next priority: source-only solar startup/checkpoint continuity fix with regression
+tests, then review any new exact archive separately. No production source was
+edited by this operation. Both acceptance JSONs remain unchanged. Private evidence:
+`../work/output/copilot-bug-bash-2026-11-06/sprint-5/ai-owner-installation/`.
+
+## 6 November 2026 09:58 UTC — native AI ownership and revised maintenance review
+
+Owner confirms deliberately changing reserves and selecting native EcoFlow AI.
+Preserve native AI ownership; do not clear the fault or restore/resume Homey
+reserve control as a repair. Read [the revised two-switch pause plan](SPRINT_5_AI_OWNER_MAINTENANCE_REVIEW.md).
+Preparing this review grants no live pause/config/state changes.
+
+Read-only identity-bound inspection finds the recorded execution Advanced Flow
+still references the exact resident runner, despite its historical name no longer
+matching. Flow and config are enabled. Native lease completed/fault-free, intent
+empty, no active run lock/stopping. Two physical 5000 records and aggregate show
+fresh `intelligent_plus` configuration receipts; no independent native UI pass.
+Six legacy cards exactly match unconditional no-op delegates; no direct reserve
+action/inline-write patterns were found in inspected Flow definitions. External
+script bodies are not exhaustively audited. Resident runner SHA256 now
+`874a2c6c69e1d488e9143a051290bd00fc118429302e7d94631c1bf963b4c8d7`;
+its disabled-config no-command early return exists. Preserve this newer source.
+
+Proposed edits, pending approval: disable only the pinned dedicated Flow, wait
+for quiescence, then set only execution config `enabled:false`. Retain the old
+fault/history/expected values, completed lease, native reserves/tasks/AI and app
+gate. Both switches stay off after validation; no automatic resumption. This
+requires explicitly approving the revised safety exception for the historical
+owner-explained fault; any new fault/active lease remains a blocker. Then use the
+unchanged approved exact candidate with full preservation and read-only checks.
+No live mutation/install/publication occurred. Raw selected evidence and exact
+target patches stay local under Sprint 5 `ai-owner-maintenance-review/`.
+
+## 6 November 2026 09:05 UTC — approved Sprint 5 installation deferred safely
+
+Owner approved the exact reviewed archive non-clean on the named household
+Homey only if preflight is safe; this does not approve fault clearing, settings,
+coordinator pause/release, battery operations, publication or automatic rollback.
+Candidate/recovery hashes match and fetched diagnostic HEAD remains `1694957`.
+
+Fresh target-bound metadata/Logic/app-settings/device GETs found running
+Development 1.11.20, 15 EcoFlow software devices, no pending intent or active run
+lock, completed fault-free native lease and matching expected reserve readbacks
+for both roles. However the enabled coordinator is latched in **fault**:
+`Reserve ownership changed; manual change or watchdog restoration requires review: house`.
+Its recorded run/fault notification dates to 4 November; completed native
+restoration is recorded earlier that day. This timestamp sequence does not
+establish whether the ownership change was manual or watchdog-induced, and
+matching current reserves do not clear the historical fault.
+
+The reviewed no-unresolved-fault condition therefore failed. **No installation
+attempt or restart occurred.** Preflight evidence is partial; no full upgrade
+Flow/Insights baseline, candidate startup/native comparison or hardware pass is
+claimed. No repeated support capture, fault/lease/Flow/settings/Energy change or
+control call was made. Raw selected state stays private and only deterministic
+allowlisted metadata/fault projections reached the hosted model.
+
+Evidence: `../work/output/copilot-bug-bash-2026-11-06/sprint-5/approved-install-2026-11-06/`.
+Next: reconcile the House ownership fault against preserved restoration/manual
+history read-only, then review any specific recovery separately. Do not install
+merely because the lease is completed or carry out a fault clear under installation
+approval. The exact candidate approval remains conditional on a fresh safe
+preflight; all source/CI/channel/runtime/hardware distinctions remain.
+
+## 6 November 2026 — Sprint 5 provenance and installation review
+
+Read [the bounded review](SPRINT_5_INSTALLATION_REVIEW_2026-11-06.md) before
+deploying. Fresh fetch confirms clean synchronized `169495793b8932dc6565db546ccd008081032ae6`;
+its exact CI is independently verified successful. One owner-target metadata
+GET at 08:54:53 UTC reports enabled/running Development 1.11.20 (`devkit_install`)
+without a source hash; installed-source provenance remains unestablished.
+No repeated telemetry capture or hardware acceptance was performed.
+
+An isolated clean-HEAD candidate was lockfile-installed, compiled and verified
+with pinned Homey 4.5.3. Source fingerprint remains `81fab286a28569d7c1bd7f9fb714ebf43ddaee296cca61c6a142c6a56adacbe0`;
+candidate archive SHA256 `73c6aa47496d745a2081af53ae19db442d5f8bc1fc4ca2a65503ac809b9d9df4`.
+The hash-matching last-documented installed recovery archive was found and frozen;
+it is not a store backup or proof of today's installed source. Exact local paths,
+manifests and target-specific review are in the Sprint 5 `provenance-review-2026-11-06/`
+directory. Native comparison needs owner assistance; complete preservation and
+fresh household coordinator/ownership safety preflight are required before any
+update. An app update affects all its devices. Approval is pending: no install,
+restart, settings/Flow/Energy/control change, publication, tester contact or soak
+was executed. Both acceptance ledgers remain unchanged. This continuation edits
+documentation only; no commit/push is authorised here. Lease/index outcome is
+recorded in the external continuation receipt.
+
 ## 6 November 2026 - Sprint 5 read-only baseline
 
 Start with [SPRINT_5_BASELINE_2026-11-06.md](SPRINT_5_BASELINE_2026-11-06.md)

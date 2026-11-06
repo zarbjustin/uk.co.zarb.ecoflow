@@ -1,5 +1,110 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 12:43 UTC - solar startup source repair independently approved
+
+[Repair/review report](SOLAR_STARTUP_CONTINUITY_2026-11-06.md): the synthetic
+123000 Wh / 123.004 kWh rollback failed before repair and passes afterward.
+Coherent source-bound restore, fractional precision, receipt/restart anchoring,
+queue-owned startup/maintenance and closed checkpoint ownership are covered by
+22 focused tests; full suite **1,456/1,456**, lint, release checks, whitespace and
+isolated pinned verified validation pass. Sol/Astra/MAI actual model IDs and
+candidate review findings/resolutions are recorded, not simulated. Exact Preview
+mapping is unattested. Local extra audit was infrastructure-blocked; the unchanged
+audit step passed in exact-source CI.
+
+Baseline HEAD `1694957`; reviewed source `8f1ba3360615ad56f2e7b86cd83e5f251ce2568f`
+was normally pushed. [Exact CI 42220029950](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42220029950)
+passed every step. Final docs SHA/CI and lease/index
+receipt remain outside Git. Existing owner-created installation/ownership docs
+are deliberately retained. This task made no live read/write, installation,
+restart, publication, version bump or Mainline/Test/Live change. Installed archive
+remains `73c6aa47...df4`; both execution switches stay off and native AI retains
+reserve ownership. Physical continuity, icon/native comparison and soak remain
+open; no historical gate is transferred to this new source fingerprint.
+
+## 6 November 2026 10:22 UTC — approved delivery done; solar continuity exception
+
+[Exact delivery and readback](SPRINT_5_AI_OWNER_INSTALLATION_RESULT.md).
+Owner-approved Flow/config pause completed; both stay disabled with native AI
+in charge. Historical fault/state, completed lease, app gate and resident runner
+were preserved. Exactly one non-clean Development install of the approved archive
+was acknowledged at 10:17:35.733 UTC; app runs 1.11.20, archive SHA256
+`73c6aa47496d745a2081af53ae19db442d5f8bc1fc4ca2a65503ac809b9d9df4`.
+
+Readbacks retain 15 EcoFlow identities/settings/capability IDs, 101 Flows, 1217
+Insights IDs, global settings hashes and Energy definitions. Only icon URL fields
+differ in compared definitions; rendering remains unverified. One of ten finite
+cumulative meters, STREAM Solar generation, dropped **4 Wh** at first startup
+readback. It later recovered through ordinary generation; **continuity is not
+accepted**. An isolated synthetic replay of packaged solar `onReady` reproduces
+the older-store/higher-projection overwrite. No physical storage race is claimed.
+Next: scoped source/test repair; no manual counter rewrite or automatic rollback.
+
+Fresh receipts still show `intelligent_plus`; no battery setting/task/reserve
+command occurred. Independent native UI comparison remains unaccepted. Store
+read-only listing confirms Test 1.11.20/build 87, Live 1.10.3/build 18; no channel
+or Mainline changes. No soak or further hardware experiment started. No source
+edits/commit/push; acceptance ledgers unchanged. Exact manifests/projections and
+restricted raw evidence remain in Sprint 5 `ai-owner-installation/`.
+
+## 6 November 2026 — revised AI-owner maintenance plan prepared, not executed
+
+Owner confirms native AI/reserve changes were intentional. [Revised review](SPRINT_5_AI_OWNER_MAINTENANCE_REVIEW.md)
+requests disabling only the dedicated execution Flow and config `enabled`, while
+preserving native AI/reserves/tasks and the latched historical fault. Leave both
+switches disabled afterward; no automatic restore. Approval is pending for these
+additional automation changes and revised maintenance preflight.
+
+Read-only 09:58 UTC check confirms pinned Flow/runner binding, enabled execution,
+completed fault-free lease, empty intent and no active lock/stopping. Fresh cached
+5000 mode receipts are `intelligent_plus`; native UI is not independently verified.
+Six legacy reserve cards are exact unconditional no-op delegates. Resident runner
+source has changed since 2 November and will be preserved, not overwritten.
+Original Flow name no longer matches; select only the recorded stable identity.
+No install, state/config/Flow/battery/settings/Energy change or publication; exact
+candidate, CI, source and both acceptance ledgers remain unchanged. Private review
+evidence is under Sprint 5 `ai-owner-maintenance-review/`.
+
+## 6 November 2026 09:05 UTC — approved update held by ownership fault
+
+Exact candidate installation was approved conditionally, but read-only preflight
+found the coordinator fault `Reserve ownership changed; manual change or watchdog restoration requires review: house`.
+The native lease is completed/fault-free, pending intent is empty, no active run
+lock exists and current expected reserve readbacks agree. Those facts do not
+resolve or authorise clearing the latched fault. Its record dates to 4 November;
+manual change versus watchdog restoration remains unresolved.
+
+No install attempt, restart, battery/settings/Flow/Energy change or publication
+occurred. Candidate/recovery hashes match; source/remote remain synchronized at
+`1694957` with these documentation changes only. App remains running Development
+1.11.20; exact installed-source provenance and all candidate hardware gates remain
+open. Full upgrade preservation baseline and candidate/native checks were not
+started after the safety failure. Private evidence and sanitised projections:
+`../work/output/copilot-bug-bash-2026-11-06/sprint-5/approved-install-2026-11-06/`.
+Next bounded work is read-only fault reconciliation; any state clear or operational
+recovery needs separate specific approval. The approved archive remains unchanged.
+
+## 6 November 2026 — Sprint 5 exact-artifact review, installation pending
+
+[Review and native comparison plan](SPRINT_5_INSTALLATION_REVIEW_2026-11-06.md).
+Fresh fetch: synchronized `1694957`, exact CI success independently confirmed.
+Single target-bound metadata read at 08:54:53 UTC confirms enabled/running
+1.11.20, `devkit_install`; no source hash is exposed. Exact installed provenance
+is still unknown. No support/device recapture or new acceptance claim.
+
+Clean-HEAD offline archive SHA256 `73c6aa47496d745a2081af53ae19db442d5f8bc1fc4ca2a65503ac809b9d9df4`
+was prepared using lockfile installation, compilation and pinned CLI verified
+validation. Recovery copy matches the last documented installed archive
+`33457061b26f8a28ae6e3b23d1ccc6b8ff7a36448ce435df5cdad0bca0414667`;
+it is not a store backup/current-source attestation. Local manifests and receipts
+remain outside Git. No engineering was redone or production source changed.
+Owner approval, fresh full preservation baseline and safe coordinator/ownership
+preflight remain required for one non-clean household Development update and
+bounded read-only readback. No install/restart, settings/Flow/Energy/control
+change, store publication, tester contact or soak; acceptance JSONs unchanged.
+Only documentation is modified locally; no commit/push performed. External
+continuation receipt records lease release and knowledge refresh.
+
 ## 6 November 2026 - Sprint 5 passive hardware baseline
 
 [Baseline and gated continuation](SPRINT_5_BASELINE_2026-11-06.md).
