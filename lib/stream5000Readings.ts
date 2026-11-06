@@ -119,7 +119,8 @@ export class Stream5000ReadingAges {
   }
 
   snapshot(now: number, limitMs: number): Record<string, unknown> {
-    return Object.fromEntries([...this.received].map(([key, receivedAt]) => {
+    return Object.fromEntries([...new Set([...this.received.keys(), ...this.writeFailures])].map((key) => {
+      const receivedAt = this.received.get(key);
       const at = this.timestamps.get(key);
       const stale = at === undefined || at > now || now - at > stream5000ReadingLimitMs(key, limitMs);
       let applicationStatus = stale ? 'stale' : 'applied';
@@ -127,7 +128,7 @@ export class Stream5000ReadingAges {
       if (this.writeFailures.has(key)) applicationStatus = 'write_failed';
       return [key, {
         ageSec: at === undefined || at > now ? null : Math.floor((now - at) / 1000),
-        receivedAgeSec: receivedAt > now ? null : Math.floor((now - receivedAt) / 1000),
+        receivedAgeSec: receivedAt === undefined || receivedAt > now ? null : Math.floor((now - receivedAt) / 1000),
         stale: stale || this.writeFailures.has(key),
         applicationStatus,
       }];

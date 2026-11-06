@@ -37,6 +37,7 @@ const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
 const BATTERY_ENERGY_STORE = 'batteryEnergyCheckpoint';
 type ControlWaitResolver = () => void;
+type EnergyRecovery = 'ready' | 'reanchoring' | 'unsupported';
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
   protected reconcileRestQuota(quota: Record<string, any>, newerFields: ReadonlySet<string>): Record<string, any> {
@@ -310,6 +311,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
     // A missing/stale reporter is unavailable, not an idle or zero battery.
     await super.setOnlineState(selected.status === 'active', this.monitoringMessage('unavailable'));
+    if (generation !== this.monitoringGeneration || this.isShuttingDown()) return;
     this.monitoringTimeline.record('reporter_state', Date.now(), selected.status);
     if (selected.status === 'active' && this.monitoringConditionReady()) {
       this.fireTriggers(Object.fromEntries(
@@ -433,6 +435,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private chargedRawWh: number | undefined;
   private dischargedRawWh: number | undefined;
   private lastEnergyTs = 0;
+  private energyRecovery: EnergyRecovery = 'ready';
   // Once the device's own energy counters (accu*Energy, via MQTT) are seen they
   // are authoritative; the REST power-integration fallback is then disabled so the
   // same energy is never counted twice into the monotonic Homey meters.
@@ -545,7 +548,12 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         await this.requireAggregateMain(true);
       } catch {
         if (generation === this.controlGeneration && !this.controlStopped && !this.isShuttingDown()) {
-          await this.setOnlineState(false, this.aggregateUnavailableMessage());
+          const sourceSn = this.getReadSn();
+          await this.queueDeviceWork(async () => {
+            if (generation === this.controlGeneration && !this.controlStopped && sourceSn === this.getReadSn()) {
+              await this.setOnlineState(false, this.aggregateUnavailableMessage());
+            }
+          });
         }
         return;
       }
@@ -650,17 +658,35 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       && (checkpoint.chargedRawWh === null || validWh(checkpoint.chargedRawWh))
       && (checkpoint.dischargedRawWh === null || validWh(checkpoint.dischargedRawWh))
       && typeof checkpoint.countersAvailable === 'boolean' && typeof checkpoint.energySourceSn === 'string';
+    const absent = checkpoint == null;
+    this.energyRecovery = 'ready';
+    if (!coherent && !absent) this.energyRecovery = checkpoint?.version === 1 ? 'reanchoring' : 'unsupported';
+    this.lastEnergyTs = 0;
     const storedWh = (key: string) => {
       const value = toFiniteNumber(coherent ? checkpoint[key] : this.getStoreValue(key));
       return value !== undefined && value >= 0 ? value : undefined;
     };
-    this.chargedWh = storedWh('chargedWh') ?? 0;
-    this.dischargedWh = storedWh('dischargedWh') ?? 0;
-    this.chargedRawWh = storedWh('chargedRawWh');
-    this.dischargedRawWh = storedWh('dischargedRawWh');
-    this.countersAvailable = (coherent ? checkpoint.countersAvailable : this.getStoreValue('countersAvailable')) === true
+    const projectedWh = (capability: string) => {
+      const value = this.getCapabilityValue(capability);
+      const wh = validWh(value) ? value * 1000 : 0;
+      return validWh(wh) ? wh : 0;
+    };
+    const recoveredWh = (key: string, capability: string) => Math.max(
+      storedWh(key) ?? 0,
+      validWh(checkpoint?.[key]) ? checkpoint[key] : 0,
+      projectedWh(capability),
+    );
+    this.chargedWh = this.energyRecovery === 'ready' ? storedWh('chargedWh') ?? 0 : recoveredWh('chargedWh', 'meter_power.charged');
+    this.dischargedWh = this.energyRecovery === 'ready' ? storedWh('dischargedWh') ?? 0 : recoveredWh('dischargedWh', 'meter_power.discharged');
+    // Present-but-unreadable records cannot authorize a legacy raw/total pair.
+    this.chargedRawWh = coherent || absent ? storedWh('chargedRawWh') : undefined;
+    this.dischargedRawWh = coherent || absent ? storedWh('dischargedRawWh') : undefined;
+    this.countersAvailable = (typeof checkpoint?.countersAvailable === 'boolean'
+      ? checkpoint.countersAvailable : this.getStoreValue('countersAvailable')) === true
       || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined;
-    this.energySourceSn = (coherent ? checkpoint.energySourceSn : this.getStoreValue('energySourceSn')) || this.mainSn;
+    this.energySourceSn = (typeof checkpoint?.energySourceSn === 'string' && checkpoint.energySourceSn
+      ? checkpoint.energySourceSn : this.getStoreValue('energySourceSn')) || this.mainSn;
+    if (this.energyRecovery !== 'ready') this.log(`Energy checkpoint ${this.energyRecovery}; lifetime totals retained, legacy raw baselines rejected.`);
     this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistBatteryStore());
 
     this.registerControlListeners();
@@ -670,11 +696,19 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if ((this.monitoringEnabled || this.monitoringRollbackPending) && this.getSetting('enable_history') !== false) this.startHistory();
     if (this.getSetting('solar_forecast') !== false) this.startSolarForecast();
     if (this.monitoringEnabled) {
-      await this.applyMonitoringTrial(); // Clear cached readings before startup's first legacy poll.
+      const generation = this.monitoringGeneration;
+      await this.queueDeviceWork(async () => {
+        if (generation === this.monitoringGeneration) await this.applyMonitoringTrial();
+      });
+      if (generation !== this.monitoringGeneration || this.isShuttingDown()) return;
       await this.setWarning(this.monitoringMessage('warning')).catch(() => {});
+      if (generation !== this.monitoringGeneration || this.isShuttingDown()) return;
       this.startMonitoringTimer();
     } else if (this.monitoringRollbackPending) {
-      await this.clearRollbackReadings();
+      const generation = this.monitoringGeneration;
+      await this.queueDeviceWork(async () => {
+        if (generation === this.monitoringGeneration) await this.clearRollbackReadings();
+      });
     }
   }
 
@@ -938,6 +972,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   /** Availability + online/offline flow triggers (overrides the base). */
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {
+    const generation = this.lifecycleGeneration;
+    const sourceSn = this.getReadSn();
     if (this.monitoringEnabled) {
       // Legacy quota availability cannot revive a stale/missing selected reporter.
       await super.setOnlineState(this.monitoringAvailabilityReady(), this.monitoringMessage('unavailable'));
@@ -958,6 +994,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       this.resetMonitoringTriggers();
       await this.setUnavailable(message || 'Device offline').catch(() => {});
     }
+    if (this.isShuttingDown() || generation !== this.lifecycleGeneration || sourceSn !== this.getReadSn()) return;
     if (this.prevOnline !== undefined && online !== this.prevOnline) {
       const card = online ? 'device_came_online' : 'device_went_offline';
       this.homey.flow.getDeviceTriggerCard(card).trigger(this).catch(() => {});
@@ -966,6 +1003,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    if (context?.sourceSn && context.sourceSn.toUpperCase() !== this.getReadSn().toUpperCase()) {
+      this.lastEnergyTs = 0;
+      return;
+    }
     if (this.bindingAttempted && !this.monitoringEnabled && !this.monitoringRollbackPending && !this.aggregateBound) return;
     const flowReceipts = this.legacyFlowReadings;
     this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
@@ -1049,7 +1090,12 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       } catch { /* Keep rollback unavailable until its complete state can be saved. */ }
     }
     // Only the original quota enters accounting, never the selected reporter's power.
-    await this.updateBatteryEnergy(quota, legacyPower, receivedAt);
+    if (this.energySourceSn.toUpperCase() === (context?.sourceSn ?? this.getReadSn()).toUpperCase()) {
+      await this.updateBatteryEnergy(quota, legacyPower, receivedAt);
+    } else {
+      this.lastEnergyTs = 0;
+      this.skippedEnergySamples += 1;
+    }
     await this.expireLiveReadings();
     if (this.monitoringEnabled) await this.applyMonitoringTrial();
     if (!this.monitoringRollbackPending && this.monitoringSettingsCount === 0) this.fireTriggers(values);
@@ -1061,11 +1107,20 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     batteryPowerW: number | boolean | string | undefined,
     receivedAt: number,
   ): Promise<void> {
+    if (this.energyRecovery === 'unsupported') {
+      this.lastEnergyTs = 0;
+      this.skippedEnergySamples += 1;
+      return;
+    }
     const accuChg = toFiniteNumber(quota.accuChgEnergy);
     const accuDsg = toFiniteNumber(quota.accuDsgEnergy);
     const hasChg = accuChg !== undefined && accuChg >= 0;
     const hasDsg = accuDsg !== undefined && accuDsg >= 0;
     this.energySamples += 1;
+    if (this.energyRecovery === 'reanchoring' && !hasChg && !hasDsg) {
+      this.skippedEnergySamples += 1;
+      return;
+    }
     const mode = batteryEnergyMode(hasChg || hasDsg, this.countersAvailable);
     // Counters are authoritative once seen: 'skip' means the source is counters but
     // this sample carries none, so we must not integrate power (double-count).
@@ -1077,6 +1132,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     // Capture the interval and re-anchor the timestamp SYNCHRONOUSLY (before any
     // await) so a concurrent applyQuota (poll + MQTT) can't double-count.
     if (mode === 'counter') {
+      this.energyRecovery = 'ready';
       this.lastEnergyTs = receivedAt;
       this.countersAvailable = true;
       let changed = false;
@@ -1124,6 +1180,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private async persistBatteryStore(): Promise<void> {
+    if (this.energyRecovery !== 'ready') return;
     // Snapshot before awaiting so totals and raw baselines describe one sample.
     const snapshot = {
       version: 1,
@@ -1145,7 +1202,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (snapshot.countersAvailable) await this.setStoreValue('countersAvailable', true);
   }
 
-  getEnergyDiagnostics(): EnergyAccountingDiagnostic {
+  getEnergyDiagnostics(): EnergyAccountingDiagnostic & { checkpointRecovery: EnergyRecovery } {
     let source: EnergyAccountingDiagnostic['source'] = this.lastEnergyTs > 0 ? 'integrated_power' : 'waiting';
     if (this.countersAvailable) source = 'device_counters';
     return {
@@ -1160,6 +1217,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       chargedKWh: this.chargedWh / 1000,
       dischargedKWh: this.dischargedWh / 1000,
       checkpoint: this.energyCheckpoint?.diagnostics(),
+      checkpointRecovery: this.energyRecovery,
     };
   }
 
@@ -1503,6 +1561,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.lastEnergyTs = 0;
     this.legacyFlowReadings = new LegacyFlowReadings();
     this.forecastGeneration += 1;
     this.forecastFlowReadings = new ForecastFlowReadings();

@@ -1,5 +1,33 @@
 # Codex cross-machine handover
 
+## 6 November 2026 - Sprints 1-4 source candidate
+
+Start with [SPRINTS_1_4_2026-11-06.md](SPRINTS_1_4_2026-11-06.md).
+Baseline was clean/synchronized `9425da2bb6bb3ae636af354a02f881d0e498b6da`
+on the existing diagnostic branch. Current sprint work bounds STREAM 5000
+SDK backlog, expands lifecycle/freshness faults, preserves malformed/future
+Energy checkpoints and actual source provenance, and guards new aggregate
+pairing against observed overlap. Final review also exposed a retired poll
+reviving a newly bound original STREAM; lifecycle ownership now fences it.
+Held availability writes, including trial/rollback startup and quarantine, are
+teardown-owned; retired availability continuations cannot emit a late online Flow.
+
+Local candidate: **1,437 tests pass**, lint/release/diff checks, audit (zero
+vulnerabilities) and pinned Homey 4.5.3 verified validation pass. All three final
+independent reviews passed. Source commit/push and exact-commit CI remain pending
+at this checkpoint; engineering is complete, private-history coverage is not.
+Final receipt:
+`../work/output/copilot-bug-bash-2026-11-06/sprints-1-4/FINAL_RECEIPT.md`.
+
+Actual reviewers: `gpt-6-sol`, `gpt-6-astra`, `mai-code-2`; the precise
+MAI-Code-2.x1 Preview mapping is unavailable. Trusted-local private-history
+semantic review remains blocked. Aggregate scope is not certified disjoint;
+no cross-session reservation or permanently stalled SDK cancellation is claimed.
+The report records one rejected synthetic sign-in request caused by a missing
+test stub; the corrected test mocks that path. No household credentials,
+settings, controls, installation, Store Test/Live or Mainline changes occurred.
+Hardware/native workflow acceptance remains open and separately authorized.
+
 ## 6 November 2026 - bounded offline bug bash
 
 Reviewed source commit: `bc184ab190d130c393d8012353d4b570a8449699`.

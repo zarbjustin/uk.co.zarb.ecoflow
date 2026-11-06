@@ -26,6 +26,7 @@ const UNSUPPORTED_API_FAILURE_LIMIT = 3;
 export interface QuotaSampleContext {
   receivedAt: number;
   source: 'mqtt' | 'rest';
+  sourceSn?: string;
 }
 
 /**
@@ -46,6 +47,10 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private clientCredentialsKey = '';
   private applyChain: Promise<void> = Promise.resolve();
   private pollPromise: Promise<void> | null = null;
+  protected lifecycleGeneration = 0;
+  private teardownPromise: Promise<void> | null = null;
+  private statusWorkPending = false;
+  private pendingStatus: { online: boolean; generation: number; sourceSn: string } | null = null;
   private lastRealtimeAt = 0;
   private realtimeRevision = 0;
   private pendingRestFields: Set<string> | null = null;
@@ -265,8 +270,9 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
 
   /** Serialize subclass maintenance with telemetry writes and shutdown. */
   protected queueDeviceWork(work: () => Promise<void>): Promise<void> {
+    const generation = this.lifecycleGeneration;
     const run = async () => {
-      if (!this.stopping && !this.developerApiQuarantineReason) await work();
+      if (!this.stopping && generation === this.lifecycleGeneration && !this.developerApiQuarantineReason) await work();
     };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
@@ -279,8 +285,18 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    if (this.teardownPromise) await this.teardownPromise;
+    const generation = ++this.lifecycleGeneration;
+    const active = () => !this.stopping && generation === this.lifecycleGeneration;
     this.deliveryDiagnostics = new StreamDeliveryDiagnostics();
     this.stopping = false;
+    this.pollPromise = null;
+    this.pendingRestFields = null;
+    this.lastRealtimeAt = 0;
+    this.realtimeRevision = 0;
+    this.mqttOffline = false;
+    this.statusWorkPending = false;
+    this.pendingStatus = null;
     const quarantineReason = this.getDeveloperApiQuarantineReason();
     if (quarantineReason) {
       await this.quarantineDeveloperApi(
@@ -295,7 +311,9 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     const secretKey = this.homey.settings.get('secretKey') as string;
     const host = this.homey.settings.get('host') as string | undefined;
     if (!accessKey || !secretKey) {
-      await this.setUnavailable('EcoFlow credentials missing — update the API keys in the app settings, then restart the app.');
+      await this.queueDeviceWork(async () => {
+        await this.setUnavailable('EcoFlow credentials missing — update the API keys in the app settings, then restart the app.');
+      });
       return;
     }
     this.client = new EcoFlowClient({
@@ -304,33 +322,34 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.clientCredentialsKey = `${accessKey}:${secretKey}:${host || ''}`;
 
     await this.onReady();
-    if (this.stopping) {
+    if (!active()) {
       // onReady may have created subclass timers while shutdown was awaiting it.
-      await this.onTeardown();
+      if (generation === this.lifecycleGeneration) await this.onTeardown();
       return;
     }
 
     await this.beforeFirstPoll();
-    if (this.stopping) return;
+    if (!active()) return;
     await this.poll();
-    if (this.stopping) return;
+    if (!active()) return;
     this.startPollTimer();
 
     const sn = this.getRealtimeSn();
     this.subscribedSn = sn;
     this.quotaHandler = (q) => {
+      if (!active()) return;
       this.lastRealtimeAt = Date.now();
       this.realtimeRevision += 1;
       if (q && typeof q === 'object') {
         for (const key of Object.keys(q)) this.pendingRestFields?.add(key);
       }
-      this.queueQuota(q, 'mqtt').catch((e) => this.error('mqtt apply', e));
+      this.queueQuota(q, 'mqtt', undefined, new Set(), sn, generation).catch((e) => this.error('mqtt apply', e));
     };
     if (this.handlesStatus()) {
       this.statusHandler = (online) => {
-        if (this.developerApiQuarantineReason) return;
+        if (!active() || sn !== this.getRealtimeSn() || this.developerApiQuarantineReason) return;
         this.mqttOffline = !online;
-        this.setOnlineState(online).catch(() => {});
+        this.queueRealtimeStatus(online, generation, sn);
       };
     }
     try {
@@ -338,17 +357,37 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       this.realtimeApp = app;
       const { quotaHandler, statusHandler } = this;
       await app.subscribeRealtime(sn, quotaHandler, statusHandler);
-      if (this.stopping) {
+      if (!active()) {
         // Teardown can precede the connection completing. Use the captured app
         // and handlers: Homey's app accessor may already have been destroyed.
         app.unsubscribeRealtime(sn, quotaHandler, statusHandler);
         return;
       }
     } catch (e) {
-      if (this.stopping) return;
+      if (!active()) return;
       this.error('mqtt subscribe failed', e);
     }
     this.log(`${this.constructor.name} ${sn} initialised`);
+  }
+
+  private queueRealtimeStatus(online: boolean, generation: number, sourceSn: string): void {
+    this.pendingStatus = { online, generation, sourceSn };
+    if (this.statusWorkPending) return;
+    this.statusWorkPending = true;
+    this.queueDeviceWork(async () => {
+      while (this.pendingStatus && !this.stopping) {
+        const status = this.pendingStatus;
+        this.pendingStatus = null;
+        if (status.generation === this.lifecycleGeneration && status.sourceSn === this.getRealtimeSn()) {
+          await this.setOnlineState(status.online);
+        }
+      }
+    }).finally(() => {
+      if (generation === this.lifecycleGeneration) {
+        this.pendingStatus = null;
+        this.statusWorkPending = false;
+      }
+    }).catch(() => {});
   }
 
   protected startPollTimer(): void {
@@ -375,32 +414,37 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       await this.pollPromise;
       return;
     }
-    this.pollPromise = this.performPoll();
+    const pending = this.performPoll(this.lifecycleGeneration);
+    this.pollPromise = pending;
     try {
-      await this.pollPromise;
+      await pending;
     } finally {
-      this.pollPromise = null;
+      if (this.pollPromise === pending) this.pollPromise = null;
     }
   }
 
-  private async performPoll(): Promise<void> {
+  private async performPoll(generation: number): Promise<void> {
+    const active = () => !this.stopping && generation === this.lifecycleGeneration;
     const requestedRevision = this.realtimeRevision;
     const newerFields = new Set<string>();
     this.pendingRestFields = newerFields;
+    const sourceSn = this.getReadSn();
     try {
       this.refreshClientCredentials();
       // Cached/shared in-flight replies can predate MQTT received before this
       // poll's revision guard started, falsely rolling a counter back.
-      const quota = await this.client.getQuotaAll(this.getReadSn(), { fresh: true });
-      if (this.stopping) return;
+      const quota = await this.client.getQuotaAll(sourceSn, { fresh: true });
+      if (!active()) return;
       this.consecutiveUnsupportedApiFailures = 0;
       // A revision detects newer MQTT even within the same millisecond. Check
       // again when the queued reply runs: capability writes may hold the queue.
-      await this.queueQuota(quota, 'rest', requestedRevision, newerFields);
+      await this.queueQuota(quota, 'rest', requestedRevision, newerFields, sourceSn, generation);
       // Don't override a realtime MQTT "offline" with a possibly-stale REST 200.
-      if (!this.mqttOffline) await this.setOnlineState(true);
+      await this.queueDeviceWork(async () => {
+        if (active() && sourceSn === this.getReadSn() && !this.mqttOffline) await this.setOnlineState(true);
+      });
     } catch (e: any) {
-      if (this.stopping) return;
+      if (!active() || sourceSn !== this.getReadSn()) return;
       if (this.isUnknownUnsupportedApiFailure(e)) {
         this.consecutiveUnsupportedApiFailures += 1;
         if (this.consecutiveUnsupportedApiFailures >= UNSUPPORTED_API_FAILURE_LIMIT) {
@@ -423,7 +467,11 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       this.consecutiveUnsupportedApiFailures = 0;
       this.error('quota poll error', e?.message || e);
       const realtimeHealthy = Date.now() - this.lastRealtimeAt <= REALTIME_GRACE_MS;
-      if (!realtimeHealthy) await this.setOnlineState(false, e?.message || 'EcoFlow API error');
+      if (!realtimeHealthy) {
+        await this.queueDeviceWork(async () => {
+          if (active() && sourceSn === this.getReadSn()) await this.setOnlineState(false, e?.message || 'EcoFlow API error');
+        });
+      }
     } finally {
       if (this.pendingRestFields === newerFields) this.pendingRestFields = null;
     }
@@ -435,13 +483,13 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest', requestedRevision?: number,
-    newerFields: ReadonlySet<string> = new Set()): Promise<void> {
-    if (this.stopping) return Promise.resolve();
-    const context = { receivedAt: Date.now(), source };
+    newerFields: ReadonlySet<string> = new Set(), sourceSn = this.getReadSn(), generation = this.lifecycleGeneration): Promise<void> {
+    if (this.stopping || generation !== this.lifecycleGeneration) return Promise.resolve();
+    const context = { receivedAt: Date.now(), source, sourceSn };
     const diagnostics = this.deliveryDiagnostics;
     diagnostics.queued(source, context.receivedAt);
     const run = () => diagnostics.run(source, async () => {
-      if (this.developerApiQuarantineReason) return false;
+      if (generation !== this.lifecycleGeneration || this.developerApiQuarantineReason) return false;
       let selected = quota;
       if (source === 'rest' && requestedRevision !== this.realtimeRevision) {
         const reconciled = this.reconcileRestQuota(quota, newerFields);
@@ -449,7 +497,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
         selected = reconciled;
       }
       await this.applyQuota(selected, context);
-      if (source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
+      if (generation === this.lifecycleGeneration && !this.stopping && sourceSn === this.getReadSn()
+        && source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
       return true;
     });
     this.applyChain = this.applyChain.then(run, run);
@@ -529,18 +578,24 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     logMessage: string,
     stopSubclassWork: boolean,
   ): Promise<void> {
-    if (this.developerApiQuarantineReason) return;
+    const generation = this.lifecycleGeneration;
+    const sourceSn = this.getReadSn();
     this.developerApiQuarantineReason = reason;
     if (this.pollTimer) {
       this.homey.clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
     this.unsubscribeSupportedRealtime();
-    if (stopSubclassWork) {
-      await this.onTeardown().catch((e) => this.error('quarantine teardown failed', e));
-    }
-    await this.setUnavailable(reason).catch(() => {});
-    this.log(logMessage);
+    // Own the offline write even though quarantine blocks normal queued work.
+    const run = async () => {
+      if (this.stopping || generation !== this.lifecycleGeneration || sourceSn !== this.getReadSn()) return;
+      if (stopSubclassWork) await this.onTeardown().catch((e) => this.error('quarantine teardown failed', e));
+      if (this.stopping || generation !== this.lifecycleGeneration || sourceSn !== this.getReadSn()) return;
+      await this.setUnavailable(reason).catch(() => {});
+      this.log(logMessage);
+    };
+    this.applyChain = this.applyChain.then(run, run);
+    await this.applyChain;
   }
 
   private unsubscribeSupportedRealtime(): void {
@@ -583,14 +638,23 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
    * otherwise the coalesced energy write is lost and meter_power regresses
    * (non-monotonic) across restarts, corrupting the Homey Energy dashboard.
    */
-  private async teardown(): Promise<void> {
+  private teardown(): Promise<void> {
+    if (this.teardownPromise) return this.teardownPromise;
     this.stopping = true;
     this.unsubscribeSupportedRealtime();
     if (this.pollTimer) {
       this.homey.clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
-    await this.applyChain.catch(() => {});
-    await this.onTeardown();
+    const finish = async () => {
+      try {
+        await this.applyChain.catch(() => {});
+        await this.onTeardown();
+      } finally {
+        this.teardownPromise = null;
+      }
+    };
+    this.teardownPromise = finish();
+    return this.teardownPromise;
   }
 }

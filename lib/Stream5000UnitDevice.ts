@@ -61,6 +61,16 @@ const NOT_CONNECTED_MESSAGE = 'EcoFlow connection unavailable. Retrying automati
 const APPLICATION_FAILED_MESSAGE = 'Fresh EcoFlow readings could not be applied in Homey. Check the integration report.';
 const ENERGY_CAPABILITIES = ['meter_power.charged', 'meter_power.discharged'] as const;
 
+type ReadingWork = 'telemetry' | 'accessories';
+type DeviceWork = ReadingWork | 'configuration' | 'expiry' | 'reset';
+type WorkTask = () => Promise<void>;
+type PendingReading = { value: number | string | null; receivedAt: number; observed: boolean; usable: boolean };
+type ReadingBatch = {
+  generation: number;
+  readings: Record<string, PendingReading>;
+  powerInterrupted: boolean;
+};
+
 export class Stream5000UnitDevice extends Homey.Device {
   private telemetryAdapter!: Stream5000TelemetryAdapter;
   private mapTelemetry!: ReturnType<Stream5000TelemetryAdapter['createMapper']>;
@@ -75,8 +85,12 @@ export class Stream5000UnitDevice extends Homey.Device {
   private watchdog: NodeJS.Timeout | null = null;
   private readingExpiryTimer: NodeJS.Timeout | null = null;
   private readingExpiryPending = false;
+  private availabilityPending = false;
   private resubscribeTimer: NodeJS.Timeout | null = null;
   private applyChain: Promise<void> = Promise.resolve();
+  private workRunning = false;
+  private readonly pendingWork = new Map<DeviceWork, WorkTask>();
+  private readonly pendingReadings = new Map<ReadingWork, ReadingBatch>();
   private lastValues: Stream5000CapabilityValues = {};
   private lastResubscribeAt = 0;
   private framesReceived = 0;
@@ -236,7 +250,8 @@ export class Stream5000UnitDevice extends Homey.Device {
           if (!Number.isSafeInteger(epoch) || epoch <= 0
             || (this.deliveryEpoch !== undefined && epoch < this.deliveryEpoch)) return;
           if (this.deliveryEpoch !== undefined && epoch !== this.deliveryEpoch) {
-            this.resetDeliverySession().catch((e) => this.error('reset telemetry session', e));
+            // Enqueue only: per-packet reactions would grow behind a stalled SDK write.
+            this.applyChain = this.resetDeliverySession();
           }
           this.deliveryEpoch = epoch;
         }
@@ -248,7 +263,7 @@ export class Stream5000UnitDevice extends Homey.Device {
         this.timeObserver?.observe(payload, topic);
       } catch { /* Optional research cannot interrupt production telemetry or log private bytes. */ }
       this.configurationTracker?.observe(payload, this.lastFrameAt);
-      this.queueConfiguration().catch((e) => this.error('apply configuration observations', e?.message || e));
+      this.applyChain = this.queueConfiguration();
       const telemetry = this.telemetryAdapter.parse(payload, sn);
       const diagnostic = this.telemetryAdapter.describe(payload, sn, telemetry ? 0 : undefined);
       if (!telemetry) {
@@ -260,8 +275,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       this.parsedFrames += 1;
       if (!this.isEnergyAggregate()) {
-        this.queueAccessories(this.telemetryAdapter.accessories(telemetry, sn), receivedAt)
-          .catch((e) => this.error('apply accessory readings', e?.message || e));
+        this.applyChain = this.queueAccessories(this.telemetryAdapter.accessories(telemetry, sn), receivedAt);
       }
       this.topologyTracker?.observe(telemetry, receivedAt);
       this.reporterObservations.observe(telemetry, sn, receivedAt);
@@ -275,7 +289,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.captureRequestedSnapshot(diagnostic, topic);
       this.maybeLogDiagnosticSummary(topic);
       if (Object.keys(roleValues).some((capability) => this.hasCapability(capability))) {
-        this.queueTelemetry(values, receivedAt, usable).catch((e) => this.error('apply telemetry', e?.message || e));
+        this.applyChain = this.queueTelemetry(values, receivedAt, usable);
       }
     };
 
@@ -284,7 +298,12 @@ export class Stream5000UnitDevice extends Homey.Device {
     this.refreshOfficialSystemSoc().catch(() => {});
     this.watchdog = this.homey.setInterval(() => {
       this.refreshOfficialSystemSoc().catch(() => {});
-      this.checkAvailability().catch((e) => this.error('availability check', e?.message || e));
+      if (this.isStopped() || this.availabilityPending) return;
+      this.availabilityPending = true;
+      this.checkAvailability().catch((e) => this.error('availability check', e?.message || e))
+        .finally(() => {
+          this.availabilityPending = false;
+        });
     }, WATCHDOG_INTERVAL_MS);
     if (!this.isEnergyAggregate()) {
       this.readingExpiryTimer = this.homey.setInterval(() => {
@@ -361,17 +380,82 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private queueTelemetry(values: Stream5000CapabilityValues, receivedAt: number, usable: boolean): Promise<void> {
-    const generation = this.deliveryGeneration;
-    const run = async () => {
-      if (this.isStopped() || generation !== this.deliveryGeneration) return;
-      const applied = await this.applyTelemetry(values, receivedAt);
-      if (this.isStopped() || generation !== this.deliveryGeneration) return;
-      if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
-      else if (applied && usable) await this.setOnline();
-      await this.updateBatteryPresentation();
+    return this.queueReadingBatch('telemetry', this.capabilityValuesForRole(values), receivedAt, usable);
+  }
+
+  /** One running SDK operation and one pending task per kind, not one closure per packet. */
+  private queueWork(kind: DeviceWork, run: () => Promise<void>): Promise<void> {
+    if (this.isStopped()) return this.applyChain;
+    this.pendingWork.set(kind, run);
+    if (this.workRunning) return this.applyChain;
+    this.workRunning = true;
+    const drain = async () => {
+      try {
+        while (this.pendingWork.size > 0 && !this.isStopped()) {
+          const [nextKind, nextRun] = this.pendingWork.entries().next().value!;
+          this.pendingWork.delete(nextKind);
+          // eslint-disable-next-line no-await-in-loop
+          await nextRun().catch((e) => this.error(`apply ${nextKind}`, e?.message || e));
+        }
+      } finally {
+        this.workRunning = false;
+      }
     };
-    this.applyChain = this.applyChain.then(run, run);
+    this.applyChain = this.applyChain.then(drain, drain);
     return this.applyChain;
+  }
+
+  private queueReadingBatch(
+    kind: ReadingWork, values: Stream5000CapabilityValues, receivedAt: number, usable = false,
+  ): Promise<void> {
+    if (this.isStopped()) return this.applyChain;
+    const now = Date.now();
+    const batch = this.pendingReadings.get(kind) ?? {
+      generation: this.deliveryGeneration, readings: {}, powerInterrupted: false,
+    };
+    let accepted = false;
+    for (const [capability, value] of Object.entries(values)) {
+      if (!this.readingAges.canApply(capability, receivedAt, now, this.unavailableAfterMs())) continue;
+      const previous = batch.readings[capability];
+      if (previous && previous.receivedAt <= now && previous.receivedAt > receivedAt) continue;
+      if (capability === 'measure_power' && previous) batch.powerInterrupted = true;
+      batch.readings[capability] = {
+        value,
+        receivedAt,
+        observed: value !== 0 || Boolean(previous?.observed),
+        usable: usable && value !== null && this.hasCapability(capability),
+      };
+      accepted = true;
+    }
+    if (!accepted) return this.applyChain;
+    this.pendingReadings.set(kind, batch);
+    return this.queueWork(kind, async () => {
+      this.pendingReadings.delete(kind);
+      if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+      if (kind === 'accessories') {
+        await this.applyAccessories(batch);
+        return;
+      }
+      // Coalesced power intervals are unknown. Retain totals and anchor only
+      // at the final accepted receipt, never integrate across discarded samples.
+      if (batch.powerInterrupted) this.lastEnergySampleAt = 0;
+      const groups = new Map<number, Stream5000CapabilityValues>();
+      for (const [capability, reading] of Object.entries(batch.readings)) {
+        const group = groups.get(reading.receivedAt) ?? {};
+        group[capability] = reading.value;
+        groups.set(reading.receivedAt, group);
+      }
+      let applied = true;
+      for (const [at, group] of [...groups].sort(([a], [b]) => a - b)) {
+        if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+        // eslint-disable-next-line no-await-in-loop
+        applied = await this.applyTelemetry(group, at) && applied;
+      }
+      if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+      if (this.readingAges.hasWriteFailures()) await this.setOffline(this.applicationFailedMessage());
+      else if (applied && Object.values(batch.readings).some((reading) => reading.usable)) await this.setOnline();
+      await this.updateBatteryPresentation();
+    });
   }
 
   private async applyTelemetry(values: Stream5000CapabilityValues, receivedAt: number): Promise<boolean> {
@@ -380,7 +464,7 @@ export class Stream5000UnitDevice extends Homey.Device {
     const roleValues = this.capabilityValuesForRole(values);
     const powerEligible = this.isEnergyAggregate() && Object.prototype.hasOwnProperty.call(values, 'measure_power')
       && this.readingAges.canApply('measure_power', receivedAt, Date.now(), this.unavailableAfterMs());
-    if (!this.isEnergyAggregate() && values.measure_power === null && values.battery_charging_state === null
+    if (!this.isEnergyAggregate() && roleValues.stream_unit_power_battery_flow === null && values.battery_charging_state === null
       && !this.linkedPowerWarning) {
       this.linkedPowerWarning = true;
       const key = 'device.stream_5000_unit.linked_power_unverified';
@@ -456,9 +540,10 @@ export class Stream5000UnitDevice extends Homey.Device {
   private queueConfiguration(): Promise<void> {
     const run = async () => {
       if (this.isStopped()) return;
+      const generation = this.deliveryGeneration;
       const values = stream5000ConfigurationValues(this.configurationTracker?.snapshot());
       for (const [capability, value] of Object.entries(values)) {
-        if (this.isStopped()) return;
+        if (this.isStopped() || generation !== this.deliveryGeneration) return;
         if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== value) {
           // eslint-disable-next-line no-await-in-loop
           try {
@@ -471,13 +556,11 @@ export class Stream5000UnitDevice extends Homey.Device {
         }
       }
     };
-    this.applyChain = this.applyChain.then(run, run);
-    return this.applyChain;
+    return this.queueWork('configuration', run);
   }
 
   /** Observed accessories only, physical monitor only, no solar/grid kWh source. */
   private queueAccessories(candidates: Stream5000CapabilityCandidates, receivedAt: number): Promise<void> {
-    const generation = this.deliveryGeneration;
     const values: Stream5000CapabilityValues = {};
     if (candidates.acSocketW !== undefined) values.stream_5000_socket_power = candidates.acSocketW;
     if (candidates.directPv?.totalW !== undefined) values.stream_5000_direct_pv = candidates.directPv.totalW;
@@ -486,35 +569,35 @@ export class Stream5000UnitDevice extends Homey.Device {
       if (value !== undefined) values[`stream_unit_power_pv${index}`] = value;
     }
     // Inferred solarNodeW deliberately stays out of production meters/tiles.
-    const run = async () => {
-      if (this.isStopped() || generation !== this.deliveryGeneration) return;
-      let applied = true;
-      for (const [capability, value] of Object.entries(values)) {
-        if (this.isStopped() || generation !== this.deliveryGeneration) return;
-        if (!this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) continue;
-        if (!this.hasCapability(capability)) {
-          if (value === 0) continue; // Zero alone does not establish that an accessory is installed.
-          // eslint-disable-next-line no-await-in-loop
-          try {
-            await this.addCapability(capability);
-          } catch (e) {
-            this.readingAges.failed(capability, receivedAt);
-            this.error(capability, e);
-            applied = false;
-            continue;
-          }
-        }
-        if (this.isStopped() || generation !== this.deliveryGeneration) return;
+    return this.queueReadingBatch('accessories', values, receivedAt);
+  }
+
+  private async applyAccessories(batch: ReadingBatch): Promise<void> {
+    if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+    let applied = true;
+    for (const [capability, { value, receivedAt, observed }] of Object.entries(batch.readings)) {
+      if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+      if (!this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) continue;
+      if (!this.hasCapability(capability)) {
+        if (!observed) continue; // Zero alone does not establish that an accessory is installed.
         // eslint-disable-next-line no-await-in-loop
-        const success = await this.applyLiveReading(capability, value, receivedAt);
-        applied = success && applied;
+        try {
+          await this.addCapability(capability);
+        } catch (e) {
+          this.readingAges.failed(capability, receivedAt);
+          this.error(capability, e);
+          applied = false;
+          continue;
+        }
       }
-      if (!this.isStopped() && !applied && this.readingAges.hasWriteFailures()) {
-        await this.setOffline(this.applicationFailedMessage());
-      }
-    };
-    this.applyChain = this.applyChain.then(run, run);
-    return this.applyChain;
+      if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+      // eslint-disable-next-line no-await-in-loop
+      const success = await this.applyLiveReading(capability, value, receivedAt);
+      applied = success && applied;
+    }
+    if (!this.isStopped() && !applied && this.readingAges.hasWriteFailures()) {
+      await this.setOffline(this.applicationFailedMessage());
+    }
   }
 
   getAppliedReadingAt(key: string): number | null {
@@ -836,8 +919,9 @@ export class Stream5000UnitDevice extends Homey.Device {
   private queueReadingExpiry(): Promise<void> {
     const expire = async () => {
       if (this.isStopped()) return;
+      const generation = this.deliveryGeneration;
       for (const capability of this.readingAges.expired(Date.now(), this.unavailableAfterMs())) {
-        if (this.isStopped()) return;
+        if (this.isStopped() || generation !== this.deliveryGeneration) return;
         if (this.hasCapability(capability) && this.getCapabilityValue(capability) !== null) {
           // eslint-disable-next-line no-await-in-loop
           try {
@@ -851,8 +935,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       await this.updateBatteryPresentation();
     };
-    this.applyChain = this.applyChain.then(expire, expire);
-    return this.applyChain;
+    return this.queueWork('expiry', expire);
   }
 
   private async checkAvailability(): Promise<void> {
@@ -894,6 +977,8 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private resetDeliverySession(): Promise<void> {
     this.deliveryGeneration += 1;
+    this.pendingWork.clear();
+    this.pendingReadings.clear();
     this.lastTelemetryAt = 0;
     this.officialSocAbort?.abort();
     this.officialSocEvidence = null;
@@ -921,8 +1006,7 @@ export class Stream5000UnitDevice extends Homey.Device {
       }
       await this.updateBatteryPresentation();
     };
-    this.applyChain = this.applyChain.then(reset, reset);
-    return this.applyChain;
+    return this.queueWork('reset', reset);
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
@@ -978,6 +1062,9 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async teardown(): Promise<void> {
     this.subscriptionState = 'stopped';
+    this.deliveryGeneration += 1;
+    this.pendingWork.clear();
+    this.pendingReadings.clear();
     this.officialSocAbort?.abort();
     this.officialSocEvidence = null;
     this.batteryPresentation.reset();

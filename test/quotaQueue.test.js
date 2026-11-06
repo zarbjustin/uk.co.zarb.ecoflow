@@ -13,7 +13,7 @@ try {
   ({ BaseEcoFlowDevice } = require('../.homeybuild/lib/BaseEcoFlowDevice'));
 } finally { Module._load = originalLoad; }
 
-function deferred() { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; }
+function deferred() { let resolve; let reject; const promise = new Promise((r, j) => { resolve = r; reject = j; }); return { promise, resolve, reject }; }
 
 class QueueDevice extends BaseEcoFlowDevice {
   constructor() {
@@ -50,6 +50,25 @@ test('write gate refreshes rotated credentials before using the client', async (
   await device.onUninit();
 });
 
+test('REST and MQTT contexts retain their actual source when the current read target changes', async () => {
+  const device = new QueueDevice();
+  await device.onInit();
+  device.applied = [];
+  const original = device.getReadSn();
+  let readSn = original;
+  device.getReadSn = () => readSn;
+  const reply = deferred();
+  device.client.getQuotaAll = sn => { assert.equal(sn, original); return reply.promise; };
+  const poll = device.poll();
+  readSn = 'BK61NEWMAIN00001';
+  reply.resolve({ marker: 'old-rest-target' });
+  await poll;
+  device.emit({ marker: 'old-subscription' });
+  await device.applyChain;
+  assert.deepEqual(device.applied.map(sample => sample.context.sourceSn), [original, original]);
+  await device.onUninit();
+});
+
 test('socket readback uses uncached documented targeted quota reads, not aggregate GET', async () => {
   const device = new QueueDevice(); await device.onInit();
   const calls = [];
@@ -62,6 +81,153 @@ test('socket readback uses uncached documented targeted quota reads, not aggrega
   assert.deepEqual(calls, [{ sn: 'BK31SOCKET', fields: ['relay2Onoff'] }]);
   await device.onUninit();
 });
+
+for (const failedOldReply of [false, true]) {
+  test(`same-instance reinitialization owns its poll and ignores retired ${failedOldReply ? 'errors' : 'responses'}`, async () => {
+    const device = new QueueDevice();
+    let readSn = 'BK61OLDSOURCE001';
+    device.getReadSn = () => readSn;
+    await device.onInit();
+    device.applied = [];
+    const retiredQuota = device.emit;
+    const oldReply = deferred();
+    device.client.getQuotaAll = () => oldReply.promise;
+    const oldPoll = device.poll();
+    await device.onUninit();
+    readSn = 'BK61NEWSOURCE001';
+    const newReply = deferred();
+    const bound = deferred();
+    const requests = [];
+    device.onReady = async () => {
+      device.available = false;
+      device.client = { getQuotaAll: async sn => { requests.push(sn); return newReply.promise; } };
+    };
+    device.beforeFirstPoll = async () => { bound.resolve(); };
+    const init = device.onInit().then(() => undefined, error => error);
+    await bound.promise;
+    await new Promise(setImmediate);
+    const requestsBeforeOldReply = [...requests];
+    if (failedOldReply) oldReply.reject({ code: 1006, message: 'synthetic retired API error' });
+    else oldReply.resolve({ marker: 'retired-source' });
+    await oldPoll;
+    retiredQuota({ marker: 'retired-subscription' });
+    await device.applyChain;
+    assert.deepEqual(requestsBeforeOldReply, [readSn], 'new initialization must start its own source request');
+    assert.equal(device.available, false, 'retired work cannot revive the newly bound device');
+    assert.deepEqual(device.applied, [], 'retired callbacks cannot enter the new application session');
+    const followingPoll = device.poll();
+    await Promise.resolve();
+    assert.deepEqual(requests, [readSn], 'old finally must not clear the new outstanding poll');
+    newReply.resolve({ marker: 'current-source' });
+    const [initError] = await Promise.all([init, followingPoll]);
+    assert.equal(initError, undefined);
+    assert.equal(device.available, true);
+    assert.deepEqual(device.applied.map(sample => sample.quota.marker), ['current-source']);
+    await device.onUninit();
+  });
+}
+
+test('held realtime availability drains before reinitialization and coalesces repeated status callbacks', async () => {
+  const device = new QueueDevice();
+  device.handlesStatus = () => true;
+  device.homey.app.subscribeRealtime = async (_sn, quota, status) => { device.emit = quota; device.emitStatus = status; };
+  await device.onInit();
+  device.available = false;
+  const held = deferred();
+  const entered = deferred();
+  let availabilityWrites = 0;
+  device.setAvailable = async () => { availabilityWrites++; entered.resolve(); await held.promise; device.available = true; };
+  const retiredStatus = device.emitStatus;
+  retiredStatus(true);
+  await entered.promise;
+  for (let n = 0; n < 1000; n++) retiredStatus(true);
+  let stopped = false;
+  const teardown = device.onUninit().then(() => { stopped = true; });
+  const newReply = deferred();
+  const newEntered = deferred();
+  let newRequests = 0;
+  device.getReadSn = () => 'BK61NEXTSOURCE01';
+  device.onReady = async () => {
+    device.available = false;
+    device.setAvailable = async () => { device.available = true; };
+    device.client = { getQuotaAll: async () => { newRequests++; newEntered.resolve(); return newReply.promise; } };
+  };
+  const init = device.onInit();
+  await new Promise(setImmediate);
+  const stoppedBeforeRelease = stopped;
+  const requestsBeforeRelease = newRequests;
+  held.resolve();
+  await teardown;
+  await newEntered.promise;
+  assert.equal(stoppedBeforeRelease, false, 'teardown owns an already-started availability write');
+  assert.equal(requestsBeforeRelease, 0, 'new initialization waits for teardown before rebinding');
+  assert.equal(availabilityWrites, 1, 'repeated pending statuses are bounded and not replayed after shutdown');
+  assert.equal(device.available, false, 'current lifecycle remains unavailable before its own response');
+  retiredStatus(true);
+  await device.applyChain;
+  assert.equal(device.available, false);
+  newReply.resolve({});
+  await init;
+  assert.equal(device.available, true);
+  await device.onUninit();
+});
+
+for (const reason of ['missing credentials', 'known-model quarantine', 'runtime quarantine']) {
+  test(`held ${reason} availability cannot escape teardown`, async () => {
+    const device = new QueueDevice();
+    device.error = () => {};
+    if (reason === 'missing credentials') device.homey.settings.get = () => undefined;
+    else if (reason === 'known-model quarantine') device.getReadSn = () => 'ES22SYNTHETIC001';
+    else {
+      await device.onInit();
+      device.getReadSn = () => 'ZZ99SYNTHETIC001';
+      device.client.getQuotaAll = async () => { throw { code: 1006 }; };
+      await device.poll();
+      await device.poll();
+    }
+    let release; let entered;
+    const held = new Promise(resolve => { release = resolve; });
+    const started = new Promise(resolve => { entered = resolve; });
+    device.setUnavailable = async () => { entered(); await held; device.available = false; };
+    const operation = reason === 'runtime quarantine' ? device.poll() : device.onInit();
+    await started;
+    let stopped = false;
+    const teardown = device.onUninit().then(() => { stopped = true; });
+    await new Promise(setImmediate);
+    const stoppedBeforeRelease = stopped;
+    release();
+    await Promise.all([operation, teardown]);
+    assert.equal(stoppedBeforeRelease, false, 'initialization and quarantine writes belong to the lifecycle too');
+  });
+}
+
+for (const online of [true, false]) {
+  test(`held REST ${online ? 'online' : 'error/offline'} availability is owned by teardown`, async t => {
+    t.mock.method(Date, 'now', () => 1000000000);
+    const device = new QueueDevice();
+    await device.onInit();
+    device.available = !online;
+    device.error = () => {};
+    const held = deferred();
+    const entered = deferred();
+    const write = async () => { entered.resolve(); await held.promise; device.available = online; };
+    if (online) device.setAvailable = write;
+    else device.setUnavailable = write;
+    device.client.getQuotaAll = async () => {
+      if (!online) throw new Error('synthetic REST failure');
+      return {};
+    };
+    const poll = device.poll();
+    await entered.promise;
+    let stopped = false;
+    const teardown = device.onUninit().then(() => { stopped = true; });
+    await new Promise(setImmediate);
+    const stoppedBeforeRelease = stopped;
+    held.resolve();
+    await Promise.all([poll, teardown]);
+    assert.equal(stoppedBeforeRelease, false, 'REST availability cannot outlive teardown');
+  });
+}
 
 test('new MQTT in the same millisecond supersedes an in-flight REST counter reply', async (t) => {
   t.mock.method(Date, 'now', () => 100000);

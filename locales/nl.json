@@ -1,4 +1,12 @@
 {
+  "stream_5000_pairing": {
+    "catalogue": "Bekende overlappende vertegenwoordigers worden niet getoond. De installatie van andere kandidaten is niet geverifieerd. Voeg per afzonderlijke installatie één Home Battery toe. Bestaande geschiedenis en Flows blijven behouden; fysieke monitors kunnen daarnaast worden gekoppeld.",
+    "confirm": "Elke geselecteerde Home Battery vertegenwoordigt een afzonderlijke installatie; doorgaan",
+    "unconfirmed": "Bevestig dat elke geselecteerde Home Battery een afzonderlijke installatie vertegenwoordigt.",
+    "selection": "De selectie is verlopen of is niet gevonden. Open de apparatenlijst opnieuw.",
+    "overlap": "Deze selectie overlapt al met een Home Battery op basis van het gekoppelde adres of een recent gemelde identiteit. Behoud de geschiedenis en Flows; voeg een fysieke monitor toe of bekijk de overname van het aggregaat.",
+    "inventory": "De bestaande Home Batteries konden niet worden gecontroleerd. Open het koppelen opnieuw; bestaande apparaten blijven ongewijzigd."
+  },
   "app_account_repair": {
     "title": "EcoFlow-account opnieuw verbinden",
     "intro": "Werk de EcoFlow-appaanmelding voor je bestaande apparaten bij. Apparaatidentiteiten, historie en Flows blijven behouden. Developer-API-sleutels beheer je apart in de app-instellingen.",

@@ -1,5 +1,26 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 - Sprints 1-4 offline engineering
+
+New source candidate from diagnostic baseline
+`9425da2bb6bb3ae636af354a02f881d0e498b6da`:
+[sprint report](SPRINTS_1_4_2026-11-06.md). Bounded SDK pending work,
+receipt-preserving coalescing/no-backfill, original STREAM source/checkpoint
+recovery, same-instance lifecycle ownership and known-overlap aggregate pairing.
+Held SDK availability writes also belong to teardown, including trial/rollback
+startup and quarantine; retired continuations cannot emit a late online Flow.
+**1,437 tests pass**; lint, release boundaries, diff check, audit and pinned
+Homey verified validation pass. All three final independent reviews passed.
+Source sync/exact-commit CI remain pending here, not inferred from local results.
+
+Three actual reviewers: GPT-6 Sol, GPT-6 Astra and `mai-code-2`; exact MAI preview
+version and trusted-local private-history coverage remain unattested/blocked.
+No native/hardware acceptance, installation, publication, Mainline merge or
+household settings/Flow/control change. A missing test stub caused one rejected
+synthetic authentication request; the report records the isolation error and
+corrected mock. Final source/CI/lease receipt will be outside Git:
+`../work/output/copilot-bug-bash-2026-11-06/sprints-1-4/FINAL_RECEIPT.md`.
+
 ## 6 November 2026 - offline source candidate, not deployment
 
 Reviewed source `bc184ab190d130c393d8012353d4b570a8449699` was normally pushed.

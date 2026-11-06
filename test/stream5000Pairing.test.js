@@ -14,6 +14,122 @@ const {
 
 const device = (sn) => ({ getData: () => ({ sn }) });
 
+async function overlapHarness(t, owners = []) {
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getDeviceList', async () => normalizeAppDeviceList({ bound: {
+    ES22TESTUNITBBBB: { online: 1 }, ES21TESTUNITCCCC: { online: 1 },
+  } }));
+  const system = { id: 'stream_5000_system', getDevices: () => owners };
+  const legacy = { id: 'stream', getDevices: () => [] };
+  const unit = { id: 'stream_5000_unit', getDevices: () => [] };
+  const homey = {
+    settings: { get: key => ({ appAuthEmail: 'tester@example.invalid',
+      appAuthPassword: 'synthetic-password', stream5000AggregatePairingEnabled: true }[key]) },
+    drivers: { getDriver: id => ({ stream_5000_system: system, stream: legacy, stream_5000_unit: unit }[id]) },
+  };
+  const register = driver => {
+    driver.homey = homey;
+    const handlers = {};
+    registerStream5000Pairing(driver, { setHandler: (name, handler) => { handlers[name] = handler; } });
+    return handlers;
+  };
+  return { system, legacy, unit, handlers: register(system), register };
+}
+
+test('aggregate pairing hides fresh observed peers, not unknown installations or physical monitors', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { TOPOLOGY_STALE_AFTER_MS } = require('../.homeybuild/lib/streamTopology');
+  const owner = { ...device('ES22TESTUNITAAAA'), getTopologyEvidence: () => ({
+    source: 'es22_peer_records', addressSn: 'ES22TESTUNITAAAA',
+    peers: [{ sn: 'ES22TESTUNITBBBB', seenAt: 100000 }], lastPeerRecordAt: 100000,
+    maxReportedRecordCount: 2, systemSocObserved: true, truncated: false,
+  }) };
+  const h = await overlapHarness(t, [owner]);
+  assert.deepStrictEqual((await h.handlers.list_devices()).map(entry => entry.data.sn), ['ES21TESTUNITCCCC']);
+  assert.deepStrictEqual((await h.register(h.unit).list_devices()).map(entry => entry.data.sn),
+    ['ES21TESTUNITCCCC', 'ES22TESTUNITBBBB']);
+  now += TOPOLOGY_STALE_AFTER_MS + 1;
+  assert.equal((await h.handlers.list_devices()).length, 2, 'stale observations cannot prove shared ownership');
+  now = 99999;
+  assert.equal((await h.handlers.list_devices()).length, 2, 'future receipts cannot suppress another installation');
+});
+
+test('aggregate pairing excludes a fresh legacy reporter only while its read-address binding matches', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await overlapHarness(t);
+  let currentReadSn = 'BK61SYNTHETIC0001';
+  let receivedAt = 100000;
+  h.legacy.getDevices = () => [{ ...device('BK61SYNTHETIC0001'), getResolvedReporterEvidence: () => ({
+    sn: 'ES22TESTUNITBBBB', readSn: 'BK61SYNTHETIC0001', currentReadSn, receivedAt,
+  }) }];
+  assert.deepStrictEqual((await h.handlers.list_devices()).map(entry => entry.data.sn), ['ES21TESTUNITCCCC']);
+  currentReadSn = 'BK61SYNTHETIC0002';
+  assert.equal((await h.handlers.list_devices()).length, 2);
+  currentReadSn = 'BK61SYNTHETIC0001';
+  receivedAt = -2000000;
+  assert.equal((await h.handlers.list_devices()).length, 2);
+});
+
+test('final aggregate Add rechecks fresh overlap and rejects unlisted or unconfirmed candidates', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const owners = [];
+  const h = await overlapHarness(t, owners);
+  const candidates = await h.handlers.list_devices();
+  const linked = candidates.find(candidate => candidate.data.sn === 'ES22TESTUNITBBBB');
+  const separate = candidates.find(candidate => candidate.data.sn === 'ES21TESTUNITCCCC');
+  await assert.rejects(h.handlers.add_device(linked), /installation|Installation/);
+  assert.equal(await h.handlers.confirm_stream_5000_installation_scope(true), true);
+  await assert.rejects(h.handlers.add_device({ data: { sn: 'ES22NOTLISTED' } }), /selection|Selection/);
+  owners.push({ ...device('ES22TESTUNITAAAA'), getTopologyEvidence: () => ({
+    source: 'es22_peer_records', addressSn: 'ES22TESTUNITAAAA',
+    peers: [{ sn: 'ES22TESTUNITBBBB', seenAt: 100000 }], lastPeerRecordAt: 100000,
+    maxReportedRecordCount: 2, systemSocObserved: true, truncated: false,
+  }) });
+  await assert.rejects(h.handlers.add_device(linked), /overlap|Overlap|already/);
+  await h.handlers.add_device(separate);
+});
+
+test('aggregate selections expire after account rotation or session disposal', async t => {
+  const h = await overlapHarness(t);
+  const { EcoFlowAppAuthClient } = require('../.homeybuild/lib/EcoFlowAppAuthClient');
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getSession', async () => ({ host: 'https://example.invalid' }));
+  const [candidate] = await h.handlers.list_devices();
+  await h.handlers.confirm_stream_5000_installation_scope(true);
+  await h.handlers.app_login({ email: 'replacement@example.invalid', password: 'synthetic-only' });
+  await assert.rejects(h.handlers.add_device(candidate), /Selection|selection/);
+  const [rediscovered] = await h.handlers.list_devices();
+  await h.handlers.disconnect();
+  await assert.rejects(h.handlers.add_device(rediscovered), /Selection|selection/);
+});
+
+test('retired aggregate discovery cannot replace the newer selection allowlist', async t => {
+  const h = await overlapHarness(t);
+  const { EcoFlowAppAuthClient } = require('../.homeybuild/lib/EcoFlowAppAuthClient');
+  let finishOld;
+  let calls = 0;
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getDeviceList', async () => {
+    calls++;
+    if (calls === 1) return new Promise(resolve => { finishOld = resolve; });
+    return [{ sn: 'ES21NEWSELECTION', deviceName: 'New', productType: 421 }];
+  });
+  const old = h.handlers.list_devices();
+  const obsolete = assert.rejects(old, /Selection|selection/);
+  const latest = await h.handlers.list_devices();
+  finishOld([{ sn: 'ES22OLDSELECTION', deviceName: 'Old', productType: 422 }]);
+  await obsolete;
+  await h.handlers.confirm_stream_5000_installation_scope(true);
+  await assert.rejects(h.handlers.add_device({ data: { sn: 'ES22OLDSELECTION' } }), /Selection|selection/);
+  await h.handlers.add_device(latest[0]);
+  await assert.rejects(h.handlers.add_device(latest[0]), /Selection|selection/);
+});
+
+test('aggregate inventory failures reject admission instead of treating owners as absent', async t => {
+  const h = await overlapHarness(t);
+  h.system.getDevices = () => { throw new Error('synthetic inventory unavailable'); };
+  await assert.rejects(h.handlers.list_devices(), /inventory|Inventory/);
+  assert.equal((await h.register(h.unit).list_devices()).length, 2, 'physical monitoring remains available');
+});
+
 test('physical-unit pairing suppresses serials under active and compatibility unit drivers', () => {
   const current = {
     getDevices: () => [device('ES22CURRENT0001')],

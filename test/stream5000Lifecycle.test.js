@@ -254,20 +254,234 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
   };
   if (configure) configure(device);
   await device.onInit();
+  const deliver = (payload, ...delivery) => {
+    const metadata = delivery.length ? delivery[0] : {
+      receivedAt: Date.now(), receivedMonoMs: performance.now(),
+      retained: false, duplicate: false, connectionEpoch: 1,
+    };
+    handler(payload, `/app/device/property/${sn}`, metadata);
+  };
   return {
     device,
     intervals,
     resources: () => ({ timers: timers.size, subscriptions: subscriptions.size }),
+    deliver,
     emit: async (payload, ...delivery) => {
-      const metadata = delivery.length ? delivery[0] : {
-        receivedAt: Date.now(), receivedMonoMs: performance.now(),
-        retained: false, duplicate: false, connectionEpoch: 1,
-      };
-      handler(payload, `/app/device/property/${sn}`, metadata);
+      deliver(payload, ...delivery);
       await device.applyChain;
     },
   };
 }
+
+test('a stalled SDK write bounds a mixed-frame burst and preserves sparse receipts and qualified zero', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000PhysicalUnitDevice);
+  const write = h.device.setCapabilityValue.bind(h.device);
+  let release; let entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  let loadWrites = 0;
+  h.device.setCapabilityValue = async (key, value) => {
+    if (key === 'measure_power.load' && value !== null) {
+      loadWrites += 1;
+      if (value === 42) { entered(); await blocked; }
+    }
+    await write(key, value);
+  };
+  h.device.queueTelemetry({ 'measure_power.load': 42 }, now, true);
+  await started;
+  now += 1;
+  h.device.queueTelemetry({ measure_temperature: 31 }, now, true);
+  const temperatureAt = now;
+  for (let i = 0; i < 10000; i += 1) {
+    now += 1;
+    h.deliver(frame(group(54, group(1, Buffer.concat([
+      group(1, Buffer.from(captures.pair.unit_a)), varint(16), varint(i % 100),
+    ])))));
+    h.deliver(frame(group(30, Buffer.concat([varint(8), varint(1), varint(16), varint(i % 100)]))));
+    h.device.queueTelemetry({ 'measure_power.load': i % 2 ? 0 : 100 }, now, true);
+    h.device.queueAccessories({ acSocketW: i % 2 ? 0 : 100 }, now);
+    h.device.queueReadingExpiry();
+  }
+  const drained = h.device.applyChain;
+  release();
+  await drained;
+  assert.ok(loadWrites <= 2, `${loadWrites} obsolete SDK load writes escaped coalescing`);
+  assert.equal(h.device.values['measure_power.load'], 0);
+  assert.equal(h.device.values.measure_battery, 99);
+  assert.equal(h.device.values.stream_5000_socket_power, 0, 'positive observation must qualify its later zero');
+  assert.equal(h.device.values.measure_temperature, 31);
+  assert.equal(h.device.getAppliedReadingAt('measure_temperature'), temperatureAt);
+  assert.equal(h.device.getAppliedReadingAt('measure_power.load'), now);
+  assert.equal(h.device.getAppliedReadingAt('stream_5000_socket_power'), now);
+  await h.device.onUninit();
+});
+
+test('coalesced power drops break integration without losing the last qualified sample', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000UnitDevice);
+  await h.device.queueTelemetry({ measure_power: 1000 }, now, true);
+  const before = h.device.getEnergyDiagnostics();
+  const write = h.device.setCapabilityValue.bind(h.device);
+  let release; let entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  h.device.setCapabilityValue = async (key, value) => {
+    if (key === 'measure_power.load' && value === 42) { entered(); await blocked; }
+    await write(key, value);
+  };
+  h.device.queueTelemetry({ 'measure_power.load': 42 }, now, true);
+  await started;
+  for (const watts of [1000, 0, 500]) {
+    now += 10000;
+    h.device.queueTelemetry({ measure_power: watts }, now, true);
+  }
+  h.device.queueTelemetry({ measure_power: -900 }, now - 15000, true);
+  release();
+  await h.device.applyChain;
+  assert.equal(h.device.values.measure_power, 500);
+  assert.equal(h.device.getEnergyDiagnostics().chargedKWh, before.chargedKWh);
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, before.dischargedKWh);
+  now += 10000;
+  await h.device.queueTelemetry({ measure_power: 500 }, now, true);
+  assert.ok(Math.abs(h.device.getEnergyDiagnostics().chargedKWh - 500 * 10000 / 3600000000) < 1e-12);
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, before.dischargedKWh);
+  await h.device.onUninit();
+});
+
+test('a coalesced missing value cannot promote availability from a discarded usable reading', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device } = await harness(classes.Stream5000PhysicalUnitDevice);
+  const write = device.setCapabilityValue.bind(device);
+  let release; let entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  device.setCapabilityValue = async (key, value) => {
+    if (key === 'measure_power.load' && value === 42) { entered(); await blocked; }
+    await write(key, value);
+  };
+  device.queueTelemetry({ 'measure_power.load': 42 }, 100000, false);
+  await started;
+  device.queueTelemetry({ measure_battery: 50 }, 100000, true);
+  device.queueTelemetry({ measure_battery: null }, 100000, false);
+  release();
+  await device.applyChain;
+  assert.equal(device.values.measure_battery, null);
+  assert.equal(device.getAppliedReadingAt('measure_battery'), null);
+  assert.equal(device.getAvailable(), false);
+  await device.onUninit();
+});
+
+test('power that expires behind a stalled SDK write cannot bridge the next accepted interval', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  await device.queueTelemetry({ measure_power: 600 }, now, true);
+  const write = device.setCapabilityValue.bind(device);
+  let release; let entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  device.setCapabilityValue = async (key, value) => {
+    if (key === 'measure_power.load' && value === 42) { entered(); await blocked; }
+    await write(key, value);
+  };
+  device.queueTelemetry({ 'measure_power.load': 42 }, now, false);
+  await started;
+  now += 1000;
+  device.queueTelemetry({ measure_power: 1000 }, now, true);
+  now += 180001;
+  device.queueTelemetry({ measure_battery: 0 }, now, true);
+  release();
+  await device.applyChain;
+  assert.equal(device.values.measure_battery, 0);
+  assert.equal(device.getAppliedReadingAt('measure_battery'), now);
+  assert.equal(device.getAppliedReadingAt('measure_power'), 100000, 'discarded power cannot gain a new receipt');
+  now += 1000;
+  await device.queueTelemetry({ measure_power: 600 }, now, true);
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 0);
+  now += 10000;
+  await device.queueTelemetry({ measure_power: 600 }, now, true);
+  assert.ok(Math.abs(device.getEnergyDiagnostics().chargedKWh - 600 * 10000 / 3600000000) < 1e-12);
+  await device.onUninit();
+});
+
+test('consecutive epochs discard queued retired work and recover zero after a failed reset clear', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000UnitDevice);
+  await h.device.queueTelemetry({ measure_power: 600 }, now, true);
+  const write = h.device.setCapabilityValue.bind(h.device);
+  let release; let entered; let failedClear = false;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  const writes = [];
+  h.device.setCapabilityValue = async (key, value) => {
+    if (key === 'measure_power.load' && value === 42) { entered(); await blocked; }
+    if (key === 'measure_power' && value === null && !failedClear) {
+      failedClear = true;
+      throw new Error('synthetic reset clear failure');
+    }
+    writes.push({ key, value });
+    await write(key, value);
+  };
+  h.device.queueTelemetry({ 'measure_power.load': 42 }, now, true);
+  await started;
+  for (const [epoch, soc] of [[1, 50], [2, 60], [3, 0]]) {
+    now += 1000;
+    h.deliver(frame(group(11, Buffer.concat([varint(40), varint(soc)]))), {
+      receivedAt: now, receivedMonoMs: now, retained: false, duplicate: false, connectionEpoch: epoch,
+    });
+    if (epoch === 2) h.device.queueTelemetry({ measure_power: 999 }, now, true);
+  }
+  release();
+  await h.device.applyChain;
+  assert.equal(writes.some(({ key, value }) => key === 'measure_power' && value === 999), false);
+  assert.equal(h.device.values.measure_battery, 0);
+  assert.equal(h.device.getAvailable(), false, 'failed power clear must not be masked by fresh SOC');
+  assert.equal(h.device.getReadingDiagnostics().measure_power.applicationStatus, 'write_failed');
+  h.device.queueTelemetry({ measure_power: 0 }, now, true);
+  await h.device.applyChain;
+  assert.equal(h.device.values.measure_power, 0);
+  assert.equal(h.device.getAvailable(), true);
+  assert.equal(h.device.getEnergyDiagnostics().chargedKWh, 0);
+  h.deliver(frame(group(11, Buffer.concat([varint(40), varint(99)]))), {
+    receivedAt: now, receivedMonoMs: now, retained: false, duplicate: false, connectionEpoch: 2,
+  });
+  await h.device.applyChain;
+  assert.equal(h.device.values.measure_battery, 0);
+  await h.device.onUninit();
+  assert.deepEqual(h.resources(), { timers: 0, subscriptions: 0 });
+});
+
+test('configuration application crossing a session reset starts no further retired writes', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  device.configurationTracker = { snapshot: () => ({ values: {
+    mode: { value: 'custom', stale: false }, maxChargeSocPct: { value: 65, stale: false },
+  } }) };
+  const write = device.setCapabilityValue.bind(device);
+  let release; let entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  const writes = [];
+  device.setCapabilityValue = async (key, value) => {
+    if (key === 'stream_5000_mode' && value === 'custom') { entered(); await blocked; }
+    writes.push({ key, value });
+    await write(key, value);
+  };
+  device.queueConfiguration();
+  await started;
+  device.resetDeliverySession();
+  device.queueConfiguration();
+  release();
+  await device.applyChain;
+  assert.equal(writes.some(({ key, value }) => key === 'stream_5000_charge_limit' && value === 65), false);
+  assert.equal(device.values.stream_5000_mode, null);
+  assert.equal(device.values.stream_5000_charge_limit, null);
+  await device.onUninit();
+});
 
 test('retained and duplicate STREAM 5000 frames cannot refresh readings or integrate Energy', async t => {
     let now = 100000;

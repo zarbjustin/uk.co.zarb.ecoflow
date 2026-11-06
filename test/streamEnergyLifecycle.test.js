@@ -435,6 +435,269 @@ test('failed coherent checkpoint cannot partially advance compatibility counters
   await device.onTeardown();
 });
 
+test('malformed v1 checkpoint preserves totals but re-anchors inconsistent compatibility counters', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const device = await harness({
+    chargedWh: 110, dischargedWh: 220, chargedRawWh: 1000, dischargedRawWh: 2000,
+    batteryEnergyCheckpoint: { version: 1, chargedWh: 110, dischargedWh: 220,
+      chargedRawWh: 'broken', dischargedRawWh: 2020, countersAvailable: true,
+      energySourceSn: 'BK61TEST00000001' },
+  });
+  await device.applyQuota({ accuChgEnergy: 1010, accuDsgEnergy: 2020 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(device.values['meter_power.charged'], 0.11);
+  assert.equal(device.values['meter_power.discharged'], 0.22);
+  now += 60000;
+  await device.applyQuota({ powGetBpCms: 600 }, { source: 'rest', receivedAt: now });
+  assert.equal(device.values['meter_power.charged'], 0.11, 'recovery cannot silently enable integration');
+  await device.applyQuota({ accuChgEnergy: 1015, accuDsgEnergy: 2027 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(device.values['meter_power.charged'], 0.115);
+  assert.equal(device.values['meter_power.discharged'], 0.227);
+  await device.onTeardown();
+  assert.equal(device.store.batteryEnergyCheckpoint.chargedRawWh, 1015);
+  assert.equal(device.store.batteryEnergyCheckpoint.dischargedRawWh, 2027);
+});
+
+test('malformed checkpoint survives pre-anchor restart and recovers charge-only then independent discharge', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const record = { version: 1, chargedWh: 110, dischargedWh: 220, chargedRawWh: 'broken',
+    dischargedRawWh: 2000, countersAvailable: false, energySourceSn: 'BK61TEST00000001' };
+  let saved = { batteryEnergyCheckpoint: record, chargedWh: 120, dischargedWh: 230,
+    chargedRawWh: 900, dischargedRawWh: 1900, countersAvailable: false };
+  for (let restart = 0; restart < 2; restart += 1) {
+    const device = await harness(structuredClone(saved), d => {
+      d.values['meter_power.charged'] = 0.15;
+      d.values['meter_power.discharged'] = 0.25;
+    });
+    device.client = { getMainSn: async () => device.getData().sn };
+    await device.beforeFirstPoll();
+    await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: now, source: 'mqtt' });
+    now += 60000;
+    await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: now, source: 'mqtt' });
+    assert.equal(device.getEnergyDiagnostics().source, 'waiting', 'no manufactured counter or power authority');
+    assert.equal(device.getEnergyDiagnostics().checkpointRecovery, 'reanchoring');
+    assert.equal(device.getEnergyDiagnostics().chargedKWh, 0.15);
+    assert.equal(device.getEnergyDiagnostics().dischargedKWh, 0.25);
+    await device.onTeardown();
+    assert.deepEqual(device.store.batteryEnergyCheckpoint, record, 'no downgrade before a real anchor');
+    saved = structuredClone(device.store);
+  }
+  const chargeOnly = await harness(saved, d => {
+    d.values['meter_power.charged'] = 0.15;
+    d.values['meter_power.discharged'] = 0.25;
+  });
+  await chargeOnly.applyQuota({ accuChgEnergy: 0 }, { receivedAt: now, source: 'mqtt' });
+  await chargeOnly.onTeardown();
+  assert.equal(chargeOnly.store.batteryEnergyCheckpoint.chargedRawWh, 0);
+  assert.equal(chargeOnly.store.batteryEnergyCheckpoint.dischargedRawWh, null);
+  const recovered = await harness(structuredClone(chargeOnly.store));
+  await recovered.applyQuota({ accuChgEnergy: 5, accuDsgEnergy: 3000 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(recovered.getEnergyDiagnostics().chargedKWh, 0.155);
+  assert.equal(recovered.getEnergyDiagnostics().dischargedKWh, 0.25);
+  await recovered.applyQuota({ accuDsgEnergy: 3007 }, { receivedAt: now + 1, source: 'mqtt' });
+  assert.equal(recovered.getEnergyDiagnostics().dischargedKWh, 0.257);
+  await recovered.onTeardown();
+});
+
+test('unsupported checkpoint versions pause accounting and survive downgrade/re-upgrade unchanged', async () => {
+  const future = { version: 2, chargedWh: 110, dischargedWh: 220,
+    chargedRawWh: 1010, dischargedRawWh: 2020, countersAvailable: true,
+    energySourceSn: 'BK61TEST00000001', futureExtension: { format: 'synthetic' } };
+  const saved = { batteryEnergyCheckpoint: future, chargedWh: 110, dischargedWh: 220,
+    chargedRawWh: 1000, dischargedRawWh: 2000, countersAvailable: true };
+  for (let restart = 0; restart < 2; restart += 1) {
+    const device = await harness(structuredClone(saved));
+    device.client = { getMainSn: async () => device.getData().sn };
+    await device.beforeFirstPoll();
+    await device.applyQuota({ accuChgEnergy: 1010, accuDsgEnergy: 2020, powGetBpCms: 600 });
+    assert.equal(device.values['meter_power.charged'], 0.11);
+    assert.equal(device.values['meter_power.discharged'], 0.22);
+    await device.onTeardown();
+    assert.deepEqual(device.store.batteryEnergyCheckpoint, future);
+    assert.equal(device.store.chargedRawWh, 1000);
+    Object.assign(saved, structuredClone(device.store));
+  }
+});
+
+test('coherent zero raw counters remain different from missing baselines on restart', async () => {
+  for (const raw of [0, null]) {
+    const device = await harness({ batteryEnergyCheckpoint: { version: 1,
+      chargedWh: 10, dischargedWh: 20, chargedRawWh: raw, dischargedRawWh: null,
+      countersAvailable: true, energySourceSn: 'BK61TEST00000001' } });
+    await device.applyQuota({ accuChgEnergy: 5 });
+    assert.equal(device.values['meter_power.charged'], raw === 0 ? 0.015 : 0.01);
+    await device.onTeardown();
+    assert.equal(device.store.batteryEnergyCheckpoint.chargedRawWh, 5);
+  }
+});
+
+test('same-instance original STREAM restart does not integrate stopped time', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const device = await harness();
+  device.client = { getMainSn: async () => device.getData().sn };
+  await device.beforeFirstPoll();
+  await device.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now });
+  await device.onTeardown();
+  now += 60000;
+  await device.onReady();
+  await device.beforeFirstPoll();
+  await device.applyQuota({ powGetBpCms: 600 }, { source: 'rest', receivedAt: now });
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 0);
+  now += 60000;
+  await device.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 0.01);
+  await device.onTeardown();
+});
+
+test('monitoring startup never applies paired-unit counters to a restored main-source checkpoint', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { MONITORING_TRIAL_SETTING } = require('../.homeybuild/lib/streamMonitoringTrial');
+  const paired = 'BK61TEST00000001';
+  const main = 'BK61NEWMAIN00001';
+  let trial = true;
+  const device = await harness({ batteryEnergyCheckpoint: { version: 1,
+    chargedWh: 12000, dischargedWh: 34000, chargedRawWh: 90000, dischargedRawWh: 80000,
+    countersAvailable: true, energySourceSn: main } }, d => {
+    d.getSetting = key => key === MONITORING_TRIAL_SETTING && trial;
+    d.setWarning = async () => {};
+    d.setUnavailable = async () => {};
+    d.homey.__ = key => key;
+  });
+  device.client = { getMainSn: async () => main };
+  await device.beforeFirstPoll();
+  assert.equal(device.getReadSn(), paired);
+  for (const source of ['mqtt', 'rest']) {
+    await device.applyQuota({ accuChgEnergy: 500, accuDsgEnergy: 600 },
+      { receivedAt: now, source, sourceSn: paired });
+    assert.equal(device.getEnergyDiagnostics().chargedKWh, 12);
+    assert.equal(device.getEnergyDiagnostics().dischargedKWh, 34);
+    now += 1000;
+  }
+  await device.onTeardown();
+  assert.equal(device.store.batteryEnergyCheckpoint.energySourceSn, main);
+  assert.equal(device.store.batteryEnergyCheckpoint.chargedRawWh, 90000);
+  trial = false;
+  await device.onReady();
+  await device.beforeFirstPoll();
+  await device.applyQuota({ accuChgEnergy: 90005, accuDsgEnergy: 80007 },
+    { receivedAt: now, source: 'mqtt', sourceSn: main });
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 12.005);
+  assert.equal(device.getEnergyDiagnostics().dischargedKWh, 34.007);
+  await device.applyQuota({ accuChgEnergy: 10, accuDsgEnergy: 20 },
+    { receivedAt: now, source: 'rest', sourceSn: paired });
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 12.005, 'retired REST target cannot reset the main baseline');
+  await device.onTeardown();
+});
+
+async function lifecycleHarness(client) {
+  return harness({}, d => {
+    d.homey.settings = { get: key => ({ accessKey: 'test-key', secretKey: 'test-secret' }[key]) };
+    d.homey.app = { subscribeRealtime: async () => {}, unsubscribeRealtime() {} };
+    d.available = false;
+    d.getAvailable = () => d.available;
+    d.setAvailable = async () => { d.available = true; };
+    d.setUnavailable = async () => { d.available = false; };
+    const ready = d.onReady.bind(d);
+    d.onReady = async () => { await ready(); d.client = client; };
+  });
+}
+
+test('a relinked original STREAM becomes unavailable on its first failed source verification', async () => {
+  let failLookup = false;
+  const main = 'BK61OTHERMAIN001';
+  const device = await lifecycleHarness({
+    getMainSn: async () => { if (failLookup) throw new Error('synthetic identity lookup failure'); return main; },
+    getQuotaAll: async () => ({ powGetBpCms: 200 }),
+  });
+  await device.onInit();
+  assert.notEqual(device.getReadSn(), device.getData().sn);
+  assert.equal(device.getAvailable(), true);
+  failLookup = true;
+  await device.poll();
+  assert.equal(device.values.measure_power, null);
+  assert.equal(device.getReportingDiagnostics().aggregateBinding, 'blocked');
+  assert.equal(device.getAvailable(), false, 'expected fallback to the paired address must not suppress offline state');
+  await device.onUninit();
+});
+
+for (const mode of ['trial', 'rollback']) {
+  test(`original ${mode} startup availability is teardown-owned and starts no retired timer`, async () => {
+    const { MONITORING_TRIAL_SETTING } = require('../.homeybuild/lib/streamMonitoringTrial');
+    const device = await lifecycleHarness({ getQuotaAll: async () => ({}) });
+    device.getSetting = key => mode === 'trial' && key === MONITORING_TRIAL_SETTING;
+    if (mode === 'rollback') device.store.monitoringRollbackPending = true;
+    device.setWarning = async () => {};
+    device.homey.__ = key => key;
+    let release; let entered;
+    const held = new Promise(resolve => { release = resolve; });
+    const started = new Promise(resolve => { entered = resolve; });
+    device.setUnavailable = async () => { entered(); await held; device.available = false; };
+    const init = device.onInit();
+    await started;
+    let stopped = false;
+    const teardown = device.onUninit().then(() => { stopped = true; });
+    await new Promise(setImmediate);
+    const stoppedBeforeRelease = stopped;
+    release();
+    await Promise.all([init, teardown]);
+    assert.equal(stoppedBeforeRelease, false, 'the initial monitoring availability cannot outlive teardown');
+    assert.equal(device.monitoringTimer, null, 'stopped startup cannot create a later monitoring timer');
+    assert.equal(device.timers.size, 0);
+  });
+}
+
+test('held original STREAM verification-failure availability drains before a recovered lifecycle', async () => {
+  let main = 'BK61TEST00000001';
+  let failLookup = false;
+  const device = await lifecycleHarness({
+    getMainSn: async () => { if (failLookup) throw new Error('synthetic identity lookup failure'); return main; },
+    getQuotaAll: async () => ({ powGetBpCms: 200 }),
+  });
+  await device.onInit();
+  assert.equal(device.getAvailable(), true);
+  failLookup = true;
+  let release; let entered;
+  const held = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  device.setUnavailable = async () => { entered(); await held; device.available = false; };
+  const poll = device.poll();
+  await started;
+  let stopped = false;
+  const teardown = device.onUninit().then(() => { stopped = true; });
+  await new Promise(setImmediate);
+  const stoppedBeforeRelease = stopped;
+  failLookup = false;
+  main = 'BK61NEWMAIN00001';
+  const init = device.onInit();
+  release();
+  await Promise.all([poll, teardown, init]);
+  assert.equal(stoppedBeforeRelease, false, 'source-verification availability is teardown-owned');
+  assert.equal(device.getReadSn(), main);
+  assert.equal(device.values.measure_power, 200);
+  assert.equal(device.getAvailable(), true, 'retired verification failure cannot mark the recovered device offline');
+  await device.onUninit();
+});
+
+test('an original STREAM availability write completing during shutdown cannot emit a late online Flow', async () => {
+  const device = await harness();
+  let available = false;
+  let finish;
+  const held = new Promise(resolve => { finish = resolve; });
+  const triggers = [];
+  device.getAvailable = () => available;
+  device.setAvailable = async () => { await held; available = true; };
+  device.homey.flow.getDeviceTriggerCard = id => ({ trigger: async () => { triggers.push(id); } });
+  device.prevOnline = false;
+  const transition = device.setOnlineState(true);
+  await device.onUninit();
+  finish();
+  await transition;
+  assert.deepEqual(triggers, [], 'a retired transition cannot emit device_came_online');
+});
+
 test('BK counter authority prevents power double counting, including partial counter frames', async (t) => {
   let now = 100000;
   t.mock.method(Date, 'now', () => now);

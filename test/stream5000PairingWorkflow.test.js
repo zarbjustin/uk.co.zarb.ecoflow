@@ -12,8 +12,9 @@ test('desktop/mobile unit pairing needs no gate; Energy pairing fails closed and
       const page = await browser.newPage({ viewport });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      const mock = `<script>window.pairCalls=[];window.views=[];window.energyAccess=false;
-        window.Homey={emit:function(name,body,cb){window.pairCalls.push(name);cb(null,window.energyAccess);},
+      const mock = `<script>window.pairCalls=[];window.views=[];window.energyAccess=false;window.scopeConfirmation=false;
+        window.Homey={emit:function(name,body,cb){window.pairCalls.push(name);cb(null,name==='confirm_stream_5000_installation_scope'?window.scopeConfirmation:window.energyAccess);},
+        __:function(key){return key==='stream_5000_pairing.unconfirmed'?'Confirm each selected Home Battery represents a separate installation.':key;},
         showView:function(view){window.views.push(view);}};</script>`;
       const html = (driver, view) => fs.readFileSync(path.join(__dirname, '..', 'drivers', driver, 'pair', `${view}.html`), 'utf8');
       await page.setContent(mock + html('stream_5000_unit', 'connection_info'));
@@ -24,7 +25,7 @@ test('desktop/mobile unit pairing needs no gate; Energy pairing fails closed and
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
       await page.setContent(mock + html('stream_5000_system', 'energy_access'));
-      assert.equal(await page.getByRole('button', { name: 'I understand, continue', exact: true }).isVisible(), false);
+      assert.equal(await page.locator('#energy-continue').isVisible(), false);
       assert.match(await page.locator('#energy-status').innerText(), /separate Home Battery/);
       assert.deepEqual(await page.evaluate(() => window.pairCalls), ['check_stream_5000_aggregate_access']);
       assert.deepEqual(await page.evaluate(() => window.views), []);
@@ -33,8 +34,16 @@ test('desktop/mobile unit pairing needs no gate; Energy pairing fails closed and
       assert.equal(await page.locator('#energy-continue').isVisible(), false, 'truthy string is not consent');
       await page.evaluate(() => { window.energyAccess = true; });
       await page.getByRole('button', { name: 'Check again', exact: true }).click();
-      await page.getByRole('button', { name: 'I understand, continue', exact: true }).click();
+      await page.locator('#energy-continue').click();
+      assert.deepEqual(await page.evaluate(() => window.views), [], 'rejected scope confirmation must not advance');
+      assert.match(await page.locator('#energy-status').innerText(), /separate installation/);
+      await page.evaluate(() => { window.scopeConfirmation = 'true'; });
+      await page.locator('#energy-continue').click();
+      assert.deepEqual(await page.evaluate(() => window.views), [], 'truthy string is not installation confirmation');
+      await page.evaluate(() => { window.scopeConfirmation = true; });
+      await page.locator('#energy-continue').click();
       assert.deepEqual(await page.evaluate(() => window.views), ['app_credentials']);
+      assert.equal(await page.evaluate(() => window.pairCalls.filter(name => name === 'confirm_stream_5000_installation_scope').length), 3);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(errors, []);
       await page.close();
