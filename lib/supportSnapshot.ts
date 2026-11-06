@@ -57,6 +57,11 @@ function accountingSnapshot(device: any): Record<string, unknown> | null {
       skippedSamples: safeNumber(input.skippedSamples),
       ignoredGaps: safeNumber(input.ignoredGaps),
       counterResets: safeNumber(input.counterResets),
+      counterDecreasePolicy: input.counterDecreasePolicy === 'hold_high_watermark' ? 'hold_high_watermark' : null,
+      chargedCounterAmbiguous: input.chargedCounterAmbiguous === true,
+      dischargedCounterAmbiguous: input.dischargedCounterAmbiguous === true,
+      chargedCounterHistoryIncomplete: input.chargedCounterHistoryIncomplete === true,
+      dischargedCounterHistoryIncomplete: input.dischargedCounterHistoryIncomplete === true,
       chargedCounterSeen: input.chargedCounterSeen === true,
       dischargedCounterSeen: input.dischargedCounterSeen === true,
       lastSampleAgeSec: safeNumber(input.lastSampleAgeSec),
@@ -439,6 +444,14 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
           let allowed: readonly string[] = STREAM_5000_LIVE_CAPABILITIES;
           if (id === 'stream_unit') allowed = [...BK_PV_CAPS, ...STREAM_UNIT_LIVE_CAPS];
           else if (id === 'stream') allowed = STREAM_SYSTEM_LIVE_CAPS;
+          else if (id === 'stream_solar') allowed = ['measure_power'];
+          else if (id === 'stream_socket') allowed = ['measure_power', 'onoff'];
+          else if (id === 'stream_micro') {
+            allowed = [
+              'measure_power', 'stream_micro_power_solar', 'stream_micro_power_pv1', 'stream_micro_power_pv2',
+              'stream_micro_power_grid_feed', 'measure_power.pv1', 'measure_power.pv2', 'measure_power.grid',
+            ];
+          }
           const readings = Object.fromEntries(allowed.filter((key) => input?.[key])
             .map((key) => {
               const field = input[key];

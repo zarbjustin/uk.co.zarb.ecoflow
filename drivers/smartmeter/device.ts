@@ -5,6 +5,7 @@ import { METER_DETAIL_FRESH_MS, METER_FRESH_MS, SmartMeterTelemetry } from '../.
 import { accumulateEnergy, splitGridPower } from '../../lib/smartMeterMapping';
 import { toFiniteNumber } from '../../lib/quota';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
+import { migrateReadingTitle } from '../../lib/streamReadingScopes';
 
 /** Default titles for per-phase capabilities added dynamically. */
 const DYNAMIC_TITLES: Record<string, string> = {
@@ -30,8 +31,10 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private energyCheckpoint!: EnergyCheckpoint;
   private telemetry = new SmartMeterTelemetry();
   private detailTimer: NodeJS.Timeout | null = null;
+  private detailPending = false;
   private powerSource: 'mqtt' | 'rest' | null = null;
   private lastLoadAt = 0;
+  private accountingReadOnly = false;
 
   private static readonly LIVE_POWER_CAPS = [
     'measure_power',
@@ -56,7 +59,7 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   }
 
   getMeterDiagnostics(): Record<string, unknown> {
-    return this.telemetry.snapshot();
+    return { ...this.telemetry.snapshot(), accountingStatus: this.accountingReadOnly ? 'read_only_unrecoverable_history' : 'active' };
   }
 
   gridPowerAbove(direction: string, watts: number): boolean {
@@ -67,13 +70,19 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     return (direction === 'import' ? grid : -grid) > watts;
   }
 
-  private restoreEnergyWh(storeKey: string, capability: string): number {
+  private restoreEnergyWh(storeKey: string, capability: string): number | null {
     const saved = this.getStoreValue(storeKey);
     const projected = this.getCapabilityValue(capability);
-    const savedWh = typeof saved === 'number' && Number.isFinite(saved) && saved >= 0 ? saved : 0;
+    // Unknown formats are not a new counter; preserve them even if a projection
+    // exists. Malformed primitive history is recoverable only from a valid floor.
+    if (saved !== null && typeof saved === 'object') return null;
+    const savedWh = typeof saved === 'number' && Number.isFinite(saved) && saved >= 0 ? saved : null;
     const projectedWh = typeof projected === 'number' && Number.isFinite(projected)
-      && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : 0;
-    return Math.max(savedWh, projectedWh);
+      && projected >= 0 && Number.isFinite(projected * 1000) ? projected * 1000 : null;
+    if (projected != null && projectedWh === null) return null;
+    if (saved != null && savedWh === null && projectedWh === null) return null;
+    if (savedWh !== null && projected === Math.round(savedWh) / 1000) return savedWh;
+    return Math.max(savedWh ?? 0, projectedWh ?? 0);
   }
 
   protected async onReady(): Promise<void> {
@@ -82,22 +91,29 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     this.powerSource = null;
     this.lastLoadAt = 0;
     this.meterSource = (this.getSetting('meter_source') as 'grid' | 'load') || 'grid';
-    this.importWh = this.restoreEnergyWh('importWh', 'meter_power.imported');
-    this.exportWh = this.restoreEnergyWh('exportWh', 'meter_power.exported');
+    const imported = this.restoreEnergyWh('importWh', 'meter_power.imported');
+    const exported = this.restoreEnergyWh('exportWh', 'meter_power.exported');
+    this.accountingReadOnly = imported === null || exported === null;
+    this.importWh = imported ?? 0;
+    this.exportWh = exported ?? 0;
     this.energyCheckpoint = new EnergyCheckpoint(this.homey, async () => {
+      if (this.accountingReadOnly) return;
       await this.setStoreValue('importWh', this.importWh);
       await this.setStoreValue('exportWh', this.exportWh);
     });
     // An interrupted update can leave the coalesced store behind Homey's
     // already-published total. Persist the recovered floor without downtime fill.
-    if ((this.importWh > 0 && this.importWh !== this.getStoreValue('importWh'))
-      || (this.exportWh > 0 && this.exportWh !== this.getStoreValue('exportWh'))) this.energyCheckpoint.mark();
+    if (!this.accountingReadOnly && ((this.importWh > 0 && this.importWh !== this.getStoreValue('importWh'))
+      || (this.exportWh > 0 && this.exportWh !== this.getStoreValue('exportWh')))) this.energyCheckpoint.mark();
     await this.ensureCapabilities(SmartMeterDevice.LIVE_POWER_CAPS);
     await this.removeCapabilities(SmartMeterDevice.LEGACY_LIVE_POWER_CAPS);
-    await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
-    await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
+    if (!this.accountingReadOnly) {
+      await this.projectEnergyCapabilities();
+    }
     await this.applyMeterSourceTitle();
     this.detailTimer = this.homey.setInterval(() => {
+      if (this.detailPending) return;
+      this.detailPending = true;
       this.queueDeviceWork(async () => {
         for (const cap of this.telemetry.expired()) {
           if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
@@ -111,11 +127,14 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
           && (this.lastLoadAt <= 0 || Date.now() < this.lastLoadAt || Date.now() - this.lastLoadAt > METER_DETAIL_FRESH_MS)) {
           await this.setCapabilityValue('measure_power.home_load', null).catch(() => {});
         }
+      }).finally(() => {
+        this.detailPending = false;
       }).catch((e) => this.error('meter freshness', e));
     }, 30000);
   }
 
   async applyQuota(quota: Record<string, any>, context: QuotaSampleContext = { source: 'rest', receivedAt: Date.now() }): Promise<void> {
+    if (context.accountingDiscontinuity) this.lastTs = 0;
     if (!Number.isFinite(context.receivedAt) || context.receivedAt <= 0 || context.receivedAt > Date.now()
       || Date.now() - context.receivedAt > METER_DETAIL_FRESH_MS) return;
     const values = this.telemetry.observe(quota, context);
@@ -156,14 +175,13 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
       this.powerSource = context.source;
       const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
       this.lastTs = now;
-      if (dtMs > 0 && dtMs <= METER_FRESH_MS) {
+      if (!this.accountingReadOnly && dtMs > 0 && dtMs <= METER_FRESH_MS) {
         const next = accumulateEnergy({ importWh: this.importWh, exportWh: this.exportWh }, gridW, dtMs);
         if (next.importWh !== this.importWh || next.exportWh !== this.exportWh) {
           this.importWh = next.importWh;
           this.exportWh = next.exportWh;
           this.energyCheckpoint.mark();
-          await this.setCapabilityValue('meter_power.imported', this.importWh / 1000).catch(() => {});
-          await this.setCapabilityValue('meter_power.exported', this.exportWh / 1000).catch(() => {});
+          await this.projectEnergyCapabilities();
         }
       }
     }
@@ -172,6 +190,14 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
       await this.ensureCapability(cap);
       if (this.getCapabilityValue(cap) === value) continue;
       await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
+    }
+  }
+
+  private async projectEnergyCapabilities(): Promise<void> {
+    for (const [cap, wh] of [['meter_power.imported', this.importWh], ['meter_power.exported', this.exportWh]] as const) {
+      const current = this.getCapabilityValue(cap);
+      if (typeof current === 'number' && Number.isFinite(current) && current >= wh / 1000) continue;
+      await this.setCapabilityValue(cap, wh / 1000).catch(() => {});
     }
   }
 
@@ -191,8 +217,8 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
 
   private async applyMeterSourceTitle(): Promise<void> {
     const title = { en: 'Grid power', de: 'Netzleistung', nl: 'Netvermogen' };
-    await this.setCapabilityOptions('measure_power', { title }).catch(() => {});
-    await this.setCapabilityOptions('smartmeter_power_grid', { title }).catch(() => {});
+    await migrateReadingTitle(this, 'measure_power', title);
+    await migrateReadingTitle(this, 'smartmeter_power_grid', title);
     if (this.meterSource !== 'load' && this.hasCapability('measure_power.home_load')) {
       this.lastLoadAt = 0;
       await this.setCapabilityValue('measure_power.home_load', null).catch(() => {});

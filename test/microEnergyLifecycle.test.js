@@ -41,6 +41,83 @@ function harness(store = {}, values = {}) {
 }
 const sample = (d, receivedAt, watts = 600) => d.applyQuota({ powGetPv: watts, powGetPv2: 0 }, { source: 'mqtt', sourceSn: source, receivedAt });
 
+test('micro optional projection failures do not mask fresh required power and remain separately stale', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  for (const failStartup of [false, true]) {
+    const { device } = harness();
+    const write = device.setCapabilityValue.bind(device);
+    let fail = failStartup; let available = false;
+    device.setCapabilityValue = async (cap, value) => {
+      if (fail && cap === 'stream_micro_power_grid_feed') throw Error('synthetic optional projection failure');
+      await write(cap, value);
+    };
+    await device.onInit();
+    device.getAvailable = () => available;
+    device.setAvailable = async () => { available = true; };
+    device.setUnavailable = async () => { available = false; };
+    device.setOnlineState = Object.getPrototypeOf(Micro.prototype).setOnlineState.bind(device);
+    fail = true;
+    await device.applyQuota({ powGetPv: 300, powGetPv2: 300, gridConnectionPower: 500 },
+      { source: 'mqtt', sourceSn: source, receivedAt: now });
+    now++;
+    await sample(device, now, 0);
+    await device.setOnlineState(true);
+    assert.equal(available, true, 'optional grid alias failure must not invalidate fresh required total power');
+    assert.equal(device.getReadingDiagnostics().stream_micro_power_grid_feed.stale, true);
+    fail = false; now++;
+    await device.applyQuota({ gridConnectionPower: 0 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+    assert.equal(device.getReadingDiagnostics().stream_micro_power_grid_feed.stale, false);
+    await device.onUninit();
+  }
+});
+
+test('micro failed partial-PV clear is diagnosed, retries and fresh zero recovers without bridging lost reports', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness({ generatedWh: 1000 }, { meter_power: 1 });
+  await device.onInit(); await sample(device, now);
+  const write = device.setCapabilityValue.bind(device);
+  let rejectClear = true;
+  device.setCapabilityValue = async (cap, value) => {
+    if (rejectClear && cap === 'measure_power' && value === null) throw Error('synthetic clear failure');
+    await write(cap, value);
+  };
+  now += 1000;
+  await device.applyQuota({ powGetPv: 0 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  assert.equal(device.getReadingDiagnostics().measure_power.applicationStatus, 'write_failed');
+  rejectClear = false; await device.expireLiveReadings();
+  assert.equal(device.values.measure_power, null);
+  now += 60000;
+  await device.applyQuota({ powGetPv: 600, powGetPv2: 0 },
+    { source: 'mqtt', sourceSn: source, receivedAt: now, accountingDiscontinuity: true });
+  assert.equal(device.values.meter_power, 1);
+  now += 60000; await sample(device, now, 0);
+  assert.equal(device.values.measure_power, 0);
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, false);
+  await device.onUninit();
+});
+
+test('micro independent PV and grid expiry retains counters, rejects older field reports and clears persisted live tiles', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness({ generatedWh: 1000 }, { meter_power: 1, measure_power: 900 });
+  await device.onInit();
+  assert.equal(device.values.measure_power, null);
+  await device.applyQuota({ powGetPv: 300, powGetPv2: 300, gridConnectionPower: 500 },
+    { source: 'mqtt', sourceSn: source, receivedAt: now });
+  now += 180001;
+  await device.applyQuota({ gridConnectionPower: 0 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  await device.expireLiveReadings();
+  assert.equal(device.values.measure_power, null);
+  assert.equal(device.values['measure_power.pv1'], null);
+  assert.equal(device.values['measure_power.pv2'], null);
+  assert.equal(device.values['measure_power.grid'], 0);
+  await device.applyQuota({ gridConnectionPower: 999 }, { source: 'mqtt', sourceSn: source, receivedAt: now - 1 });
+  assert.equal(device.values['measure_power.grid'], 0);
+  now++;
+  await sample(device, now, 600);
+  assert.equal(device.values.meter_power, 1, 'a stale power interval must not be integrated');
+  await device.onUninit();
+});
+
 test('micro partial PV reports are unknown totals, break accounting continuity and distinguish explicit zero', async t => {
   let now = 1000000; t.mock.method(Date, 'now', () => now);
   const { device } = harness(); await device.onInit();
@@ -121,7 +198,7 @@ test('micro new device waits for a measured first anchor while corrupt history n
 });
 
 test('micro unknown formats and foreign source state survive unchanged without disabling live readings', async t => {
-  t.mock.method(Date, 'now', () => 2000000);
+  t.mock.method(Date, 'now', () => 1060000);
   for (const store of [
     { generatedWh: { version: 2, Wh: 123000 } },
     { generatedWh: 900000, microEnergyState: { version: 2, sourceSn: source, generatedWh: 123000 } },
@@ -174,7 +251,7 @@ test('micro uses receipt time across held SDK writes and does not integrate stop
 });
 
 test('micro rejects old/duplicate/foreign receipts, recovers clock rollback and skips long gaps', async t => {
-  let now = 2000000; t.mock.method(Date, 'now', () => now);
+  let now = 1180000; t.mock.method(Date, 'now', () => now);
   const { device } = harness({ generatedWh: 1000 }, { meter_power: 1 }); await device.onInit();
   await sample(device, 1000000); await sample(device, 1060000); assert.equal(device.values.meter_power, 1.01);
   await sample(device, 1060000, 1200); await sample(device, 1030000, 1200);

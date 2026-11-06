@@ -1,4 +1,5 @@
 {
+  "stream_live": { "unavailable": "Warte auf aktuelle EcoFlow-Messwerte." },
   "stream_5000_pairing": {
     "catalogue": "Bekannte überlappende Vertreter werden ausgeblendet. Bei anderen Kandidaten ist die Anlagenzuordnung nicht verifiziert. Fügen Sie pro eigenständiger Anlage nur eine Home Battery hinzu. Bestehender Verlauf und Flows bleiben erhalten; physische Monitore können zusätzlich gekoppelt werden.",
     "confirm": "Jede ausgewählte Home Battery gehört zu einer eigenständigen Anlage; weiter",

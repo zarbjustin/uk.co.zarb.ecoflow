@@ -96,6 +96,54 @@ test('original unchanged native counters retry a failed projection without addin
   await device.onTeardown();
 });
 
+test('native decreases preserve independent fractional floors, raw watermarks and ambiguity through restart', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const device = await harness({
+    chargedWh: 1000.125, dischargedWh: 2000.375,
+    chargedRawWh: 1000, dischargedRawWh: 2000, countersAvailable: true,
+  });
+  const send = async quota => {
+    now += 1000;
+    await device.applyQuota(quota, { receivedAt: now, source: 'mqtt', sourceSn: device.getData().sn });
+  };
+  for (const raw of [1010, 1005, 1015]) await send({ accuChgEnergy: raw, accuDsgEnergy: 2000 });
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 1.015125);
+  assert.equal(device.getEnergyDiagnostics().dischargedKWh, 2.000375);
+  await send({ accuDsgEnergy: 0, powGetBpCms: -600 });
+  assert.equal(device.getEnergyDiagnostics().dischargedKWh, 2.000375, 'a zero is not reset authority');
+  assert.equal(device.getEnergyDiagnostics().counterResets, 0, 'unverified decreases are not confirmed resets');
+  assert.equal(device.getEnergyDiagnostics().dischargedCounterAmbiguous, true);
+  await device.onTeardown();
+  assert.equal(device.store.batteryEnergyCheckpoint.dischargedRawWh, 2000);
+  const restored = await harness(structuredClone(device.store));
+  assert.equal(restored.getEnergyDiagnostics().dischargedCounterAmbiguous, true);
+  now += 1000;
+  await restored.applyQuota({ accuDsgEnergy: 2001, powGetBpCms: -600 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(restored.getEnergyDiagnostics().dischargedKWh, 2.001375);
+  assert.equal(restored.getEnergyDiagnostics().dischargedCounterAmbiguous, false);
+  await restored.onTeardown();
+});
+
+test('native counter uncertainty remains latched after high-water recovery and restart', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const device = await harness({
+    chargedWh: 1000, dischargedWh: 2000, chargedRawWh: 1000, dischargedRawWh: 2000, countersAvailable: true,
+  });
+  for (const raw of [0, 1000, 1001]) {
+    now += 1000;
+    await device.applyQuota({ accuChgEnergy: raw }, { receivedAt: now, source: 'mqtt' });
+  }
+  assert.equal(device.getEnergyDiagnostics().chargedKWh, 1.001);
+  assert.equal(device.getEnergyDiagnostics().chargedCounterAmbiguous, false);
+  assert.equal(device.getEnergyDiagnostics().chargedCounterHistoryIncomplete, true);
+  assert.equal(device.getEnergyDiagnostics().dischargedCounterHistoryIncomplete, false);
+  await device.onTeardown();
+  const restored = await harness(structuredClone(device.store));
+  assert.equal(restored.getEnergyDiagnostics().chargedCounterHistoryIncomplete, true);
+  assert.equal(restored.getEnergyDiagnostics().chargedKWh, 1.001);
+  await restored.onTeardown();
+});
+
 test('original widget configuration freshness requires matching receipts and expires independently', async t => {
   let now = 100000; t.mock.method(Date, 'now', () => now);
   const fields = ['measure_battery', 'backup_reserve_soc', 'charge_limit', 'discharge_limit', 'feed_in_control'];
@@ -792,13 +840,29 @@ test('BK counter authority prevents power double counting, including partial cou
   await device.onTeardown();
 });
 
-test('BK observed counter decreases preserve monotonic totals and record reset evidence', async () => {
+test('BK loss boundaries re-anchor power without clearing native authority or counter watermarks', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const d = await harness();
+  await d.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now });
+  now += 60000;
+  await d.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now, accountingDiscontinuity: true });
+  assert.equal(d.values['meter_power.charged'], 0);
+  await d.applyQuota({ accuChgEnergy: 1000 });
+  await d.applyQuota({ accuChgEnergy: 1010 }, { source: 'mqtt', receivedAt: now, accountingDiscontinuity: true });
+  assert.equal(d.values['meter_power.charged'], 0.01);
+  now += 60000; await d.applyQuota({ powGetBpCms: 600 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(d.values['meter_power.charged'], 0.01, 'loss cannot unlatch native authority');
+  await d.onTeardown();
+});
+
+test('BK observed counter decreases hold their watermark and report ambiguity, not reset authority', async () => {
   const device = await harness({ chargedWh: 250, chargedRawWh: 1000, countersAvailable: true });
   await device.applyQuota({ accuChgEnergy: 1100 });
   await device.applyQuota({ accuChgEnergy: 20 });
   await device.applyQuota({ accuChgEnergy: 30 });
-  assert.equal(device.values['meter_power.charged'], 0.38);
-  assert.equal(device.getEnergyDiagnostics().counterResets, 1);
+  assert.equal(device.values['meter_power.charged'], 0.35);
+  assert.equal(device.getEnergyDiagnostics().counterResets, 0);
+  assert.equal(device.getEnergyDiagnostics().chargedCounterAmbiguous, true);
   await device.onTeardown();
 });
 

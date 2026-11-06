@@ -50,6 +50,95 @@ test('write gate refreshes rotated credentials before using the client', async (
   await device.onUninit();
 });
 
+test('actual Developer queue bounds blocked-consumer backlog, exposes loss and breaks the next accounting interval', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const device = new QueueDevice(); await device.onInit(); device.applied = [];
+  const held = deferred(); device.emit({ hold: held.promise, sequence: 0 });
+  await new Promise(setImmediate);
+  for (let sequence = 1; sequence <= 10000; sequence++) {
+    now++;
+    device.emit({ sequence, powGetBpCms: sequence % 2 ? 600 : 0, accuChgEnergy: 1000 + sequence });
+  }
+  const pending = device.getDeliveryDiagnostics().mqtt.pending;
+  held.resolve(); await device.applyChain;
+  assert.ok(pending <= 64, `retained ${pending} pending telemetry callbacks`);
+  assert.equal(device.getDeliveryDiagnostics().mqtt.dropped, 10000 - pending);
+  const count = device.applied.length;
+  now += 1000;
+  device.emit({ relay2Onoff: 0, powGetBpCms: 0, accuChgEnergy: 12000 });
+  await device.applyChain;
+  assert.equal(device.applied.length, count + 1);
+  const last = device.applied.at(-1);
+  assert.equal(last.context.receivedAt, now);
+  assert.equal(last.context.accountingDiscontinuity, true);
+  assert.equal(last.quota.powGetBpCms, 0);
+  assert.equal(last.quota.relay2Onoff, 0, 'sparse packets and explicit zero are never merged or replaced');
+  now++; device.emit({ sequence: 10002 }); await device.applyChain;
+  assert.equal(device.applied.at(-1).context.accountingDiscontinuity, false);
+  await device.onUninit();
+});
+
+test('failed consumer breaks an already admitted next interval and recovers without retaining work', async () => {
+  const d = new QueueDevice(); await d.onInit(); d.applied = [];
+  const apply = d.applyQuota.bind(d);
+  d.applyQuota = async (quota, context) => {
+    if (quota.fail) throw Error('synthetic consumer failure');
+    await apply(quota, context);
+  };
+  const failed = d.queueQuota({ fail: true }, 'mqtt');
+  const recovered = d.queueQuota({ powGetBpCms: 0 }, 'mqtt');
+  await assert.rejects(failed, /consumer failure/);
+  await recovered;
+  assert.equal(d.applied.at(-1).context.accountingDiscontinuity, true);
+  assert.equal(d.getDeliveryDiagnostics().mqtt.failed, 1);
+  assert.equal(d.getDeliveryDiagnostics().mqtt.pending, 0);
+  await d.queueQuota({ sequence: 3 }, 'mqtt');
+  assert.equal(d.applied.at(-1).context.accountingDiscontinuity, false);
+  await d.onUninit();
+});
+
+test('live and remaining-time expiry ticks coalesce behind a blocked consumer and retire cleanly', async () => {
+  const d = new QueueDevice(); await d.onInit();
+  const timers = new Map(); let next = 0;
+  d.homey.setInterval = fn => { timers.set(++next, fn); return next; };
+  d.homey.clearInterval = id => timers.delete(id);
+  const values = {};
+  d.hasCapability = () => true;
+  d.getCapabilityValue = cap => values[cap];
+  d.setCapabilityValue = async (cap, value) => { values[cap] = value; };
+  await d.startLiveReadings(['measure_power']);
+  await d.startRemainingTime('system');
+  const held = deferred(); d.emit({ hold: held.promise });
+  await new Promise(setImmediate);
+  let submissions = 0; const owned = d.queueDeviceWork.bind(d);
+  d.queueDeviceWork = work => { submissions++; return owned(work); };
+  for (let i = 0; i < 10000; i++) for (const tick of timers.values()) tick();
+  assert.equal(submissions, 2, 'at most one pending tick per expiry class');
+  held.resolve(); await d.applyChain;
+  d.stopRemainingTime();
+  await d.onUninit();
+  assert.equal(timers.size, 0);
+});
+
+test('overflow gap survives a rejected REST sample and bounded accepted FIFO drains before retirement', async () => {
+  const d = new QueueDevice(); await d.onInit(); d.applied = [];
+  const held = deferred(); d.emit({ sequence: 0, hold: held.promise });
+  await new Promise(setImmediate);
+  for (let sequence = 1; sequence <= 10000; sequence++) d.emit({ sequence });
+  held.resolve(); await d.applyChain;
+  assert.deepEqual(d.applied.map(row => row.quota.sequence), Array.from({ length: 65 }, (_, i) => i));
+  await d.queueQuota({ discarded: true }, 'rest', -1);
+  await d.queueQuota({ powGetBpCms: 0 }, 'mqtt');
+  assert.equal(d.applied.at(-1).context.accountingDiscontinuity, true);
+  const retired = d.emit;
+  await d.onUninit();
+  retired({ sequence: 20000 });
+  await d.applyChain;
+  assert.equal(d.getDeliveryDiagnostics().mqtt.pending, 0);
+  assert.equal(d.getDeliveryDiagnostics().mqtt.running, 0);
+  assert.equal(d.applied.some(row => row.quota.sequence === 20000), false);
+});
+
 test('REST and MQTT contexts retain their actual source when the current read target changes', async () => {
   const device = new QueueDevice();
   await device.onInit();

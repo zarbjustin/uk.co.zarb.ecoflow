@@ -32,7 +32,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const read = name => JSON.parse(fs.readFileSync(path.join(root, 'docs', name), 'utf8'));
   const result = assessFullRelease(read('DUAL_CT_ENERGY_ACCEPTANCE.json'), read('STREAM_5000_MONITORING_ACCEPTANCE.json'), candidateFingerprint(root), assessEnergyEngineering(root));
   console.log(`Full release candidate: ${result.fingerprint}`);
-  console.log(`Energy engineering: ${result.engineering.ready ? 'ACCEPTED' : `PENDING: ${result.engineering.pending.join(', ')}`}`);
+  console.log(`Dual CT structural engineering checks only: ${result.engineering.ready ? 'PASSED' : `PENDING: ${result.engineering.pending.join(', ')}`}`);
   console.log(`Dual CT CT1: ${result.dualCt.ready ? 'ACCEPTED' : `PENDING: ${result.dualCt.pending.join(', ')}`}`);
   for (const row of result.batteries) console.log(`${row.model}/${row.role}: ${row.ready ? 'ACCEPTED' : `PENDING: ${row.pending.join(', ')}`}`);
   console.log('No activation, deployment, hardware operation or publication. Software CI and the remaining product scope are separate checkpoints.');

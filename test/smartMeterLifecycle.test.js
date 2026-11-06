@@ -46,6 +46,84 @@ class TestMeter extends Meter {
   async onReady() { await super.onReady(); this.client = { getQuotaAll: async () => ({ powGetSysGrid: 10 }) }; }
 }
 
+test('meter preserves unrecoverable and unknown counter history while live power remains usable', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  for (const key of ['importWh', 'exportWh']) {
+    for (const broken of [{ corrupt: true }, { version: 2, Wh: 1000 }, NaN, -1]) {
+      const d = new TestMeter();
+      d.store[key] = broken;
+      const original = structuredClone(d.store);
+      await d.onInit();
+      await d.applyQuota({ powGetSysGrid: 3600 }, { source: 'mqtt', receivedAt: now });
+      now += 1000;
+      await d.applyQuota({ powGetSysGrid: -3600 }, { source: 'mqtt', receivedAt: now });
+      await d.onUninit();
+      assert.deepEqual(d.store, original, 'unrecoverable evidence must not be overwritten with zero or new intervals');
+      assert.equal(d.values.get('meter_power.imported'), undefined);
+      assert.equal(d.values.get('meter_power.exported'), undefined);
+      assert.equal(d.values.get('measure_power'), -3600);
+    }
+  }
+});
+
+test('meter keeps custom capability titles/options and title-read failure cannot overwrite them', async () => {
+  for (const unreadable of [false, true]) {
+    const d = new TestMeter();
+    const options = { title: { en: 'My boundary', de: 'Meine Grenze' }, decimals: 1, preventInsights: true };
+    const applied = [];
+    d.getCapabilityOptions = () => { if (unreadable) throw Error('synthetic SDK options failure'); return options; };
+    d.setCapabilityOptions = async (cap, value) => applied.push([cap, value]);
+    await d.onInit();
+    for (const [, value] of applied) {
+      assert.equal(value.title.en, 'My boundary');
+      assert.equal(value.title.de, 'Meine Grenze');
+      assert.equal(value.decimals, 1);
+      assert.equal(value.preventInsights, true);
+    }
+    if (unreadable) assert.equal(applied.length, 0);
+    await d.onUninit();
+  }
+});
+
+test('meter preserves precise fractional floors through rounded projections and repeated restarts', async () => {
+  const d = new TestMeter();
+  Object.assign(d.store, { importWh: 1000.6, exportWh: 2000.4 });
+  d.values.set('meter_power.imported', 1.001);
+  d.values.set('meter_power.exported', 2);
+  for (let restart = 0; restart < 3; restart++) {
+    await d.onInit(); await d.onUninit();
+    assert.equal(d.store.importWh, 1000.6);
+    assert.equal(d.store.exportWh, 2000.4);
+  }
+});
+
+test('meter preserves both rounded capability floors at startup and through sub-bin increments and restart', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter();
+  Object.assign(d.store, { importWh: 1000.6, exportWh: 2000.6 });
+  const floors = { 'meter_power.imported': 1.001, 'meter_power.exported': 2.001 };
+  for (const [cap, value] of Object.entries(floors)) d.values.set(cap, value);
+  const writes = []; const write = d.setCapabilityValue.bind(d);
+  d.setCapabilityValue = async (cap, value) => {
+    if (cap in floors && typeof value === 'number') writes.push([cap, value]);
+    await write(cap, value);
+  };
+  for (let restart = 0; restart < 3; restart++) {
+    await d.onInit();
+    for (const power of [360, 360, -360]) {
+      now += 1000;
+      await d.applyQuota({ powGetSysGrid: power }, { source: 'mqtt', receivedAt: now });
+    }
+    await d.onUninit();
+  }
+  for (const [cap, value] of writes) {
+    assert.ok(value >= floors[cap], `${cap} decreased from ${floors[cap]} to ${value}`);
+    floors[cap] = value;
+  }
+  assert.ok(Math.abs(d.store.importWh - 1000.9) < 1e-8);
+  assert.ok(Math.abs(d.store.exportWh - 2000.9) < 1e-8);
+});
+
 test('Live v1.10.3 meter upgrade/restart retains device identity, settings and totals without adopting Dual CT candidates', async t => {
   let now=100000; t.mock.method(Date,'now',()=>now);
   const baseline=require('./fixtures/live-v1.10.3-contract.json').drivers.find(d=>d.id==='smartmeter');

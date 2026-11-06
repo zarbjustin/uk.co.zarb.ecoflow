@@ -42,6 +42,8 @@ const PREVIOUS_SCOPED_TITLES: Record<string, Record<string, string>> = {
 };
 
 const LEGACY_TITLES: Record<string, Record<string, string>> = {
+  measure_power: { en: 'Grid power', de: 'Netzleistung', nl: 'Netvermogen' },
+  smartmeter_power_grid: { en: 'Grid power', de: 'Netzleistung', nl: 'Netvermogen' },
   stream_5000_mode: { en: 'Operating mode' },
   stream_5000_charge_limit: { en: 'Reported charge limit' },
   stream_5000_discharge_limit: { en: 'Reported discharge limit' },

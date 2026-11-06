@@ -16,6 +16,7 @@ installed Homey candidate and store releases are separate states.
 - **Solar device:** a `solarpanel` device per system showing PV generation + cumulative solar energy.
 - **Per-unit monitors:** each physical inverter/battery (Ultra X Left/Right, AC Pro 1.1–1.4) is available as its own telemetry device without contributing separately to Homey Energy.
 - **AC sockets:** each AC outlet on AC Pro / Ultra X is its own **smart-plug device** (on/off + live power) — clearer than generic toggles.
+- Solar, microinverter and socket freshness checks reject fields older than three minutes without their own accepted receipt. Live tiles are cleared to unknown on the next minute expiry tick when the SDK queue progresses, not at an exact three-minute deadline; blocked SDK work can delay clearing. Missing data is not zero or off. Socket action completion acknowledges the cloud request; later telemetry, not that acknowledgement, reports relay state.
 - **Control:** settable charge/discharge limits, backup-reserve level (3–100%), operating mode (Self-powered / AI / Scheduled / Time-of-use), grid feed-in on/off, per-socket on/off.
 - Original battery units use the explicit BK11/BK12/BK31/BK41/BK51/BK61 registry. The BK01 microinverter has its own monitoring driver; it is not a Home Battery. Unknown/new models are not admitted by marketing name.
 
@@ -105,9 +106,10 @@ English, **German** and **Dutch**.
 ### Under the hood
 - Signed EcoFlow IoT Open Platform REST client (HMAC-SHA256, validated against the documented test vector), with bounded retry for transient blips.
 - Shared **MQTT** connection for near-realtime updates, with REST polling where supported. Cadence varies with the model, source and EcoFlow service; a two-second update is not guaranteed.
+- Developer telemetry retains at most 64 pending reports plus one running report. Overload drops whole new packets, exposes incomplete accounting and re-anchors power estimates; it does not merge sparse counter reports. Original native counter decreases hold their previous high watermark because reset and delayed data cannot currently be distinguished; genuine resets can undercount until that watermark is exceeded.
 - **Troubleshooting / logs:** view the app's live log (incl. `[mqtt]` connection events) via *Homey Developer Tools → your app → Log*.
 - **Local support report:** app Settings → **Show support report** provides installed
-  versions, battery-driver registration and anonymous Energy accounting evidence,
+  versions, battery-driver registration and sanitised Energy accounting metadata,
   without credentials, device names or serials. See the [tester checklist](docs/TESTER_VALIDATION.md).
 
 ## Setup

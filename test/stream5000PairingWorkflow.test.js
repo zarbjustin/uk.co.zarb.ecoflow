@@ -5,6 +5,30 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 
+test('credential forms announce validation errors and support keyboard use without mobile overflow', async () => {
+  const browser = await chromium.launch();
+  try {
+    for (const driver of ['stream', 'stream_unit', 'stream_solar', 'stream_micro', 'stream_socket', 'smartmeter',
+      'stream_ac5000', 'stream_5000_unit', 'stream_5000_system']) {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const view = driver.includes('5000') ? 'app_credentials' : 'credentials';
+      const html = fs.readFileSync(path.join(__dirname, '..', 'drivers', driver, 'pair', `${view}.html`), 'utf8');
+      await page.setContent(`<script>window.calls=[];window.Homey={emit:(name,body,cb)=>{calls.push(name);cb(null,false);},showView:()=>{}};</script>${html}`);
+      const button = page.locator('#ef-next');
+      await button.focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.getByRole('alert').count(), 1, driver);
+      assert.match(await page.getByRole('alert').innerText(), /required/i, driver);
+      assert.equal(await page.locator('input').count(), 2);
+      for (const id of await page.locator('input').evaluateAll(inputs => inputs.map(input => input.id))) {
+        assert.equal(await page.locator(`label[for="${id}"]`).count(), 1);
+      }
+      assert.equal(await page.evaluate(() => calls.some(name => name === 'login' || name === 'app_login')), false);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.close();
+    }
+  } finally { await browser.close(); }
+});
+
 test('desktop/mobile unit pairing needs no gate; Energy pairing fails closed and rechecks explicit consent', async () => {
   const browser = await chromium.launch();
   try {

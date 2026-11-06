@@ -1,4 +1,5 @@
 {
+  "stream_live": { "unavailable": "Wachten op actuele EcoFlow-metingen." },
   "stream_5000_pairing": {
     "catalogue": "Bekende overlappende vertegenwoordigers worden niet getoond. De installatie van andere kandidaten is niet geverifieerd. Voeg per afzonderlijke installatie één Home Battery toe. Bestaande geschiedenis en Flows blijven behouden; fysieke monitors kunnen daarnaast worden gekoppeld.",
     "confirm": "Elke geselecteerde Home Battery vertegenwoordigt een afzonderlijke installatie; doorgaan",

@@ -28,19 +28,20 @@ export class StreamLiveReadings {
     this.fields = {};
   }
 
-  async apply(cap: string, value: unknown, at: number, write: (value: number | string | null) => Promise<void>,
+  async apply(cap: string, value: unknown, at: number, write: (value: number | string | boolean | null) => Promise<void>,
     active: () => boolean): Promise<boolean> {
     const now = Date.now();
     if (!active() || !this.tracks(cap) || !Number.isFinite(at) || at <= 0 || at > now
       || now - at > STREAM_LIVE_TTL_MS) return false;
     const old = this.fields[cap];
     if (old && old.receivedAt <= now && at < old.receivedAt) return false;
-    const valid = cap === 'battery_charging_state' ? ['charging', 'discharging', 'idle'].includes(String(value))
-      : typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 100000;
+    let valid = typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 100000;
+    if (cap === 'battery_charging_state') valid = ['charging', 'discharging', 'idle'].includes(String(value));
+    if (cap === 'onoff') valid = typeof value === 'boolean';
     const entry: Entry = { receivedAt: at, appliedAt: null, failed: false };
     this.fields[cap] = entry;
     try {
-      await write(valid ? value as number | string : null);
+      await write(valid ? value as number | string | boolean : null);
       if (!active()) return false;
       if (valid && at <= Date.now() && Date.now() - at <= STREAM_LIVE_TTL_MS) entry.appliedAt = at;
       else await write(null);

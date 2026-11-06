@@ -1,5 +1,24 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 — release-readiness programme; full public NO-GO
+
+[Programme report](RELEASE_READINESS_PROGRAMME_2026-11-06.md) and external
+`../work/output/release-programme-2026-11-06/FINAL_RECEIPT.md` identify the reviewed
+source, exact CI, offline archive and model/lease receipts. Conservative native
+counter ordering, 64-pending real Developer queue/loss diagnostics, legacy
+field expiry/failure recovery, original meter history/precision/custom titles
+and credential accessibility replace earlier U1/U2/U3 source status below.
+Initial candidate full suite 1504 passed; final counts/checks and any correction
+reviews are recorded externally. Actual configured reviewers: `gpt-6-sol`,
+`gpt-6-astra`, `mai-code-2`; upstream/Preview mapping unverified.
+
+No installation, live query, restart, settings/control/Flow/Energy, publication
+or external contact. Installed Development, Test/Live and physical evidence below
+remain dated observations. Native AI/reserve ownership and both disabled Homey
+execution switches preserved. Hardware scope/native intervals, ES22, independent
+three-phase, exact-runtime 48-hour soak and API-permission/UX decisions remain
+open; no ledger weakened. The prepared archive is not an installed update.
+
 ## 6 November 2026 — full-release review: NO-GO, diagnostic source maintenance only
 
 [Full report](FULL_RELEASE_REVIEW_2026-11-06.md) separates engineering,

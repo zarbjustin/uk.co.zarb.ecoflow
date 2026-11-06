@@ -1,7 +1,7 @@
 'use strict';
 
 const SOURCES = ['mqtt', 'rest'] as const;
-const COUNTS = ['queued', 'started', 'completed', 'failed', 'skipped', 'pending', 'running'] as const;
+const COUNTS = ['queued', 'started', 'completed', 'failed', 'skipped', 'pending', 'running', 'dropped'] as const;
 const TIMES = ['lastQueuedAt', 'lastStartedAt', 'lastCompletedAt', 'lastFailedAt'] as const;
 
 /** Consumer callbacks and processing only; never proof of broker delivery or valid readings. */
@@ -10,6 +10,7 @@ export function streamDeliverySnapshot(input: any, now: number): Record<string, 
   for (const source of SOURCES) {
     const row = input?.[source];
     result[source] = Object.fromEntries([
+      ['accountingIncomplete', row?.dropped > 0 || row?.failed > 0],
       ...COUNTS.map((key) => [key, Number.isSafeInteger(row?.[key]) && row[key] >= 0 && row[key] <= 65535 ? row[key] : 0]),
       ...TIMES.map((key) => [key.replace(/At$/, 'AgeSec'), typeof row?.[key] === 'number'
         && Number.isFinite(row[key]) && row[key] > 0 && row[key] <= now ? Math.floor((now - row[key]) / 1000) : null]),
@@ -26,6 +27,12 @@ export class StreamDeliveryDiagnostics {
     row.queued = Math.min(65535, row.queued + 1);
     row.pending = Math.min(65535, row.pending + 1);
     row.lastQueuedAt = now;
+  }
+
+  dropped(source: 'mqtt' | 'rest'): void {
+    const row = this.rows[source];
+    row.pending = Math.max(0, row.pending - 1);
+    row.dropped = Math.min(65535, row.dropped + 1);
   }
 
   async run(source: 'mqtt' | 'rest', work: () => Promise<boolean>): Promise<void> {
@@ -50,6 +57,9 @@ export class StreamDeliveryDiagnostics {
 
   /** Internal timestamps are reprojected again at the export boundary. */
   evidence() {
-    return Object.fromEntries(SOURCES.map((source) => [source, { ...this.rows[source] }]));
+    return Object.fromEntries(SOURCES.map((source) => [source, {
+      ...this.rows[source],
+      accountingIncomplete: this.rows[source].dropped > 0 || this.rows[source].failed > 0,
+    }]));
   }
 }

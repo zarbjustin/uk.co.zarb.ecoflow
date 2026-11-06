@@ -455,7 +455,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private energySamples = 0;
   private skippedEnergySamples = 0;
   private ignoredEnergyGaps = 0;
-  private counterResets = 0;
+  private chargedCounterAmbiguous = false;
+  private dischargedCounterAmbiguous = false;
+  private chargedCounterHistoryIncomplete = false;
+  private dischargedCounterHistoryIncomplete = false;
   private counterContinuity = new StreamCounterContinuity();
 
   protected getReadSn(): string {
@@ -479,6 +482,8 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
           // Rebase new reporter lifetime counters without importing history or bridging power gaps.
           this.chargedRawWh = undefined;
           this.dischargedRawWh = undefined;
+          this.chargedCounterAmbiguous = false;
+          this.dischargedCounterAmbiguous = false;
           this.lastEnergyTs = 0;
         }
         this.energySourceSn = this.mainSn;
@@ -711,6 +716,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     // Present-but-unreadable records cannot authorize a legacy raw/total pair.
     this.chargedRawWh = !chargedFloorRaised && (coherent || absent) ? storedWh('chargedRawWh') : undefined;
     this.dischargedRawWh = !dischargedFloorRaised && (coherent || absent) ? storedWh('dischargedRawWh') : undefined;
+    this.chargedCounterAmbiguous = coherent && checkpoint.chargedCounterAmbiguous === true;
+    this.dischargedCounterAmbiguous = coherent && checkpoint.dischargedCounterAmbiguous === true;
+    this.chargedCounterHistoryIncomplete = checkpoint?.chargedCounterHistoryIncomplete === true || this.chargedCounterAmbiguous;
+    this.dischargedCounterHistoryIncomplete = checkpoint?.dischargedCounterHistoryIncomplete === true || this.dischargedCounterAmbiguous;
     this.countersAvailable = (typeof checkpoint?.countersAvailable === 'boolean'
       ? checkpoint.countersAvailable : this.getStoreValue('countersAvailable')) === true
       || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined
@@ -1037,6 +1046,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    if (context?.accountingDiscontinuity) {
+      this.lastEnergyTs = 0;
+      this.ignoredEnergyGaps += 1;
+    }
     if (context?.sourceSn && context.sourceSn.toUpperCase() !== this.getReadSn().toUpperCase()) {
       this.lastEnergyTs = 0;
       return;
@@ -1170,13 +1183,15 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       this.lastEnergyTs = receivedAt;
       this.countersAvailable = true;
       if (hasChg) {
-        if (this.chargedRawWh !== undefined && accuChg < this.chargedRawWh) this.counterResets += 1;
+        this.chargedCounterAmbiguous = this.chargedRawWh !== undefined && accuChg < this.chargedRawWh;
+        this.chargedCounterHistoryIncomplete ||= this.chargedCounterAmbiguous;
         const r = followResettableCounter(this.chargedWh, this.chargedRawWh, accuChg as number);
         this.chargedWh = r.totalWh;
         this.chargedRawWh = r.lastRawWh;
       }
       if (hasDsg) {
-        if (this.dischargedRawWh !== undefined && accuDsg < this.dischargedRawWh) this.counterResets += 1;
+        this.dischargedCounterAmbiguous = this.dischargedRawWh !== undefined && accuDsg < this.dischargedRawWh;
+        this.dischargedCounterHistoryIncomplete ||= this.dischargedCounterAmbiguous;
         const r = followResettableCounter(this.dischargedWh, this.dischargedRawWh, accuDsg as number);
         this.dischargedWh = r.totalWh;
         this.dischargedRawWh = r.lastRawWh;
@@ -1234,6 +1249,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       dischargedRawWh: this.dischargedRawWh ?? null,
       countersAvailable: this.countersAvailable,
       energySourceSn: this.energySourceSn,
+      chargedCounterAmbiguous: this.chargedCounterAmbiguous,
+      dischargedCounterAmbiguous: this.dischargedCounterAmbiguous,
+      chargedCounterHistoryIncomplete: this.chargedCounterHistoryIncomplete,
+      dischargedCounterHistoryIncomplete: this.dischargedCounterHistoryIncomplete,
     };
     // One authoritative record prevents restart from combining a newer total
     // with an older raw baseline if a legacy compatibility write is interrupted.
@@ -1254,7 +1273,12 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       samples: this.energySamples,
       skippedSamples: this.skippedEnergySamples,
       ignoredGaps: this.ignoredEnergyGaps,
-      counterResets: this.counterResets,
+      counterResets: 0,
+      counterDecreasePolicy: 'hold_high_watermark',
+      chargedCounterAmbiguous: this.chargedCounterAmbiguous,
+      dischargedCounterAmbiguous: this.dischargedCounterAmbiguous,
+      chargedCounterHistoryIncomplete: this.chargedCounterHistoryIncomplete,
+      dischargedCounterHistoryIncomplete: this.dischargedCounterHistoryIncomplete,
       chargedCounterSeen: this.chargedRawWh !== undefined,
       dischargedCounterSeen: this.dischargedRawWh !== undefined,
       lastSampleAgeSec: this.lastEnergyTs > 0 ? Math.max(0, Math.round((Date.now() - this.lastEnergyTs) / 1000)) : null,

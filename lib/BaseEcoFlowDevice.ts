@@ -22,11 +22,14 @@ import { StreamLiveReadings, STREAM_SYSTEM_LIVE_CAPS, STREAM_UNIT_LIVE_CAPS } fr
 const DEFAULT_POLL_MS = 30000;
 const REALTIME_GRACE_MS = 90000;
 const UNSUPPORTED_API_FAILURE_LIMIT = 3;
+export const DEVELOPER_QUOTA_PENDING_LIMIT = 64;
 
 export interface QuotaSampleContext {
   receivedAt: number;
   source: 'mqtt' | 'rest';
   sourceSn?: string;
+  /** A whole report was lost before this receipt; power intervals must re-anchor. */
+  accountingDiscontinuity?: boolean;
 }
 
 /**
@@ -46,6 +49,9 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private realtimeApp?: EcoFlowAppApi;
   private clientCredentialsKey = '';
   private applyChain: Promise<void> = Promise.resolve();
+  private queuedQuotas = 0;
+  private quotaGapPending = false;
+  private quotaApplyFailed = false;
   private pollPromise: Promise<void> | null = null;
   protected lifecycleGeneration = 0;
   private teardownPromise: Promise<void> | null = null;
@@ -62,10 +68,12 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   private remainingTimeScope: 'unit' | 'system' | null = null;
   private remainingTimeGeneration = 0;
   private remainingTimeClearPending = new Set<string>();
+  private remainingExpiryPending = false;
   private liveReadings: StreamLiveReadings | null = null;
   private liveReadingsTimer: NodeJS.Timeout | null = null;
   private liveReadingsGeneration = 0;
   private liveClearPending = new Set<string>();
+  private liveExpiryPending = false;
 
   protected liveReadingsEnabled(): boolean {
     return true;
@@ -75,13 +83,24 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     return this.liveReadings?.snapshot() || {};
   }
 
+  getReadingDiagnostics(): Record<string, unknown> {
+    return this.getLiveReadingFreshness();
+  }
+
+  protected requiredLiveReadings(): readonly string[] {
+    return [];
+  }
+
   protected resetLiveReadingReceipts(): void {
     this.liveReadings?.reset();
   }
 
-  protected async startLiveReadings(scope: 'unit' | 'system'): Promise<void> {
+  protected async startLiveReadings(scope: 'unit' | 'system' | readonly string[]): Promise<void> {
     this.stopLiveReadings();
-    const caps = (scope === 'unit' ? STREAM_UNIT_LIVE_CAPS : STREAM_SYSTEM_LIVE_CAPS).filter((cap) => this.hasCapability(cap));
+    let selected: readonly string[] = STREAM_SYSTEM_LIVE_CAPS;
+    if (scope === 'unit') selected = STREAM_UNIT_LIVE_CAPS;
+    else if (typeof scope !== 'string') selected = scope;
+    const caps = selected.filter((cap) => this.hasCapability(cap));
     this.liveReadings = new StreamLiveReadings(caps);
     const generation = this.liveReadingsGeneration;
     for (const cap of caps) {
@@ -92,7 +111,11 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     }
     if (this.isShuttingDown() || generation !== this.liveReadingsGeneration || typeof this.homey.setInterval !== 'function') return;
     this.liveReadingsTimer = this.homey.setInterval(() => {
-      this.queueDeviceWork(() => this.expireLiveReadings()).catch(() => {});
+      if (this.liveExpiryPending) return;
+      this.liveExpiryPending = true;
+      this.queueDeviceWork(() => this.expireLiveReadings()).finally(() => {
+        this.liveExpiryPending = false;
+      }).catch(() => {});
     }, 60000);
   }
 
@@ -102,6 +125,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.liveReadingsTimer = null;
     this.liveReadings = null;
     this.liveClearPending.clear();
+    this.liveExpiryPending = false;
   }
 
   protected isLiveReading(cap: string): boolean {
@@ -129,6 +153,17 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     await this.liveReadings?.expire(async (cap) => {
       if (this.hasCapability(cap) && this.getCapabilityValue(cap) !== null) await this.setCapabilityValue(cap, null);
     }, active);
+    if (active() && !this.requiredLiveReadingsReady()) {
+      await this.setOnlineState(false, this.homey.__?.('stream_live.unavailable') || 'Waiting for fresh EcoFlow readings.');
+    }
+  }
+
+  private requiredLiveReadingsReady(): boolean {
+    const required = this.requiredLiveReadings();
+    if (!required.length) return true;
+    const fields = this.getLiveReadingFreshness();
+    return required.every((cap) => !this.hasCapability(cap)
+      || (!this.liveClearPending.has(cap) && fields[cap]?.stale === false));
   }
 
   getRemainingTimeDiagnostics(): Record<string, unknown> {
@@ -176,6 +211,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     }
     if (this.isShuttingDown() || generation !== this.remainingTimeGeneration) return;
     this.remainingTimeTimer = this.homey.setInterval(() => {
+      if (this.remainingExpiryPending) return;
+      this.remainingExpiryPending = true;
       this.queueDeviceWork(async () => {
         for (const cap of this.remainingTimeClearPending) {
           if (generation !== this.remainingTimeGeneration || this.isShuttingDown()) return;
@@ -189,6 +226,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
           },
           () => generation === this.remainingTimeGeneration && !this.isShuttingDown(),
         );
+      }).finally(() => {
+        this.remainingExpiryPending = false;
       }).catch(() => {});
     }, 60000);
   }
@@ -297,6 +336,9 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.mqttOffline = false;
     this.statusWorkPending = false;
     this.pendingStatus = null;
+    this.queuedQuotas = 0;
+    this.quotaGapPending = false;
+    this.quotaApplyFailed = false;
     const quarantineReason = this.getDeveloperApiQuarantineReason();
     if (quarantineReason) {
       await this.quarantineDeveloperApi(
@@ -488,19 +530,41 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     const context = { receivedAt: Date.now(), source, sourceSn };
     const diagnostics = this.deliveryDiagnostics;
     diagnostics.queued(source, context.receivedAt);
-    const run = () => diagnostics.run(source, async () => {
-      if (generation !== this.lifecycleGeneration || this.developerApiQuarantineReason) return false;
-      let selected = quota;
-      if (source === 'rest' && requestedRevision !== this.realtimeRevision) {
-        const reconciled = this.reconcileRestQuota(quota, newerFields);
-        if (!reconciled || !Object.keys(reconciled).length) return false;
-        selected = reconciled;
-      }
-      await this.applyQuota(selected, context);
-      if (generation === this.lifecycleGeneration && !this.stopping && sourceSn === this.getReadSn()
-        && source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
-      return true;
-    });
+    // Drop whole NEW reports, never merge sparse fields or replace queued counter
+    // transitions. Loss is visible and the first later admitted receipt carries
+    // the boundary; older queued work must not consume it.
+    if (this.queuedQuotas >= DEVELOPER_QUOTA_PENDING_LIMIT) {
+      this.quotaGapPending = true;
+      diagnostics.dropped(source);
+      return Promise.resolve();
+    }
+    const sample: QuotaSampleContext = { ...context, accountingDiscontinuity: this.quotaGapPending };
+    this.quotaGapPending = false;
+    this.queuedQuotas += 1;
+    const run = () => {
+      this.queuedQuotas -= 1;
+      return diagnostics.run(source, async () => {
+        if (generation !== this.lifecycleGeneration || this.developerApiQuarantineReason) return false;
+        this.quotaApplyFailed ||= sample.accountingDiscontinuity === true;
+        let selected = quota;
+        if (source === 'rest' && requestedRevision !== this.realtimeRevision) {
+          const reconciled = this.reconcileRestQuota(quota, newerFields);
+          if (!reconciled || !Object.keys(reconciled).length) return false;
+          selected = reconciled;
+        }
+        sample.accountingDiscontinuity ||= this.quotaApplyFailed;
+        this.quotaApplyFailed = false;
+        try {
+          await this.applyQuota(selected, sample);
+        } catch (error) {
+          this.quotaApplyFailed = true;
+          throw error;
+        }
+        if (generation === this.lifecycleGeneration && !this.stopping && sourceSn === this.getReadSn()
+          && source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
+        return true;
+      });
+    };
     this.applyChain = this.applyChain.then(run, run);
     return this.applyChain;
   }
@@ -609,6 +673,10 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   /** Apply availability. Subclasses can override to add flow triggers etc. */
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {
     if (this.developerApiQuarantineReason) return;
+    if (online && !this.requiredLiveReadingsReady()) {
+      await this.setUnavailable(this.homey.__?.('stream_live.unavailable') || 'Waiting for fresh EcoFlow readings.').catch(() => {});
+      return;
+    }
     if (online) {
       if (!this.getAvailable()) await this.setAvailable().catch(() => {});
     } else {

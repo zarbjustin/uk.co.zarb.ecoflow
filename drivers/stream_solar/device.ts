@@ -5,6 +5,7 @@ import { perPvWatts, solarPowerWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
 import { collectStreamUnits } from '../../lib/streamPairing';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
+import { STREAM_LIVE_TTL_MS } from '../../lib/StreamLiveReadings';
 
 function validTotal(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -23,6 +24,7 @@ function sourceSn(value: unknown): string | undefined {
 module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   private generatedWh = 0;
   private lastTs = 0;
+  private lastReceiptTs = 0;
   private attributionTimer: NodeJS.Timeout | null = null;
   private attributionPending = false;
   private energyCheckpoint?: EnergyCheckpoint;
@@ -34,10 +36,17 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
     return sourceSn(this.getStoreValue('mainSn')) || this.getData().sn;
   }
 
+  protected requiredLiveReadings(): readonly string[] {
+    return ['measure_power'];
+  }
+
   protected async onReady(): Promise<void> {
     await this.queueDeviceWork(async () => {
+      await this.startLiveReadings(['measure_power']);
+      if (this.isShuttingDown()) return;
       await this.energyCheckpoint?.close();
       this.lastTs = 0;
+      this.lastReceiptTs = 0;
       this.energyKnown = false;
       this.generatedWh = 0;
       this.energySourceSn = sourceSn(this.getData().sn);
@@ -112,7 +121,8 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
-    if (this.energyReadOnly
+    if (context?.accountingDiscontinuity) this.lastTs = 0;
+    if (!this.energySourceSn
       || sourceSn(this.getReadSn()) !== this.energySourceSn
       || (context?.sourceSn !== undefined && sourceSn(context.sourceSn) !== this.energySourceSn)) {
       this.lastTs = 0;
@@ -126,11 +136,20 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
         this.lastTs = 0;
         return;
       }
-      if (this.lastTs > wallNow) this.lastTs = 0;
-      if (this.lastTs > 0 && now <= this.lastTs) return;
-      const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
+      if (this.lastReceiptTs > wallNow) {
+        this.lastReceiptTs = 0;
+        this.lastTs = 0;
+      }
+      if (now <= this.lastReceiptTs) return;
+      this.lastReceiptTs = now;
+      const dtMs = this.lastTs > 0 && now - this.lastTs <= STREAM_LIVE_TTL_MS ? now - this.lastTs : 0;
       this.lastTs = now;
       const power = Math.max(0, raw); // solar must be non-negative when generating
+      if (this.energyReadOnly) {
+        this.lastTs = 0;
+        await this.applyLiveReading('measure_power', power, now);
+        return;
+      }
       const wasKnown = this.energyKnown;
       this.energyKnown = true;
       const next = integratePositivePower(this.generatedWh, power, dtMs);
@@ -139,9 +158,7 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
         this.energyCheckpoint?.mark();
       }
       if (!wasKnown) this.energyCheckpoint?.mark();
-      if (this.getCapabilityValue('measure_power') !== power) {
-        await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
-      }
+      await this.applyLiveReading('measure_power', power, now);
       await this.projectEnergy();
     }
   }
@@ -156,9 +173,11 @@ module.exports = class StreamSolarDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.stopLiveReadings();
     if (this.attributionTimer) this.homey.clearInterval(this.attributionTimer);
     this.attributionTimer = null;
     this.lastTs = 0;
+    this.lastReceiptTs = 0;
     await this.energyCheckpoint?.close();
   }
 

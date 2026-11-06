@@ -1,5 +1,27 @@
 # Codex cross-machine handover
 
+## 6 November 2026 — release-readiness engineering programme; no deployment
+
+Read [the programme report](RELEASE_READINESS_PROGRAMME_2026-11-06.md) and
+`../work/output/release-programme-2026-11-06/FINAL_RECEIPT.md` before resuming.
+They supersede the earlier U1/U2/U3 source-blocker status below, not its historical
+installed/store/hardware evidence. Native high-water policy, bounded real
+Developer queue with explicit accounting loss/gaps, independent legacy expiry,
+Smart Meter history/fractional/title preservation and credential-form error
+semantics have offline regressions. Independent actual Sol/Astra/MAI first passes
+returned; exact common-diff reviews, final checks/commit/CI/archive and lease/index
+outcome are in that external receipt. MAI Preview/provider mapping is unverified.
+
+Full public release remains NO-GO: indistinguishable resets can undercount,
+overload is explicitly lossy, cloud receipt is not hardware age, API permission/
+product contracts and multilingual/native acceptance remain open. No acceptance
+ledger, publish workflow or permission scope changed. No Homey/household query,
+installation, restart, controls, Flow/settings/Energy or external contact.
+Installed Development and Test/Live observations below are unchanged historical
+records, not the new candidate. Keep AI ownership and disabled Homey execution.
+Next approval, if desired: read-only exact-target preservation/quiescence preflight
+on Justin's Homey Pro; no installation approval is implied.
+
 ## 6 November 2026 — full-release review NO-GO; bounded source-only repairs
 
 Read [the full review](FULL_RELEASE_REVIEW_2026-11-06.md) and

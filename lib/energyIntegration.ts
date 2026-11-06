@@ -1,14 +1,8 @@
 'use strict';
 
 /**
- * Shared, reset-proof energy integration helpers.
- *
- * The EcoFlow STREAM open API does not expose lifetime cumulative energy
- * counters over REST (accuChgEnergy/accuDsgEnergy and friends come back empty),
- * so cumulative kWh for the Homey Energy dashboard must be derived locally by
- * integrating instantaneous power over time. Homey requires cumulative
- * `meter_power` values to be monotonic (never decrease), which these helpers
- * guarantee.
+ * Monotonic energy helpers. Native counters remain authoritative once observed;
+ * otherwise accepted power receipts provide local estimates, never downtime fill.
  */
 
 /** Maximum sample gap to integrate over; longer gaps (downtime, clock jumps) are ignored. */
@@ -52,6 +46,11 @@ export interface EnergyAccountingDiagnostic {
   skippedSamples: number;
   ignoredGaps: number;
   counterResets: number;
+  counterDecreasePolicy?: 'hold_high_watermark';
+  chargedCounterAmbiguous?: boolean;
+  dischargedCounterAmbiguous?: boolean;
+  chargedCounterHistoryIncomplete?: boolean;
+  dischargedCounterHistoryIncomplete?: boolean;
   chargedCounterSeen: boolean;
   dischargedCounterSeen: boolean;
   lastSampleAgeSec: number | null;
@@ -102,10 +101,11 @@ export function integratePositivePower(prevWh: number, powerW: number, dtMs: num
 }
 
 /**
- * Track a device-reported cumulative counter that may reset to 0 (e.g. on a
- * firmware update) and produce a strictly monotonic total. The first sample only
- * anchors `lastRaw` (no jump). A decrease is treated as a reset and the new raw
- * value is counted from zero.
+ * Track a same-source cumulative counter without inventing reset authority.
+ * A lower raw value could be delayed data OR a genuine reset: neither receipt
+ * order nor a reported zero distinguishes them. Hold the high watermark and
+ * publish no energy from the ambiguous range. A genuine reset can therefore
+ * undercount until it exceeds that watermark; never substitute integrated power.
  *
  * @param prevTotalWh  the monotonic total so far (Wh)
  * @param lastRawWh    the previous raw counter value, or undefined on first call
@@ -122,6 +122,6 @@ export function followResettableCounter(
   if (lastRawWh === undefined) {
     return { totalWh: prevTotalWh, lastRawWh: rawWh };
   }
-  const delta = rawWh >= lastRawWh ? rawWh - lastRawWh : rawWh;
-  return { totalWh: prevTotalWh + delta, lastRawWh: rawWh };
+  if (rawWh < lastRawWh) return { totalWh: prevTotalWh, lastRawWh };
+  return { totalWh: prevTotalWh + (rawWh - lastRawWh), lastRawWh: rawWh };
 }

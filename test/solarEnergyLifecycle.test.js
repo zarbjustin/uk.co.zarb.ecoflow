@@ -83,6 +83,89 @@ const context = receivedAt => ({ receivedAt, source: 'mqtt', sourceSn: source })
 const sample = (device, receivedAt, power = 600) =>
   device.applyQuota({ powGetPvSum: power }, context(receivedAt));
 
+test('solar clears persisted live power before a blocked optional attribution discovery', async () => {
+  const wait = deferred();
+  OfflineClient.discover = () => wait.promise;
+  const { device } = harness({ generatedWh: 1000 }, { meter_power: 1, measure_power: 900 });
+  const startup = device.onInit();
+  try {
+    await settle();
+    assert.equal(device.values.measure_power, null);
+  } finally {
+    wait.resolve([]);
+    OfflineClient.discover = undefined;
+    await startup;
+    await device.onUninit();
+  }
+});
+
+test('solar accounting quarantine preserves history while same-source live power and zero remain usable', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  for (const store of [
+    { generatedWh: { corrupt: true } },
+    { solarEnergyState: { version: 2, sourceSn: source, generatedWh: 900000 } },
+    { solarEnergyState: { version: 1, sourceSn: 'BK61OTHERINSTALLATION', generatedWh: 900000 } },
+  ]) {
+    const original = structuredClone(store);
+    const { device } = harness(store, { meter_power: 123, measure_power: 900 });
+    await device.onInit();
+    await sample(device, now, 600);
+    assert.equal(device.values.measure_power, 600);
+    assert.equal(device.getReadingDiagnostics().measure_power.stale, false);
+    now += 60000; await sample(device, now, 0);
+    assert.equal(device.values.measure_power, 0);
+    now++;
+    await device.applyQuota({ powGetPvSum: 999 }, { ...context(now), sourceSn: 'BK61OTHERINSTALLATION' });
+    assert.equal(device.values.measure_power, 0, 'foreign source still cannot refresh a quarantined device');
+    await device.onUninit();
+    assert.equal(device.values.meter_power, 123);
+    assert.deepEqual(device.store, original);
+    assert.equal(device.storeWrites.length, 0);
+  }
+});
+
+test('solar startup/live SDK failures stay unknown and an overload boundary breaks only power integration', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness({ generatedWh: 1000 }, { meter_power: 1, measure_power: 900 });
+  const write = device.setCapabilityValue.bind(device); let fail = true;
+  device.setCapabilityValue = async (cap, value) => {
+    if (cap === 'measure_power' && fail) throw Error('synthetic SDK failure');
+    await write(cap, value);
+  };
+  await device.onInit();
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, true);
+  await sample(device, now);
+  assert.equal(device.getReadingDiagnostics().measure_power.applicationStatus, 'write_failed');
+  fail = false; await device.expireLiveReadings();
+  assert.equal(device.values.measure_power, null);
+  now += 60000;
+  await device.applyQuota({ powGetPvSum: 600 }, { ...context(now), accountingDiscontinuity: true });
+  assert.equal(device.values.meter_power, 1);
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, false);
+  now += 60000; await sample(device, now);
+  assert.equal(device.values.meter_power, 1.01);
+  await device.onUninit();
+});
+
+test('solar persisted and expired power becomes unknown independently of unrelated traffic and recovers at explicit zero', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device, timers } = harness({ generatedWh: 123000 }, { meter_power: 123, measure_power: 900 });
+  await device.onInit();
+  assert.equal(device.values.measure_power, null, 'persisted power is not a session receipt');
+  await sample(device, now, 600);
+  now += 180001;
+  await device.applyQuota({ cmsBattSoc: 80 }, context(now));
+  for (const tick of [...timers.values()]) tick();
+  await device.applyChain;
+  assert.equal(device.values.measure_power, null);
+  assert.equal(device.values.meter_power, 123, 'expiry cannot change cumulative energy');
+  now++;
+  await sample(device, now, 0);
+  assert.equal(device.values.measure_power, 0);
+  assert.equal(device.values.meter_power, 123, 'expired integration anchor cannot bridge a gap');
+  await device.onUninit();
+});
+
 test('solar startup retains the higher same-device projection instead of losing 4 Wh', async () => {
   const { device } = harness({ generatedWh: 123000 }, { meter_power: 123.004 });
   await device.onInit();
@@ -125,8 +208,8 @@ test('a new solar counter anchors at its first valid sample, not a missing start
     assert.equal(device.storeWrites.length, 0);
     await sample(device, 1000000, 0);
     assert.equal(device.values.meter_power, 0);
-    await sample(device, 1600000);
-    assert.equal(device.values.meter_power, 0.1);
+    await sample(device, 1060000);
+    assert.equal(device.values.meter_power, 0.01);
     await device.onUninit();
   }
 });
@@ -201,8 +284,8 @@ test('solar rejects a queued old-source sample and re-anchors after binding chan
   await device.applyQuota({ powGetPvSum: 600 }, { ...context(1700000), sourceSn: 'BK61OTHERINSTALLATION' });
   await sample(device, 1800000);
   assert.equal(device.values.meter_power, 1);
-  await sample(device, 2400000);
-  assert.equal(device.values.meter_power, 1.1);
+  await sample(device, 1860000);
+  assert.equal(device.values.meter_power, 1.01);
   await device.onUninit();
 });
 
@@ -216,20 +299,20 @@ test('solar does not backfill downtime, duplicate/out-of-order samples or excess
   assert.equal(device.values.meter_power, 1);
   await sample(device, 1600000);
   await sample(device, 1500000);
-  await sample(device, 2200000);
-  assert.equal(device.values.meter_power, 1.1);
+  await sample(device, 1660000);
+  assert.equal(device.values.meter_power, 1.01);
   await sample(device, 6200000);
-  assert.equal(device.values.meter_power, 1.1);
-  await sample(device, 6800000);
-  assert.equal(device.values.meter_power, 1.2);
+  assert.equal(device.values.meter_power, 1.01);
+  await sample(device, 6260000);
+  assert.equal(device.values.meter_power, 1.02);
   await sample(device, NaN);
   await sample(device, Number.MAX_VALUE);
   await sample(device, 6900000);
-  assert.equal(device.values.meter_power, 1.2);
+  assert.equal(device.values.meter_power, 1.02);
   await device.onUninit();
   await device.onInit();
   await sample(device, 1000000);
-  assert.equal(device.values.meter_power, 1.2);
+  assert.equal(device.values.meter_power, 1.02);
   await device.onUninit();
 });
 
@@ -266,12 +349,12 @@ test('solar uses queued receipt times even when a power capability write is dela
   t.mock.method(Date, 'now', () => now);
   const first = device.queueQuota({ powGetPvSum: 600 }, 'mqtt');
   await entered.promise;
-  now += 600000;
+  now += 60000;
   const second = device.queueQuota({ powGetPvSum: 600 }, 'mqtt');
-  now += 300000;
+  now += 30000;
   hold.resolve();
   await Promise.all([first, second]);
-  assert.equal(device.values.meter_power, 1.1);
+  assert.equal(device.values.meter_power, 1.01);
   await device.onUninit();
 });
 
@@ -371,7 +454,7 @@ test('solar drains slow checkpoints and newly accepted marks before allowing rei
   const checkpoint = device.energyCheckpoint.flush();
   await entered.promise;
   await sample(device, 1000000);
-  await sample(device, 1600000);
+  await sample(device, 1060000);
   let restarted = false;
   const stopping = device.onUninit();
   const starting = device.onInit().then(() => { restarted = true; });
@@ -380,9 +463,9 @@ test('solar drains slow checkpoints and newly accepted marks before allowing rei
   hold.resolve();
   await Promise.all([checkpoint, stopping, starting]);
   assert.equal(maxActive, 1);
-  assert.equal(device.values.meter_power, 1.104);
+  assert.equal(device.values.meter_power, 1.014);
   await device.onUninit();
-  assert.ok(Math.abs(device.store.generatedWh - 1104) < 1e-8);
+  assert.ok(Math.abs(device.store.generatedWh - 1014) < 1e-8);
 });
 
 test('solar teardown owns pending startup SDK and attribution work before a new lifecycle', async (t) => {
@@ -414,7 +497,7 @@ test('solar teardown owns pending startup SDK and attribution work before a new 
     hold.resolve();
     await Promise.all([oldStart, stopping, newStart]);
     assert.equal(device.settingsWrites.length, 1);
-    assert.equal(timers.size, 3);
+    assert.equal(timers.size, 4);
     await device.onUninit();
     assert.equal(timers.size, 0);
     delete OfflineClient.discover;

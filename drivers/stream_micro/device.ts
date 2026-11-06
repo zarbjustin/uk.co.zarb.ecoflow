@@ -5,6 +5,7 @@ import { perPvWatts } from '../../lib/streamMapping';
 import { integratePositivePower } from '../../lib/energyIntegration';
 import { toFiniteNumber } from '../../lib/quota';
 import { EnergyCheckpoint } from '../../lib/EnergyCheckpoint';
+import { STREAM_LIVE_TTL_MS } from '../../lib/StreamLiveReadings';
 
 function validTotal(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -40,6 +41,10 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
 
   protected getReadSn(): string {
     return this.getData().sn;
+  }
+
+  protected requiredLiveReadings(): readonly string[] {
+    return ['measure_power'];
   }
 
   protected async onReady(): Promise<void> {
@@ -82,6 +87,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
         await this.setStoreValue('generatedWh', generatedWh);
       });
       await this.ensureCapabilities(StreamMicroDevice.LIVE_POWER_CAPS);
+      await this.startLiveReadings(StreamMicroDevice.LIVE_POWER_CAPS);
       if (this.energyKnown) {
         this.energyCheckpoint.mark();
         await this.projectEnergy();
@@ -90,6 +96,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    if (context?.accountingDiscontinuity) this.lastTs = 0;
     if (sourceSn(this.getReadSn()) !== this.energySourceSn
       || (context?.sourceSn !== undefined && sourceSn(context.sourceSn) !== this.energySourceSn)) {
       this.lastTs = 0;
@@ -114,7 +121,7 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
       this.lastReceiptTs = now;
       if (!completePv) this.lastTs = 0;
       else if (!this.energyReadOnly) {
-        const dtMs = this.lastTs > 0 ? now - this.lastTs : 0;
+        const dtMs = this.lastTs > 0 && now - this.lastTs <= STREAM_LIVE_TTL_MS ? now - this.lastTs : 0;
         this.lastTs = now;
         const wasKnown = this.energyKnown;
         this.energyKnown = true;
@@ -126,40 +133,30 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
         if (!wasKnown) this.energyCheckpoint?.mark();
       }
     }
-    if (pv1 !== undefined && this.getCapabilityValue('stream_micro_power_pv1') !== pv1) {
-      await this.setCapabilityValue('stream_micro_power_pv1', pv1).catch(() => {});
-    }
-    if (pv1 !== undefined && this.getCapabilityValue('measure_power.pv1') !== pv1) {
-      await this.setCapabilityValue('measure_power.pv1', pv1).catch(() => {});
-    }
-    if (pv2 !== undefined && this.getCapabilityValue('stream_micro_power_pv2') !== pv2) {
-      await this.setCapabilityValue('stream_micro_power_pv2', pv2).catch(() => {});
-    }
-    if (pv2 !== undefined && this.getCapabilityValue('measure_power.pv2') !== pv2) {
-      await this.setCapabilityValue('measure_power.pv2', pv2).catch(() => {});
+    const at = context?.receivedAt ?? Date.now();
+    for (const [value, caps] of [
+      [pv1, ['stream_micro_power_pv1', 'measure_power.pv1']],
+      [pv2, ['stream_micro_power_pv2', 'measure_power.pv2']],
+    ] as const) {
+      if (value !== undefined) for (const cap of caps) await this.applyLiveReading(cap, value, at);
     }
 
     const grid = toFiniteNumber(quota.gridConnectionPower);
-    if (grid !== undefined && this.getCapabilityValue('stream_micro_power_grid_feed') !== grid) {
-      await this.setCapabilityValue('stream_micro_power_grid_feed', grid).catch(() => {});
-    }
-    if (grid !== undefined && this.getCapabilityValue('measure_power.grid') !== grid) {
-      await this.setCapabilityValue('measure_power.grid', grid).catch(() => {});
+    if (grid !== undefined) {
+      await this.applyLiveReading('stream_micro_power_grid_feed', grid, at);
+      await this.applyLiveReading('measure_power.grid', grid, at);
     }
 
     if (pv1 !== undefined || pv2 !== undefined) {
       const power = completePv ? Math.max(0, pv1 + pv2) : null;
-      if (this.getCapabilityValue('stream_micro_power_solar') !== power) {
-        await this.setCapabilityValue('stream_micro_power_solar', power).catch((e) => this.error('stream_micro_power_solar', e));
-      }
-      if (this.getCapabilityValue('measure_power') !== power) {
-        await this.setCapabilityValue('measure_power', power).catch((e) => this.error('measure_power', e));
-      }
+      await this.applyLiveReading('stream_micro_power_solar', power, at);
+      await this.applyLiveReading('measure_power', power, at);
       if (!this.energyReadOnly && this.energyKnown) await this.projectEnergy();
     }
   }
 
   protected async onTeardown(): Promise<void> {
+    this.stopLiveReadings();
     this.lastTs = 0;
     this.lastReceiptTs = 0;
     await this.energyCheckpoint?.close();
