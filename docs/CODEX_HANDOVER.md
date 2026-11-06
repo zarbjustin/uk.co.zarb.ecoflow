@@ -2,9 +2,15 @@
 
 ## 6 November 2026 - bounded offline bug bash
 
+Reviewed source commit: `bc184ab190d130c393d8012353d4b570a8449699`.
+[Exact-commit CI run 381](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42138726870)
+**passed**, including audit, at 00:43:30 UTC. This final checkpoint commit only
+updates documentation; its own final SHA/CI and lease release/knowledge refresh
+are recorded in the external receipt without another Git documentation loop.
+
 Read [BUG_BASH_2026-11-06.md](BUG_BASH_2026-11-06.md) before older checkpoints.
 Baseline diagnostic-branch HEAD was `d21ffa9b39f3d2462caa2584c6bf9a92a3bbf896`,
-with clean tracked/untracked state and no remote divergence. Candidate fixes
+with clean tracked/untracked state and no remote divergence. Reviewed fixes
 protect cached REST/MQTT reconciliation, coherent Energy restart, whole-system PV
 scope, and STREAM 5000 delivery age/epochs/retired work. Final local suite:
 **1,405 passing**, lint, release boundaries, diff check and pinned Homey 4.5.3

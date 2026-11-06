@@ -2,6 +2,11 @@
 
 ## 6 November 2026 - offline source candidate, not deployment
 
+Reviewed source `bc184ab190d130c393d8012353d4b570a8449699` was normally pushed.
+[Exact-commit CI run 381](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42138726870)
+passed all validation steps, including audit. Final documentation-only HEAD/CI
+and lease/knowledge-refresh outcomes belong to the external receipt below.
+
 [Bug-bash report](BUG_BASH_2026-11-06.md): fresh REST reconciliation, coherent
 original STREAM Energy checkpoint, system-only PV authority and STREAM 5000
 live-delivery/epoch fencing; **1,405 tests pass**, lint/release/diff checks and
