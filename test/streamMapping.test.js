@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { mapStreamQuota } = require('../.homeybuild/lib/streamMapping.js');
+const { mapStreamQuota, solarPowerWatts } = require('../.homeybuild/lib/streamMapping.js');
 
 // Real STREAM main-SN quota sample (whole-home aggregates populated).
 const MAIN = {
@@ -80,6 +80,21 @@ test('solar is per-unit (own strings) for unit scope, system total for system sc
   assert.strictEqual(mapStreamQuota(q)['measure_power.pv'], 845);
   // Unit: sums the unit's own strings, ignoring the system total.
   assert.strictEqual(mapStreamQuota(q, 'unit')['measure_power.pv'], 369);
+});
+
+test('partial or unit-only PV reports cannot replace system generation or feed solar Energy', () => {
+  for (const quota of [
+    { powGetPv: 410 },
+    { powGetPv: 410, powGetPv2: 600, powGetPv3: 0, powGetPv4: 0 },
+    { plugInInfoPvAmp: 2, plugInInfoPvVol: 40 },
+    { powGetPvSum: null, powGetPv: 410 },
+  ]) {
+    assert.strictEqual(mapStreamQuota(quota)['measure_power.pv'], undefined);
+    assert.strictEqual(solarPowerWatts(quota), undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ powGetPv: 410 })['measure_power.pv1'], 410);
+  assert.strictEqual(mapStreamQuota({ powGetPvSum: 0, powGetPv: 410 })['measure_power.pv'], 0);
+  assert.strictEqual(solarPowerWatts({ powGetPvSum: '1010', powGetPv: 410 }), 1010);
 });
 
 test('self_heating is mapped only when the device reports a heating field', () => {

@@ -258,12 +258,142 @@ async function harness(DeviceClass, savedStore = {}, sn = captures.pair.unit_a, 
     device,
     intervals,
     resources: () => ({ timers: timers.size, subscriptions: subscriptions.size }),
-    emit: async (payload) => {
-      handler(payload, `/app/device/property/${sn}`);
+    emit: async (payload, ...delivery) => {
+      const metadata = delivery.length ? delivery[0] : {
+        receivedAt: Date.now(), receivedMonoMs: performance.now(),
+        retained: false, duplicate: false, connectionEpoch: 1,
+      };
+      handler(payload, `/app/device/property/${sn}`, metadata);
       await device.applyChain;
     },
   };
 }
+
+test('retained and duplicate STREAM 5000 frames cannot refresh readings or integrate Energy', async t => {
+    let now = 100000;
+    t.mock.method(Date, 'now', () => now);
+    const h = await harness(classes.Stream5000UnitDevice);
+    const payload = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+    const delivery = () => ({ receivedAt: now, receivedMonoMs: now, retained: false, duplicate: false, connectionEpoch: 1 });
+    await h.emit(payload, delivery());
+    const before = h.device.getEnergyDiagnostics();
+    const powerAt = h.device.getAppliedReadingAt('measure_power');
+    assert.equal(powerAt, now);
+    for (const flags of [{ retained: true }, { duplicate: true }]) {
+      now += 60000;
+      await h.emit(payload, { ...delivery(), ...flags });
+      assert.equal(h.device.getAppliedReadingAt('measure_power'), powerAt);
+      assert.equal(h.device.getEnergyDiagnostics().samples, before.samples);
+      assert.equal(h.device.getEnergyDiagnostics().chargedKWh, before.chargedKWh);
+      assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, before.dischargedKWh);
+    }
+    await h.device.onUninit();
+  });
+
+test('STREAM 5000 delivery age is not renewed by a delayed subscriber callback', async t => {
+    t.mock.method(Date, 'now', () => 160000);
+    const h = await harness(classes.Stream5000UnitDevice);
+    const payload = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+    await h.emit(payload, { receivedAt: 100000, receivedMonoMs: 100000, retained: false, duplicate: false, connectionEpoch: 1 });
+    assert.equal(h.device.getAppliedReadingAt('measure_power'), 100000);
+    assert.equal(h.device.getReadingDiagnostics().measure_power.ageSec, 60);
+    await h.device.onUninit();
+  });
+
+test('STREAM 5000 socket epochs clear session evidence and re-anchor Energy without backfill', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000UnitDevice);
+  const power = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+  const config = frame(group(30, Buffer.concat([varint(8), varint(1), varint(16), varint(40)])));
+  const delivery = epoch => ({ receivedAt: now, receivedMonoMs: now, retained: false, duplicate: false, connectionEpoch: epoch });
+  await h.emit(power, delivery(1));
+  await h.emit(config, delivery(1));
+  const before = h.device.getEnergyDiagnostics();
+  now += 60000;
+  await h.emit(frame(group(11, Buffer.concat([varint(40), varint(61)]))), delivery(2));
+  assert.equal(h.device.getAppliedReadingAt('measure_power'), null);
+  assert.equal(h.device.values.stream_5000_backup_reserve, null);
+  await assert.rejects(h.device.configurationReserveEnabled(), /unavailable/);
+  await h.emit(power, delivery(2));
+  assert.equal(h.device.getEnergyDiagnostics().chargedKWh, before.chargedKWh);
+  assert.equal(h.device.getEnergyDiagnostics().dischargedKWh, before.dischargedKWh);
+  const samples = h.device.getEnergyDiagnostics().samples;
+  now += 1000;
+  await h.emit(power, delivery(1));
+  assert.equal(h.device.getEnergyDiagnostics().samples, samples, 'retired socket callbacks are rejected');
+  await h.device.onUninit();
+});
+
+test('invalid STREAM 5000 delivery metadata cannot fabricate a fresh reading', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await harness(classes.Stream5000UnitDevice);
+  const payload = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+  const valid = { receivedAt: 100000, receivedMonoMs: 100000, retained: false, duplicate: false, connectionEpoch: 1 };
+  for (const bad of [{ receivedAt: null }, { receivedAt: 100001 }, { receivedAt: NaN },
+    { receivedMonoMs: -1 }, { retained: undefined }, { connectionEpoch: 0 }, { connectionEpoch: 1.5 }]) {
+    await h.emit(payload, { ...valid, ...bad });
+    assert.equal(h.device.getAppliedReadingAt('measure_power'), null);
+    assert.equal(h.device.getEnergyDiagnostics().samples, 0);
+  }
+  await h.device.onUninit();
+});
+
+test('missing transport metadata cannot refresh STREAM 5000 evidence or Energy', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000UnitDevice);
+  const payload = frame(Buffer.from(captures.pair.frames[2].pdata_hex, 'hex'));
+  await h.emit(payload);
+  const receipt = h.device.getAppliedReadingAt('measure_power');
+  now += 60000;
+  const energy = h.device.getEnergyDiagnostics();
+  for (const missing of [undefined, null]) {
+    await h.emit(payload, missing);
+    assert.equal(h.device.getAppliedReadingAt('measure_power'), receipt);
+    assert.deepEqual(h.device.getEnergyDiagnostics(), energy);
+  }
+  await h.device.onUninit();
+});
+
+test('accessory capability creation crossing a reset cannot publish retired numeric readings', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await harness(classes.Stream5000UnitDevice);
+  let release;
+  let started;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const entered = new Promise(resolve => { started = resolve; });
+  const add = h.device.addCapability.bind(h.device);
+  h.device.addCapability = async key => { started(); await blocked; await add(key); };
+  const writes = [];
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async (key, value) => { writes.push({ key, value }); await write(key, value); };
+  const queued = h.device.queueAccessories({ acSocketW: 20 }, 100000);
+  await entered;
+  const reset = h.device.resetDeliverySession();
+  release();
+  await queued; await reset;
+  assert.equal(writes.some(item => item.key === 'stream_5000_socket_power' && item.value === 20), false);
+  assert.equal(h.device.getAppliedReadingAt('stream_5000_socket_power'), null);
+  await h.device.onUninit();
+});
+
+test('peer qualification survives socket epochs and never re-admits aggregate power as unit power', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const pv = require('./fixtures/stream5000PvResearch.json');
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, pv.unit_b);
+  const delivery = epoch => ({ receivedAt: 100000, receivedMonoMs: 100000,
+    retained: false, duplicate: false, connectionEpoch: epoch });
+  await h.emit(frame(Buffer.from(pv.frames[2].pdata_hex, 'hex')), delivery(1));
+  assert.equal(h.device.values.stream_unit_power_battery_flow, null);
+  await h.emit(Buffer.alloc(0), delivery(2));
+  const mapped = h.device.mapTelemetry({ battW: -900 });
+  await h.device.queueTelemetry(h.device.capabilityValuesForRole(mapped), 100000, true);
+  assert.equal(h.device.values.stream_unit_power_battery_flow, null);
+  assert.equal(h.device.values.battery_charging_state, null);
+  assert.equal(h.device.getAppliedReadingAt('stream_unit_power_battery_flow'), null);
+  await h.device.onUninit();
+});
 
 test('physical expiry timer clears watts/state within five seconds without running connection recovery', async (t) => {
   let now = 100000;
@@ -1382,7 +1512,8 @@ test('a late-joining ES21 aggregate waits through unrelated deltas then accepts 
     };
   };
   const broadcast = async payload => {
-    for (const callback of callbacks) callback(payload, `/app/device/property/${sn}`);
+    const delivery = { receivedAt: now, receivedMonoMs: performance.now(), retained: false, duplicate: false, connectionEpoch: 1 };
+    for (const callback of callbacks) callback(payload, `/app/device/property/${sn}`, delivery);
     await Promise.all([unit.device.applyChain, system?.device.applyChain]);
   };
   const ownSocZero = frame(group(54, group(1, Buffer.concat([group(1, Buffer.from(sn)), varint(16), varint(0)]))));

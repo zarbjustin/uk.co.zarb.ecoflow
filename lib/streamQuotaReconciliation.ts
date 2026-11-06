@@ -9,12 +9,12 @@ const groups = [
   ['soh', 'realSoh', 'cmsBattSoh', 'bmsBattSoh'],
   ['temp', 'maxCellTemp'],
   ['bmsHeatingStatus', 'heatingStatus', 'selfHeating', 'heatStatus', 'sysHeatStatus'],
-  // A partial PV update can affect both a string and the fallback total.
-  ['powGetPvSum', ...[1, 2, 3, 4].flatMap((i) => [
+  // Unit strings form a derived unit total, not the independent system total.
+  [1, 2, 3, 4].flatMap((i) => [
     i === 1 ? 'powGetPv' : `powGetPv${i}`,
     i === 1 ? 'plugInInfoPvAmp' : `plugInInfoPv${i}Amp`,
     i === 1 ? 'plugInInfoPvVol' : `plugInInfoPv${i}Vol`,
-  ])],
+  ]),
 ];
 
 function group(key: string): string {

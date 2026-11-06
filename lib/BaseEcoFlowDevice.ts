@@ -389,7 +389,9 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.pendingRestFields = newerFields;
     try {
       this.refreshClientCredentials();
-      const quota = await this.client.getQuotaAll(this.getReadSn());
+      // Cached/shared in-flight replies can predate MQTT received before this
+      // poll's revision guard started, falsely rolling a counter back.
+      const quota = await this.client.getQuotaAll(this.getReadSn(), { fresh: true });
       if (this.stopping) return;
       this.consecutiveUnsupportedApiFailures = 0;
       // A revision detects newer MQTT even within the same millisecond. Check

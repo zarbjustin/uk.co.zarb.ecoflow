@@ -169,6 +169,31 @@ class StreamQueueDevice extends QueueDevice {
   reconcileRestQuota(quota, fields) { return reconcileStreamQuota(quota, fields); }
 }
 
+test('poll after newer MQTT cannot replay a shared cached REST counter or power value', async t => {
+  const { EcoFlowClient } = require('../.homeybuild/lib/EcoFlowClient');
+  EcoFlowClient.responseCache.clear();
+  t.after(() => EcoFlowClient.responseCache.clear());
+  t.mock.method(Date, 'now', () => 100000);
+  const device = new StreamQueueDevice();
+  await device.onInit();
+  device.applied = [];
+  device.refreshClientCredentials = () => {};
+  const client = new EcoFlowClient({ accessKey: 'cache-regression', secretKey: 'synthetic' });
+  let reads = 0;
+  client.request = async () => (++reads === 1
+    ? { accuChgEnergy: 1000, powGetBpCms: 600 }
+    : { accuChgEnergy: 1200, powGetBpCms: -600 });
+  device.client = client;
+  await client.getQuotaAll(device.getReadSn());
+  device.emit({ accuChgEnergy: 1200, powGetBpCms: -600 });
+  await device.applyChain;
+  await device.poll();
+  assert.deepEqual(device.applied.map(s => s.quota.accuChgEnergy), [1200, 1200]);
+  assert.ok(device.applied.every(s => s.quota.powGetBpCms === -600));
+  assert.equal(reads, 2, 'an accounting poll must obtain its own current response');
+  await device.onUninit();
+});
+
 test('original STREAM temperature MQTT cannot starve repeated REST SOC/power polls', async t => {
   t.mock.method(Date, 'now', () => 100000);
   const device = new StreamQueueDevice(); await device.onInit(); device.applied = [];
@@ -210,11 +235,30 @@ test('original reconciliation withholds aliases and complete derived groups with
     powGetSysGrid: 50, cmsBattSoc: 80 };
   const result = reconcileStreamQuota(rest, new Set(['maxCellTemp', 'bmsBattSoh', 'plugInInfoPvAmp',
     'energyStrategyOperateMode.operateScheduledOpen', 'cmsBattSoc']));
-  assert.deepEqual(result, { powGetSysGrid: 50 });
-  assert.equal(mapStreamQuota(result)['measure_power.pv'], undefined);
+  assert.deepEqual(result, { powGetPvSum: 300, powGetSysGrid: 50 });
+  assert.equal(mapStreamQuota(result)['measure_power.pv'], 300);
   assert.equal(mapStreamQuota(result).operating_mode, undefined);
   assert.equal(rest.cmsBattSoc, 80, 'shared cached reply remains unchanged');
   assert.deepEqual(reconcileStreamQuota({ cmsBattSoc: 30 }, new Set(['cmsBattSoc'])), {});
+});
+
+test('unit-only MQTT cannot starve REST system PV, but newer system PV remains authoritative', async () => {
+  const device = new StreamQueueDevice(); await device.onInit(); device.applied = [];
+  for (let n = 0; n < 3; n += 1) {
+    const reply = deferred(); device.client.getQuotaAll = () => reply.promise;
+    const poll = device.poll();
+    device.emit({ powGetPv: 400 });
+    reply.resolve({ powGetPvSum: 1200, powGetPv: 300 });
+    await poll; await device.applyChain;
+    assert.deepEqual(device.applied.at(-1).quota, { powGetPvSum: 1200 });
+  }
+  const reply = deferred(); device.client.getQuotaAll = () => reply.promise;
+  const poll = device.poll();
+  device.emit({ powGetPvSum: 0 });
+  reply.resolve({ powGetPvSum: 1200 });
+  await poll; await device.applyChain;
+  assert.deepEqual(device.applied.at(-1).quota, { powGetPvSum: 0 });
+  await device.onUninit();
 });
 
 test('obsolete REST zero and invalid MQTT fields do not revive older readings', async () => {

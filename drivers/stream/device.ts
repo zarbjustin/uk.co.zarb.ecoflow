@@ -35,6 +35,7 @@ import {
 
 const HISTORY_INTERVAL_MS = 30 * 60 * 1000;
 const SOLAR_FORECAST_INTERVAL_MS = 3 * 60 * 60 * 1000;
+const BATTERY_ENERGY_STORE = 'batteryEnergyCheckpoint';
 type ControlWaitResolver = () => void;
 
 module.exports = class StreamDevice extends BaseEcoFlowDevice {
@@ -450,7 +451,6 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   protected async beforeFirstPoll(): Promise<void> {
     const generation = this.controlGeneration;
     this.bindingAttempted = true;
-    this.energySourceSn = (this.getStoreValue('energySourceSn') as string) || this.mainSn;
     this.aggregateBound = false;
     if (this.client && !this.monitoringEnabled && !this.monitoringRollbackPending) {
       try {
@@ -644,16 +644,23 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
       ? this.getStoreValue('monitoringRollbackPending') === true : state?.mode !== 'original');
     this.resetMonitoringTriggers();
     this.mainSn = (this.getStoreValue('mainSn') as string) || this.getData().sn;
+    const checkpoint = this.getStoreValue(BATTERY_ENERGY_STORE);
+    const validWh = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    const coherent = checkpoint?.version === 1 && validWh(checkpoint.chargedWh) && validWh(checkpoint.dischargedWh)
+      && (checkpoint.chargedRawWh === null || validWh(checkpoint.chargedRawWh))
+      && (checkpoint.dischargedRawWh === null || validWh(checkpoint.dischargedRawWh))
+      && typeof checkpoint.countersAvailable === 'boolean' && typeof checkpoint.energySourceSn === 'string';
     const storedWh = (key: string) => {
-      const value = toFiniteNumber(this.getStoreValue(key));
+      const value = toFiniteNumber(coherent ? checkpoint[key] : this.getStoreValue(key));
       return value !== undefined && value >= 0 ? value : undefined;
     };
     this.chargedWh = storedWh('chargedWh') ?? 0;
     this.dischargedWh = storedWh('dischargedWh') ?? 0;
     this.chargedRawWh = storedWh('chargedRawWh');
     this.dischargedRawWh = storedWh('dischargedRawWh');
-    this.countersAvailable = this.getStoreValue('countersAvailable') === true
+    this.countersAvailable = (coherent ? checkpoint.countersAvailable : this.getStoreValue('countersAvailable')) === true
       || this.chargedRawWh !== undefined || this.dischargedRawWh !== undefined;
+    this.energySourceSn = (coherent ? checkpoint.energySourceSn : this.getStoreValue('energySourceSn')) || this.mainSn;
     this.energyCheckpoint = new EnergyCheckpoint(this.homey, () => this.persistBatteryStore());
 
     this.registerControlListeners();
@@ -1119,13 +1126,17 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private async persistBatteryStore(): Promise<void> {
     // Snapshot before awaiting so totals and raw baselines describe one sample.
     const snapshot = {
+      version: 1,
       chargedWh: this.chargedWh,
       dischargedWh: this.dischargedWh,
-      chargedRawWh: this.chargedRawWh,
-      dischargedRawWh: this.dischargedRawWh,
+      chargedRawWh: this.chargedRawWh ?? null,
+      dischargedRawWh: this.dischargedRawWh ?? null,
       countersAvailable: this.countersAvailable,
       energySourceSn: this.energySourceSn,
     };
+    // One authoritative record prevents restart from combining a newer total
+    // with an older raw baseline if a legacy compatibility write is interrupted.
+    await this.setStoreValue(BATTERY_ENERGY_STORE, snapshot);
     await this.setStoreValue('chargedWh', snapshot.chargedWh);
     await this.setStoreValue('dischargedWh', snapshot.dischargedWh);
     await this.setStoreValue('chargedRawWh', snapshot.chargedRawWh ?? null);

@@ -1,5 +1,27 @@
 # Codex cross-machine handover
 
+## 6 November 2026 - bounded offline bug bash
+
+Read [BUG_BASH_2026-11-06.md](BUG_BASH_2026-11-06.md) before older checkpoints.
+Baseline diagnostic-branch HEAD was `d21ffa9b39f3d2462caa2584c6bf9a92a3bbf896`,
+with clean tracked/untracked state and no remote divergence. Candidate fixes
+protect cached REST/MQTT reconciliation, coherent Energy restart, whole-system PV
+scope, and STREAM 5000 delivery age/epochs/retired work. Final local suite:
+**1,405 passing**, lint, release boundaries, diff check and pinned Homey 4.5.3
+verified validation passed. Final audit retry hit registry infrastructure errors;
+exact-commit CI is independent and recorded with the final external receipt.
+
+GPT-6.1 Sol and GPT-6 Astra independently reviewed public source; Opus 5.5 was
+unavailable, not substituted. Private-history semantic review was not possible
+without a trusted local process. Unbounded SDK telemetry backlog remains open.
+The report records the final-review scope-latch disagreement and its source-led
+resolution. Full three-model/private-history/hardware acceptance is not claimed.
+
+Resume from the actual checkout and
+`../work/output/copilot-bug-bash-2026-11-06/FINAL_RECEIPT.md`, not hidden chat memory.
+Installed Homey, Mainline/master, Store Test/Live and automation were untouched.
+Older deployed-state claims below are dated history, not freshly verified state.
+
 ## GitHub CI follow-up — 2 November 2026 22:36 GMT
 
 Both initial source commits were pushed and branch tips verified: HomeyPro

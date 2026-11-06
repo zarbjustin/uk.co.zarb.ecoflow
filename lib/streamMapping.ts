@@ -43,11 +43,9 @@ function perPvSum(q: Quota): number | undefined {
   return any ? total : undefined;
 }
 
-/** Sum of available PV watts, preferring the firmware's system total. */
+/** Only the firmware total establishes whole-system solar generation. */
 function pvSum(q: Quota): number | undefined {
-  const direct = num(q, ['powGetPvSum']);
-  if (direct !== undefined) return direct;
-  return perPvSum(q);
+  return num(q, ['powGetPvSum']);
 }
 
 /** Total solar generation in Watts (for the dedicated solar device). */

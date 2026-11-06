@@ -400,6 +400,41 @@ test('checkpoint captures matching totals and raw baselines before an asynchrono
   assert.equal(device.store.chargedRawWh, 1100);
 });
 
+test('restart after an interrupted legacy mirror cannot recount a saved counter increment', async () => {
+  const device = await harness({ chargedWh: 100, dischargedWh: 200, chargedRawWh: 1000,
+    dischargedRawWh: 2000, countersAvailable: true });
+  await device.applyQuota({ accuChgEnergy: 1010, accuDsgEnergy: 2020 });
+  const write = device.setStoreValue.bind(device);
+  device.setStoreValue = async (key, value) => {
+    if (key === 'chargedRawWh') throw new Error('synthetic interrupted write');
+    await write(key, value);
+  };
+  await assert.rejects(device.persistBatteryStore(), /interrupted write/);
+  const restarted = await harness(structuredClone(device.store));
+  await restarted.applyQuota({ accuChgEnergy: 1010, accuDsgEnergy: 2020 });
+  assert.equal(restarted.values['meter_power.charged'], 0.11);
+  assert.equal(restarted.values['meter_power.discharged'], 0.22);
+  device.setStoreValue = write;
+  await device.onTeardown();
+  await restarted.onTeardown();
+});
+
+test('failed coherent checkpoint cannot partially advance compatibility counters', async () => {
+  const saved = { chargedWh: 100, dischargedWh: 200, chargedRawWh: 1000,
+    dischargedRawWh: 2000, countersAvailable: true, energySourceSn: 'BK61TEST00000001' };
+  const device = await harness(saved);
+  await device.applyQuota({ accuChgEnergy: 1010, accuDsgEnergy: 2020 });
+  const write = device.setStoreValue.bind(device);
+  device.setStoreValue = async (key, value) => {
+    if (key === 'batteryEnergyCheckpoint') throw new Error('synthetic checkpoint rejection');
+    await write(key, value);
+  };
+  await assert.rejects(device.persistBatteryStore(), /checkpoint rejection/);
+  for (const [key, value] of Object.entries(saved)) assert.equal(device.store[key], value);
+  device.setStoreValue = write;
+  await device.onTeardown();
+});
+
 test('BK counter authority prevents power double counting, including partial counter frames', async (t) => {
   let now = 100000;
   t.mock.method(Date, 'now', () => now);

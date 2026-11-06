@@ -1,5 +1,20 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 6 November 2026 - offline source candidate, not deployment
+
+[Bug-bash report](BUG_BASH_2026-11-06.md): fresh REST reconciliation, coherent
+original STREAM Energy checkpoint, system-only PV authority and STREAM 5000
+live-delivery/epoch fencing; **1,405 tests pass**, lint/release/diff checks and
+pinned Homey verified validation pass. Final audit retries encountered registry
+infrastructure failures. Exact source/CI synchronization belongs to the external
+`../work/output/copilot-bug-bash-2026-11-06/FINAL_RECEIPT.md`.
+
+Two actual independent models participated (`gpt-6.1-sol`, `gpt-6-astra`);
+Opus 5.5 and trusted-local private-history semantic coverage are missing.
+SDK backlog remains unfixed; hardware/native-upgrade/soak gates remain open.
+No installation, Test/Live publication, Mainline/master merge, settings, Flow,
+device identity/history change or hardware/control operation was performed.
+
 ## GitHub CI follow-up — 2 November 2026 22:36 GMT
 
 Both initial source commits were pushed and branch tips verified: HomeyPro
