@@ -65,3 +65,24 @@ test('concurrent flushes cannot overlap writes and retain marks arriving during 
   assert.equal(maxActive, 1);
   assert.equal(checkpoint.diagnostics().pending, false);
 });
+
+test('closing a failed checkpoint retains dirty state without a retired retry timer', async () => {
+  let writes = 0;
+  const { checkpoint, timers } = harness(async () => {
+    writes += 1;
+    if (writes === 1) throw new Error('store unavailable');
+  });
+  checkpoint.mark();
+  const retiredTimer = [...timers.values()][0];
+  await assert.rejects(checkpoint.close(), /store unavailable/);
+  assert.equal(timers.size, 0);
+  assert.equal(checkpoint.diagnostics().pending, true);
+  retiredTimer();
+  checkpoint.mark();
+  await Promise.resolve();
+  assert.equal(writes, 1);
+  await checkpoint.close();
+  assert.equal(writes, 2);
+  assert.equal(checkpoint.diagnostics().pending, false);
+  assert.equal(timers.size, 0);
+});

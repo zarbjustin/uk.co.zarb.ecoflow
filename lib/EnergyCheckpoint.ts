@@ -8,6 +8,7 @@ export class EnergyCheckpoint {
   private dirty = false;
   private inFlight: Promise<void> | null = null;
   private failures = 0;
+  private closed = false;
   private homey: any;
   private persist: () => Promise<void>;
 
@@ -17,14 +18,16 @@ export class EnergyCheckpoint {
   }
 
   mark(): void {
+    if (this.closed) return;
     this.dirty = true;
     this.schedule();
   }
 
   private schedule(): void {
-    if (this.timer) return;
+    if (this.timer || this.closed) return;
     this.timer = this.homey.setTimeout(() => {
       this.timer = null;
+      if (this.closed) return;
       this.flush().catch(() => {});
     }, CHECKPOINT_MS);
   }
@@ -50,6 +53,12 @@ export class EnergyCheckpoint {
       this.inFlight = null;
     });
     await this.inFlight;
+  }
+
+  /** Drain accepted work without leaving a retry owned by a retired device. */
+  async close(): Promise<void> {
+    this.closed = true;
+    await this.flush();
   }
 
   diagnostics(): { pending: boolean; writing: boolean; failures: number } {
