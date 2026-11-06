@@ -1,4 +1,9 @@
 {
+  "1.11.21": {
+    "en": "Improves counter continuity, startup recovery and stale-reading handling across STREAM batteries, meters, solar, microinverters and sockets. Preserves custom meter titles and improves diagnostics and pairing feedback. Community Test: ambiguous native-counter resets can undercount; queue overload reports accounting gaps. Hardware qualification remains in progress.",
+    "de": "Verbessert Zählerkontinuität, Wiederanlauf und die Behandlung veralteter Messwerte bei STREAM-Batterien, Zählern, Solar, Mikro-Wechselrichtern und Steckdosen. Eigene Zählertitel bleiben erhalten; Diagnosen und Rückmeldungen beim Hinzufügen wurden verbessert. Community-Test: Unklare Zählerrücksetzungen können zu Unterzählung führen; Überlast meldet Lücken in der Energieberechnung. Hardwareprüfung läuft weiter.",
+    "nl": "Verbetert tellercontinuïteit, herstel na opstarten en verwerking van verouderde metingen voor STREAM-batterijen, meters, zonnepanelen, micro-omvormers en stopcontacten. Behoudt eigen metertitels en verbetert diagnostiek en meldingen tijdens koppelen. Communitytest: onduidelijke tellerresets kunnen te weinig tellen; overbelasting meldt hiaten in de energieberekening. Hardwarevalidatie loopt nog."
+  },
   "1.11.18": {
     "en": "Improves Dual CT support diagnostics by separating shared socket traffic, routing rejections and broker ping responses from meter readings. No changes to accounting, freshness limits or device commands.",
     "de": "Verbessert Dual-CT-Supportdiagnosen durch getrennte Zähler für Socket-Verkehr, Routing-Ablehnungen und Broker-Ping-Antworten. Keine Änderung der Energieberechnung, Aktualitätsgrenzen oder Gerätebefehle.",

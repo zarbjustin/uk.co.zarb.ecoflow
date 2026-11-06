@@ -1,5 +1,49 @@
 # Codex cross-machine handover
 
+## 6 November 2026 — owner authorised cloud backup and scoped Test 1.11.21
+
+[Release scope](TEST_1_11_21_RELEASE_2026-11-06.md): owner chose cloud backup and
+Test publication without installing this candidate on Justin's Homey Pro.
+Version-only 1.11.21 wraps reviewed 2938c522 runtime; previous repairs retained.
+1510 local tests/lint/structural checks pass. Exact final CI, archive, backup and
+store receipts are recorded externally at
+../work/output/cloud-backup-test-2026-11-06/FINAL_RECEIPT.md.
+This is Test authority only; full public NO-GO and physical gates stay open.
+Live/Mainline and installed Development/battery/AI/disabled Homey execution
+remain unchanged. Cloud backup excludes developer-installed apps and does not
+close Development recovery/store gaps. No USB interruption or tester contact.
+
+
+## 6 November 2026 — recovery coverage reviewed; USB backup proposal only
+
+[Recovery plan](DEVELOPMENT_RECOVERY_PLAN_2026-11-06.md) checks official coverage:
+cloud backups exclude developer-installed apps; fresh cloud backup alone is not
+full Development recovery proof. Official full USB backup includes apps/system,
+but needs whole-hub power-off/Recovery Mode and owner-assisted physical access.
+No household query, backup, restart, install or publication performed here.
+Current read-only interfaces do not expose private device stores. Prior binary
+lacks ambiguity/history flags; no automatic downgrade. Next: owner approval for
+an attended full USB-backup window and read-only return-to-service checks;
+installation remains separately gated. Native AI and both disabled Homey
+execution switches remain untouched. External receipt:
+../work/output/release-recovery-review-2026-11-06/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 18:42 UTC — read-only release preflight; installation held
+
+[Preflight report](RELEASE_PREFLIGHT_2026-11-06.md) records two fresh reads:
+15 EcoFlow identities, 101 Flows, 1,217 Insights and ten nondecreasing numeric
+counters; definitions/settings/Energy and disabled Homey execution unchanged.
+Native AI subscription evidence and bounded idle/runner checks passed.
+No install/restart/control/settings/Flow/Energy/publication or external contact.
+Automatic backups enabled, last successful 02:39 UTC predates current delivery;
+current recovery coverage and precise persisted-store baseline remain unproven.
+Old archive verified but lacks new ambiguity handling; no automatic downgrade.
+Installation NOT cleared/authorised. Exact candidate remains source 2938c522;
+resolve backup/recovery prerequisites before requesting installation approval.
+Private evidence/receipt: ../work/output/release-preflight-20261106T184130Z/.
+
+
 ## 6 November 2026 — release-readiness engineering programme; no deployment
 
 Read [the programme report](RELEASE_READINESS_PROGRAMME_2026-11-06.md) and
