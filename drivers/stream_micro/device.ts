@@ -148,9 +148,15 @@ module.exports = class StreamMicroDevice extends BaseEcoFlowDevice {
     }
 
     if (pv1 !== undefined || pv2 !== undefined) {
-      const power = completePv ? Math.max(0, pv1 + pv2) : null;
-      await this.applyLiveReading('stream_micro_power_solar', power, at);
-      await this.applyLiveReading('measure_power', power, at);
+      if (completePv) {
+        const power = Math.max(0, pv1 + pv2);
+        await this.applyLiveReading('stream_micro_power_solar', power, at);
+        await this.applyLiveReading('measure_power', power, at);
+      } else {
+        // A sparse update is not a new total. Keep the last complete receipt's
+        // original deadline; never refresh it or use it for missing energy intervals.
+        await this.expireLiveReadings();
+      }
       if (!this.energyReadOnly && this.energyKnown) await this.projectEnergy();
     }
   }

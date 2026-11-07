@@ -112,3 +112,11 @@ test('changing a display name does not change source binding or inventory author
  h.inventory.contributors[0].name='After';const row=await h.confirm(review);
  assert.equal(row.store.dualCtEnergySourceBinding,expected.store.dualCtEnergySourceBinding);assert.doesNotMatch(JSON.stringify(row),/Before|After/);
 });
+
+test('unreviewed SDK meter roles block pairing before issuing consent and edits invalidate confirmation', async () => {
+  const h = harness(); h.inventory.roleReviewRequired = true; h.inventory.complete = false;
+  await assert.rejects(h.workflow.prepare(), /energy_role_review_required/);
+  h.inventory.roleReviewRequired = false; h.inventory.complete = true;
+  const review = await h.workflow.prepare(); h.inventory.roleReviewRequired = true; h.inventory.complete = false;
+  await assert.rejects(h.confirm(review), /energy_role_review_required/);
+});

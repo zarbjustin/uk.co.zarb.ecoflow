@@ -24,6 +24,7 @@
     "saved": "Aanmelding opgeslagen. Apparaten verbinden opnieuw; controleer hun metingen. Apparaatidentiteiten en Energy-toestemmingen zijn behouden."
   },
   "dual_ct_energy": {
+    "reviewRoleRequired": "Controleer de Homey Energy-meterrol in de geavanceerde instellingen van de andere EcoFlow-meter. Dit verandert de deelname aan Energy of tellerstanden niet.",
     "pairedSinglePhase": "Eén fase — CT1",
     "pairedThreePhase": "Drie fasen — CT1 communitytest",
     "pairedDisabled": "Energy-koppeling niet ingeschakeld",

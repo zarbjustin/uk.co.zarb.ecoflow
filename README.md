@@ -72,8 +72,12 @@ convert or remove them. There is no need to re-pair existing devices for the cle
 ### Advanced cross-app coordination
 
 The production candidate does not request whole-Homey API access. EcoFlow devices,
-counters and Homey Energy remain in this app. Automatic overlap checks cover
-EcoFlow meters only; review and exclude overlapping external meters in Homey Energy.
+counters and Homey Energy remain in this app. Overlap checks use visible EcoFlow
+meter roles. If the SDK cannot read Energy inclusion flags, review the other meter’s
+**Homey Energy meter role** in Advanced Settings first. This declaration does not
+change its Homey Energy inclusion or counters; review it again after Energy/wiring
+changes. Unreviewed roles stay blocked. Review other apps’ meters in Homey Energy
+yourself. The selected Dual CT does not need its own role review.
 
 The former in-app cross-device picker and observation monitor cannot start in
 this candidate. Saved source selections and the six existing observation Flow

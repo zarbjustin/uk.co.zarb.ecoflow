@@ -97,6 +97,47 @@
         "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
         "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
       }
+    },
+    {
+      "id": "property_meter_role",
+      "type": "dropdown",
+      "label": {
+        "en": "Homey Energy meter role",
+        "de": "Zählerrolle in Homey Energy",
+        "nl": "Meterrol in Homey Energy"
+      },
+      "value": "unreviewed",
+      "values": [
+        {
+          "id": "unreviewed",
+          "label": {
+            "en": "Not reviewed",
+            "de": "Nicht geprüft",
+            "nl": "Niet gecontroleerd"
+          }
+        },
+        {
+          "id": "included",
+          "label": {
+            "en": "Included as a whole-property meter",
+            "de": "Als Gesamtzähler einbezogen",
+            "nl": "Opgenomen als hoofdmeter"
+          }
+        },
+        {
+          "id": "not_included",
+          "label": {
+            "en": "Excluded or configured as a submeter",
+            "de": "Ausgeschlossen oder als Unterzähler eingerichtet",
+            "nl": "Uitgesloten of ingesteld als tussenmeter"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Review this meter in Homey Energy before choosing a role. This review is used when the app SDK cannot read Homey’s inclusion flags. It does not change Energy inclusion or counters. Review again after changing Energy inclusion or wiring. The selected Dual CT does not need its own review; other cumulative EcoFlow meters do.",
+        "de": "Prüfen Sie diesen Zähler in Homey Energy, bevor Sie eine Rolle wählen. Diese Angabe wird verwendet, wenn das App-SDK die Einbeziehung nicht lesen kann. Sie ändert weder Energy-Einstellungen noch Zählerstände. Nach Änderungen an Einbeziehung oder Verdrahtung erneut prüfen. Der ausgewählte Dual CT benötigt keine eigene Prüfung, andere kumulative EcoFlow-Zähler schon.",
+        "nl": "Controleer deze meter in Homey Energy voordat u een rol kiest. Deze controle wordt gebruikt als de app-SDK de deelname niet kan lezen. Dit verandert de Energy-instellingen of tellerstanden niet. Controleer opnieuw na wijzigingen in deelname of bedrading. De geselecteerde Dual CT heeft zelf geen controle nodig; andere cumulatieve EcoFlow-meters wel."
+      }
     }
   ],
   "images": {

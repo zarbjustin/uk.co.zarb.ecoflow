@@ -126,6 +126,7 @@
       const reasons = {
         source_read_failed: 'reviewSourceFailed', contract_blocked: 'reviewContractFailed',
         inventory_read_failed: 'reviewInventoryFailed', inventory_unknown: 'reviewInventoryFailed',
+        energy_role_review_required: 'reviewRoleRequired',
         grid_source_overlap: 'reviewOverlap', identity_stale: 'reviewExpired', inventory_stale: 'reviewExpired',
       };
       const match = /^DUAL_CT_REVIEW:([a-z_]+)$/.exec(error && error.message || '');

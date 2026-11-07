@@ -17,6 +17,8 @@ test('release check rejects accidental Energy, actions, public routes, permissio
     value => { value.app.api.coordinationWorkspace.public = true; },
     value => { value.app.permissions.push('homey:manager:flow'); },
     value => { value.app.permissions.push('homey:manager:api'); },
+    value => { value.app.drivers.find(driver => driver.id === 'smartmeter').settings.find(setting => setting.id === 'property_meter_role').value = 'not_included'; },
+    value => { value.app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_energy').settings.find(setting => setting.id === 'property_meter_role').values = []; },
     value => { value.homeyReader += '\nhomey.api.getOwnerApiToken();'; },
     value => { value.app.flow.conditions.find(card => card.id === 'battery_soc').args[1].name = 'changed'; },
     value => { value.gridGate = value.gridGate.replace('RUNTIME_ENABLED = true', 'RUNTIME_ENABLED = false'); },

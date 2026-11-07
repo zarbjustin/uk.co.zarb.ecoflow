@@ -45,6 +45,11 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
   assert.deepEqual([...compose.permissions].sort(), [...app.permissions].sort());
   assert.deepEqual(app.drivers.map(driver => driver.id).sort(), ['smartmeter', 'smartmeter_dual_ct_energy', 'smartmeter_dual_ct_preview', 'stream',
     'stream_5000_system', 'stream_5000_unit', 'stream_ac5000', 'stream_micro', 'stream_socket', 'stream_solar', 'stream_unit']);
+  for (const id of ['smartmeter', 'smartmeter_dual_ct_energy']) {
+    const role = app.drivers.find(driver => driver.id === id).settings.find(setting => setting.id === 'property_meter_role');
+    assert.equal(role.value, 'unreviewed', 'Missing SDK Energy flags must never default to an excluded role');
+    assert.deepEqual(role.values.map(value => value.id).sort(), ['included', 'not_included', 'unreviewed']);
+  }
   for (const old of live.drivers) {
     const current = app.drivers.find(driver => driver.id === old.id);
     assert.equal(current.class, old.class); assert.deepEqual(current.energy || null, old.energy);

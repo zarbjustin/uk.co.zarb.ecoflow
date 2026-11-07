@@ -18,6 +18,7 @@ interface Inventory {
   account: string;
   observedAt: number;
   complete: boolean;
+  roleReviewRequired?: boolean;
   contributors: DualCtEnergyContributor[];
 }
 interface Options {
@@ -99,6 +100,7 @@ export class DualCtEnergyAdoptionWorkflow {
     const now = this.now();
     if (!fresh(selected.identityObservedAt, now)) throw new Error('identity_stale');
     if (!inventory || inventory.account !== selected.account || !fresh(inventory.observedAt, now)) throw new Error('inventory_stale');
+    if (inventory.roleReviewRequired === true) throw new Error('energy_role_review_required');
     const plan = planDualCtEnergyAdoption({
       explicitConsent: true,
       target: 'new_energy_device',

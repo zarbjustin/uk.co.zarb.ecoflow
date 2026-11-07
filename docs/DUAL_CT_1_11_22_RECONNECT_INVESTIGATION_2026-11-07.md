@@ -1,5 +1,15 @@
 # Dual CT 1.11.22 reconnect investigation — 7 November 2026
 
+## Update after approved1.11.23 delivery — cause confirmed
+
+See [diagnostic result](DEVELOPMENT_1_11_23_DIAGNOSTIC_RESULT_2026-11-07.md).
+SDK Energy flags are absent while Web API confirms the Office meter is excluded;
+the classifier defaults missing flags to included and falsely blocks admission.
+Dual CT remains reconnecting pending a reviewed correction. The initial source-
+preparation snapshot below predates these diagnostics and its unresolved-cause
+statements are superseded. No further source/policy/install change was applied.
+
+
 ## Result and certainty
 
 **Household reconnect cause remains unresolved.** Do not describe1.11.23 as a

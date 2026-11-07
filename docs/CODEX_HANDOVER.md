@@ -1,5 +1,74 @@
 # Codex cross-machine handover
 
+## 7 November2026 — 1.11.24 source push, conditional install and Office role approved
+
+Owner approved commit/push of the reviewed1.11.24, exact CI, then one non-clean
+Development update on Justin's Homey Pro if fresh preflight is safe. Also approved
+confirming original Office/shed meter's app-local property_meter_role=not_included,
+only after read-only verification of its existing Energy exclusion. Built-in Energy
+flags,Test/Live,battery settings and AI ownership remain unchanged; Homey reserve
+execution remains disabled. Reviewed export/archive still match source. At this
+checkpoint CI/preflight/delivery/role readback are pending,not claimed complete.
+See local final receipt for exact SHA/run/delivery/preservation and scope limits:
+../work/output/development-1.11.24-20261107/FINAL_RECEIPT.md.
+
+## 7 November2026 — source-only1.11.24 micro/role-review fixes ready
+
+[Combined candidate review](COMBINED_MICRO_DUAL_CT_1_11_24_REVIEW_2026-11-07.md):
+micro sparse frames retain only the previous complete total's original freshness
+budget; never refresh it or integrate missing intervals. Startup partial remains
+unknown; expiry/zero/ordering/counter guards retained. Dual CT SDK-unknown Energy
+flags now require explicit Homey Energy meter role review on OTHER EcoFlow meters,
+rather than inventing overlap. New native setting defaults unreviewed; actual
+visible conflicts still block. Selected source excluded exactly once; duplicate,
+source/firmware/consent/authority guards remain. Manual declarations are not SDK
+proof and must be reviewed after Energy/wiring changes; no automatic global flag
+monitoring is claimed. Original Office/shed meter would need separately approved
+property_meter_role=not_included after confirming its existing exclusion. No such
+setting or installation performed. Source-only1.11.24:1539 full tests pass,final17
+micro lifecycle tests pass,lint/release:check/verified4.5.3 package pass. No new
+commit/push/CI/model/hardware signoff. Hardware gates/full release remain NO-GO.
+Installed1.11.23,Test88,Live18,AI/battery settings unchanged. Prior dirty work kept.
+Local receipt: ../work/output/combined-micro-dualct-11124-20261107T1710Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — microinverter history checked read-only
+
+[Microinverter telemetry](MICROINVERTER_READONLY_TELEMETRY_2026-11-07.md): owner
+reports multi-day No response and confirms native offline now.16:45UTC vendor
+inventory also offline; Homey waits for fresh fields,total preserved. Existing
+history/direct readbacks show activity5/6/7November and counter advancement today;
+not a verified continuous multi-day outage. Fine/hourly histories disagree for
+parts of today,so no exact connection-duration claim. Daytime saved PV2/grid
+updates with null total match the deliberate partial-PV rule: same-packet complete
+PV required; partial update immediately clears total/availability. Existing offline
+regression reproduces this. Raw-packet attribution remains incomplete; current
+physical offline and sparse-update UI behavior are separate issues. Recommend a
+bounded source sprint preserving last complete total's original TTL while keeping
+partial-report accounting gaps,plus accessory diagnostics. No source/install/
+settings/control/Flow/Energy/Test/Live/AI changes. Mac locked,native history not
+inspected. Canonicale9fef96 and prior dirty work preserved; new docs only. Receipt:
+../work/output/microinverter-readonly-20261107T1450Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — Development1.11.23 installed; false-overlap cause confirmed
+
+[Delivery/diagnosis](DEVELOPMENT_1_11_23_DIAGNOSTIC_RESULT_2026-11-07.md): e9fef96
+committed/pushed,exact CI42381892040 passed. Approved archive installed once
+non-clean at14:33:07UTC on Justin's Homey Pro; running1.11.23/geolocation only.
+Fresh safety/external-role checks passed;102 startup samples,no numeric drops/read
+errors,five transient unknown samples,all ten totals recovered. Two full readbacks
+preserve15 devices/settings/definitions (except icon URLs),101 Flows,1217 Insights,
+Energy/global/native configuration and disabled Homey reserve execution.
+**Cause now confirmed:** SDK getSettings returns Energy flags unset while Web API
+shows Office meter excluded. Classifier treats missing flags as included,causing
+false grid_source_overlap at admission. Two schema20 reports and synthetic replay
+corroborate. Dual CT still reconnecting,totals intact; no corrective guard bypass,
+rollback or second install. Need reviewed unknown-role/inclusion handling without
+broad API or weakened overlap safety; current automatic-role guarantee needs
+correction. No new source fix/role setting applied after diagnosis. Test88/Live18
+verified unchanged,AI/battery settings unchanged,no physical gates/48hsoak passed.
+Post-delivery docs uncommitted. Private receipt:
+../work/output/development-1.11.23-20261107T1440Z/FINAL_RECEIPT.md.
+
 ## 7 November2026 — 1.11.23 source push and conditional Development update approved
 
 Owner approved commit/push of the reviewed diagnostic1.11.23, exact CI, then one

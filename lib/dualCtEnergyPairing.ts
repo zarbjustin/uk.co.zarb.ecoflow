@@ -86,7 +86,7 @@ export function registerDualCtEnergyPairing(driver: any, session: any, dependenc
           blocked: true, reason: 'grid_source_overlap', devices: [...error.devices], total: error.total,
         };
       }
-      const allowed = ['source_read_failed', 'inventory_read_failed', 'inventory_unknown', 'grid_source_overlap',
+      const allowed = ['source_read_failed', 'inventory_read_failed', 'inventory_unknown', 'grid_source_overlap', 'energy_role_review_required',
         'contract_blocked', 'identity_stale', 'inventory_stale'];
       const reason = allowed.includes(error?.message) ? error.message : 'verification_failed';
       // Only fixed classifications cross the pairing bridge; never relay upstream errors.

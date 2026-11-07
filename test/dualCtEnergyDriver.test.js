@@ -441,3 +441,32 @@ test('single-phase startup diagnostics survive recovery without exposing communi
   assert.equal(d.subscriptions.length, 0); assert.doesNotMatch(JSON.stringify(diag), /DUALCTSYNTHETIC01|synthetic_contract/);
   await d.onUninit();
 });
+
+test('real SDK-only startup respects an explicitly reviewed excluded Office meter and preserves existing counter checkpoints', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const d = new Driver(); enabled(d);
+  const saved = makeDualCtEnergyCheckpoint(binding, contract.timing, 1, 25000, 1000);
+  d.store.set(DUAL_CT_ENERGY_CHECKPOINT_KEY, saved); d.values.set('meter_power.imported', 25); d.values.set('meter_power.exported', 1);
+  const settings = { property_meter_role: 'not_included' };
+  const port = (s, opts) => ({ getData: () => ({ sn: s }), getCapabilities: () => ['measure_power','meter_power.imported'],
+    getEnergy: () => null, getSettings: () => opts, getName: () => 'Synthetic meter' });
+  d.homey.manifest = { id: 'uk.co.zarb.ecoflow', drivers: [{ id: 'smartmeter', energy: { cumulative: true } },
+    { id: 'smartmeter_dual_ct_energy', energy: { cumulative: true } }] };
+  d.homey.drivers = { getDriver: id => ({ getDevices: () => id === 'smartmeter' ? [port('OFFICESYNTHETIC', settings)] : [port(sn, {})] }) };
+  d.homey.api = { getOwnerApiToken() { assert.fail('broad API'); } };
+  const deps = d.energyDependencies();
+  d.energyDependencies = () => ({ ...deps, context: () => new DualCtHomeyEnergyContext({ homey: d.homey, sn,
+    ownDevice: { sn, driverId: 'homey:app:uk.co.zarb.ecoflow:smartmeter_dual_ct_energy' },
+    client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code:421 }] }] }),
+    readFirmware: async () => identity.firmware }) });
+  await d.onInit();
+  assert.equal(d.subscriptions.length, 1); assert.equal(d.getDualCtEnergyDiagnostics().active, true);
+  assert.equal(d.values.get('meter_power.imported'), 25); assert.equal(d.values.get('meter_power.exported'), 1);
+  assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+  settings.property_meter_role = 'unreviewed';
+  await d.onUninit(); await d.onInit();
+  assert.equal(d.getDualCtEnergyDiagnostics().context.reason, 'energy_role_review_required');
+  assert.equal(d.getDualCtEnergyDiagnostics().active, false);
+  assert.equal(d.values.get('meter_power.imported'), 25); assert.equal(d.values.get('meter_power.exported'), 1);
+  await d.onUninit();
+});

@@ -71,7 +71,7 @@ test('micro optional projection failures do not mask fresh required power and re
   }
 });
 
-test('micro failed partial-PV clear is diagnosed, retries and fresh zero recovers without bridging lost reports', async t => {
+test('micro failed expiry clear is diagnosed, retries and fresh zero recovers without bridging lost reports', async t => {
   let now = 1000000; t.mock.method(Date, 'now', () => now);
   const { device } = harness({ generatedWh: 1000 }, { meter_power: 1 });
   await device.onInit(); await sample(device, now);
@@ -81,8 +81,8 @@ test('micro failed partial-PV clear is diagnosed, retries and fresh zero recover
     if (rejectClear && cap === 'measure_power' && value === null) throw Error('synthetic clear failure');
     await write(cap, value);
   };
-  now += 1000;
-  await device.applyQuota({ powGetPv: 0 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  now += 180001;
+  await device.expireLiveReadings();
   assert.equal(device.getReadingDiagnostics().measure_power.applicationStatus, 'write_failed');
   rejectClear = false; await device.expireLiveReadings();
   assert.equal(device.values.measure_power, null);
@@ -118,18 +118,18 @@ test('micro independent PV and grid expiry retains counters, rejects older field
   await device.onUninit();
 });
 
-test('micro partial PV reports are unknown totals, break accounting continuity and distinguish explicit zero', async t => {
+test('micro partial PV reports retain a fresh complete total but break accounting continuity and distinguish explicit zero', async t => {
   let now = 1000000; t.mock.method(Date, 'now', () => now);
   const { device } = harness(); await device.onInit();
   const deliver = quota => device.applyQuota(quota, { source: 'mqtt', sourceSn: source, receivedAt: now });
   await deliver({ powGetPv: 300, powGetPv2: 300 });
   now += 60000; await deliver({ powGetPv: 300 });
   assert.equal(device.values['measure_power.pv1'], 300);
-  assert.equal(device.values.measure_power, null);
-  assert.equal(device.values.stream_micro_power_solar, null);
+  assert.equal(device.values.measure_power, 600);
+  assert.equal(device.values.stream_micro_power_solar, 600);
   assert.equal(device.values.meter_power, 0, 'an omitted channel cannot authorize a guessed interval');
   now += 60000; await deliver({ powGetPv2: 300 });
-  assert.equal(device.values.measure_power, null);
+  assert.equal(device.values.measure_power, 600);
   now += 60000; await deliver({ powGetPv: 300, powGetPv2: 0 });
   assert.equal(device.values.measure_power, 300, 'explicit zero is a complete channel reading');
   assert.equal(device.values.meter_power, 0, 'recovery anchors without backfilling partial reports');
@@ -274,4 +274,49 @@ test('micro pending startup SDK write is drained before teardown and reinitialis
   assert.equal(timers.size, 0); const count = device.writes.length; await settle(); assert.equal(device.writes.length, count);
   await device.onInit(); assert.equal(device.values.meter_power, 1); await device.onUninit();
   assert.equal(device.getData().sn, source);
+});
+
+
+test('micro sparse updates preserve last complete total age but cannot refresh it or integrate missing intervals', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness({ generatedWh: 1000 }, { meter_power: 1 }); await device.onInit();
+  await sample(device, now, 600);
+  now += 60000; await device.applyQuota({ powGetPv2: 50 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  assert.equal(device.values.measure_power, 600);
+  assert.equal(device.getReadingDiagnostics().measure_power.ageSec, 60);
+  assert.equal(device.values.meter_power, 1);
+  now += 60000; await device.applyQuota({ powGetPv2: 70 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  assert.equal(device.values.measure_power, 600); assert.equal(device.getReadingDiagnostics().measure_power.ageSec, 120);
+  now += 60001; await device.applyQuota({ powGetPv2: 80 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  await device.expireLiveReadings(); assert.equal(device.values.measure_power, null);
+  assert.equal(device.values['measure_power.pv2'], 80); assert.equal(device.values.meter_power, 1);
+  now += 1000; await sample(device, now, 600); assert.equal(device.values.meter_power, 1, 'complete recovery anchors without backfill');
+  now += 60000; await sample(device, now, 600); assert.equal(device.values.meter_power, 1.01);
+  await device.onUninit();
+});
+test('micro startup partial updates and interleaved channels cannot fabricate a complete total', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness({ generatedWh: 1000 }, { meter_power: 1, measure_power: 999 });await device.onInit();
+  await device.applyQuota({ powGetPv: 0 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  now += 1000;await device.applyQuota({ powGetPv2: 400 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  assert.equal(device.values.measure_power, null);assert.equal(device.values.meter_power, 1);
+  now += 1000;await sample(device, now, 0);assert.equal(device.values.measure_power, 0);
+  assert.equal(device.getReadingDiagnostics().measure_power.stale, false);await device.onUninit();
+});
+
+test('micro sparse traffic does not toggle availability while the original complete total is fresh', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const { device } = harness(); let available = false;
+  const { BaseEcoFlowDevice } = require('../.homeybuild/lib/BaseEcoFlowDevice');
+  device.homey.__ = key => key; device.getAvailable = () => available;
+  device.setAvailable = async () => { available = true; }; device.setUnavailable = async () => { available = false; };
+  device.setOnlineState = BaseEcoFlowDevice.prototype.setOnlineState.bind(device);
+  await device.onInit(); await sample(device, now, 600); await device.setOnlineState(true); assert.equal(available, true);
+  now += 1000; await device.applyQuota({ powGetPv2: 20 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  await device.setOnlineState(true); assert.equal(available, true);
+  now += 180000; await device.applyQuota({ powGetPv2: 30 }, { source: 'mqtt', sourceSn: source, receivedAt: now });
+  assert.equal(available, false); assert.equal(device.values.measure_power, null);
+  now++; await sample(device, now, 0); await device.setOnlineState(true);
+  assert.equal(available, true); assert.equal(device.values.measure_power, 0);
+  await device.onUninit();
 });

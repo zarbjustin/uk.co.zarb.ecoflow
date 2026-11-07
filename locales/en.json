@@ -24,6 +24,7 @@
     "saved": "Sign-in saved. Devices will reconnect; check their readings. Device identities and Energy permissions were kept."
   },
   "dual_ct_energy": {
+    "reviewRoleRequired": "Review the Homey Energy meter role in the other EcoFlow meter’s Advanced Settings. This review does not change Energy inclusion or counters.",
     "pairedSinglePhase": "Single phase — CT1",
     "pairedThreePhase": "Three phase — CT1 community trial",
     "pairedDisabled": "Energy pairing not enabled",

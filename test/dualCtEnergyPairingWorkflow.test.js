@@ -125,7 +125,7 @@ test('three-phase confirmation describes three phases rather than asking for sin
 test('review displays only allowlisted translated failure classifications',async()=>{
  const browser=await chromium.launch();
  try{
-  for(const [reason,key] of [['source_read_failed','reviewSourceFailed'],['inventory_unknown','reviewInventoryFailed'],['grid_source_overlap','reviewOverlap'],['contract_blocked','reviewContractFailed'],['PRIVATE_ERROR','reviewFailed']]){
+  for(const [reason,key] of [['source_read_failed','reviewSourceFailed'],['inventory_unknown','reviewInventoryFailed'],['energy_role_review_required','reviewRoleRequired'],['grid_source_overlap','reviewOverlap'],['contract_blocked','reviewContractFailed'],['PRIVATE_ERROR','reviewFailed']]){
    const page=await pageFor(browser,{width:390,height:844},'en',true);
    await page.evaluate(reason=>{const emit=Homey.emit;Homey.emit=(name,input)=>name==='dual_ct_energy_review'?Promise.reject(new Error('DUAL_CT_REVIEW:'+reason)):emit(name,input);},reason);
    await page.locator('#find').click();await page.locator('#review').click();

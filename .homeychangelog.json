@@ -1,4 +1,9 @@
 {
+  "1.11.24": {
+      "en": "Keeps the microinverter’s last complete solar reading until its original expiry during sparse updates, without integrating missing energy. Adds explicit review of EcoFlow meter roles when Homey Energy flags are unavailable to the SDK; existing counters and identities are preserved.",
+      "de": "Behält bei Teilmeldungen den letzten vollständigen Solarwert bis zu seinem ursprünglichen Ablauf, ohne fehlende Energie zu integrieren. Ergänzt eine ausdrückliche Prüfung der EcoFlow-Zählerrolle, wenn Energy-Flags im SDK fehlen. Zählerstände und Identitäten bleiben erhalten.",
+      "nl": "Behoudt bij gedeeltelijke berichten de laatste volledige zonne-uitlezing tot de oorspronkelijke vervaltijd, zonder ontbrekende energie te berekenen. Voegt expliciete controle van EcoFlow-meterrollen toe wanneer de SDK Energy-vlaggen niet ziet. Tellers en identiteiten blijven behouden."
+  },
   "1.11.23": {
     "en": "Adds local read-only Dual CT startup and owned-meter diagnostics for single-phase and three-phase installations. Preserves counters, freshness and overlap safeguards; the cause of the 1.11.22 reconnecting issue is still under investigation.",
     "de": "Ergänzt lokale, rein lesende Dual-CT-Start- und Zählerdiagnosen für ein- und dreiphasige Installationen. Zählerstände sowie Aktualitäts- und Überschneidungsprüfungen bleiben erhalten; die Ursache des Verbindungsproblems in 1.11.22 wird noch untersucht.",

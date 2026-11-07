@@ -16,11 +16,11 @@ function homey(rows = {}) {
   return { manifest: { id: appId, drivers: definitions }, drivers: { getDriver: id => ({ getDevices: () => rows[id] || [] }) },
     api: { getOwnerApiToken: () => assert.fail('whole-Homey token must never be requested'), getLocalUrl: () => assert.fail('loopback API must never be requested') } };
 }
-function context(h, own = false) {
+function context(h, own = false, communityThreePhase = false) {
   const client = { getSession: async () => ({ host: 'https://api.ecoflow.com', userId: 'synthetic' }),
     getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }],
     getDualCtCurrentFirmware: async () => ({ version: '1.0.0.41' }) };
-  return new DualCtHomeyEnergyContext({ homey: h, sn, client: () => client, now: () => 100000,
+  return new DualCtHomeyEnergyContext({ homey: h, sn, client: () => client, now: () => 100000, communityThreePhase,
     ...(own ? { ownDevice: { sn, driverId: `homey:app:${appId}:smartmeter_dual_ct_energy` } } : {}) });
 }
 test('production candidate does not request broad Homey API access', () => {
@@ -33,7 +33,7 @@ test('normal Dual CT context works with standard SDK only and declares the exter
   assert.deepEqual(snapshot.inventory.contributors, []); c.close();
 });
 test('same-app active meters still block and excluded/downstream meters remain distinct', async () => {
-  const h = homey({ smartmeter: [device('METER1', { cumulative: true }), device('METER2', { cumulative: true }, { energy_exclude: true }),
+  const h = homey({ smartmeter: [device('METER1', { cumulative: true }, { property_meter_role: 'included' }), device('METER2', { cumulative: true }, { energy_exclude: true }),
     device('METER3', { cumulative: true }, { energy_cumulative_include: false })] });
   const c = context(h); await c.refresh(); const rows = c.snapshot().inventory.contributors;
   assert.equal(rows.length, 3); assert.equal(rows.filter(r => r.contributes).length, 1); c.close();
@@ -52,7 +52,7 @@ test('unknown SDK inventory or malformed settings fail closed instead of becomin
   }
 });
 test('device/driver identities are stable across fresh scans and native Energy definitions are never rewritten', async () => {
-  const d = device('METER', { cumulative: true }); d.setEnergy = () => assert.fail('write'); d.setSettings = () => assert.fail('write');
+  const d = device('METER', { cumulative: true }, { property_meter_role: 'included' }); d.setEnergy = () => assert.fail('write'); d.setSettings = () => assert.fail('write');
   const h = homey({ smartmeter: [d] }); const first = await readOwnAppEnergyDevices(h); const second = await readOwnAppEnergyDevices(h);
   assert.deepEqual(Object.keys(first), Object.keys(second)); assert.equal(dualCtHomeyContributors(first).contributors.length, 1);
 });
@@ -75,7 +75,7 @@ test('owned-inventory completeness never substitutes for explicit external-meter
 
 
 test('an undefined SDK cumulative override cannot hide a declared EcoFlow property meter', async () => {
-  const rows = await readOwnAppEnergyDevices(homey({ smartmeter: [device('METER', { cumulative: undefined })] }));
+  const rows = await readOwnAppEnergyDevices(homey({ smartmeter: [device('METER', { cumulative: undefined }, { property_meter_role: 'included' })] }));
   const result = dualCtHomeyContributors(rows);
   assert.equal(result.complete, true); assert.equal(result.contributors.filter(r => r.contributes).length, 1);
 });
@@ -139,6 +139,55 @@ test('owned diagnostics expose fixed exclusion states rather than names, IDs, re
   const { dualCtOwnedInventoryDiagnostics } = require('../.homeybuild/lib/dualCtHomeyEnergyContext');
   const scan = dualCtOwnedInventoryDiagnostics(homey({ smartmeter: [device('PRIVATE', null,
     { energy_exclude: true, energy_cumulative_include: false, private: 'PRIVATE' })] }));
-  assert.deepEqual(scan.meterSettings, [{ driver: 'smartmeter', exclude: 'true', include: 'false' }]);
+  assert.deepEqual(scan.meterSettings, [{ driver: 'smartmeter', exclude: 'true', include: 'false', reviewedRole: 'unreviewed' }]);
   assert.doesNotMatch(JSON.stringify(scan), /PRIVATE/);
+});
+
+
+test('SDK-unset Energy flags require explicit meter-role review instead of inventing a grid overlap', async () => {
+  const c = context(homey({ smartmeter: [device('OFFICESYNTHETIC', null)] }));
+  await c.refresh(); const snapshot = c.snapshot();
+  assert.equal(snapshot.inventory.complete, false); assert.equal(snapshot.inventory.roleReviewRequired, true);
+  assert.equal(c.diagnostics().reason, 'energy_role_review_required'); c.close();
+});
+test('reviewed non-property SDK meter permits admission while included roles and explicit platform conflicts remain blockers', async () => {
+  for (const [settings, expected] of [
+    [{ property_meter_role: 'not_included' }, false], [{ property_meter_role: 'included' }, true],
+    [{ property_meter_role: 'not_included', energy_exclude: false, energy_cumulative_include: true }, true],
+    [{ property_meter_role: 'included', energy_exclude: true }, false],
+  ]) {
+    const c = context(homey({ smartmeter: [device('OFFICESYNTHETIC', null, settings)] }));
+    await c.refresh(); const inventory = c.snapshot().inventory;
+    assert.equal(inventory.complete, true); assert.equal(inventory.contributors[0].contributes, expected);
+    c.close();
+  }
+});
+test('invalid reviews, new unreviewed meters and malformed platform flags cannot silently pass SDK inventory', async () => {
+  for (const rows of [
+    [device('OFFICE', null, { property_meter_role: 'invalid' })],
+    [device('OFFICE', null, { property_meter_role: 'not_included' }), device('NEW', null)],
+    [device('OFFICE', null, { property_meter_role: 'not_included', energy_exclude: 'true' })],
+  ]) { const c = context(homey({ smartmeter: rows })); await c.refresh(); assert.equal(c.snapshot().inventory.complete, false); c.close(); }
+});
+test('role edits change only inventory admission; source bindings and identities remain unchanged', async () => {
+  const settings = { property_meter_role: 'not_included' };
+  const c = context(homey({ smartmeter: [device('OFFICESYNTHETIC', null, settings)] }));
+  await c.refresh(); const source = c.snapshot().source; const ids = c.snapshot().inventory.contributors.map(r => r.id);
+  settings.property_meter_role = 'included'; await c.refresh();
+  assert.deepEqual(c.snapshot().source, source); assert.deepEqual(c.snapshot().inventory.contributors.map(r => r.id), ids);
+  assert.equal(c.snapshot().inventory.contributors[0].contributes, true);
+  settings.property_meter_role = 'unreviewed'; await c.refresh(); assert.equal(c.snapshot().inventory.complete, false); c.close();
+});
+
+test('reviewed SDK roles preserve single-phase qualification and separately consented three-phase scope', async () => {
+  for (const community of [false, true]) {
+    const c = context(homey({ smartmeter: [device('OFFICE', null, { property_meter_role: 'not_included' })],
+      smartmeter_dual_ct_energy: [device(sn, { cumulative: true })] }), true, community);
+    await c.refresh(); const snapshot = c.snapshot();
+    assert.equal(snapshot.inventory.complete, true); assert.equal(snapshot.inventory.contributors[0].contributes, false);
+    const contract = c.resolveContract(snapshot.source.identity);
+    if (community) { assert.equal(contract.communityTrial, true); assert.equal(contract.wiring, 'three_phase'); }
+    else { assert.equal(contract.singlePhaseOnly, true); assert.notEqual(contract.communityTrial, true); }
+    c.close();
+  }
 });

@@ -39,10 +39,20 @@ export function dualCtHomeyContributors(input: unknown, ownDevice?: { sn: string
     const { settings } = d;
     if (!settings || typeof settings !== 'object' || Array.isArray(settings) || !flag(settings.energy_exclude)
       || !flag(settings.energy_cumulative_include)) return { complete: false, contributors: [] };
+    let contributes = settings.energy_exclude !== true && settings.energy_cumulative_include !== false;
+    if (d.energyRoleVisibility === 'sdk_owned' && contributes
+      && !(settings.energy_exclude === false && settings.energy_cumulative_include === true)) {
+      // The app SDK omits Homey-managed Energy flags. Absence is neither an
+      // included nor an excluded meter; require an explicit owner role review.
+      if (!['included', 'not_included'].includes(settings.property_meter_role)) {
+        return { complete: false, contributors: [], roleReviewRequired: true };
+      }
+      contributes = settings.property_meter_role === 'included';
+    }
     contributors.push({
       id: d.id,
       grid: DUAL_CT_PROPERTY_GRID,
-      contributes: settings.energy_exclude !== true && settings.energy_cumulative_include !== false,
+      contributes,
       ...(typeof d.name === 'string' ? { name: d.name } : {}),
     });
     if (contributors.length > 256) return { complete: false, contributors: [] };
@@ -98,6 +108,7 @@ function readOwnAppEnergyDevicesNow(homey: any): Record<string, any> {
           data,
           capabilities,
           energyObj: { cumulative: cumulative === undefined ? false : cumulative },
+          energyRoleVisibility: 'sdk_owned',
           settings,
           ...(name ? { name } : {}),
         };
@@ -123,6 +134,7 @@ export function dualCtOwnedInventoryDiagnostics(homey: any) {
       ...common,
       status: result.complete ? 'complete' : 'incomplete',
       complete: result.complete,
+      roleReviewRequired: result.roleReviewRequired === true,
       stage: result.complete ? null : 'classification',
       driver: null,
       pairedDevices: Object.keys(rows).length,
@@ -138,6 +150,8 @@ export function dualCtOwnedInventoryDiagnostics(homey: any) {
           driver: safeOwnedDriver(row.driverId.split(':').at(-1)),
           exclude: state(row.settings?.energy_exclude),
           include: state(row.settings?.energy_cumulative_include),
+          reviewedRole: ['included', 'not_included', 'unreviewed'].includes(row.settings?.property_meter_role)
+            ? row.settings.property_meter_role : 'unreviewed',
         };
       }),
     };
@@ -194,7 +208,9 @@ export class DualCtHomeyEnergyContext {
   private source: { account: string; device: string; grid: string; owned: boolean;
     identity: { productType: number; firmware: string }; identityObservedAt: number } | null = null;
 
-  private inventory: { account: string; observedAt: number; complete: boolean; scope: 'app_owned'; externalInventoryVerified: false; contributors: DualCtEnergyContributor[] } | null = null;
+  private inventory: { account: string; observedAt: number; complete: boolean; roleReviewRequired?: boolean;
+    scope: 'app_owned'; externalInventoryVerified: false; contributors: DualCtEnergyContributor[] } | null = null;
+
   private readonly trial: DualCtCommunityTrial;
   private generation = 0;
   private closed = false;
@@ -292,7 +308,11 @@ export class DualCtHomeyEnergyContext {
     try {
       await this.readSelection(); stage = 'inventory';
       const inventory = await this.readInventory();
-      this.lastFailure = inventory.complete ? null : dualCtContextFailureSnapshot({ stage, reason: 'inventory_incomplete', inventoryStage: 'classification' });
+      this.lastFailure = inventory.complete ? null : dualCtContextFailureSnapshot({
+        stage,
+        reason: inventory.roleReviewRequired ? 'energy_role_review_required' : 'inventory_incomplete',
+        inventoryStage: 'classification',
+      });
     } catch (error: any) {
       let reason = 'read_failed';
       try {

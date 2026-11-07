@@ -198,6 +198,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     const clearing = this.stop(); const stoppedGeneration = this.generation;
     await clearing;
     if (stoppedGeneration !== this.generation || !enabled() || this.getStoreValue('dualCtEnergyConsent') !== 1) return;
+    if (this.getDualCtEnergyDiagnostics()?.context?.reason === 'energy_role_review_required') {
+      await this.setUnavailable(this.homey.__('dual_ct_energy.reviewRoleRequired')).catch(() => {});
+      if (stoppedGeneration !== this.generation) return;
+    }
     this.retry = this.homey.setTimeout(() => {
       this.retry = null; this.connect().catch(() => {});
     }, this.retryDelay);

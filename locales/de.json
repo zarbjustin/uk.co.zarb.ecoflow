@@ -24,6 +24,7 @@
     "saved": "Anmeldung gespeichert. Geräte verbinden sich neu; prüfen Sie die Messwerte. Geräteidentitäten und Energy-Freigaben bleiben erhalten."
   },
   "dual_ct_energy": {
+    "reviewRoleRequired": "Prüfen Sie die Zählerrolle in den erweiterten Einstellungen des anderen EcoFlow-Zählers. Diese Prüfung ändert weder die Einbeziehung in Energy noch Zählerstände.",
     "pairedSinglePhase": "Einphasig — CT1",
     "pairedThreePhase": "Dreiphasig — CT1 Community-Test",
     "pairedDisabled": "Energy-Kopplung nicht aktiviert",

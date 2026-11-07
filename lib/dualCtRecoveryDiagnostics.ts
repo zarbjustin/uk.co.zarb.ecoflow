@@ -6,7 +6,7 @@ export function dualCtContextFailureSnapshot(input: any) {
   try {
     if (!input || !['selection', 'inventory'].includes(input.stage)) return null;
     const reasons = ['owned_inventory_read_failed', 'inventory_incomplete', 'account_required', 'owned_source_required',
-      'firmware_readback_unavailable', 'source_changed', 'source_closed', 'inventory_read_cancelled', 'read_failed'];
+      'firmware_readback_unavailable', 'source_changed', 'source_closed', 'inventory_read_cancelled', 'read_failed', 'energy_role_review_required'];
     const stages = ['manifest', 'driver', 'devices', 'identity', 'energy', 'capabilities', 'settings', 'classification'];
     return {
       stage: input.stage as string,
