@@ -7,6 +7,7 @@ import { AppDevice } from './appDevices';
 import { EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
 import type { CoordinationReader } from './coordinationWorkspace';
 import { dualCtAccountBinding, dualCtPreviewDevices } from './dualCtPreviewPairing';
+import { safeOwnedDriver, dualCtContextFailureSnapshot } from './dualCtRecoveryDiagnostics';
 import { DualCtEnergyContributor } from './dualCtEnergyAdoption';
 
 export const DUAL_CT_PROPERTY_GRID = 'homey_property_grid';
@@ -36,7 +37,7 @@ export function dualCtHomeyContributors(input: unknown, ownDevice?: { sn: string
       || ![true, false, null].includes(d.energyObj.cumulative)) return { complete: false, contributors: [] };
     if (d.energyObj.cumulative !== true) continue;
     const { settings } = d;
-    if (!settings || typeof settings !== 'object' || !flag(settings.energy_exclude)
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings) || !flag(settings.energy_exclude)
       || !flag(settings.energy_cumulative_include)) return { complete: false, contributors: [] };
     contributors.push({
       id: d.id,
@@ -50,46 +51,109 @@ export function dualCtHomeyContributors(input: unknown, ownDevice?: { sn: string
 }
 
 /** SDK-owned devices only. External meters require the separate pairing acknowledgement. */
-export async function readOwnAppEnergyDevices(homey: any): Promise<Record<string, any>> {
-  const manifest = homey?.manifest || homey?.app?.manifest;
-  if (manifest?.id !== 'uk.co.zarb.ecoflow' || !Array.isArray(manifest.drivers)
+type OwnedInventoryStage = 'manifest' | 'driver' | 'devices' | 'identity' | 'energy' | 'capabilities' | 'settings';
+class OwnedInventoryReadError extends Error {
+  constructor(readonly stage: OwnedInventoryStage, readonly driver: string | null) {
+    super('owned_inventory_unknown');
+  }
+}
+function readOwnAppEnergyDevicesNow(homey: any): Record<string, any> {
+  let stage: OwnedInventoryStage = 'manifest'; let driver: string | null = null;
+  try {
+    const manifest = homey?.manifest || homey?.app?.manifest;
+    if (manifest?.id !== 'uk.co.zarb.ecoflow' || !Array.isArray(manifest.drivers)
     || manifest.drivers.length === 0 || manifest.drivers.length > 64) throw new Error('owned_inventory_unknown');
-  const rows: Record<string, any> = {};
-  const drivers = new Set<string>();
-  for (const entry of manifest.drivers) {
-    if (!validId(entry?.id) || drivers.has(entry.id)) throw new Error('owned_inventory_unknown');
-    drivers.add(entry.id);
-    const devices = homey.drivers.getDriver(entry.id).getDevices();
-    if (!Array.isArray(devices) || devices.length > 2048) throw new Error('owned_inventory_unknown');
-    for (const device of devices) {
-      const data = device.getData();
-      if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length > 64
+    const rows: Record<string, any> = {};
+    const drivers = new Set<string>();
+    for (const entry of manifest.drivers) {
+      stage = 'manifest'; driver = null;
+      if (!validId(entry?.id) || drivers.has(entry.id)) throw new Error('owned_inventory_unknown');
+      drivers.add(entry.id);
+      driver = entry.id; stage = 'driver';
+      const instance = homey.drivers.getDriver(entry.id);
+      stage = 'devices'; const devices = instance.getDevices();
+      if (!Array.isArray(devices) || devices.length > 2048) throw new Error('owned_inventory_unknown');
+      for (const device of devices) {
+        stage = 'identity'; const data = device.getData();
+        if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length > 64
         || Object.values(data).some((v) => v !== null && !['string', 'number', 'boolean'].includes(typeof v))
         || Object.values(data).some((v) => typeof v === 'number' && !Number.isFinite(v))) throw new Error('owned_inventory_unknown');
-      const driverId = `homey:app:${manifest.id}:${entry.id}`;
-      const id = createHash('sha256').update(driverId).update('\0')
-        .update(JSON.stringify(Object.fromEntries(Object.entries(data).sort(([a], [b]) => a.localeCompare(b)))))
-        .digest('hex');
-      if (rows[id] || Object.keys(rows).length >= 2048) throw new Error('owned_inventory_unknown');
-      const declared = device.getEnergy();
-      if (declared !== undefined && declared !== null && (typeof declared !== 'object' || Array.isArray(declared))) throw new Error('owned_inventory_unknown');
-      const cumulative = declared?.cumulative === undefined ? entry.energy?.cumulative : declared.cumulative;
-      let name: string | undefined;
-      try {
-        if (typeof device.getName?.() === 'string') name = device.getName();
-      } catch { /* Labels cannot change admission. */ }
-      rows[id] = {
-        id,
-        driverId,
-        data,
-        capabilities: device.getCapabilities(),
-        energyObj: { cumulative: cumulative === undefined ? false : cumulative },
-        settings: device.getSettings(),
-        ...(name ? { name } : {}),
-      };
+        const driverId = `homey:app:${manifest.id}:${entry.id}`;
+        const id = createHash('sha256').update(driverId).update('\0')
+          .update(JSON.stringify(Object.fromEntries(Object.entries(data).sort(([a], [b]) => a.localeCompare(b)))))
+          .digest('hex');
+        if (rows[id] || Object.keys(rows).length >= 2048) throw new Error('owned_inventory_unknown');
+        stage = 'energy'; const declared = device.getEnergy();
+        if (declared !== undefined && declared !== null && (typeof declared !== 'object' || Array.isArray(declared))) throw new Error('owned_inventory_unknown');
+        const cumulative = declared?.cumulative === undefined ? entry.energy?.cumulative : declared.cumulative;
+        let name: string | undefined;
+        try {
+          if (typeof device.getName?.() === 'string') name = device.getName();
+        } catch { /* Labels cannot change admission. */ }
+        stage = 'capabilities'; const capabilities = device.getCapabilities();
+        stage = 'settings'; const settings = device.getSettings();
+        rows[id] = {
+          id,
+          driverId,
+          data,
+          capabilities,
+          energyObj: { cumulative: cumulative === undefined ? false : cumulative },
+          settings,
+          ...(name ? { name } : {}),
+        };
+      }
     }
+    return rows;
+  } catch {
+    throw new OwnedInventoryReadError(stage, driver);
   }
-  return rows;
+}
+
+export async function readOwnAppEnergyDevices(homey: any): Promise<Record<string, any>> {
+  return readOwnAppEnergyDevicesNow(homey);
+}
+
+/** Synchronous SDK metadata getters only; no vendor/API requests or writes. Never returns identities or exceptions. */
+export function dualCtOwnedInventoryDiagnostics(homey: any) {
+  const common = { scope: 'app_owned', externalInventoryVerified: false, readOnly: true };
+  try {
+    const rows = readOwnAppEnergyDevicesNow(homey);
+    const result = dualCtHomeyContributors(rows);
+    return {
+      ...common,
+      status: result.complete ? 'complete' : 'incomplete',
+      complete: result.complete,
+      stage: result.complete ? null : 'classification',
+      driver: null,
+      pairedDevices: Object.keys(rows).length,
+      propertyMeters: result.complete ? result.contributors.length : null,
+      includedMeters: result.complete ? result.contributors.filter((row) => row.contributes).length : null,
+      meterSettings: Object.values(rows).filter((row) => row.energyObj?.cumulative === true).slice(0, 256).map((row) => {
+        const state = (value: unknown) => {
+          if (value === true) return 'true';
+          if (value === false) return 'false';
+          return value === undefined ? 'unset' : 'invalid';
+        };
+        return {
+          driver: safeOwnedDriver(row.driverId.split(':').at(-1)),
+          exclude: state(row.settings?.energy_exclude),
+          include: state(row.settings?.energy_cumulative_include),
+        };
+      }),
+    };
+  } catch (error) {
+    return {
+      ...common,
+      status: 'read_failed',
+      complete: false,
+      stage: error instanceof OwnedInventoryReadError ? error.stage : 'unknown',
+      driver: error instanceof OwnedInventoryReadError ? safeOwnedDriver(error.driver) : null,
+      pairedDevices: null,
+      propertyMeters: null,
+      includedMeters: null,
+      meterSettings: [],
+    };
+  }
 }
 
 export async function createOwnAppEnergyReader(homey: any, signal?: AbortSignal): Promise<CoordinationReader> {
@@ -121,6 +185,12 @@ interface Options {
 }
 
 export class DualCtHomeyEnergyContext {
+  private lastFailure: ReturnType<typeof dualCtContextFailureSnapshot> = null;
+
+  diagnostics() {
+    return dualCtContextFailureSnapshot(this.lastFailure);
+  }
+
   private source: { account: string; device: string; grid: string; owned: boolean;
     identity: { productType: number; firmware: string }; identityObservedAt: number } | null = null;
 
@@ -218,9 +288,23 @@ export class DualCtHomeyEnergyContext {
   }
 
   async refresh() {
+    let stage = 'selection';
     try {
-      await this.readSelection(); await this.readInventory();
-    } catch {
+      await this.readSelection(); stage = 'inventory';
+      const inventory = await this.readInventory();
+      this.lastFailure = inventory.complete ? null : dualCtContextFailureSnapshot({ stage, reason: 'inventory_incomplete', inventoryStage: 'classification' });
+    } catch (error: any) {
+      let reason = 'read_failed';
+      try {
+        const message = error?.message;
+        if (['account_required', 'owned_source_required', 'firmware_readback_unavailable', 'source_changed', 'source_closed', 'inventory_read_cancelled'].includes(message)) reason = message;
+      } catch { /* Even exception getters are untrusted. */ }
+      this.lastFailure = dualCtContextFailureSnapshot({
+        stage,
+        reason: error instanceof OwnedInventoryReadError ? 'owned_inventory_read_failed' : reason,
+        inventoryStage: error instanceof OwnedInventoryReadError ? error.stage : null,
+        driver: error instanceof OwnedInventoryReadError ? error.driver : null,
+      });
       this.trial.cancel(); this.source = null; this.inventory = null; throw new Error('energy_source_unavailable');
     }
   }

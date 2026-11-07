@@ -391,7 +391,7 @@ test('ordinary support export contains preview health but never preview numbers,
       lastReceiptAgeSec: 1, receivedFrames: 60, rejectedFrames: 1, lastFrameAgeSec: 0,
       transport: { connected: true, listening: true, activeTopics: 2, receivedFrames: 60, topic: 'PRIVATE', payload: 'PRIVATE', error: 'PRIVATE' }, value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
   } } });
-  assert.equal(report.schemaVersion, 19); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
+  assert.equal(report.schemaVersion, 20); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
   assert.equal(report.dualCtPreviews[0].receivedFrames, 60);
   assert.equal(report.dualCtPreviews[0].transport.activeTopics, 2);
   assert.equal(report.dualCtPreviews[0].transport.receivedFrames, 60);

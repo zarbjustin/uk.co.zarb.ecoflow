@@ -864,7 +864,8 @@
           comparisonButton.disabled = dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = false;
           if (dualCtOnly && report && !err) report = { schemaVersion: 1, scope: "dual_ct_support_summary", appVersion: report.appVersion,
             homeyVersion: report.homeyVersion, persistence: "since_app_start_bounded_recent_events",
-            dualCtPreviews: report.dualCtPreviews, dualCtCommunityTrials: report.dualCtCommunityTrials };
+            dualCtPreviews: report.dualCtPreviews, dualCtCommunityTrials: report.dualCtCommunityTrials,
+            dualCtOwnedInventory: report.dualCtOwnedInventory, dualCtEnergyRecovery: report.dualCtEnergyRecovery };
           if (comparison && report && !err && report.scope === 'dual_ct_support_summary') {
             var now = Date.now();
             if (comparisonSnapshots.length === 3 || (comparisonStartedAt !== null && (now < comparisonStartedAt || now - comparisonStartedAt > 900000))

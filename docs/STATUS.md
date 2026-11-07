@@ -1,5 +1,53 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 7 November2026 — 1.11.23 source push and conditional Development update approved
+
+Owner approved commit/push of the reviewed diagnostic1.11.23, exact CI, then one
+non-clean Development installation on Justin's Homey Pro only if fresh preflight
+is safe, followed by preservation and targeted diagnostics. Test/Live/battery
+settings remain unchanged; EcoFlow AI stays in charge, Homey execution stays off.
+Reviewed source export matches canonical runtime; archive/fingerprint are in the
+[investigation review](DUAL_CT_1_11_22_RECONNECT_INVESTIGATION_2026-11-07.md).
+At checkpoint creation CI/preflight/delivery/readback are pending; see local final
+receipt for exact committed SHA, CI, delivery and diagnostic results. No claim the
+candidate fixes the outage until evidence proves it. Prior dirty reports preserved.
+Local receipt: ../work/output/development-1.11.23-20261107T1440Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — source-only1.11.23 diagnostics; reconnect cause not yet established
+
+[Investigation/review](DUAL_CT_1_11_22_RECONNECT_INVESTIGATION_2026-11-07.md) records
+continued1.11.22 reconnecting at14:11UTC, two totals retained. Actual cause unresolved:
+current single-phase runtime hides/discards the failing startup check. Confirmed
+visibility defect fixed locally: source/inventory/getter/admission diagnostics
+survive recovery; schema20 anonymous owned-SDK scan and Dual CT summary/copy added.
+Also fixed reproduced array-settings acceptance (complete -> incomplete); NOT
+proven as household cause. No overlap/freshness bypass, reset or permission restore.
+Uncommitted1.11.23 diagnostic candidate:1529 tests/lint/release:check/CLI4.5.3 verified
+pass. No exact new CI/multi-model/hardware claim; release:full remains NO-GO. Review
+before commit/push/CI or any separately approved diagnostic installation. Installed
+1.11.22,Test88,Live18,battery/AI and disabled Homey execution unchanged; no external
+contact. Prior dirty reports preserved. Local receipt:
+../work/output/dualct-11122-recovery-investigation-20261107T1412Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — Development 1.11.22 installed; Dual CT validation blocked
+
+[Validation report](DEVELOPMENT_1_11_22_VALIDATION_2026-11-07.md): approved exact
+archive installed once non-clean at13:33:02UTC on Justin's Homey Pro. Source
+c1c7f68 / fingerprint96c4c830...f159f147 / CI42376675594. Running1.11.22 with
+geolocation only confirmed. Pending checkpoint settled naturally; safety and
+external-meter role review passed.103 startup samples: no numeric counter drop or
+read error; seven transient unknown samples, all ten totals recovered. Two full
+readbacks preserve15 identities/settings/definitions (except generated icon URLs),
+101 Flows,1217 Insights,Energy/global/native configuration and disabled Homey
+execution. **Runtime validation NOT passed:** Dual CT live before delivery, now
+reconnecting/unknown watts; two counters intact. Cause unestablished. Investigate
+owned SDK inventory/source admission; no re-pair/reset/permission weakening or
+unapproved deployment. Pre-existing micro offline and linked5000 scope unchanged.
+Test1.11.21/build88/Live1.10.3/build18 verified unchanged; EcoFlow AI stays in charge,
+battery settings unchanged. No automatic rollback/restart, hardware gate closure
+or48hsoak. Source unchanged; report/checkpoint uncommitted. Private receipt:
+../work/output/development-1.11.22-20261107T1331Z/FINAL_RECEIPT.md.
+
 ## 7 November 2026 — 1.11.22 tradeoffs accepted; diagnostic source push authorised
 
 Owner explicitly accepted the [1.11.22 contract](NO_BROAD_API_CANDIDATE_1_11_22_2026-11-07.md)

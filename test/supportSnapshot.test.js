@@ -413,7 +413,7 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 19);
+  assert.equal(report.schemaVersion, 20);
 });
 
 test('self observations and linked-power explanation are re-projected without private fields or authority', () => {
@@ -526,4 +526,20 @@ test('official system SOC provenance is bounded, excludes private identifiers an
   assert.deepEqual(system.officialSoc, [{ deviceIndex: 0, source: 'developer_api', basis: 'cloud_latest_report',
     hardwareReportedAt: null, receiptAgeSec: 2, requestDurationMs: 60, stale: false }]);
   assert.ok(!JSON.stringify(report).includes('PRIVATE_SOC'));
+});
+
+
+test('support includes anonymous single-phase recovery and owned SDK scan diagnostics without cloud/API access', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter_dual_ct_energy' ? [{
+    getDualCtEnergyDiagnostics: () => ({ mode: 'single_phase', startupStage: 'source', retryScheduled: true, active: false,
+      context: { stage: 'inventory', reason: 'owned_inventory_read_failed', inventoryStage: 'settings', driver: 'smartmeter' }, private: 'PRIVATE' }),
+    getData: () => ({ sn: 'PRIVATE' }), getEnergy: () => ({ cumulative: true }), getCapabilities: () => ['measure_power'], getSettings: () => ({}),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  assert.equal(report.dualCtEnergyRecovery[0].mode, 'single_phase');
+  assert.equal(report.dualCtEnergyRecovery[0].context.inventoryStage, 'settings');
+  assert.equal(report.dualCtCommunityTrials.length, 0);
+  assert.doesNotMatch(JSON.stringify(report.dualCtEnergyRecovery), /PRIVATE/);
+  assert.equal(report.dualCtOwnedInventory.readOnly, true);
 });

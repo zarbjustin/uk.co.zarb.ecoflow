@@ -79,3 +79,66 @@ test('an undefined SDK cumulative override cannot hide a declared EcoFlow proper
   const result = dualCtHomeyContributors(rows);
   assert.equal(result.complete, true); assert.equal(result.contributors.filter(r => r.contributes).length, 1);
 });
+
+
+test('owned scan identifies the failing SDK getter without returning private values or errors', () => {
+  const { dualCtOwnedInventoryDiagnostics } = require('../.homeybuild/lib/dualCtHomeyEnergyContext');
+  for (const [method, stage] of [['getData', 'identity'], ['getEnergy', 'energy'], ['getSettings', 'settings'], ['getCapabilities', 'capabilities']]) {
+    const d = device('PRIVATE_SERIAL', { cumulative: true });
+    d[method] = () => { throw Error('PRIVATE_TOKEN PRIVATE_HOUSEHOLD'); };
+    const scan = dualCtOwnedInventoryDiagnostics(homey({ smartmeter: [d] }));
+    assert.equal(scan.status, 'read_failed'); assert.equal(scan.stage, stage); assert.equal(scan.driver, 'smartmeter');
+    assert.equal(scan.readOnly, true); assert.equal(scan.complete, false);
+    assert.doesNotMatch(JSON.stringify(scan), /PRIVATE/);
+  }
+});
+test('owned diagnostic scans distinguish malformed inventory and included/excluded meters without writes', () => {
+  const { dualCtOwnedInventoryDiagnostics } = require('../.homeybuild/lib/dualCtHomeyEnergyContext');
+  const d = device('PRIVATE_SERIAL', null, { energy_exclude: true });
+  d.setEnergy = d.setSettings = () => assert.fail('diagnostics must not write');
+  const scan = dualCtOwnedInventoryDiagnostics(homey({ smartmeter: [d] }));
+  assert.equal(scan.status, 'complete'); assert.equal(scan.pairedDevices, 1); assert.equal(scan.includedMeters, 0);
+  assert.equal(scan.propertyMeters, 1); assert.equal(scan.externalInventoryVerified, false);
+  assert.doesNotMatch(JSON.stringify(scan), /PRIVATE/);
+  const bad = dualCtOwnedInventoryDiagnostics(homey({ smartmeter: [device('PRIVATE_SERIAL', null, { energy_exclude: 'true' })] }));
+  assert.equal(bad.status, 'incomplete'); assert.equal(bad.includedMeters, null);
+});
+test('source and SDK inventory failures remain distinct after refresh clears eligibility', async () => {
+  const badHomey = homey({ smartmeter: [device('PRIVATE_SERIAL', null)] });
+  badHomey.drivers.getDriver = () => { throw Error('PRIVATE_TOKEN'); };
+  const c = context(badHomey); await assert.rejects(c.refresh(), /energy_source_unavailable/);
+  assert.equal(c.snapshot(), null);
+  assert.deepEqual(c.diagnostics(), { stage: 'inventory', reason: 'owned_inventory_read_failed', inventoryStage: 'driver', driver: 'smartmeter' });
+  c.close(); assert.equal(c.diagnostics().stage, 'inventory');
+  const unavailable = new DualCtHomeyEnergyContext({ homey: homey(), sn, client: () => null });
+  await assert.rejects(unavailable.refresh()); assert.equal(unavailable.diagnostics().stage, 'selection');
+  assert.equal(unavailable.diagnostics().reason, 'account_required');
+  assert.doesNotMatch(JSON.stringify(c.diagnostics()), /PRIVATE/);
+});
+
+test('hostile error and diagnostic getters cannot preserve eligibility or expose exception text', async () => {
+  const { dualCtContextFailureSnapshot, dualCtEnergyRecoverySnapshot } = require('../.homeybuild/lib/dualCtRecoveryDiagnostics');
+  assert.equal(dualCtContextFailureSnapshot({ get stage() { throw Error('PRIVATE'); } }), null);
+  assert.equal(dualCtEnergyRecoverySnapshot({ get mode() { throw Error('PRIVATE'); } }), null);
+  const c = new DualCtHomeyEnergyContext({ homey: homey(), sn, client: () => ({ getSession: async () => {
+    throw Object.defineProperty({}, 'message', { get() { throw Error('PRIVATE'); } });
+  } }) });
+  await assert.rejects(c.refresh(), /energy_source_unavailable/);
+  assert.equal(c.snapshot(), null); assert.equal(c.diagnostics().reason, 'read_failed');
+  assert.doesNotMatch(JSON.stringify(c.diagnostics()), /PRIVATE/);
+  const fake = dualCtContextFailureSnapshot({ stage: 'inventory', reason: 'PRIVATE', driver: 'PRIVATE', inventoryStage: 'PRIVATE' });
+  assert.equal(fake.driver, null); assert.equal(fake.inventoryStage, null); assert.equal(fake.reason, 'read_failed');
+});
+
+test('array-shaped meter settings cannot be admitted as a complete overlap inventory', async () => {
+  const c = context(homey({ smartmeter: [device('PRIVATE', { cumulative: true }, [])] }));
+  await c.refresh(); assert.equal(c.snapshot().inventory.complete, false);
+  assert.equal(c.diagnostics().reason, 'inventory_incomplete'); c.close();
+});
+test('owned diagnostics expose fixed exclusion states rather than names, IDs, readings or settings payloads', () => {
+  const { dualCtOwnedInventoryDiagnostics } = require('../.homeybuild/lib/dualCtHomeyEnergyContext');
+  const scan = dualCtOwnedInventoryDiagnostics(homey({ smartmeter: [device('PRIVATE', null,
+    { energy_exclude: true, energy_cumulative_include: false, private: 'PRIVATE' })] }));
+  assert.deepEqual(scan.meterSettings, [{ driver: 'smartmeter', exclude: 'true', include: 'false' }]);
+  assert.doesNotMatch(JSON.stringify(scan), /PRIVATE/);
+});

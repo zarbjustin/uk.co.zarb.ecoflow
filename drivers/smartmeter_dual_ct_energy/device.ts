@@ -1,5 +1,6 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
+import { dualCtEnergyRecoverySnapshot } from '../../lib/dualCtRecoveryDiagnostics';
 import { DualCtMessageEvidence } from '../../lib/dualCtMessageEvidence';
 import { DualCtEnergyDetails } from '../../lib/dualCtEnergyDetails';
 import { DUAL_CT_DISPLAY_SETTINGS } from '../../lib/dualCtDisplaySettings';
@@ -19,6 +20,7 @@ import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
 const authority = new DualCtEnergyAuthority();
 
 module.exports = class DualCtEnergyDevice extends Homey.Device {
+  private startupFailure: { startupStage: string; context: unknown; admission: string | null } = { startupStage: 'idle', context: null, admission: null };
   private readonly messageEvidence = new DualCtMessageEvidence();
   private readonly communityFeedback = new DualCtCommunityFeedback();
   private readonly details = new DualCtEnergyDetails(this);
@@ -158,6 +160,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       if (!subscribed) throw new Error('subscription');
       this.retryDelay = 30000;
       this.lastRefresh = Date.now();
+      this.startupFailure = { startupStage: 'ready', context: null, admission: null };
       this.ticker = this.homey.setInterval(() => {
         if (generation !== this.generation || this.adapter !== adapter) return;
         this.details.render().catch(() => {});
@@ -168,7 +171,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         if (Date.now() - this.lastRefresh >= 60000 && !this.identityRefresh) {
           this.lastRefresh = Date.now();
           const refresh = context.refresh().then(() => (generation === this.generation ? adapter.refresh() : undefined)).catch(() => {
-            if (generation === this.generation) this.communityFeedback.record('identity_refresh_failed');
+            if (generation === this.generation) {
+              this.startupFailure = { startupStage: 'source', context: context.diagnostics?.() || null, admission: adapter.diagnostics().status };
+              this.communityFeedback.record('identity_refresh_failed');
+            }
             return this.recover(generation, dependencies.enabled);
           })
             .finally(() => {
@@ -178,7 +184,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         }
       }, 1000);
     } catch {
-      if (generation === this.generation) this.communityFeedback.record(`startup_${startupStage}_failed`);
+      if (generation === this.generation) {
+        this.startupFailure = { startupStage, context: context.diagnostics?.() || null, admission: this.adapter?.diagnostics().status || null };
+        this.communityFeedback.record(`startup_${startupStage}_failed`);
+      }
       await this.recover(generation, dependencies.enabled);
     }
   }
@@ -225,6 +234,15 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
     if (changedKeys.some((key) => DUAL_CT_DISPLAY_SETTINGS.includes(key))) await this.configureDetails(newSettings);
+  }
+
+  getDualCtEnergyDiagnostics() {
+    return dualCtEnergyRecoverySnapshot({
+      ...this.startupFailure,
+      mode: this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' ? 'three_phase_community' : 'single_phase',
+      retryScheduled: this.retry !== null,
+      active: this.adapter?.diagnostics().active === true,
+    });
   }
 
   getDualCtCommunityFeedback() {

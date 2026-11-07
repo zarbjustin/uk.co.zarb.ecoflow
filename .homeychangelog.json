@@ -1,4 +1,9 @@
 {
+  "1.11.23": {
+    "en": "Adds local read-only Dual CT startup and owned-meter diagnostics for single-phase and three-phase installations. Preserves counters, freshness and overlap safeguards; the cause of the 1.11.22 reconnecting issue is still under investigation.",
+    "de": "Ergänzt lokale, rein lesende Dual-CT-Start- und Zählerdiagnosen für ein- und dreiphasige Installationen. Zählerstände sowie Aktualitäts- und Überschneidungsprüfungen bleiben erhalten; die Ursache des Verbindungsproblems in 1.11.22 wird noch untersucht.",
+    "nl": "Voegt lokale alleen-lezen Dual CT-opstart- en meterdiagnostiek toe voor één- en driefasige installaties. Tellers, actualiteitscontroles en overlapbeveiliging blijven behouden; de oorzaak van het verbindingsprobleem in 1.11.22 wordt nog onderzocht."
+  },
   "1.11.22": {
     "en": "Removes whole-Homey API access. Dual CT continues to check EcoFlow meters automatically; other apps’ property meters require your explicit Homey Energy review. Saved devices, counters, history and Flow card identities are retained. Previous in-app cross-app coordination cannot start; advanced coordination needs a separately configured owner automation. No battery settings are changed.",
     "de": "Entfernt den vollständigen Homey-API-Zugriff. Dual CT prüft EcoFlow-Zähler weiterhin automatisch; Zähler anderer Apps müssen Sie ausdrücklich in Homey Energy prüfen. Geräte, Zählerstände, Historie und Flow-Karten bleiben erhalten. Die bisherige appübergreifende Koordination kann nicht starten; sie benötigt eine eigene Automation. Keine Batterieeinstellungen werden geändert.",

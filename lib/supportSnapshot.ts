@@ -1,5 +1,7 @@
 'use strict';
 
+import { dualCtOwnedInventoryDiagnostics } from './dualCtHomeyEnergyContext';
+import { dualCtEnergyRecoverySnapshot } from './dualCtRecoveryDiagnostics';
 import { messageEvidenceSnapshot } from './dualCtMessageEvidence';
 
 import { dualCtEventSnapshot, DUAL_CT_MONITOR_EVENTS } from './dualCtDiagnosticEvents';
@@ -550,7 +552,7 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
       });
   } catch { /* Optional numeric-free preview evidence. */ }
   return {
-    schemaVersion: 19,
+    schemaVersion: 20,
     capturedAt: new Date(now).toISOString(),
     appVersion: safeVersion(manifest.version),
     homeyVersion: safeVersion(homey?.version),
@@ -568,6 +570,22 @@ export function createSupportSnapshot(homey: any): Record<string, unknown> {
     })),
     smartMeters,
     dualCtPreviews,
+    dualCtOwnedInventory: dualCtOwnedInventoryDiagnostics(homey),
+    dualCtEnergyRecovery: (() => {
+      try {
+        return homey.drivers.getDriver('smartmeter_dual_ct_energy').getDevices().slice(0, 16)
+          .map((device: any) => {
+            try {
+              return dualCtEnergyRecoverySnapshot(device.getDualCtEnergyDiagnostics?.());
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+      } catch {
+        return [];
+      }
+    })(),
     dualCtCommunityTrials: (() => {
       try {
         return homey.drivers.getDriver('smartmeter_dual_ct_energy').getDevices().slice(0, 16)

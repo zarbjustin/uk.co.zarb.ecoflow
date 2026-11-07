@@ -424,3 +424,20 @@ test('busy transport with one sparse CT1 anchor can show recent detail while Ene
     assert.equal(d.subscriptions.length, 1); assert.equal(d.detached.length, 0);
   } finally { await d.onUninit(); }
 });
+
+
+test('single-phase startup diagnostics survive recovery without exposing community trial claims or clearing counters', async () => {
+  const d = new Driver(); enabled(d);
+  d.values.set('meter_power.imported', 9); d.values.set('meter_power.exported', 8);
+  d.energyDependencies = () => ({ enabled: () => true, resolve: () => contract,
+    context: () => new DualCtHomeyEnergyContext({ homey: {}, sn, client: () => null }) });
+  await d.onInit();
+  const diag = d.getDualCtEnergyDiagnostics();
+  assert.equal(diag.mode, 'single_phase'); assert.equal(diag.startupStage, 'source');
+  assert.equal(diag.context.stage, 'selection'); assert.equal(diag.context.reason, 'account_required');
+  assert.equal(diag.retryScheduled, true); assert.equal(diag.active, false);
+  assert.equal(d.getDualCtCommunityFeedback(), null);
+  assert.equal(d.values.get('meter_power.imported'), 9); assert.equal(d.values.get('meter_power.exported'), 8);
+  assert.equal(d.subscriptions.length, 0); assert.doesNotMatch(JSON.stringify(diag), /DUALCTSYNTHETIC01|synthetic_contract/);
+  await d.onUninit();
+});
