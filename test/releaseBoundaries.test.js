@@ -16,6 +16,8 @@ test('release check rejects accidental Energy, actions, public routes, permissio
     value => { value.app.flow.actions.push({ id: 'coordination_force_charge' }); },
     value => { value.app.api.coordinationWorkspace.public = true; },
     value => { value.app.permissions.push('homey:manager:flow'); },
+    value => { value.app.permissions.push('homey:manager:api'); },
+    value => { value.homeyReader += '\nhomey.api.getOwnerApiToken();'; },
     value => { value.app.flow.conditions.find(card => card.id === 'battery_soc').args[1].name = 'changed'; },
     value => { value.gridGate = value.gridGate.replace('RUNTIME_ENABLED = true', 'RUNTIME_ENABLED = false'); },
     value => { value.gridProfiles.profiles[0].firmware = '*'; },

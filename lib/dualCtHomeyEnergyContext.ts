@@ -1,10 +1,11 @@
 /** Owned-source and Homey inventory readback for the separate, gated CT1 Energy driver. */
+import { createHash } from 'crypto';
 import { DualCtCommunityTrial } from './dualCtCommunityTrial';
 import { DualCtGridIdentity, resolveDualCtGridEnergyContract } from './dualCtGridEnergySource';
 import { appAuthCredentialsRevision } from './appAuthPairing';
 import { AppDevice } from './appDevices';
 import { EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
-import { createHomeyCoordinationReader } from './coordinationWorkspace';
+import type { CoordinationReader } from './coordinationWorkspace';
 import { dualCtAccountBinding, dualCtPreviewDevices } from './dualCtPreviewPairing';
 import { DualCtEnergyContributor } from './dualCtEnergyAdoption';
 
@@ -48,6 +49,64 @@ export function dualCtHomeyContributors(input: unknown, ownDevice?: { sn: string
   return { complete: true, contributors };
 }
 
+/** SDK-owned devices only. External meters require the separate pairing acknowledgement. */
+export async function readOwnAppEnergyDevices(homey: any): Promise<Record<string, any>> {
+  const manifest = homey?.manifest || homey?.app?.manifest;
+  if (manifest?.id !== 'uk.co.zarb.ecoflow' || !Array.isArray(manifest.drivers)
+    || manifest.drivers.length === 0 || manifest.drivers.length > 64) throw new Error('owned_inventory_unknown');
+  const rows: Record<string, any> = {};
+  const drivers = new Set<string>();
+  for (const entry of manifest.drivers) {
+    if (!validId(entry?.id) || drivers.has(entry.id)) throw new Error('owned_inventory_unknown');
+    drivers.add(entry.id);
+    const devices = homey.drivers.getDriver(entry.id).getDevices();
+    if (!Array.isArray(devices) || devices.length > 2048) throw new Error('owned_inventory_unknown');
+    for (const device of devices) {
+      const data = device.getData();
+      if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length > 64
+        || Object.values(data).some((v) => v !== null && !['string', 'number', 'boolean'].includes(typeof v))
+        || Object.values(data).some((v) => typeof v === 'number' && !Number.isFinite(v))) throw new Error('owned_inventory_unknown');
+      const driverId = `homey:app:${manifest.id}:${entry.id}`;
+      const id = createHash('sha256').update(driverId).update('\0')
+        .update(JSON.stringify(Object.fromEntries(Object.entries(data).sort(([a], [b]) => a.localeCompare(b)))))
+        .digest('hex');
+      if (rows[id] || Object.keys(rows).length >= 2048) throw new Error('owned_inventory_unknown');
+      const declared = device.getEnergy();
+      if (declared !== undefined && declared !== null && (typeof declared !== 'object' || Array.isArray(declared))) throw new Error('owned_inventory_unknown');
+      const cumulative = declared?.cumulative === undefined ? entry.energy?.cumulative : declared.cumulative;
+      let name: string | undefined;
+      try {
+        if (typeof device.getName?.() === 'string') name = device.getName();
+      } catch { /* Labels cannot change admission. */ }
+      rows[id] = {
+        id,
+        driverId,
+        data,
+        capabilities: device.getCapabilities(),
+        energyObj: { cumulative: cumulative === undefined ? false : cumulative },
+        settings: device.getSettings(),
+        ...(name ? { name } : {}),
+      };
+    }
+  }
+  return rows;
+}
+
+export async function createOwnAppEnergyReader(homey: any, signal?: AbortSignal): Promise<CoordinationReader> {
+  let closed = false;
+  const list = async () => {
+    if (closed || signal?.aborted) throw new Error('owned_inventory_closed');
+    return readOwnAppEnergyDevices(homey);
+  };
+  return {
+    list,
+    read: async (id: string) => (await list())[id] || null,
+    close: () => {
+      closed = true;
+    },
+  };
+}
+
 interface Options {
   homey: any;
   sn: string;
@@ -56,7 +115,7 @@ interface Options {
   communityThreePhase?: boolean;
   /** Code-owned supported readback, NEVER a customer setting, native screenshot or cached report. */
   readFirmware?: (client: EcoFlowAppAuthClient, device: AppDevice) => Promise<string | null>;
-  reader?: typeof createHomeyCoordinationReader;
+  reader?: typeof createOwnAppEnergyReader;
   now?: () => number;
   readTimeoutMs?: number;
 }
@@ -65,7 +124,7 @@ export class DualCtHomeyEnergyContext {
   private source: { account: string; device: string; grid: string; owned: boolean;
     identity: { productType: number; firmware: string }; identityObservedAt: number } | null = null;
 
-  private inventory: { account: string; observedAt: number; complete: boolean; contributors: DualCtEnergyContributor[] } | null = null;
+  private inventory: { account: string; observedAt: number; complete: boolean; scope: 'app_owned'; externalInventoryVerified: false; contributors: DualCtEnergyContributor[] } | null = null;
   private readonly trial: DualCtCommunityTrial;
   private generation = 0;
   private closed = false;
@@ -136,8 +195,8 @@ export class DualCtHomeyEnergyContext {
       this.controller.signal.addEventListener('abort', rejectAbort, { once: true });
       if (this.controller.signal.aborted) rejectAbort();
     });
-    let reader: Awaited<ReturnType<typeof createHomeyCoordinationReader>> | null = null;
-    const opening = Promise.resolve().then(() => (this.options.reader || createHomeyCoordinationReader)(this.options.homey, this.controller.signal));
+    let reader: Awaited<ReturnType<typeof createOwnAppEnergyReader>> | null = null;
+    const opening = Promise.resolve().then(() => (this.options.reader || createOwnAppEnergyReader)(this.options.homey, this.controller.signal));
     // A reader that opens after cancellation must never retain a token or connection.
     opening.then((opened) => {
       if (this.controller.signal.aborted) opened.close();
@@ -147,7 +206,9 @@ export class DualCtHomeyEnergyContext {
       const raw = await Promise.race([reader.list(), aborted]);
       const result = dualCtHomeyContributors(raw, this.options.ownDevice);
       if (generation !== this.generation || this.source?.account !== account) throw new Error('source_changed');
-      this.inventory = { account, observedAt: this.now(), ...result };
+      this.inventory = {
+        account, observedAt: this.now(), ...result, scope: 'app_owned', externalInventoryVerified: false,
+      };
       return { ...this.inventory, contributors: result.contributors.map((row) => ({ ...row })) };
     } finally {
       cancelTimer(timer);

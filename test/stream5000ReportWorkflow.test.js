@@ -53,7 +53,8 @@ test('desktop/mobile reports explain an unmetered unit-only setup without writes
       assert.match(text, /Reported grid-meter power: Unavailable or stale/);
       assert.match(text, /Flow-derived grid power: 3 W/);
       assert.equal(await page.locator('#enableDualCtPreview').isChecked(), false);
-      assert.equal(await page.locator('#coord-flow-consent').isChecked(), false);
+      assert.equal(await page.locator('#coord-flow-consent').count(), 0);
+      assert.equal(await page.locator('#coord-external-notice').count(), 1);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
       assert.deepEqual(calls, [{ method: 'GET', url: '/support-snapshot' }]);
       assert.deepEqual(writes, []);

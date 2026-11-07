@@ -1,7 +1,6 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const http = require('node:http');
 const { coordinationCatalog, coordinationSourceKind, normalizeCoordinationBindings, boundCoordinationView } = require('../.homeybuild/lib/coordinationBindings');
 const { createHomeyCoordinationReader } = require('../.homeybuild/lib/coordinationWorkspace');
 
@@ -62,30 +61,11 @@ test('known preview source classification is shared, explicit and cannot confer 
   assert.equal(coordinationCatalog(Object.fromEntries(h.devices)).sources[0].sourceKind, 'metadata_only');
 });
 
-test('permission failure and cancelled token acquisition do not proceed to URL acquisition or HTTP reads', async () => {
-  let urls = 0, release;
-  const api = { getOwnerApiToken: () => new Promise(resolve => { release = resolve; }), getLocalUrl: async () => { urls++; return 'http://127.0.0.1'; } };
-  const abort = new AbortController(); const pending = createHomeyCoordinationReader({ api }, abort.signal);
-  abort.abort(); release('synthetic-token'); await assert.rejects(pending, /closed/); assert.equal(urls, 0);
-  api.getOwnerApiToken = async () => { throw new Error('synthetic denied'); };
-  await assert.rejects(createHomeyCoordinationReader({ api }), /denied/); assert.equal(urls, 0);
-  await assert.rejects(createHomeyCoordinationReader({ api }, abort.signal), /closed/); assert.equal(urls, 0);
+test('missing permission never causes token acquisition, URL lookup or network access', async () => {
+  const api = new Proxy({}, { get() { assert.fail('broad API must not be accessed'); } });
+  await assert.rejects(createHomeyCoordinationReader({ api }), /external_reader_required/);
 });
-
-test('native read fence rejects malformed/oversized/denied responses and close prevents subsequent network access', async () => {
-  let calls = 0;
-  const server = http.createServer((req, res) => {
-    calls++;
-    if (req.url.endsWith('/oversized')) { res.end('x'.repeat(4 * 1024 * 1024 + 1)); return; }
-    if (req.url.endsWith('/denied')) { res.writeHead(403); res.end('{}'); return; }
-    res.end('{invalid');
-  });
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const reader = await createHomeyCoordinationReader({ api: { getOwnerApiToken: async () => 'synthetic-token',
-    getLocalUrl: async () => `http://127.0.0.1:${server.address().port}` } });
-  try {
-    await assert.rejects(reader.read('malformed')); await assert.rejects(reader.read('oversized'), /too large/);
-    await assert.rejects(reader.read('denied'), /unavailable/);
-    const before = calls; reader.close(); await assert.rejects(reader.read('after-close'), /closed/); assert.equal(calls, before);
-  } finally { reader.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+test('cancelled external-reader request fails closed before consulting Homey', async () => {
+  const abort = new AbortController(); abort.abort();
+  await assert.rejects(createHomeyCoordinationReader({}, abort.signal), /closed/);
 });

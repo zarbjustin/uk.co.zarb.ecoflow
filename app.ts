@@ -14,7 +14,7 @@ import { mergeDualCtInventory, probeDualCtDeveloper, dualCtInventorySummary } fr
 import { EcoFlowClient } from './lib/EcoFlowClient';
 import { readStream5000OfficialSoc, Stream5000OfficialSocSample } from './lib/stream5000OfficialSoc';
 import { EcoFlowDevice } from './lib/types';
-import { CoordinationWorkspace, createHomeyCoordinationReader } from './lib/coordinationWorkspace';
+import { CoordinationWorkspace } from './lib/coordinationWorkspace';
 import { CoordinationFlowMonitor } from './lib/coordinationFlowMonitor';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
@@ -43,18 +43,18 @@ module.exports = class EcoFlowApp extends Homey.App {
   private readonly settingsHandler = (key: string) => this.onSettingChanged(key);
 
   async requestCoordinationWorkspace(body: any): Promise<Record<string, any>> {
-    if (this.stopping) {
-      return {
-        state: 'blocked',
-        reason: 'session_expired',
-        advisoryOnly: true,
-        controlsEnabled: false,
-        contributesToEnergy: false,
-        commandWrites: 0,
-      };
-    }
-    if (!this.coordinationWorkspace) this.coordinationWorkspace = new CoordinationWorkspace((signal) => createHomeyCoordinationReader(this.homey, signal));
-    return this.coordinationWorkspace.request(body);
+    if (body?.action === 'revoke') this.coordinationWorkspace?.revoke();
+    return {
+      advisoryOnly: true,
+      controlsEnabled: false,
+      contributesToEnergy: false,
+      commandWrites: 0,
+      state: 'blocked',
+      reason: this.stopping ? 'session_expired' : 'external_reader_required',
+      readings: [],
+      decision: null,
+      preservedBindings: true,
+    };
   }
 
   async onInit(): Promise<void> {
@@ -170,21 +170,13 @@ module.exports = class EcoFlowApp extends Homey.App {
     } else if (body?.action === 'start') {
       if (this.stopping) throw new Error('coordination_flow_stopped');
       if (body.expectedRevision !== this.coordinationFlowRevision) throw new Error('coordination_flow_setup_changed');
-      this.coordinationFlowRevision += 1;
-      if (!this.coordinationFlowMonitor) {
-        this.coordinationFlowMonitor = new CoordinationFlowMonitor(() => createHomeyCoordinationReader(this.homey), (event, tokens) => {
-          try {
-            this.homey.flow.getTriggerCard(event).trigger(tokens).catch(() => {});
-          } catch { /* No telemetry/provider error logging. */ }
-        }, { now: () => Date.now(), set: (fn, ms) => this.homey.setTimeout(fn, ms), clear: (timer) => this.homey.clearTimeout(timer) });
-      }
-      return { ...this.coordinationFlowMonitor.start(body), revision: this.coordinationFlowRevision };
+      throw new Error('coordination_flow_external_reader_required');
     } else if (body?.action !== 'status') throw new Error('coordination_flow_unsupported_action');
     return {
       ...(this.coordinationFlowMonitor?.status() || {
         active: false,
         state: 'disabled',
-        reason: 'monitor_disabled',
+        reason: 'external_reader_required',
         advisoryOnly: true,
         controlsEnabled: false,
         contributesToEnergy: false,

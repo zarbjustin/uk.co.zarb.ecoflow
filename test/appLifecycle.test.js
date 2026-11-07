@@ -178,7 +178,7 @@ test('account changes revoke a pending page reader without enabling or altering 
   const { app, settings } = harness(); await app.onInit();
   let signal;
   app.coordinationWorkspace = new CoordinationWorkspace(abort => { signal = abort; return new Promise(() => {}); });
-  const pending = app.requestCoordinationWorkspace({ action: 'open', consent: true, clientId: 'synthetic-page' });
+  const pending = app.coordinationWorkspace.request({ action: 'open', consent: true, clientId: 'synthetic-page' });
   settings.emit('set', 'appAuthPassword');
   assert.equal((await pending).reason, 'session_expired'); assert.equal(signal.aborted, true);
   assert.equal(app.coordinationFlowMonitor, null); await app.onUninit();
@@ -412,4 +412,15 @@ test('concurrent Start during discovery does not change preview consent or attac
     await pending;
     assert.equal(app.getDualCtResearchView().preview.enabled, false);
   } finally { pairing.appAuthClientFromSettings = original; await app.onUninit(); }
+});
+
+
+test('production coordination endpoints retain IDs but block cross-app starts with explicit migration reason', async () => {
+  const { app } = harness(); await app.onInit();
+  const result = await app.requestCoordinationWorkspace({ action: 'open', consent: true });
+  assert.equal(result.reason, 'external_reader_required'); assert.equal(result.commandWrites, 0);
+  assert.equal(app.requestCoordinationFlowMonitor({ action: 'status' }).reason, 'external_reader_required');
+  assert.throws(() => app.requestCoordinationFlowMonitor({ action: 'start', expectedRevision: 0 }), /external_reader_required/);
+  assert.equal(app.coordinationFlowMonitor, null); assert.equal(app.coordinationWorkspace, null);
+  await app.onUninit();
 });

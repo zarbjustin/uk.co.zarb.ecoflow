@@ -69,15 +69,20 @@ The earlier detailed-monitor driver is hidden from new pairing. Existing devices
 capabilities, history and Flow references remain supported; this update does not
 convert or remove them. There is no need to re-pair existing devices for the cleanup.
 
-### Cross-app coordination preview
+### Advanced cross-app coordination
 
-The settings workspace can explicitly read selected Homey capabilities for a
-grid meter, external battery SOC/power and STREAM power. Broad Homey API permission
-is required; the implementation is GET-only and default-off. Six observation
-WHEN/AND cards have separate consent and a fixed 30-minute monitoring session.
-Existing user THEN actions can run when those triggers fire. Known Dual CT
-candidates cannot feed these cards. No new charging action or Energy adoption is
-enabled. See [source compatibility and access limits](docs/COORDINATION_SOURCE_AUDIT.md).
+The production candidate does not request whole-Homey API access. EcoFlow devices,
+counters and Homey Energy remain in this app. Automatic overlap checks cover
+EcoFlow meters only; review and exclude overlapping external meters in Homey Energy.
+
+The former in-app cross-device picker and observation monitor cannot start in
+this candidate. Saved source selections and the six existing observation Flow
+card IDs are retained, but cross-app conditions fail closed and no new observation
+triggers fire. Existing user THEN actions are not run. Advanced coordination
+needs a separately authorised HomeyScript or owner automation; nothing is
+installed or enabled automatically. The pure authenticated advisory preview
+endpoint remains available without a reader or commands. See
+[the migration design](docs/COORDINATION_EXTERNAL_RUNNER_DESIGN.md).
 
 ### Automation
 - **Triggers:** solar/grid power changed, grid import/export started, grid import/export **rises above** a threshold, charging/discharging started, battery level crossed, operating mode changed, fault raised/cleared, device online/offline.

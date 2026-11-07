@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.11.21",
+  "version": "1.11.22",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -79,7 +79,6 @@
   },
   "brandColor": "#000000",
   "permissions": [
-    "homey:manager:api",
     "homey:manager:geolocation"
   ],
   "api": {

@@ -1,7 +1,6 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const http = require('node:http');
 const { normalizeCoordinationBindings: normalize, coordinationCatalog, boundCoordinationView: view } = require('../.homeybuild/lib/coordinationBindings');
 const { CoordinationWorkspace, createHomeyCoordinationReader } = require('../.homeybuild/lib/coordinationWorkspace');
 const binding = (deviceId, capabilityId, unit, positiveMeans) => ({ deviceId, driverId: 'homey:app:synthetic:driver', capabilityId, unit, positiveMeans });
@@ -125,24 +124,10 @@ test('opt-out cancels an opening reader before its session token exists', async 
   finish({ close() { closes++; } });
   assert.equal((await pending).reason, 'session_expired'); assert.equal(closes, 1); workspace.stop();
 });
-test('native Homey reader uses only fixed GET routes, rejects redirects/path traversal and aborts on close', async () => {
-  const calls = []; let redirected = 0;
-  const target = http.createServer((_req, res) => { redirected++; res.end('{}'); });
-  await new Promise(resolve => target.listen(0, '127.0.0.1', resolve));
-  const server = http.createServer((req, res) => {
-    calls.push([req.method, req.url]);
-    if (req.url.endsWith('/redirect')) { res.writeHead(302, { location: `http://127.0.0.1:${target.address().port}/` }); res.end(); return; }
-    res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ id: 'synthetic' }));
-  });
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const reader = await createHomeyCoordinationReader({ api: { async getOwnerApiToken() { return 'synthetic-token'; },
-    async getLocalUrl() { return `http://127.0.0.1:${server.address().port}`; } } });
-  try {
-    await reader.list(); await reader.read('synthetic');
-    await assert.rejects(reader.read('../settings')); await assert.rejects(reader.read('..')); await assert.rejects(reader.read('redirect'));
-    assert.equal(redirected, 0); assert(calls.every(([verb]) => verb === 'GET'));
-    assert.deepEqual(calls.slice(0, 2), [['GET', '/api/manager/devices/device/'], ['GET', '/api/manager/devices/device/synthetic']]);
-    reader.close(); await assert.rejects(reader.read('synthetic'));
-  } finally { reader.close(); server.closeAllConnections(); target.closeAllConnections(); await Promise.all([
-    new Promise(resolve => server.close(resolve)), new Promise(resolve => target.close(resolve))]); }
+test('retired in-app reader cannot obtain broad credentials or issue any network request', async () => {
+  let calls = 0;
+  await assert.rejects(createHomeyCoordinationReader({ api: {
+    getOwnerApiToken() { calls++; throw Error('should not acquire'); }, getLocalUrl() { calls++; throw Error('should not resolve'); },
+  } }), /external_reader_required/);
+  assert.equal(calls, 0);
 });

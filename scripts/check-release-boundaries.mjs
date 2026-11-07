@@ -14,6 +14,7 @@ export function loadReleaseInputs(root) {
   const json = name => JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
   const app = json('app.json');
   return {
+    homeyReader: fs.readFileSync(path.join(root, 'lib/coordinationWorkspace.ts'), 'utf8'),
     app, compose: json('.homeycompose/app.json'), pkg: json('package.json'), lock: json('package-lock.json'),
     legacy: json('test/fixtures/legacy-flow-v1.10.54-contract.json'), live: json('test/fixtures/live-v1.10.3-contract.json'),
     definitions: app.capabilities,
@@ -28,7 +29,7 @@ export function loadReleaseInputs(root) {
       .filter(name => fs.existsSync(path.join(root, name))).map(name => fs.readFileSync(path.join(root, name), 'utf8')).join('\n'),
   };
 }
-export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, gridProfiles, threePhaseGridProfiles, communityGridProfiles, runtime,
+export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, legacy, live, definitions, pairingAccess, gridGate, gridProfiles, threePhaseGridProfiles, communityGridProfiles, runtime,
   timeObserver, timeObserverRuntime }) {
   assert.deepEqual(threePhaseGridProfiles, { schemaVersion: 1, profiles: [] }, 'Hardware-qualified three-phase registry must remain empty during the community trial');
   assert.deepEqual(communityGridProfiles, { schemaVersion: 1, qualification: 'community_trial_not_hardware_validated', profiles: [{
@@ -39,7 +40,8 @@ export function assertReleaseBoundaries({ app, compose, pkg, lock, legacy, live,
   }] }, 'Community scope must remain explicit and pinned');
   assert.equal(app.id, 'uk.co.zarb.ecoflow');
   for (const version of [compose.version, pkg.version, lock.version, lock.packages[''].version]) assert.equal(version, app.version, 'version mismatch');
-  assert.deepEqual([...app.permissions].sort(), ['homey:manager:api', 'homey:manager:geolocation']);
+  assert.deepEqual([...app.permissions].sort(), ['homey:manager:geolocation']);
+  assert.doesNotMatch(homeyReader, /getOwnerApiToken|getLocalUrl/, 'Cross-app owner-token reader must not return');
   assert.deepEqual([...compose.permissions].sort(), [...app.permissions].sort());
   assert.deepEqual(app.drivers.map(driver => driver.id).sort(), ['smartmeter', 'smartmeter_dual_ct_energy', 'smartmeter_dual_ct_preview', 'stream',
     'stream_5000_system', 'stream_5000_unit', 'stream_ac5000', 'stream_micro', 'stream_socket', 'stream_solar', 'stream_unit']);

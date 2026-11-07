@@ -147,61 +147,8 @@ export class CoordinationWorkspace {
   }
 }
 
-/** Created only after explicit opt-in request; retain only narrow read/close methods. */
-export async function createHomeyCoordinationReader(homey: any, signal?: AbortSignal): Promise<CoordinationReader> {
+/** Cross-app reads belong to a separately authorised owner automation, never this vendor integration. */
+export async function createHomeyCoordinationReader(_homey: any, signal?: AbortSignal): Promise<CoordinationReader> {
   if (signal?.aborted) throw new Error('Local API reader closed');
-  let token: string | null = await homey.api.getOwnerApiToken();
-  if (signal?.aborted) {
-    token = null; throw new Error('Local API reader closed');
-  }
-  const base = new URL(await homey.api.getLocalUrl());
-  if (signal?.aborted) {
-    token = null; throw new Error('Local API reader closed');
-  }
-  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash
-    || typeof token !== 'string' || !token || /[\r\n]/.test(token)) throw new Error('Local API unavailable');
-  const controller = new AbortController();
-  const close = () => {
-    token = null; controller.abort(); signal?.removeEventListener('abort', close);
-  };
-  signal?.addEventListener('abort', close, { once: true });
-  const read = async (path: string) => {
-    if (!token || controller.signal.aborted) throw new Error('Local API reader closed');
-    const url = new URL(base); url.pathname = path;
-    const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'error',
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    if (!response.ok) throw new Error('Local API read unavailable');
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('Local API response unavailable');
-    const parts: Buffer[] = []; let size = 0;
-    try {
-      let finished = false;
-      while (!finished) {
-        // eslint-disable-next-line no-await-in-loop
-        const part = await reader.read();
-        finished = part.done === true;
-        if (finished) break;
-        size += part.value.length;
-        if (size > 4 * 1024 * 1024) {
-          await reader.cancel(); throw new Error('Local API response too large');
-        }
-        parts.push(Buffer.from(part.value));
-      }
-      return JSON.parse(Buffer.concat(parts).toString('utf8'));
-    } finally {
-      reader.releaseLock();
-    }
-  };
-  return {
-    list: () => read('/api/manager/devices/device/'),
-    read: (id: string) => {
-      if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/.test(id)) return Promise.reject(new Error('Invalid device selection'));
-      return read(`/api/manager/devices/device/${encodeURIComponent(id)}`);
-    },
-    close,
-  };
+  throw new Error('external_reader_required');
 }

@@ -1,5 +1,110 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 7 November 2026 — 1.11.22 tradeoffs accepted; diagnostic source push authorised
+
+Owner explicitly accepted the [1.11.22 contract](NO_BROAD_API_CANDIDATE_1_11_22_2026-11-07.md)
+and authorised commit/push to the diagnostic branch and exact-commit CI checking.
+This does not approve installation, Test/Live publication or household changes.
+Reviewed runtime-source fingerprint remains
+`96c4c830907d7d3e8b3c72886d78da52b714e8f76c62590ef404f301f159f147`.
+Fresh fetch found base a77d22f and remote equal; reviewed exported runtime files
+match canonical files. Prior 1,520-test/lint/release:check/verified package receipts
+remain valid for this unchanged runtime. CI is pending at checkpoint creation;
+read the exact committed HEAD's workflow result and local final receipt below.
+Accepted tradeoffs: automatic owned-EcoFlow meter checks plus explicit manual
+external-meter review; disabled former advanced in-app reader/monitor, with
+retained identities/settings and a separate owner automation design only.
+Hardware/rollback/native/three-phase/exact-runtime48h gates remain open; full
+release NO-GO. Installed Development1.11.21, Test1.11.21/build88, Live1.10.3/build18
+remain the latest recorded versions; no Homey/store/configuration query or write
+is part of this source-push task. AI remains in charge; no reserve execution change.
+Local result/CI receipt: ../work/output/push-no-broad-api-1.11.22-20261107T1321Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — source-only 1.11.22 without broad API access
+
+Owner selected a no-broad-API candidate. [Candidate review](NO_BROAD_API_CANDIDATE_1_11_22_2026-11-07.md)
+records source/archive, 1,520 passing tests, lint/structural/verified CLI checks.
+Permission removed only in source; candidate is uncommitted/unpushed/uninstalled.
+Important correction: broad reader also served Dual CT overlap checks. New SDK
+inventory automatically checks EcoFlow-owned meters only; automatic external-meter
+detection is removed and existing explicit manual review remains. Review this
+reduced guarantee before deployment. Advanced in-app picker/monitor is unavailable;
+Flow IDs/settings retained does not mean unchanged advanced behavior. Separate
+external-owner automation is design only. No bindings/counters/accounting/phase
+mapping or driver/Flow/Energy definitions changed. No independent new CI/model
+review. Full release remains NO-GO; no physical gate closed or soak begun.
+Native 1.11.21 system Standby/100% contrasted with Homey unknown battery W/state;
+not an idle pass and not a proven defect. Installed 1.11.21, Test88 and Live18
+unchanged, AI/battery/Flow/Energy settings untouched. Prior dirty work preserved.
+Local receipt: ../work/output/candidate-no-broad-api-20261107T123216Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — public-release decision prepared; no submission
+
+[Release decision](PUBLIC_RELEASE_DECISION_2026-11-07.md) records fresh Test88/
+Live18 unchanged and full-readiness exit1. Actual Live18 has geolocation only;
+Test88 adds broad Homey API permission for optional coordination reader. This is
+new for public users and may prevent automatic updates; Athom eligibility is
+not established. Owner preference requested: prepare no-broad-API core candidate
+with reviewed advanced-feature path,or retain and seek Athom eligibility. No
+permission/feature/source change or reviewer message applied. Concrete source/
+Flow-impact checklist,unsent Athom draft and exact-runtime48h plan prepared.
+Overnight Homey reads show natural idle/AI/disabled Homey execution; Mac locked,
+so native comparison awaits manual unlock. No gates closed,soak started,
+installation/restart/control/settings/Energy/Flow/publication or external contact.
+Prior uncommitted installed/native reports preserved; sourcea77d22f unchanged.
+External receipt:../work/output/public-release-decision-20261107T010719Z/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 20:33 UTC — native EcoFlow comparison now accessible
+
+[Updated comparison](NATIVE_SCOPE_COMPARISON_1_11_21_2026-11-06.md): owner requested
+retry; actual running wrapper is accessible. Native Specifications confirms second
+unit is full STREAM5000. Its SOC/discharge direction agrees with Homey in a bounded
+window; system SOC agrees and Homey watts lie within bracketing native observations.
+Main unit native page has SOC but no explicit battery watts/state; do not infer
+idle/zero or borrow combined power. Earlier manual-read request is superseded.
+No settings/power/firmware/control or installation/restart; AI and disabled Homey
+execution retained; Test88/Live18 confirmed unchanged. No physical gate passed,
+no48hsoak begun. Remaining charge/idle/linked signed-unit scope needs its own
+evidence or explicit product-scope review. Detailed private receipt:
+../work/output/native-ui-comparison-1.11.21-20261106T202916Z/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 — native/system scope comparison; no soak started
+
+[Comparison report](NATIVE_SCOPE_COMPARISON_1_11_21_2026-11-06.md) records working
+Homey web and official read-only Developer API. Both paired ES21-family identities
+resolve to one main; system SOC/battery watts exactly agree across502ms Homey/API
+window. No physical measurement-time/energy-accuracy claim. Main physical power
+is deliberately unknown after peer evidence; other unit candidate is not physical
+signoff. Official11-field quota lacks per-unit signed-power contract. Native
+EcoFlow accessibility timed out; targeted owner unit-page comparison is pending.
+No source/installation/settings/control/Flow/Energy/Test/Live change or external
+contact. AI and disabled Homey execution preserved. Full release NO-GO; no gate
+closed or48hsoak started. Local private receipt:
+../work/output/native-comparison-1.11.21-20261106T192629Z/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 19:19 UTC — Development 1.11.21 installed; preservation passed
+
+[Installation result](DEVELOPMENT_1_11_21_VALIDATION_2026-11-06.md): owner explicitly
+approved local non-clean1.11.21 after disclosed cloud-backup limits. Exact Test88
+archive fa7fd6a9...f515 acknowledged19:15:13UTC; sourcea77d22f/fingerprint
+e8d74b27...0445,running/devkit_install in two full readbacks. Initial cloud upload
+HTTP400 was resolved as rejected/old runtime before fresh direct-local delivery;
+only one successful installation,no uncertain duplicate/restart/rollback.
+103 startup samples over2min spanning delivery: no counter decrease/read error;
+six transient unknowns retained,ten counters numeric after recovery.15 identities,
+101 Flows,1217 Insights,settings/titles/Energy/global config preserved; generated
+icon URLs alone differ. Native configuration values/AI,disabled Homey execution,
+lease/fault/state/gate unchanged. Test1.11.21/build88 and Live1.10.3/build18 unchanged.
+Owner confirms phone tiles,SOC and Energy look normal (appearance only).
+Microinverter now waits for fresh data (old tiles had >3h-old SDK updates); counters
+preserved. One physical5000 scope remains unverified. No phone/native/48hsoak
+acceptance claimed; full public NO-GO and ledgers untouched. Private receipt:
+../work/output/development-1.11.21-20261106T190906Z-local-delivery/FINAL_RECEIPT.md.
+
+
 ## 6 November 2026 — owner authorised cloud backup and scoped Test 1.11.21
 
 [Release scope](TEST_1_11_21_RELEASE_2026-11-06.md): owner chose cloud backup and
