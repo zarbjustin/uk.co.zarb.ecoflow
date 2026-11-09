@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "scope": "qualified_reserve_unit_then",
+  "models": ["es21", "es22"],
+  "roles": ["unit"],
+  "excluded": ["system_controls", "mode_controls", "feed_limit_controls", "socket_controls", "exact_watts", "native_return", "monitoring_signoff"],
+  "gates": [
+    {"id":"es21.identity_scope","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#identity-scope","observedAt":null,"startedAt":null},
+    {"id":"es21.native_contract","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#native-contract","observedAt":null,"startedAt":null},
+    {"id":"es21.private_durable_cas","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#private-durable-cas","observedAt":null,"startedAt":null},
+    {"id":"es21.issuance_fencing","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#issuance-fencing","observedAt":null,"startedAt":null},
+    {"id":"es21.driver_binding","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#driver-binding","observedAt":null,"startedAt":null},
+    {"id":"es21.exact_runtime","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#exact-runtime","observedAt":null,"startedAt":null},
+    {"id":"es21.action_readback","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#action-readback","observedAt":null,"startedAt":null},
+    {"id":"es21.native_ai_preservation","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#native-ai-preservation","observedAt":null,"startedAt":null},
+    {"id":"es21.recovery","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#recovery","observedAt":null,"startedAt":null},
+    {"id":"es21.ui_semantics","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#ui-semantics","observedAt":null,"startedAt":null},
+    {"id":"es21.normal_use_soak","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#normal-use-soak","observedAt":null,"startedAt":null},
+    {"id":"es22.identity_scope","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#identity-scope","observedAt":null,"startedAt":null},
+    {"id":"es22.native_contract","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#native-contract","observedAt":null,"startedAt":null},
+    {"id":"es22.private_durable_cas","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#private-durable-cas","observedAt":null,"startedAt":null},
+    {"id":"es22.issuance_fencing","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#issuance-fencing","observedAt":null,"startedAt":null},
+    {"id":"es22.driver_binding","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#driver-binding","observedAt":null,"startedAt":null},
+    {"id":"es22.exact_runtime","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#exact-runtime","observedAt":null,"startedAt":null},
+    {"id":"es22.action_readback","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#action-readback","observedAt":null,"startedAt":null},
+    {"id":"es22.native_ai_preservation","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#native-ai-preservation","observedAt":null,"startedAt":null},
+    {"id":"es22.recovery","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#recovery","observedAt":null,"startedAt":null},
+    {"id":"es22.ui_semantics","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#ui-semantics","observedAt":null,"startedAt":null},
+    {"id":"es22.normal_use_soak","status":"open","evidence":"none","candidateFingerprint":null,"firmwareVersion":null,"reference":"docs/STREAM_5000_THEN_RELEASE_ACCEPTANCE.md#normal-use-soak","observedAt":null,"startedAt":null}
+  ]
+}

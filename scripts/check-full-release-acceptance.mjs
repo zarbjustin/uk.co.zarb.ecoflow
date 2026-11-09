@@ -3,13 +3,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assessAcceptance, candidateFingerprint } from './check-stream-5000-acceptance.mjs';
 import { assessDualCtAcceptance } from './check-dual-ct-acceptance.mjs';
+import { assessThenAcceptance } from './check-stream-5000-then-acceptance.mjs';
 
 /** Full requested scope is the intersection, never a transfer of one model/role's hardware evidence. */
-export function assessFullRelease(dualCt, monitoring, fingerprint, engineering = { ready: false, pending: ['engineering_not_assessed'] }) {
+export function assessFullRelease(dualCt, monitoring, fingerprint, engineering = { ready: false, pending: ['engineering_not_assessed'] }, thenRecord = null) {
   const dual = assessDualCtAcceptance(dualCt, fingerprint);
   const batteries = ['es21', 'es22'].flatMap(model => ['unit', 'system'].map(role => assessAcceptance(monitoring, fingerprint, model, role)));
-  const hardwareReady = dual.ready && batteries.every(row => row.ready);
-  return { fingerprint, hardwareReady, engineering, ready: hardwareReady && engineering.ready === true, dualCt: dual, batteries };
+  const reserve = ['es21', 'es22'].map(model => thenRecord === null
+    ? { model, role: 'unit', action: 'reserve', ready: false, pending: [`${model}.then_not_assessed`] }
+    : assessThenAcceptance(thenRecord, fingerprint, model));
+  const hardwareReady = dual.ready && batteries.every(row => row.ready) && reserve.every(row => row.ready);
+  return { fingerprint, hardwareReady, engineering, ready: hardwareReady && engineering.ready === true, dualCt: dual, batteries, then: reserve };
 }
 
 /** Fail closed on an intentionally disabled/hidden source, even if hardware records are accidentally marked passed. */
@@ -30,11 +34,12 @@ export function assessEnergyEngineering(root) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const read = name => JSON.parse(fs.readFileSync(path.join(root, 'docs', name), 'utf8'));
-  const result = assessFullRelease(read('DUAL_CT_ENERGY_ACCEPTANCE.json'), read('STREAM_5000_MONITORING_ACCEPTANCE.json'), candidateFingerprint(root), assessEnergyEngineering(root));
+  const result = assessFullRelease(read('DUAL_CT_ENERGY_ACCEPTANCE.json'), read('STREAM_5000_MONITORING_ACCEPTANCE.json'), candidateFingerprint(root), assessEnergyEngineering(root), read('STREAM_5000_THEN_ACCEPTANCE.json'));
   console.log(`Full release candidate: ${result.fingerprint}`);
   console.log(`Dual CT structural engineering checks only: ${result.engineering.ready ? 'PASSED' : `PENDING: ${result.engineering.pending.join(', ')}`}`);
   console.log(`Dual CT CT1: ${result.dualCt.ready ? 'ACCEPTED' : `PENDING: ${result.dualCt.pending.join(', ')}`}`);
   for (const row of result.batteries) console.log(`${row.model}/${row.role}: ${row.ready ? 'ACCEPTED' : `PENDING: ${row.pending.join(', ')}`}`);
+  for (const row of result.then) console.log(`${row.model}/${row.role}/${row.action}: ${row.ready ? 'ACCEPTED' : `PENDING: ${row.pending.join(', ')}`}`);
   console.log('No activation, deployment, hardware operation or publication. Software CI and the remaining product scope are separate checkpoints.');
   if (process.argv.includes('--require-ready') && !result.ready) process.exitCode = 1;
 }
