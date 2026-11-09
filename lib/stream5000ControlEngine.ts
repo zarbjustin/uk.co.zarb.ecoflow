@@ -309,10 +309,11 @@ export class Stream5000ControlEngine {
         configurationReceivedAt: current.configuration.receivedAt,
         reservePercent: (restoring ? 50 : 51) as 50 | 51,
       });
-      this.alive();
+      this.qualified();
       await this.io(this.dispatchPort!(request, this.controller.signal));
       this.alive();
       this.activeContext();
+      this.qualified();
       // Dispatch acceptance is not terminal execution/application evidence.
     });
   }

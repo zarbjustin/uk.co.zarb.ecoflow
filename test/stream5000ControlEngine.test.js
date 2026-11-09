@@ -232,6 +232,49 @@ test('binding revocation or shutdown from synchronous dispatch preparation canno
   }
 });
 
+test('binding withdrawal during final context capture suppresses native invocation after the possible commit', async () => {
+  const f = laboratory();
+  let withdraw = false;
+  const engine = new Engine({ ...f.options, readContext: () => {
+    if (withdraw) f.binding.valid = false;
+    return f.context();
+  } });
+  await engine.open(); await engine.begin(f.approval, f.baseline);
+  f.hooks.after = () => { withdraw = true; };
+  await assert.rejects(engine.dispatch(1), /unqualified/);
+  assert.equal(f.row().journal.active.phase, 'forward_possible');
+  assert.equal(engine.snapshot().storageUncertain, false);
+  assert.equal(engine.snapshot().held, true);
+  assert.equal(f.events.some(value => value.startsWith('dispatch:')), false);
+  await assert.rejects(engine.dispatch(1), /held/);
+});
+
+test('binding withdrawal during native IO or its final context capture retains a sticky unknown outcome', async () => {
+  for (const boundary of ['native_io', 'context_capture']) {
+    const f = laboratory();
+    let withdrawOnRead = false;
+    const engine = new Engine({ ...f.options, readContext: () => {
+      if (withdrawOnRead) f.binding.valid = false;
+      return f.context();
+    } });
+    await engine.open(); await engine.begin(f.approval, f.baseline);
+    const entered = deferred(); const gate = deferred();
+    f.hooks.dispatch = () => { entered.resolve(); return gate.promise; };
+    const pending = engine.dispatch(1); await entered.promise;
+    if (boundary === 'native_io') f.binding.valid = false;
+    else withdrawOnRead = true;
+    gate.resolve();
+    await assert.rejects(pending, /unqualified/);
+    assert.equal(f.row().journal.active.phase, 'forward_possible');
+    assert.equal(engine.snapshot().storageUncertain, false);
+    assert.equal(engine.snapshot().held, true);
+    assert.equal(f.events.filter(value => value.startsWith('dispatch:')).length, 1);
+    await assert.rejects(engine.dispatch(1), /held/);
+    await assert.rejects(engine.restore(f.restore), /held/);
+    assert.equal(f.events.filter(value => value.startsWith('dispatch:')).length, 1);
+  }
+});
+
 test('serialization withdrawal and concurrent reentry cannot commit or erase another operation', async () => {
   const f = laboratory(); await f.engine.open();
   const approval = { ...f.approval, toJSON() { f.engine.stop(); return f.approval; } };
