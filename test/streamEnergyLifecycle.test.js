@@ -1006,19 +1006,57 @@ test('original STREAM resumes the same verified main after a transient lookup fa
   } finally { await d.onTeardown(); }
 });
 
-test('a changed aggregate main remains blocked even if a later lookup returns the old source', async () => {
-  const d = await harness({ chargedWh: 12000, dischargedWh: 34000 }); preparePolling(d);
-  let main = 'BK61TEST00000001'; let reads = 0;
-  d.client = { getMainSn: async () => main, getQuotaAll: async () => { reads++; return { cmsBattSoc: 50, powGetBpCms: 0 }; } };
+test('original STREAM recovers monitoring only when its verified main returns after a mismatch', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const original = 'BK61TEST00000001';
+  let main = original; let reads = 0;
+  const d = await harness({ chargedWh: 12000, dischargedWh: 34000 });
+  preparePolling(d);
+  const hasCapability = d.hasCapability.bind(d);
+  d.hasCapability = cap => cap === 'measure_battery' || hasCapability(cap);
+  d.client = {
+    getMainSn: async () => main,
+    getQuotaAll: async sn => { assert.equal(sn, original); reads++; return { cmsBattSoc: 50, powGetBpCms: 3600 }; },
+    setQuota: async () => assert.fail('recovered monitoring must not unlock controls'),
+  };
   try {
-    await d.beforeFirstPoll(); main = 'BK61CHANGED00001'; await d.poll();
-    main = 'BK61TEST00000001'; await d.poll();
-    assert.equal(reads, 0); assert.equal(d.aggregateBound, false);
+    await d.beforeFirstPoll(); await d.poll(); assert.equal(reads, 1);
+    main = 'BK61CHANGED00001'; now += 30000; await d.poll(); await d.poll();
+    assert.equal(reads, 1); assert.equal(d.getAvailable(), false);
+    assert.equal(d.getReportingDiagnostics().aggregateRecovery.state, 'identity_changed');
     assert.equal(d.getEnergyDiagnostics().chargedKWh, 12);
+    main = original; now += 30000; await d.poll();
+    assert.equal(reads, 2); assert.equal(d.getAvailable(), true);
+    assert.equal(d.getReportingDiagnostics().aggregateRecovery.state, 'verified_original_main');
+    assert.equal(d.getReportingDiagnostics().aggregateRecovery.recoveries, 1);
+    assert.equal(d.getEnergyDiagnostics().chargedKWh, 12, 'the first sample cannot fill the outage');
+    assert.equal(d.getEnergyDiagnostics().dischargedKWh, 34);
+    assert.equal(await d.requireAggregateMain('history'), original);
     await assert.rejects(d.flowSetFeedIn(false), /unverified/);
+    assert.equal(d.getAvailable(), true, 'rejecting a control must not invalidate restored monitoring');
+    assert.equal(d.values.measure_battery, 50);
+    assert.equal(d.store.energySourceSn, original);
   } finally { await d.onTeardown(); }
 });
 
+test('a delayed verification cannot restore monitoring after a newer main mismatch', async () => {
+  const d = await harness(); preparePolling(d);
+  const original = 'BK61TEST00000001';
+  let resolveOld; let reads = 0;
+  d.client = { getMainSn: async () => original, getQuotaAll: async () => { reads++; return {}; } };
+  try {
+    await d.beforeFirstPoll();
+    d.client.getMainSn = () => new Promise(resolve => { resolveOld = resolve; });
+    const old = d.poll();
+    d.client.getMainSn = async () => 'BK61CHANGED00001';
+    await assert.rejects(d.requireAggregateMain('history'), /unverified/);
+    resolveOld(original);
+    await old;
+    assert.equal(reads, 0);
+    assert.equal(d.getAvailable(), false);
+    assert.equal(d.getReportingDiagnostics().aggregateRecovery.state, 'identity_changed');
+  } finally { await d.onTeardown(); }
+});
 
 test('original STREAM refreshes rotated credentials before its main lookup can block the base poll', async () => {
   const d = await harness(); preparePolling(d); let lookups = 0, reads = 0, refreshes = 0;

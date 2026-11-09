@@ -48,6 +48,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private aggregateBound = false;
   private aggregateVerifiedMain = '';
   private aggregateIdentityConflict = false;
+  private aggregateVerificationRevision = 0;
   private aggregateVerificationFailures = 0;
   private aggregateRecoveries = 0;
   private bindingAttempted = false;
@@ -508,34 +509,53 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     return main.toUpperCase();
   }
 
-  private async requireAggregateMain(allowTelemetryRecovery = false): Promise<string> {
+  private async requireAggregateMain(purpose: 'poll' | 'history' | 'control' = 'control'): Promise<string> {
+    // A recovered read route does not restore write authority after a main change.
+    if (purpose === 'control' && this.aggregateIdentityConflict) {
+      throw Error('Aggregate main unverified for controls after an identity change');
+    }
     const generation = this.controlGeneration;
+    const revision = this.aggregateVerificationRevision;
+    const current = () => generation === this.controlGeneration && !this.controlStopped && !this.isShuttingDown();
     try {
       const main = await this.resolveAggregateMain();
-      if (main !== this.mainSn) this.aggregateIdentityConflict = true;
-      if (this.aggregateIdentityConflict) throw Error('Aggregate main changed; reinitialization required');
-      if (!this.aggregateBound && allowTelemetryRecovery && this.aggregateVerifiedMain === main) {
-        // A fresh successful lookup of the same session-verified source can
-        // recover telemetry. Never adopt a changed source or replay readings.
-        this.aggregateBound = true;
-        this.aggregateRecoveries = Math.min(65535, this.aggregateRecoveries + 1);
-        this.log('Original STREAM telemetry source reverified');
+      if (!current() || revision !== this.aggregateVerificationRevision) throw Error('Aggregate lookup superseded');
+      if (main !== this.mainSn) {
+        this.aggregateIdentityConflict = true;
+        throw Error('Aggregate main changed');
       }
+      if (!this.aggregateBound && purpose === 'poll' && this.aggregateVerifiedMain === main) {
+        // Drain old device work while the source is blocked. Only the same
+        // session-verified reporter may resume, with a new accounting anchor.
+        await this.queueDeviceWork(async () => {
+          if (!current() || revision !== this.aggregateVerificationRevision) return;
+          this.lastEnergyTs = 0;
+          this.aggregateBound = true;
+          this.aggregateRecoveries = Math.min(65535, this.aggregateRecoveries + 1);
+          this.log('Original STREAM telemetry source reverified');
+        });
+      }
+      if (!current() || revision !== this.aggregateVerificationRevision) throw Error('Aggregate lookup superseded');
       if (!this.aggregateBound) throw Error('Aggregate main unverified; reinitialization required');
       return main;
     } catch {
-      if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) throw Error('Aggregate lookup interrupted');
+      if (!current() || revision !== this.aggregateVerificationRevision) throw Error('Aggregate lookup interrupted');
       if (this.aggregateBound) this.log('Original STREAM source verification interrupted', this.aggregateIdentityConflict ? 'identity_changed' : 'lookup_failed');
       this.aggregateBound = false;
+      const failedRevision = ++this.aggregateVerificationRevision;
       this.aggregateVerificationFailures = Math.min(65535, this.aggregateVerificationFailures + 1);
-      this.lastEnergyTs = 0;
       this.legacyFlowReadings = new LegacyFlowReadings();
-      for (const cap of ['measure_battery', 'measure_power', 'measure_power.grid', 'measure_power.load',
-        'measure_power.pv', 'battery_charging_state', 'feed_in_control', 'backup_reserve_soc',
-        'charge_limit', 'discharge_limit', 'operating_mode']) {
-        if (generation !== this.controlGeneration || this.controlStopped || this.isShuttingDown()) break;
-        if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
-      }
+      await this.queueDeviceWork(async () => {
+        if (!current() || failedRevision !== this.aggregateVerificationRevision) return;
+        this.lastEnergyTs = 0;
+        this.resetMonitoringTriggers();
+        for (const cap of ['measure_battery', 'measure_power', 'measure_power.grid', 'measure_power.load',
+          'measure_power.pv', 'battery_charging_state', 'feed_in_control', 'backup_reserve_soc',
+          'charge_limit', 'discharge_limit', 'operating_mode']) {
+          if (!current() || failedRevision !== this.aggregateVerificationRevision) break;
+          if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+        }
+      });
       throw Error('Aggregate main unverified; no controls or legacy readings allowed');
     }
   }
@@ -567,7 +587,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         // Identity checks precede the base poll, so refresh rotated API keys
         // here too; otherwise a failed lookup can trap the old client forever.
         this.refreshClientCredentials();
-        await this.requireAggregateMain(true);
+        await this.requireAggregateMain('poll');
       } catch {
         if (generation === this.controlGeneration && !this.controlStopped && !this.isShuttingDown()) {
           const sourceSn = this.getReadSn();
@@ -590,7 +610,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     if (this.bindingAttempted) aggregateBinding = this.aggregateBound ? 'verified_original_main' : 'blocked';
     let recoveryState = aggregateBinding;
     if (this.bindingAttempted && !this.aggregateBound && !this.aggregateVerifiedMain) recoveryState = 'startup_unverified';
-    if (this.aggregateIdentityConflict) recoveryState = 'identity_changed';
+    if (this.aggregateIdentityConflict && !this.aggregateBound) recoveryState = 'identity_changed';
     return {
       readAddressMatchesSavedMain: this.getStoreValue('mainSn') ? this.getReadSn() === this.getStoreValue('mainSn') : null,
       aggregateBinding,
@@ -888,7 +908,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private async refreshHistory(): Promise<void> {
     if (this.isShuttingDown()) return;
-    if (this.bindingAttempted && !this.monitoringEnabled) await this.requireAggregateMain();
+    if (this.bindingAttempted && !this.monitoringEnabled) await this.requireAggregateMain('history');
     const generation = this.controlGeneration;
     // On a calendar-day rollover, clear the existing daily tiles so a broken/empty
     // history feed can't keep showing yesterday's totals as "today"; fresh data
@@ -956,7 +976,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     const active = () => !this.controlStopped && !this.isShuttingDown()
       && !this.monitoringEnabled && !this.monitoringRollbackPending
       && this.monitoringSettingsCount === 0
-      && this.aggregateBound && generation === this.controlGeneration
+      && this.aggregateBound && !this.aggregateIdentityConflict && generation === this.controlGeneration
       && target === (this.mainSn || this.getData().sn);
     try {
       await executeStreamControl(target, intent, {
@@ -1007,7 +1027,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   private aggregateUnavailableMessage(): string {
-    if (this.aggregateIdentityConflict) return 'Original STREAM main unit changed; review the installation before continuing.';
+    if (this.aggregateIdentityConflict) return 'Original STREAM main unit changed; waiting for the previously verified source.';
     return this.aggregateVerifiedMain
       ? 'Original STREAM source verification interrupted; retrying automatically.'
       : 'Waiting for original STREAM source verification.';
