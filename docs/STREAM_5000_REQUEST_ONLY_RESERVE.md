@@ -4,6 +4,10 @@
 This is a distinct product scope, not a pass or relaxation of the existing
 strong reserve-control ledger. Installation, Flow execution, battery/settings
 actions and publication are not authorised by source-development approval.
+The owner's later, separate approval for an actual experimental community Test
+release is documented in [the 1.11.25 beta policy](COMMUNITY_TEST_1_11_25.md).
+The owner declined the local pilot and soak; neither is represented as passed.
+Volunteer commissioning does not authorise changes to the owner's Homey.
 
 ## What the card does
 
