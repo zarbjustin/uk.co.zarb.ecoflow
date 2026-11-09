@@ -15,6 +15,9 @@ import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint, dualCtHomeyEnergy
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED, dualCtGridBinding, resolveDualCtGridEnergyContract } from '../../lib/dualCtGridEnergySource';
 import { AppFrameDelivery } from '../../lib/EcoFlowAppMqtt';
 import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
+import {
+  QualifiedGridNotifications, SustainedGridObservation, gridNotificationObservationMatches,
+} from '../../lib/sustainedGridNotifications';
 
 // Shared by every instance in this app process; never one authority per device.
 const authority = new DualCtEnergyAuthority();
@@ -34,6 +37,20 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   private identityRefresh: Promise<void> | null = null;
   private lastRefresh = 0;
   private credentialRevision = '';
+  private gridNotificationAnchorRevision = 0;
+  private gridNotificationAnchorPending = false;
+  private gridNotificationCard: any = null;
+  private readonly reloadGridNotifications = () => this.gridNotifications.reload();
+  private readonly gridNotifications = new QualifiedGridNotifications({
+    loadRules: () => this.gridNotificationCard?.getArgumentValues(this) ?? Promise.resolve([]),
+    readCurrent: () => {
+      const now = Date.now();
+      return { observation: this.currentGridNotificationObservation(now), now };
+    },
+    trigger: (tokens, state) => this.gridNotificationCard?.trigger(this, tokens, state) ?? Promise.resolve(),
+    onError: () => (this as any).error?.('Grid notification arguments or delivery unavailable'),
+  });
+
   private readonly accountChanged = (key: string) => {
     if (['appAuthEmail', 'appAuthPassword', 'appAuthHost'].includes(key)) this.stop().catch(() => {});
   };
@@ -53,9 +70,48 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     };
   }
 
+  gridPowerAbove(direction: string, watts: number): boolean {
+    if (!['import', 'export'].includes(direction) || typeof watts !== 'number' || !Number.isFinite(watts)
+      || watts < 0 || watts > 100000) throw new Error('Invalid grid power comparison');
+    if (!this.handler || !this.adapter || this.getStoreValue('dualCtEnergyConsent') !== 1
+      || this.credentialRevision !== dualCtCredentialsRevision(this.homey)) throw new Error('Fresh qualified CT1 power is unavailable');
+    const power = this.adapter.currentPower();
+    if (this.getCapabilityValue('measure_power') !== power) throw new Error('Current CT1 display is unavailable');
+    return (direction === 'export' ? -power : power) > watts;
+  }
+
+  private currentGridNotificationObservation(now: number) {
+    try {
+      if (this.gridNotificationAnchorPending || !this.handler || !this.adapter || this.getStoreValue('dualCtEnergyConsent') !== 1
+        || this.credentialRevision !== dualCtCredentialsRevision(this.homey)) return null;
+      const observation = this.adapter.currentPowerObservation(now);
+      return observation && this.getCapabilityValue('measure_power') === observation.powerW ? observation : null;
+    } catch {
+      return null;
+    }
+  }
+
+  gridNotificationEventCurrent(observation: SustainedGridObservation | null): boolean {
+    const now = Date.now();
+    return gridNotificationObservationMatches(observation, this.currentGridNotificationObservation(now), now);
+  }
+
+  private tickGridNotifications(observation: SustainedGridObservation | null, now: number): void {
+    try {
+      this.gridNotifications.tick(observation, now);
+    } catch {
+      // Monitoring failure must not block core expiry, restart or shutdown.
+    }
+  }
+
   async onInit(): Promise<void> {
     this.homey.settings.on('set', this.accountChanged);
     this.homey.settings.on('unset', this.accountChanged);
+    if (!this.gridNotificationCard) {
+      this.gridNotificationCard = this.homey.flow?.getDeviceTriggerCard('smartmeter_grid_power_sustained') ?? null;
+      this.gridNotificationCard?.on('update', this.reloadGridNotifications);
+    }
+    this.gridNotifications.start();
     await this.connect();
     // Optional capability/UI setup must never delay the core Energy subscription.
     if (this.getStoreValue('dualCtEnergyConsent') === 1) await this.configureDetails().catch(() => {});
@@ -123,7 +179,14 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
           contractQualified: true,
         }),
       });
-      const adapter = new DualCtGridEnergyDeviceAdapter(session, this, dependencies.enabled); this.adapter = adapter;
+      const adapter = new DualCtGridEnergyDeviceAdapter(session, this, dependencies.enabled, (observation) => {
+        if (generation !== this.generation || this.adapter !== adapter) return;
+        const now = Date.now();
+        this.tickGridNotifications(observation && gridNotificationObservationMatches(
+          observation, this.currentGridNotificationObservation(now), now,
+        ) ? observation : null, now);
+      });
+      this.adapter = adapter;
       await adapter.start();
       if (generation !== this.generation) {
         await adapter.close(); return;
@@ -144,7 +207,14 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
             this.communityFeedback.record('delivery_rejected'); this.communityFeedback.record(result.status);
           }
           if (result.restartAnchor) {
-            session.resetAnchor().then(() => adapter.refresh()).catch(() => this.recover(generation, dependencies.enabled).catch(() => {})); return;
+            const anchorRevision = ++this.gridNotificationAnchorRevision;
+            this.gridNotificationAnchorPending = true;
+            this.tickGridNotifications(null, Date.now());
+            session.resetAnchor().then(() => {
+              if (generation !== this.generation || this.adapter !== adapter) return undefined;
+              if (anchorRevision === this.gridNotificationAnchorRevision) this.gridNotificationAnchorPending = false;
+              return adapter.refresh();
+            }).catch(() => this.recover(generation, dependencies.enabled).catch(() => {})); return;
           }
           if (!result.accepted || !delivery) return;
           adapter.observe(payload, topic, delivery.receivedAt).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
@@ -163,6 +233,8 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       this.startupFailure = { startupStage: 'ready', context: null, admission: null };
       this.ticker = this.homey.setInterval(() => {
         if (generation !== this.generation || this.adapter !== adapter) return;
+        const now = Date.now();
+        this.tickGridNotifications(this.currentGridNotificationObservation(now), now);
         this.details.render().catch(() => {});
         adapter.refresh().then(() => {
           if (generation === this.generation && !adapter.diagnostics().active) this.recover(generation, dependencies.enabled).catch(() => {});
@@ -210,6 +282,9 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
 
   private async stop(): Promise<void> {
     const generation = ++this.generation;
+    ++this.gridNotificationAnchorRevision;
+    this.gridNotificationAnchorPending = false;
+    this.tickGridNotifications(null, Date.now());
     if (this.retry) this.homey.clearTimeout(this.retry);
     this.retry = null;
     if (this.ticker) this.homey.clearInterval(this.ticker);
@@ -217,8 +292,12 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (this.handler) (this.homey.app as any).unsubscribeAppRealtime(this.getData().sn, this.handler);
     this.handler = null; this.context?.close(); this.context = null;
     const { adapter } = this; this.adapter = null;
-    await Promise.all([adapter?.close(), this.details.stop()]);
+    this.details.stop().catch(() => {});
+    await adapter?.close();
     if (generation !== this.generation) return;
+    // The adapter owns bounded availability/power invalidation when present.
+    // Optional rendering and SDK shutdown writes do not own counter authority.
+    if (adapter) return;
     await this.setUnavailable(this.homey.__(this.getStoreValue('dualCtEnergyConsent') === 1
       ? 'dual_ct_energy.recovering' : 'dual_ct_energy.unavailable')).catch(() => {});
     if (generation !== this.generation) return;
@@ -264,6 +343,9 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   }
 
   async onUninit(): Promise<void> {
+    this.gridNotifications.stop();
+    this.gridNotificationCard?.removeListener('update', this.reloadGridNotifications);
+    this.gridNotificationCard = null;
     this.homey.settings.removeListener('set', this.accountChanged);
     this.homey.settings.removeListener('unset', this.accountChanged);
     await this.stop();

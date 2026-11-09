@@ -118,6 +118,10 @@ export class Stream5000ReadingAges {
     return this.timestamps.get(key) ?? null;
   }
 
+  receivedReceiptAt(key: string): number | null {
+    return this.received.get(key) ?? null;
+  }
+
   snapshot(now: number, limitMs: number): Record<string, unknown> {
     return Object.fromEntries([...new Set([...this.received.keys(), ...this.writeFailures])].map((key) => {
       const receivedAt = this.received.get(key);

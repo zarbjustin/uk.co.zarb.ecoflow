@@ -11,25 +11,46 @@ interface DevicePort {
   setUnavailable: (reason: string) => Promise<unknown>;
 }
 
+let observationGeneration = 0;
+
+export type QualifiedCt1PowerObservation = Readonly<{
+  powerW: number; receivedAt: number; validUntil: number; generation: number;
+}>;
+
 export class DualCtGridEnergyDeviceAdapter {
   private generation = 0;
+  private observationEpoch = 0;
   private active = false;
   private chain: Promise<void> = Promise.resolve();
   private status = 'not_started';
   private refreshPending: Promise<void> | null = null;
   private clearPending = false;
   private powerClear: Promise<void> | null = null;
+  private unavailableWrite: Promise<void> | null = null;
+  private nullPowerWrite: Promise<void> | null = null;
+  private clearGoal: { generation: number; reason: string; unavailable: boolean; power: boolean } | null = null;
   private powerClearRevision = 0;
-  private publishedPower: { at: number; until: number } | null = null;
+  private publishedPower: { at: number; until: number; value: number; receivedAt: number | null } | null = null;
 
   private readonly session: DualCtGridEnergySession;
   private readonly port: DevicePort;
   private readonly runtimeEnabled: () => boolean;
+  private readonly onPowerObservation: (observation: QualifiedCt1PowerObservation | null) => void;
 
   constructor(session: DualCtGridEnergySession, port: DevicePort,
     /** Code-owned injection for synthetic lifecycle verification; never a setting/request parameter. */
-    runtimeEnabled: () => boolean = () => DUAL_CT_ENERGY_RUNTIME_ENABLED) {
+    runtimeEnabled: () => boolean = () => DUAL_CT_ENERGY_RUNTIME_ENABLED,
+    onPowerObservation: (observation: QualifiedCt1PowerObservation | null) => void = () => {}) {
     this.session = session; this.port = port; this.runtimeEnabled = runtimeEnabled;
+    this.onPowerObservation = onPowerObservation;
+  }
+
+  private notifyPowerObservation(observation: QualifiedCt1PowerObservation | null): void {
+    try {
+      this.onPowerObservation(observation);
+    } catch {
+      // Optional synchronous observation must not own projection or checkpoint completion.
+    }
   }
 
   private enqueue(work: () => Promise<void>): Promise<void> {
@@ -62,34 +83,64 @@ export class DualCtGridEnergyDeviceAdapter {
     }
   }
 
-  private requestPowerClear(generation: number): Promise<void> {
+  private requestPowerClear(generation: number, reason = 'Waiting for fresh CT1 power'): Promise<void> {
     if (generation !== this.generation) return Promise.resolve();
-    this.status = 'waiting_for_fresh_power';
+    if (this.active) this.status = 'waiting_for_fresh_power';
     this.publishedPower = null;
+    this.notifyPowerObservation(null);
+    if (!this.clearPending || this.clearGoal?.generation !== generation || this.clearGoal.reason !== reason) {
+      ++this.powerClearRevision;
+      this.clearGoal = {
+        generation, reason, unavailable: false, power: false,
+      };
+    }
+    this.clearPending = true;
+    this.dispatchClear('unavailable');
+    this.dispatchClear('power');
     if (this.powerClear) return this.powerClear;
-    ++this.powerClearRevision;
-    const pending = (async () => {
-      if (generation !== this.generation) return;
-      this.clearPending = true;
-      let unavailable = false;
-      try {
-        await this.port.setUnavailable('Waiting for fresh CT1 power'); unavailable = true;
-      } catch { /* Retry on the next tick. */ }
-      if (generation !== this.generation) return;
-      try {
-        await this.port.setCapabilityValue('measure_power', null); this.clearPending = !unavailable;
-      } catch { /* Retain the retry flag. Never touch cumulative totals. */ }
-    })().finally(() => {
+    const pending = Promise.all([this.unavailableWrite, this.nullPowerWrite]).then(() => {}).finally(() => {
       if (this.powerClear === pending) this.powerClear = null;
     });
     this.powerClear = pending; return pending;
+  }
+
+  private dispatchClear(action: 'unavailable' | 'power'): void {
+    const lane = action === 'unavailable' ? 'unavailableWrite' : 'nullPowerWrite';
+    if (this[lane] || !this.clearGoal || this.clearGoal[action]) return;
+    const pending = (async () => {
+      // A retired completion may need one current-generation correction, but
+      // never starts an unbounded retry loop or releases checkpoint authority.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const goal = this.clearGoal;
+        if (!goal) return;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          if (action === 'unavailable') await this.port.setUnavailable(goal.reason);
+          // eslint-disable-next-line no-await-in-loop
+          else await this.port.setCapabilityValue('measure_power', null);
+        } catch {
+          return;
+        }
+        if (goal === this.clearGoal) {
+          goal[action] = true;
+          this.clearPending = !(goal.unavailable && goal.power);
+          return;
+        }
+      }
+    })().finally(() => {
+      if (this[lane] === pending) this[lane] = null;
+    });
+    this[lane] = pending;
   }
 
   /** Runtime withdrawal blocks before storage, configuration or capability writes. */
   start(): Promise<void> {
     const wasActive = this.active;
     const generation = ++this.generation;
+    // Queued events must not match a replacement adapter at the same receipt.
+    this.observationEpoch = ++observationGeneration;
     this.active = false; this.publishedPower = null;
+    this.notifyPowerObservation(null);
     return this.enqueue(async () => {
       if (generation !== this.generation) return;
       try {
@@ -140,6 +191,7 @@ export class DualCtGridEnergyDeviceAdapter {
   refresh(): Promise<void> {
     // This check deliberately runs outside the serialized projection queue.
     this.checkPublishedPower(this.generation);
+    if (!this.active && this.clearPending) this.clearPower(this.status).catch(() => {});
     if (this.refreshPending) return this.refreshPending;
     const { generation } = this;
     this.refreshPending = this.enqueue(async () => {
@@ -189,7 +241,15 @@ export class DualCtGridEnergyDeviceAdapter {
         // Null/stale power was already cleared with an unavailable status above.
         if (id === 'measure_power' && values[id] === null) continue;
         if (id === 'measure_power') powerWriteClearRevision = this.powerClearRevision;
-        await this.port.setCapabilityValue(id, id === 'measure_power' ? values[id] : dualCtHomeyEnergyKwh(values[id]! * 1000));
+        try {
+          await this.port.setCapabilityValue(id, id === 'measure_power' ? values[id] : dualCtHomeyEnergyKwh(values[id]! * 1000));
+        } finally {
+          if (id === 'measure_power' && (!this.current(generation)
+            || this.session.view().candidateCapabilities.measure_power === null)) {
+            if (this.clearGoal) this.clearGoal.power = false;
+            this.requestPowerClear(this.generation, this.active ? 'Waiting for fresh CT1 power' : this.status).catch(() => {});
+          }
+        }
       }
       if (!await this.guard(generation)) return;
       this.checkPublishedPower(generation); await this.powerClear;
@@ -201,9 +261,23 @@ export class DualCtGridEnergyDeviceAdapter {
       if (values.measure_power === null || after.powerFreshUntil === null) {
         this.status = 'waiting_for_fresh_power'; return;
       }
-      this.publishedPower = { at: after.projectionNow, until: after.powerFreshUntil };
+      this.publishedPower = {
+        at: after.projectionNow,
+        until: after.powerFreshUntil,
+        value: values.measure_power,
+        receivedAt: after.powerReceivedAt,
+      };
       this.status = 'recent';
-      await this.port.setAvailable();
+      // Deliver this concrete matched projection before another SDK/source update can overwrite it.
+      this.notifyPowerObservation(this.currentPowerObservation());
+      try {
+        await this.port.setAvailable();
+      } finally {
+        if (!this.current(generation) || this.session.view().candidateCapabilities.measure_power === null) {
+          if (this.clearGoal) this.clearGoal.unavailable = false;
+          this.requestPowerClear(this.generation, this.active ? 'Waiting for fresh CT1 power' : this.status).catch(() => {});
+        }
+      }
       if (!await this.guard(generation)) return;
       this.checkPublishedPower(generation); await this.powerClear;
       if (!await this.guard(generation) || this.clearPending) return;
@@ -215,37 +289,32 @@ export class DualCtGridEnergyDeviceAdapter {
     }
     // Keep the last still-fresh committed projection, rather than blanking healthy power.
     // The next normal tick catches up; the independent deadline check still expires it.
-    this.status = 'projection_superseded'; this.checkPublishedPower(generation); await this.powerClear;
+    this.status = 'projection_superseded'; this.notifyPowerObservation(null);
+    this.checkPublishedPower(generation); await this.powerClear;
   }
 
   /* eslint-enable no-await-in-loop */
 
   private async fail(reason: string): Promise<void> {
     this.active = false; this.publishedPower = null; this.status = reason;
-    await this.powerClear;
+    this.notifyPowerObservation(null);
+    this.clearPower(reason).catch(() => {});
     await this.session.close();
-    await this.clearPower(reason);
     // Retain committed cumulative totals; never reset/migrate another device or clear its checkpoint.
   }
 
-  private async clearPower(reason: string): Promise<void> {
-    this.clearPending = true;
-    let unavailable = false;
-    try {
-      await this.port.setUnavailable(reason); unavailable = true;
-    } catch { /* Retry on a later local tick. */ }
-    try {
-      await this.port.setCapabilityValue('measure_power', null); this.clearPending = !unavailable;
-    } catch { /* Do not lose a failed clear. */ }
+  private clearPower(reason: string): Promise<void> {
+    return this.requestPowerClear(this.generation, reason);
   }
 
   close(): Promise<void> {
     const wasActive = this.active;
     ++this.generation; this.active = false; this.publishedPower = null; this.status = 'closed';
+    this.notifyPowerObservation(null);
+    if (wasActive || this.clearPending) this.clearPower('closed').catch(() => {});
     const closed = this.session.close();
     return this.enqueue(async () => {
-      await closed; await this.powerClear;
-      if (wasActive || this.clearPending) await this.clearPower('closed');
+      await closed;
     });
   }
 
@@ -253,5 +322,37 @@ export class DualCtGridEnergyDeviceAdapter {
     return {
       status: this.status, active: this.active, valuesIncluded: false, controlsEnabled: false,
     };
+  }
+
+  /** Read-only Flow guard: qualified source and successful current projection, not a cached tile. */
+  currentPower(): number {
+    const power = this.qualifiedPower(this.session.view());
+    if (power === null) throw new Error('Fresh qualified CT1 power is unavailable');
+    return power;
+  }
+
+  private qualifiedPower(view: ReturnType<DualCtGridEnergySession['view']>): number | null {
+    const power = view.candidateCapabilities.measure_power;
+    if (!this.current(this.generation) || this.status !== 'recent' || this.clearPending || this.powerClear
+      || !Number.isFinite(view.projectionNow) || !this.publishedPower || view.projectionNow < this.publishedPower.at
+      || view.projectionNow >= this.publishedPower.until || power === null || power !== this.publishedPower.value) {
+      return null;
+    }
+    return power;
+  }
+
+  /** Successfully published CT1 receipt/deadline; never a renewed view/cache timestamp. */
+  currentPowerObservation(now = Date.now()): QualifiedCt1PowerObservation | null {
+    const view = this.session.view(now);
+    const published = this.publishedPower;
+    if (this.qualifiedPower(view) === null || !published || published.receivedAt === null
+      || !Number.isFinite(published.receivedAt) || published.receivedAt <= 0 || published.receivedAt > now
+    ) return null;
+    return Object.freeze({
+      powerW: published.value,
+      receivedAt: published.receivedAt,
+      validUntil: published.until,
+      generation: this.observationEpoch,
+    });
   }
 }

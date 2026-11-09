@@ -48,9 +48,15 @@ test('locked MQTT.js v5 broker denial triggers an actual wire retry and resumes 
   try {
     await app.connect(); app.subscribe('SYNTHETIC', () => count++); app.subscribe('SYNTHETIC', () => count++);
     await settle(); assert.equal(app.getDeliveryDiagnostics('SYNTHETIC').rejectedTopics, 1);
-    const retry = [...owned].find(timer => timer.ms === 5000); assert.ok(retry); owned.delete(retry); retry.fn();
+    const retry = app.subscriptions.get('/app/device/property/SYNTHETIC').timer;
+    assert.ok(owned.has(retry)); owned.delete(retry); retry.fn();
     await settle();
     assert.equal(routes.filter(route => route === '/app/device/property/SYNTHETIC').length, 2, 'real SUBSCRIBE sent again');
+    for (let n = 0; app.getDeliveryDiagnostics('SYNTHETIC').activeTopics < 2 && n < 3; n++) {
+      const waiting = [...app.subscriptions.values()].find(item => item.timer);
+      assert.ok(waiting && owned.has(waiting.timer));
+      const timer = waiting.timer; owned.delete(timer); timer.fn(); await settle();
+    }
     assert.equal(app.getDeliveryDiagnostics('SYNTHETIC').activeTopics, 2);
     wire.push(packets.generate({ cmd: 'publish', topic: '/app/device/property/SYNTHETIC', qos: 0, retain: false,
       dup: false, payload: Buffer.from('synthetic') }, { protocolVersion: 5 }));

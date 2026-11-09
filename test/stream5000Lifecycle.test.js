@@ -68,6 +68,173 @@ function varint(value) {
   return Buffer.from(bytes);
 }
 
+test('follow-on configuration authority is withdrawn before stopped SDK work settles, including disabled reserve', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await harness(classes.Stream5000UnitDevice);
+  await h.emit(frame(Buffer.concat([varint(200), varint(2), group(30, Buffer.from([8, 0, 16, 0]))])));
+  assert.equal(await h.device.configurationModeIs('custom'), true);
+  assert.equal(await h.device.configurationReserveEnabled(), false);
+  let release; let enter;
+  const held = new Promise(resolve => { release = resolve; });
+  const entered = new Promise(resolve => { enter = resolve; });
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'measure_power.load' && value === 42) { enter(); await held; }
+    return write(id, value);
+  };
+  const pending = h.device.queueTelemetry({ 'measure_power.load': 42 }, 100000, true);
+  await entered;
+  const stopped = h.device.onUninit();
+  try {
+    const results = await Promise.allSettled([
+      h.device.configurationModeIs('custom'), h.device.configurationReserveEnabled(),
+    ]);
+    assert.deepEqual(results.map(result => result.status), ['rejected', 'rejected']);
+  } finally { release(); await Promise.all([pending, stopped]); }
+});
+
+test('follow-on configuration conditions reject nonfinite current time independently of display', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000UnitDevice);
+  try {
+    await h.emit(frame(Buffer.concat([varint(200), varint(2), group(30, Buffer.from([8, 1]))])));
+    now = NaN;
+    const results = await Promise.allSettled([
+      h.device.configurationModeIs('custom'), h.device.configurationReserveEnabled(),
+    ]);
+    assert.deepEqual(results.map(result => result.status), ['rejected', 'rejected']);
+  } finally { now = 100000; await h.device.onUninit(); }
+});
+
+test('follow-on late configuration display completion is corrected at its own receipt expiry', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000UnitDevice);
+  let release; let enter;
+  const held = new Promise(resolve => { release = resolve; });
+  const entered = new Promise(resolve => { enter = resolve; });
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'stream_5000_mode' && value === 'custom') { enter(); await held; }
+    return write(id, value);
+  };
+  h.deliver(frame(Buffer.concat([varint(200), varint(2)]))); await entered;
+  try {
+    assert.equal(await h.device.configurationModeIs('custom'), true, 'reported configuration is not a UI application predicate');
+    now += 1200001;
+    await assert.rejects(h.device.configurationModeIs('custom'), /unavailable/);
+    release(); await h.device.applyChain;
+    assert.equal(h.device.values.stream_5000_mode, null);
+  } finally { release(); await h.device.applyChain; await h.device.onUninit(); }
+});
+
+test('follow-on stopped late configuration SDK completion retires its field rather than publishing the old session', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await harness(classes.Stream5000UnitDevice);
+  let release; let enter;
+  const held = new Promise(resolve => { release = resolve; });
+  const entered = new Promise(resolve => { enter = resolve; });
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'stream_5000_mode' && value === 'custom') { enter(); await held; }
+    return write(id, value);
+  };
+  h.deliver(frame(Buffer.concat([varint(200), varint(2)]))); await entered;
+  const stopped = h.device.onUninit();
+  try {
+    release(); await stopped;
+    assert.equal(h.device.values.stream_5000_mode, null);
+    await assert.rejects(h.device.configurationModeIs('custom'), /unavailable/);
+  } finally { release(); await stopped; }
+});
+
+test('reported configuration retains native receipt semantics after a failed own UI write', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await harness(classes.Stream5000UnitDevice);
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async (id, value) => {
+    if (['stream_5000_mode', 'stream_5000_backup_reserve_state'].includes(id) && value !== null) {
+      throw Error('synthetic UI rejection');
+    }
+    return write(id, value);
+  };
+  try {
+    await h.emit(frame(Buffer.concat([varint(200), varint(2), group(30, Buffer.from([8, 0, 16, 0]))])));
+    assert.equal(h.device.values.stream_5000_mode, null);
+    assert.equal(h.device.values.stream_5000_backup_reserve_state, null);
+    assert.equal(await h.device.configurationModeIs('custom'), true);
+    assert.equal(await h.device.configurationReserveEnabled(), false);
+  } finally { await h.device.onUninit(); }
+});
+
+test('monitoring guard requires independently applied native field, matching source role and live generation', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  for (const [DeviceClass, role] of [[classes.Stream5000UnitDevice, 'system'], [classes.Stream5000PhysicalUnitDevice, 'unit']]) {
+    const { device } = await harness(DeviceClass);
+    const current = field => device.monitoringReadingCurrent(field, role);
+    assert.throws(() => current('soc'));
+    await device.queueTelemetry({ measure_battery: 0, measure_power: 0, battery_charging_state: 'idle' }, now, true);
+    for (const field of ['soc', 'power', 'state']) assert.equal(current(field), true);
+    assert.throws(() => device.monitoringReadingCurrent('power', role === 'unit' ? 'system' : 'unit'));
+    assert.throws(() => current('temperature'));
+    const power = role === 'unit' ? 'stream_unit_power_battery_flow' : 'measure_power';
+    device.values[power] = 123; assert.throws(() => current('power')); device.values[power] = 0;
+    now += 180001; await device.queueTelemetry({ measure_temperature: 32 }, now, true);
+    assert.throws(() => current('power')); assert.throws(() => current('state')); assert.equal(current('soc'), true);
+    await device.queueTelemetry({ measure_power: -20, battery_charging_state: 'discharging' }, now, true);
+    assert.equal(current('power'), true);
+    if (role === 'unit') { device.linkedPowerWarning = true; assert.throws(() => current('power')); assert.equal(current('soc'), true); device.linkedPowerWarning = false; }
+    device.officialSocEvidence = {}; assert.throws(() => current('soc')); device.officialSocEvidence = null;
+    device.deliveryGeneration++; assert.throws(() => current('soc'));
+    await device.queueTelemetry({ measure_battery: 50 }, now, true); assert.equal(current('soc'), true);
+    const time = now; now = NaN; assert.throws(() => current('soc')); now = time;
+    await device.onUninit(); assert.throws(() => current('soc'));
+  }
+});
+
+test('monitoring guard rejects a pending/failed field while unrelated fresh SOC remains usable and recovery is current', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  await device.queueTelemetry({ measure_power: 20, measure_battery: 50 }, now, true);
+  const write = device.setCapabilityValue.bind(device); let release; let entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  device.setCapabilityValue = async (key, value) => {
+    if (key === 'measure_power' && value === 30) { entered(); await new Promise(resolve => { release = resolve; }); throw new Error('synthetic rejection'); }
+    await write(key, value);
+  };
+  now += 1; const applying = device.queueTelemetry({ measure_power: 30 }, now, true); await started;
+  assert.throws(() => device.monitoringReadingCurrent('power', 'system'));
+  assert.equal(device.monitoringReadingCurrent('soc', 'system'), true);
+  release(); await applying; assert.throws(() => device.monitoringReadingCurrent('power', 'system'));
+  device.setCapabilityValue = write; now += 1;
+  await device.queueTelemetry({ measure_power: 0 }, now, true);
+  assert.equal(device.monitoringReadingCurrent('power', 'system'), true);
+  await device.onUninit();
+});
+
+test('registered monitoring AND rejects unknown even when inverted, but valid false grid comparisons may invert', async t => {
+  const load = Module._load; let App;
+  try {
+    Module._load = function (name, ...args) {
+      if (name === 'homey') return { App: class { log() {} } };
+      return load.call(this, name, ...args);
+    };
+    App = require('../.homeybuild/app');
+  } finally { Module._load = load; }
+  const listeners = {};
+  const app = new App();
+  app.homey = { settings: { get() {}, on() {} },
+    flow: { getConditionCard: id => ({ registerRunListener: fn => { listeners[id] = fn; } }) } };
+  await app.onInit();
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  const evaluate = async (args, inverted) => { const value = await listeners.stream_5000_reading_current(args); return inverted ? !value : value; };
+  await assert.rejects(evaluate({ device, field: 'soc', role: 'system' }, true));
+  await device.queueTelemetry({ measure_battery: 50 }, Date.now(), true);
+  assert.equal(await evaluate({ device, field: 'soc', role: 'system' }, false), true);
+  assert.equal(await evaluate({ device, field: 'soc', role: 'system' }, true), false);
+  assert.equal(await listeners.smartmeter_grid_power_above({ device: { gridPowerAbove: () => false }, direction: 'export', watts: 100 }), false);
+  await device.onUninit();
+});
+
 test('failed live write never refreshes applied age, unrelated fields cannot restore availability, zero can recover', async (t) => {
   let now = 100000;
   t.mock.method(Date, 'now', () => now);
@@ -1860,6 +2027,30 @@ test('a late-joining ES21 aggregate waits through unrelated deltas then accepts 
 const officialSoc = (percent, at) => ({ percent, requestStartedAt: at, receivedAt: at,
   basis: 'cloud_latest_report', hardwareReportedAt: null });
 
+test('cloud SOC cannot qualify between successful SDK settlement and fallback provenance commit', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const { device } = await harness(classes.Stream5000UnitDevice);
+  t.after(() => device.onUninit());
+  let qualifiedAtSettlement;
+  const write = device.setCapabilityValue.bind(device);
+  t.mock.method(device, 'setCapabilityValue', (key, value) => {
+    const pending = write(key, value);
+    if (key === 'measure_battery' && value === 0) pending.then(() => queueMicrotask(() => {
+      try { qualifiedAtSettlement = device.monitoringReadingCurrent('soc', 'system'); }
+      catch { qualifiedAtSettlement = false; }
+    }));
+    return pending;
+  });
+  device.homey.app.readStream5000SystemSoc = async () => officialSoc(0, now);
+  await device.refreshOfficialSystemSoc();
+  assert.equal(device.values.measure_battery, 0);
+  assert.equal(qualifiedAtSettlement, false);
+  assert.throws(() => device.monitoringReadingCurrent('soc', 'system'));
+  now++;
+  await device.queueTelemetry({ measure_battery: 10 }, now, true);
+  assert.equal(device.monitoringReadingCurrent('soc', 'system'), true);
+});
+
 test('official SOC fallback restores aggregate zero without touching power, availability or cumulative counters', async (t) => {
   const now = 100000; t.mock.method(Date, 'now', () => now);
   const { device } = await harness(classes.Stream5000UnitDevice, { chargedWh: 2500, dischargedWh: 1500 });
@@ -2002,5 +2193,92 @@ test('startup floor preserves STREAM 5000 fractional Wh instead of promoting rou
     await device.onUninit();
     saved = structuredClone(device.store);
     assert.equal(saved.chargedWh, 1000.6);
+  }
+});
+
+for (const phase of ['same-millisecond write', 'queued batch', 'unprocessed active-batch field']) {
+  test(`5000 current guard rejects pending own-field reports: ${phase}`, async t => {
+    let now = 100000;
+    t.mock.method(Date, 'now', () => now);
+    const { device } = await harness(classes.Stream5000UnitDevice);
+    await device.queueTelemetry({ measure_power: 20, measure_battery: 50 }, now, true);
+    const write = device.setCapabilityValue.bind(device);
+    let release; let entered;
+    const started = new Promise(resolve => { entered = resolve; });
+    const blockedField = phase === 'same-millisecond write' ? 'measure_power' : 'measure_temperature';
+    device.setCapabilityValue = async (key, value) => {
+      if (key === blockedField && value === 30) {
+        entered();
+        await new Promise(resolve => { release = resolve; });
+      }
+      await write(key, value);
+    };
+    if (phase !== 'same-millisecond write') now += 1;
+    const values = phase === 'same-millisecond write' ? { measure_power: 30 }
+      : phase === 'queued batch' ? { measure_temperature: 30 }
+        : { measure_temperature: 30, measure_power: 30 };
+    const applying = device.queueTelemetry(values, now, true);
+    await started;
+    const queued = phase === 'queued batch'
+      ? device.queueTelemetry({ measure_power: 30 }, ++now, true) : Promise.resolve();
+    try {
+      assert.equal(device.monitoringReadingCurrent('soc', 'system'), true);
+      assert.throws(() => device.monitoringReadingCurrent('power', 'system'), /unavailable/);
+    } finally {
+      release();
+      await Promise.all([applying, queued]);
+      try {
+        assert.equal(device.monitoringReadingCurrent('power', 'system'), true);
+        assert.equal(device.values.measure_power, 30);
+      } finally {
+        await device.onUninit();
+      }
+    }
+  });
+}
+
+test('physical-power delivery guard rejects queued and old completions until the newest native report applies', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const float = (field, value) => {
+    const bytes = Buffer.alloc(4); bytes.writeFloatLE(value);
+    return Buffer.concat([varint(field * 8 + 5), bytes]);
+  };
+  const powerFrame = watts => frame(group(12, Buffer.concat([
+    float(4, 0), float(5, Math.max(0, -watts)), float(7, Math.max(0, watts)),
+  ])));
+  const h = await harness(classes.Stream5000PhysicalUnitDevice);
+  await h.emit(powerFrame(20));
+  assert.equal(h.device.monitoringReadingCurrent('power', 'unit'), true);
+  const write = h.device.setCapabilityValue.bind(h.device);
+  let release30; let release40; let enter30; let enter40;
+  const started30 = new Promise(resolve => { enter30 = resolve; });
+  const started40 = new Promise(resolve => { enter40 = resolve; });
+  h.device.setCapabilityValue = async (key, value) => {
+    if (key === 'stream_unit_power_battery_flow' && value === 30) {
+      enter30(); await new Promise(resolve => { release30 = resolve; });
+    }
+    if (key === 'stream_unit_power_battery_flow' && value === 40) {
+      enter40(); await new Promise(resolve => { release40 = resolve; });
+    }
+    await write(key, value);
+  };
+  try {
+    h.deliver(powerFrame(30));
+    assert.throws(() => h.device.monitoringReadingCurrent('power', 'unit'), /unavailable/);
+    await started30;
+    assert.throws(() => h.device.monitoringReadingCurrent('power', 'unit'), /unavailable/);
+    now += 1; h.deliver(powerFrame(40));
+    release30(); await started40;
+    assert.equal(h.device.values.stream_unit_power_battery_flow, 30);
+    assert.throws(() => h.device.monitoringReadingCurrent('power', 'unit'), /unavailable/);
+    release40(); await h.device.applyChain;
+    assert.equal(h.device.values.stream_unit_power_battery_flow, 40);
+    assert.equal(h.device.monitoringReadingCurrent('power', 'unit'), true);
+  } finally {
+    h.device.setCapabilityValue = write;
+    if (release30) release30();
+    if (release40) release40();
+    await h.device.onUninit();
   }
 });

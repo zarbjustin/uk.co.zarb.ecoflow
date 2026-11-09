@@ -3,10 +3,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const { EventEmitter } = require('node:events');
+const { Writable } = require('node:stream');
+const nativeMqtt = require('mqtt');
+const nativeAck = require(require('node:path').join(require.resolve('mqtt'), '..', 'lib/handlers/ack.js')).default;
 
 const clients = [];
 let subscribeHook;
 let autoConnect = true;
+let nativeFactory;
 class Client extends EventEmitter {
   constructor() {
     super(); this.connected = false; this.subscribed = []; this.unsubscribed = [];
@@ -25,7 +29,8 @@ const originalLoad = Module._load;
 let EcoFlowAppMqtt;
 try {
   Module._load = function (request, ...args) {
-    if (request === 'mqtt') return { connect() {
+    if (request === 'mqtt') return { connect(_url, options) {
+      if (nativeFactory) return nativeFactory(options);
       const client = new Client(); clients.push(client);
       if (autoConnect) queueMicrotask(() => { client.connected = true; client.emit('connect'); });
       return client;
@@ -168,8 +173,8 @@ test('missing SUBACK retries are bounded, late callbacks fenced and last detach/
     clock.run(5000); callbacks[0](null, [{ topic, qos: 0 }]);
     assert.equal(mqtt.getDeliveryDiagnostics(sn).pendingTopics, 1, 'old SUBACK cannot accept a replacement attempt');
     clock.run(10000); clock.run(10000); // deadline, then second retry backoff.
-    clock.run(10000); // final deadline: no further retries.
-    assert.equal(client.subscribed.length, 4); assert.equal(clock.timers.size, 0);
+    clock.run(10000); // The fast wave ends, but owned low-rate recovery continues.
+    assert.equal(client.subscribed.length, 4); assert.equal(clock.timers.size, 1);
     mqtt.unsubscribe(sn, preview); assert.equal(client.unsubscribed.length, 0);
     mqtt.unsubscribe(sn, energy); assert.equal(client.unsubscribed.length, 2);
     mqtt.subscribe(sn, energy); assert.equal(clock.timers.size, 1);
@@ -297,7 +302,7 @@ test('repeated failed handshakes and successful mixed-serial recovery leave no o
   assert.equal(clock.timers.size, 0);
 });
 
-test('a new consumer can recover exhausted shared topics without resubscribing active topics or fabricating frames', async t => {
+test('existing consumers recover exhausted shared topics without churn or fabricated frames', async t => {
   const clock = fakeTimers(t);
   for (const failure of ['denied', 'timeout']) {
     let fail = true; let frames = 0;
@@ -316,9 +321,11 @@ test('a new consumer can recover exhausted shared topics without resubscribing a
       if (failure==='timeout') clock.run(10000);
       clock.run(10000);
       if (failure==='timeout') clock.run(10000);
-      assert.equal(clock.timers.size,0);
+      assert.equal(clock.timers.size,1);
       const before=client.subscribed.length; fail=false;
       mqtt.subscribe(sn,energy);
+      assert.equal(client.subscribed.length,before,'new listeners do not accelerate scheduled recovery');
+      clock.run(30000);
       assert.equal(client.subscribed.length,before+1,'only exhausted topic retried');
       assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics,2);
       assert.equal(frames,0,'SUBACK is not telemetry');
@@ -328,6 +335,38 @@ test('a new consumer can recover exhausted shared topics without resubscribing a
       mqtt.unsubscribe(sn,energy);assert.equal(client.unsubscribed.length,0);
     } finally { subscribeHook=undefined;await mqtt.end(); }
   }
+});
+
+test('permanent topic denial has capped ongoing recovery and last detach fences every old attempt', async t => {
+  const clock = fakeTimers(t); const callbacks = [];
+  subscribeHook = (_client, route, callback) => {
+    if (route === topic) { callbacks.push(callback); callback(null, [{ topic: route, qos: 128 }]); }
+    else callback(null, [{ topic: route, qos: 0 }]);
+  };
+  const mqtt = new EcoFlowAppMqtt({ client: auth }); let peer = 0;
+  const listener = () => {};
+  try {
+    await mqtt.connect(); const client = clients.at(-1);
+    mqtt.subscribe(sn, listener);
+    mqtt.subscribe('HEALTHY_SYNTHETIC', () => peer++);
+    clock.run(5000); clock.run(10000);
+    for (let cycle = 0; cycle < 40; cycle++) {
+      const delay = Math.min(30000 * 2 ** cycle, 300000);
+      assert.equal(clock.timers.size, 1);
+      clock.run(delay);
+      client.emit('message', '/app/device/property/HEALTHY_SYNTHETIC', Buffer.from('peer'), { retain: false, dup: false });
+      assert.equal(mqtt.getDeliveryDiagnostics(sn).receivedFrames, 0);
+      assert.equal(mqtt.subscriptions.size, 4, 'one fixed state record per topic');
+    }
+    assert.equal(peer, 40);
+    assert.equal(client.subscribed.filter(route => route.includes('HEALTHY_SYNTHETIC')).length, 2);
+    assert.equal(clients.at(-1), client, 'topic denial never replaces the socket');
+    const old = callbacks[0];
+    mqtt.unsubscribe(sn, listener); assert.equal(clock.timers.size, 0);
+    old(null, [{ topic, qos: 0 }]);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 0);
+    assert.equal(mqtt.getDeliveryDiagnostics('HEALTHY_SYNTHETIC').activeTopics, 2);
+  } finally { subscribeHook = undefined; await mqtt.end(); }
 });
 
 test('consumer churn cannot multiply scheduled subscription retries or touch a healthy topic', async t => {
@@ -385,4 +424,307 @@ test('busy other-device traffic does not renew sparse Dual CT receipts or resubs
     assert.equal(preview[1], energy[1]); assert.equal(preview[1].receivedAt, 17000);
     assert.deepEqual(client.subscribed, subscribed); assert.equal(client.unsubscribed.length, 0);
   } finally { await mqtt.end(); }
+});
+
+const nativeSettle = async () => { for (let n = 0; n < 4; n++) await new Promise(setImmediate); };
+
+async function nativeHarness(t) {
+  assert.equal(nativeMqtt.MqttClient.VERSION, '5.15.1', 'private bookkeeping fixture is version-specific');
+  const clock = fakeTimers(t);
+  const fixture = { packets: [], callbacks: [], clients: [], blockWrites: false, pauseAll: false, hangEnd: false };
+  nativeFactory = options => {
+    const client = new nativeMqtt.MqttClient(() => { throw new Error('network prohibited'); },
+      { ...options, manualConnect: true, keepalive: 0 });
+    client.stream = new Writable({ highWaterMark: 16384, write(_bytes, _encoding, done) {
+      if (fixture.blockWrites) fixture.releaseWrite = () => { fixture.releaseWrite = undefined; done(); };
+      else done();
+    } });
+    client.on('packetsend', packet => {
+      fixture.packets.push({ client, ...packet });
+      if (packet.cmd === 'subscribe' && packet.subscriptions[0].topic !== topic && !fixture.pauseAll) {
+        queueMicrotask(() => nativeAck(client, { cmd: 'suback', messageId: packet.messageId, granted: [0] }));
+      }
+    });
+    const subscribe = client.subscribe.bind(client);
+    client.subscribe = (route, opts, callback) => {
+      fixture.callbacks.push({ client, route, callback });
+      return subscribe(route, opts, callback);
+    };
+    client._cleanUp = (_force, done) => {
+      fixture.endCallback = done;
+      if (!fixture.hangEnd) { client.connected = false; client.stream.destroy(); done?.(); }
+    };
+    fixture.clients.push(client);
+    queueMicrotask(() => { client.connected = true; client.emit('connect'); });
+    return client;
+  };
+  const app = new EcoFlowAppMqtt({ client: auth });
+  await app.connect();
+  const client = fixture.clients.at(-1);
+  const listener = () => {};
+  let peers = 0;
+  app.subscribe(sn, listener);
+  app.subscribe('HEALTHY_SYNTHETIC', () => peers++);
+  await nativeSettle();
+  for (let n = 0; n < 10; n++) {
+    const waiting = [...app.subscriptions].find(([route, item]) => route !== topic && item.timer);
+    if (!waiting) break;
+    clock.timers.delete(waiting[1].timer); waiting[1].timer.fn(); await nativeSettle();
+  }
+  assert.equal(app.getDeliveryDiagnostics('HEALTHY_SYNTHETIC').activeTopics, 2);
+  const targets = () => fixture.packets.filter(p => p.client === client && p.cmd === 'subscribe' && p.subscriptions[0].topic === topic);
+  const retry = async () => {
+    const timer = [...clock.timers][0]; assert.ok(timer, 'owned topic timer');
+    clock.run(timer.ms); await nativeSettle();
+  };
+  const clean = async () => {
+    nativeFactory = undefined; fixture.hangEnd = false;
+    fixture.releaseWrite?.(); fixture.endCallback?.();
+    for (const c of fixture.clients) {
+      c._storeProcessing = false; c._storeProcessingQueue.length = 0;
+      c.end = (_force, opts, callback) => { c.stream.destroy(); (typeof opts === 'function' ? opts : callback)?.(); return c; };
+    }
+    const ending = app.end(); await nativeSettle();
+    fixture.endCallback?.();
+    const nativeFinish = [...clock.timers].find(timer => timer.ms === 10);
+    if (nativeFinish) clock.run(10);
+    await ending;
+  };
+  return { app, client, fixture, clock, targets, retry, clean, listener, peers: () => peers };
+}
+
+test('native F4 thousands of missing SUBACK retries keep one immutable owner transaction and healthy peers', async t => {
+  const h = await nativeHarness(t);
+  try {
+    for (let n = 0; n < 2000; n++) {
+      await h.retry();
+      h.client.emit('message', '/app/device/property/HEALTHY_SYNTHETIC', Buffer.from('synthetic'), { retain: false, dup: false });
+    }
+    assert.ok(h.targets().length > 900);
+    assert.equal(new Set(h.targets().map(packet => packet.messageId)).size, 1, 'one ID for the entire owner lifetime');
+    assert.equal(Object.keys(h.client.outgoing).length, 1, 'one current native callback graph');
+    assert.equal(Object.keys(h.client.messageIdToTopic).length, 1, 'one native topic mapping');
+    assert.equal(h.client._storeProcessingQueue.length, 0);
+    assert.equal(h.client.stream.writableLength, 0);
+    assert.equal(h.clock.timers.size, 1);
+    assert.equal(h.peers(), 2000);
+    assert.equal(h.app.getDeliveryDiagnostics(sn).receivedFrames, 0, 'retry is not telemetry');
+    const bytes = require('mqtt-packet').generate(h.targets()[0], { protocolVersion: 5 });
+    assert.ok(h.targets().every(packet => require('mqtt-packet').generate(packet, { protocolVersion: 5 }).equals(bytes)));
+  } finally { await h.clean(); }
+});
+
+for (const [first, second] of [[0, 0], [128, 0], [0, 128], [145, 0]]) {
+  test(`native F4 repeated SUBACK ${first}/${second} settles only the current identical owner intent`, async t => {
+    const h = await nativeHarness(t);
+    try {
+      const original = h.targets()[0];
+      const oldCallback = h.fixture.callbacks.find(row => row.route === topic).callback;
+      await h.retry(); await h.retry();
+      const pending = h.app.subscriptions.get(topic);
+      oldCallback(null, [{ topic, qos: 0 }]); oldCallback(new Error('old callback')); oldCallback(null, [{ topic, qos: 128 }]);
+      assert.equal(pending.state, 'pending', 'old callback objects cannot settle a newer pending attempt');
+      assert.equal(h.targets().at(-1).messageId, original.messageId);
+      nativeAck(h.client, { cmd: 'suback', messageId: original.messageId, granted: [first] });
+      await nativeSettle();
+      assert.equal(pending.state, first === 0 ? 'active' : 'rejected');
+      if (first === 0) h.app.subscribeTopic(sn, topic);
+      else await h.retry();
+      await nativeSettle();
+      const current = h.app.subscriptions.get(topic);
+      assert.equal(h.targets().at(-1).messageId, original.messageId, 'settlement does not free the owner ID');
+      h.fixture.pauseAll = true;
+      h.app.subscribe('OTHER_NATIVE_OWNER', () => {});
+      const other = h.fixture.packets.find(packet => packet.cmd === 'subscribe' && packet.subscriptions[0].topic === '/app/device/property/OTHER_NATIVE_OWNER');
+      assert.notEqual(other.messageId, original.messageId);
+      nativeAck(h.client, { cmd: 'suback', messageId: original.messageId, granted: [second] });
+      await nativeSettle();
+      assert.equal(current.state, second === 0 ? 'active' : 'rejected', 'matching older wire ACK may settle this same intent, not latest-wire authorization');
+      assert.equal(h.app.getDeliveryDiagnostics('OTHER_NATIVE_OWNER').activeTopics, 0);
+      assert.equal(h.app.getDeliveryDiagnostics(sn).receivedFrames, 0);
+    } finally { await h.clean(); }
+  });
+}
+
+test('native F4 settled detach retires IDs across allocator wrap and cleans unacknowledged UNSUB bookkeeping', async t => {
+  const h = await nativeHarness(t);
+  try {
+    const id = h.targets()[0].messageId;
+    nativeAck(h.client, { cmd: 'suback', messageId: id, granted: [0] }); await nativeSettle();
+    h.app.unsubscribe(sn, h.listener);
+    await nativeSettle();
+    assert.equal(Object.keys(h.client.outgoing).length, 0, 'detach must not wait for UNSUBACK');
+    assert.equal(Object.keys(h.client.messageIdToTopic).length, 0);
+    const predecessor = id === 1 ? 65535 : id - 1;
+    for (let n = 0; h.client.messageIdProvider.getLastAllocated() !== predecessor; n++) {
+      assert.ok(n < 65535);
+      const allocated = h.client.messageIdProvider.allocate(); assert.notEqual(allocated, 0);
+      h.client.messageIdProvider.deallocate(allocated);
+    }
+    h.app.subscribe(sn, h.listener);
+    const current = h.targets().at(-1);
+    assert.notEqual(current.messageId, id, 'settled old lifetime never aliases returning ownership');
+    nativeAck(h.client, { cmd: 'suback', messageId: id, granted: [0] }); await nativeSettle();
+    assert.equal(h.app.getDeliveryDiagnostics(sn).pendingTopics, 1);
+    assert.equal(h.app.getDeliveryDiagnostics('HEALTHY_SYNTHETIC').activeTopics, 2);
+  } finally { await h.clean(); }
+});
+
+test('native F4 exhausted unified namespace still retries existing owners and rejects new work before busy SDK queues', async t => {
+  const h = await nativeHarness(t);
+  try {
+    const id = h.targets()[0].messageId;
+    for (let candidate = 1; candidate <= 65535; candidate++) h.client.messageIdProvider.register(candidate);
+    h.client.messageIdProvider.clear(); // Native lifecycle clear must not reset this connection's owner/tombstone ledger.
+    await h.retry(); await h.retry();
+    assert.equal(h.targets().at(-1).messageId, id);
+    h.client._storeProcessing = true;
+    const sends = h.fixture.packets.length;
+    h.app.subscribe('NAMESPACE_FULL', () => {});
+    assert.equal(h.fixture.packets.length, sends);
+    assert.equal(h.client._storeProcessingQueue.length, 0, 'exhaustion is checked before SDK can enqueue without allocating');
+    h.client._storeProcessing = false;
+    h.app.subscribe('NAMESPACE_FULL_2', () => {});
+    assert.equal(h.fixture.packets.length, sends);
+    assert.equal(h.client._storeProcessingQueue.length, 0);
+    assert.equal(h.client.messageIdProvider.allocate(), null);
+    assert.equal(h.fixture.clients.length, 1, 'no silent namespace-reset reconnect');
+  } finally { await h.clean(); }
+});
+
+test('native F4 busy native processing coalesces retry and detach without appending deferred SDK operations', async t => {
+  const h = await nativeHarness(t);
+  try {
+    h.client._storeProcessing = true;
+    for (let n = 0; n < 300; n++) await h.retry();
+    assert.equal(h.client._storeProcessingQueue.length, 0);
+    h.app.unsubscribe(sn, h.listener);
+    assert.equal(h.client._storeProcessingQueue.length, 0, 'busy unsubscribe is skipped, not deferred');
+    h.client._storeProcessing = false;
+    h.client._storeProcessingQueue.push({ invoke: () => false, callback: () => {} });
+    h.app.subscribe(sn, h.listener);
+    assert.equal(h.client._storeProcessingQueue.length, 1, 'existing foreign queue is not appended or flushed');
+    h.app.unsubscribe(sn, h.listener);
+    assert.equal(h.client._storeProcessingQueue.length, 1);
+  } finally { await h.clean(); }
+});
+
+test('native F4 non-draining memory stream cannot grow retry bytes or drain listeners', async t => {
+  const h = await nativeHarness(t);
+  try {
+    h.fixture.blockWrites = true;
+    h.client.stream._writableState.highWaterMark = 1;
+    await h.retry(); await h.retry();
+    const debt = h.client.stream.writableLength;
+    const drains = h.client.stream.listenerCount('drain');
+    assert.ok(debt > 0);
+    for (let n = 0; n < 2000; n++) await h.retry();
+    assert.equal(h.client.stream.writableLength, debt, 'one blocked write, no appended retry debt');
+    assert.equal(h.client.stream.listenerCount('drain'), drains);
+    assert.equal(h.client._storeProcessingQueue.length, 0);
+    h.fixture.blockWrites = false; h.fixture.releaseWrite(); await nativeSettle();
+    for (let n = 0; h.targets().length < 3 && n < 3; n++) await h.retry();
+    assert.equal(h.targets().length, 3, 'late drain only permits the next owned retry');
+    h.client.stream.destroy();
+    const sent = h.fixture.packets.length;
+    for (let n = 0; n < 3; n++) await h.retry();
+    assert.equal(h.fixture.packets.length, sent, 'destroyed transport cannot resurrect writes');
+  } finally { await h.clean(); }
+});
+
+test('native F4 cancellation owns only its callback/mapping and tombstones before reentrant allocation', async t => {
+  const h = await nativeHarness(t);
+  try {
+    const id = h.targets()[0].messageId;
+    const foreign = { volatile: true, cb: () => assert.fail('foreign outgoing cancelled') };
+    h.client.outgoing[60000] = foreign;
+    h.client.messageIdToTopic[60000] = ['foreign'];
+    h.client.messageIdProvider.register(60000);
+    const remove = h.client.removeOutgoingMessage.bind(h.client);
+    const cancelled = [];
+    h.client.removeOutgoingMessage = removed => {
+      cancelled.push(removed);
+      assert.equal(h.app.subscriptions.has(topic), false);
+      const next = h.client.messageIdProvider.allocate();
+      assert.notEqual(next, id); h.client.messageIdProvider.deallocate(next);
+      return remove(removed);
+    };
+    h.app.unsubscribe(sn, h.listener); await nativeSettle();
+    assert.ok(cancelled.includes(id));
+    assert.equal(h.client.outgoing[60000], foreign);
+    assert.deepEqual(h.client.messageIdToTopic[60000], ['foreign']);
+    assert.equal(Object.keys(h.client.outgoing).length, 1, 'owned unsubscribe callbacks are cancelled immediately');
+    delete h.client.outgoing[60000]; delete h.client.messageIdToTopic[60000];
+  } finally { await h.clean(); }
+});
+
+test('native F4 unified allocation preserves an ordinary QoS publish reentering owned unsubscribe', async t => {
+  const h = await nativeHarness(t);
+  try {
+    let published = false;
+    h.client.once('packetsend', packet => {
+      assert.equal(packet.cmd, 'unsubscribe');
+      h.client.publish('/synthetic/ordinary', Buffer.from('synthetic'), { qos: 1 }, error => {
+        assert.ifError(error); published = true;
+      });
+    });
+    h.app.unsubscribe(sn, h.listener); await nativeSettle();
+    const unsub = h.fixture.packets.find(packet => packet.cmd === 'unsubscribe');
+    const publish = h.fixture.packets.find(packet => packet.cmd === 'publish');
+    assert.ok(unsub && publish);
+    assert.notEqual(unsub.messageId, publish.messageId, 'temporary selector was consumed only by its native unsubscribe');
+    assert.ok(h.client.outgoing[publish.messageId]);
+    assert.equal(h.client.outgoing[unsub.messageId], undefined);
+    assert.equal(published, false);
+    nativeAck(h.client, { cmd: 'puback', messageId: publish.messageId, reasonCode: 0 }); await nativeSettle();
+    assert.equal(published, true);
+    assert.equal(h.client.messageIdProvider.register(publish.messageId), true, 'ordinary settled publish ID is reusable');
+    h.client.messageIdProvider.deallocate(publish.messageId);
+    assert.equal(h.client.messageIdProvider.register(unsub.messageId), false, 'retired unsubscribe ID remains fenced');
+    assert.equal(h.client.messageIdProvider.register(h.targets()[0].messageId), false, 'retired owner ID remains fenced');
+  } finally { await h.clean(); }
+});
+
+test('native F4 late callbacks from detached and replaced clients cannot settle new owners', async t => {
+  const h = await nativeHarness(t);
+  try {
+    const old = h.fixture.callbacks.find(row => row.route === topic).callback;
+    const oldId = h.targets()[0].messageId;
+    h.app.unsubscribe(sn, h.listener); await nativeSettle(); h.app.subscribe(sn, h.listener); await nativeSettle();
+    old(null, [{ topic, qos: 0 }]);
+    assert.equal(h.app.getDeliveryDiagnostics(sn).pendingTopics, 1);
+    await h.app.reconnect(); await nativeSettle();
+    const next = h.fixture.clients.at(-1);
+    const waiting = h.app.subscriptions.get(topic);
+    if (waiting.state === 'timed_out') {
+      h.clock.timers.delete(waiting.timer); waiting.timer.fn(); await nativeSettle();
+    }
+    old(null, [{ topic, qos: 0 }]);
+    nativeAck(h.client, { cmd: 'suback', messageId: oldId, granted: [0] }); await nativeSettle();
+    assert.equal(h.app.getDeliveryDiagnostics(sn).pendingTopics, 1);
+    assert.equal(h.app.client, next);
+    assert.equal(Object.keys(h.client.outgoing).length, 0);
+  } finally { await h.clean(); }
+});
+
+test('native F4 graceful shutdown is bounded and double/late completion cannot close a newer client', async t => {
+  const h = await nativeHarness(t);
+  try {
+    h.fixture.hangEnd = true;
+    let ended = false;
+    const ending = h.app.end().then(() => { ended = true; });
+    const double = h.app.end();
+    await nativeSettle();
+    assert.equal(ended, false);
+    assert.ok([...h.clock.timers].some(timer => timer.ms === 1000), 'owned end deadline independent of native callback');
+    h.clock.run(1000); await Promise.all([ending, double]);
+    assert.equal(h.client.stream.destroyed, true);
+    assert.equal(h.clock.timers.size, 0);
+    assert.equal(h.client.listenerCount('packetsend'), 1, 'only fixture instrumentation remains');
+    const late = h.fixture.endCallback;
+    h.fixture.hangEnd = false; await h.app.connect();
+    const next = h.fixture.clients.at(-1);
+    late?.(); late?.(); await nativeSettle();
+    assert.equal(h.app.client, next); assert.equal(h.app.connected, true);
+  } finally { await h.clean(); }
 });

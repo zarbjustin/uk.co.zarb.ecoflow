@@ -1046,21 +1046,37 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   }
 
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    const eventCaps = ['measure_battery', 'operating_mode'];
+    const reportedEvents = [
+      ...(Object.prototype.hasOwnProperty.call(quota, 'cmsBattSoc') ? ['measure_battery'] : []),
+      ...(Object.keys(quota).some((key) => key.startsWith('energyStrategyOperateMode.')) ? ['operating_mode'] : []),
+    ];
     if (context?.accountingDiscontinuity) {
       this.lastEnergyTs = 0;
       this.ignoredEnergyGaps += 1;
     }
     if (context?.sourceSn && context.sourceSn.toUpperCase() !== this.getReadSn().toUpperCase()) {
+      for (const cap of reportedEvents) this.legacyFlowReadings.invalidateEvent(cap);
       this.lastEnergyTs = 0;
       return;
     }
     if (this.bindingAttempted && !this.monitoringEnabled && !this.monitoringRollbackPending && !this.aggregateBound) return;
     const flowReceipts = this.legacyFlowReadings;
-    this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
-    if (!this.monitoringEnabled && !this.monitoringRollbackPending) await this.applyRemainingTime(quota, context);
+    const generation = this.lifecycleGeneration;
+    const session = this.monitoringSession;
+    const { monitoringGeneration } = this;
+    const sourceSn = this.getReadSn();
+    const currentFlowSession = () => flowReceipts === this.legacyFlowReadings && !this.isShuttingDown()
+      && generation === this.lifecycleGeneration && session === this.monitoringSession
+      && monitoringGeneration === this.monitoringGeneration && sourceSn === this.getReadSn() && !this.monitoringEnabled;
     const receivedAt = context?.receivedAt ?? Date.now();
-    this.counterContinuity.observe(quota, receivedAt);
     const values = mapStreamQuota(quota);
+    for (const cap of reportedEvents) {
+      if (values[cap] === undefined) flowReceipts.invalidateEvent(cap, receivedAt);
+    }
+    this.limitObservations.observe(quota, receivedAt, 'developer_quota');
+    if (!this.monitoringEnabled && !this.monitoringRollbackPending) await this.applyRemainingTime(quota, context);
+    this.counterContinuity.observe(quota, receivedAt);
     if (!this.monitoringEnabled && flowReceipts === this.legacyFlowReadings) {
       if (Object.keys(quota).some((key) => key.startsWith('energyStrategyOperateMode.')) && values.operating_mode === undefined) {
         flowReceipts.observe('operating_mode', undefined, undefined, receivedAt);
@@ -1099,12 +1115,35 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
     let coreWriteFailed = false;
     const recordFlow = (cap: string, value: unknown) => {
-      if (flowReceipts === this.legacyFlowReadings && !this.isShuttingDown() && !this.monitoringEnabled) {
+      if (currentFlowSession()) {
         flowReceipts.observe(cap, value, this.getCapabilityValue(cap), receivedAt);
+        if (!eventCaps.includes(cap)) return;
+        if (this.monitoringRollbackPending || this.monitoringSettingsCount > 0) {
+          flowReceipts.invalidateEvent(cap);
+          return;
+        }
+        const previous = flowReceipts.observeEvent(cap, value, this.getCapabilityValue(cap), receivedAt);
+        if (previous === undefined || previous === value) return;
+        const { flow } = this.homey;
+        if (cap === 'operating_mode') {
+          flow.getDeviceTriggerCard('operating_mode_changed').trigger(this, { mode: value }).catch(() => {});
+        } else {
+          flow.getDeviceTriggerCard('battery_level_crossed')
+            .trigger(this, { battery: value }, { soc: value, prevSoc: previous }).catch(() => {});
+        }
+      } else {
+        flowReceipts.invalidateEvent(cap);
       }
     };
     for (const [cap, value] of Object.entries(values)) {
       if (!this.hasCapability(cap)) continue;
+      if (eventCaps.includes(cap)) {
+        if (!currentFlowSession()) {
+          flowReceipts.invalidateEvent(cap);
+          continue;
+        }
+        if (!flowReceipts.prepareEvent(cap, this.getCapabilityValue(cap), receivedAt)) continue;
+      }
       if (this.isLiveReading(cap)) {
         const applied = await this.applyLiveReading(cap, value, receivedAt);
         if (!applied) {
@@ -1145,7 +1184,10 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     }
     await this.expireLiveReadings();
     if (this.monitoringEnabled) await this.applyMonitoringTrial();
-    if (!this.monitoringRollbackPending && this.monitoringSettingsCount === 0) this.fireTriggers(values);
+    if (!this.monitoringRollbackPending && this.monitoringSettingsCount === 0) {
+      // Original SOC/mode events are committed per field above; raw mapped values are not observations.
+      this.fireTriggers(Object.fromEntries(Object.entries(values).filter(([cap]) => !eventCaps.includes(cap))));
+    }
     this.checkFaults(quota);
   }
 

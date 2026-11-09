@@ -56,14 +56,36 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
     for (const capability of old.capabilities) assert(current.capabilities.includes(capability));
   }
   const additions = {
-    triggers: ['coordination_assessment_changed', 'coordination_readings_changed'],
-    conditions: ['coordination_circuit_power_sustained', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_readings_current'],
+    triggers: ['coordination_assessment_changed', 'coordination_readings_changed', 'smartmeter_grid_power_sustained'],
+    conditions: ['coordination_circuit_power_sustained', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_readings_current', 'stream_5000_reading_current'],
     actions: [],
   };
   for (const [kind, oldCards] of Object.entries(legacy.flow)) {
     assert.deepEqual(app.flow[kind].map(card => card.id).sort(), [...oldCards.map(card => card.id), ...additions[kind]].sort(), 'unexpected Flow identities');
-    for (const old of oldCards) assert.deepEqual(contract(app.flow[kind].find(card => card.id === old.id).args || []), contract(old.args || []), `legacy arguments: ${old.id}`);
+    for (const old of oldCards) {
+      const expected = structuredClone(old.args || []);
+      if (old.id === 'smartmeter_grid_power_above') expected[0].filter = 'driver_id=smartmeter|smartmeter_dual_ct_energy';
+      assert.deepEqual(contract(app.flow[kind].find(card => card.id === old.id).args || []), contract(expected), `legacy arguments: ${old.id}`);
+    }
   }
+  assert.deepEqual(contract(app.flow.conditions.find(card => card.id === 'stream_5000_reading_current').args), [
+    { type: 'device', name: 'device', filter: 'driver_id=stream_5000_system|stream_5000_unit|stream_ac5000' },
+    { type: 'dropdown', name: 'field', values: [{ id: 'soc' }, { id: 'state' }, { id: 'power' }] },
+    { type: 'dropdown', name: 'role', values: [{ id: 'unit' }, { id: 'system' }] },
+  ], 'Only the reviewed, read-only device-scoped monitoring guard is admitted');
+  const sustained = app.flow.triggers.find(card => card.id === 'smartmeter_grid_power_sustained');
+  assert.deepEqual(contract(sustained.args), [
+    { type: 'device', name: 'device', filter: 'driver_id=smartmeter_dual_ct_energy' },
+    { type: 'dropdown', name: 'direction', values: [{ id: 'import' }, { id: 'export' }] },
+    { type: 'number', name: 'watts', min: 0, max: 100000 },
+    { type: 'number', name: 'seconds', min: 1, max: 1800 },
+    { type: 'number', name: 'hysteresis', min: 0, max: 100000 },
+    { type: 'number', name: 'cooldown', min: 0, max: 86400 },
+  ], 'Sustained notifications remain bounded and qualified CT1-only, not battery control');
+  assert.deepEqual(contract(sustained.tokens), [
+    { name: 'direction', type: 'string' }, { name: 'power', type: 'number' },
+    { name: 'grid_power', type: 'number' },
+  ]);
   const preview = app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_preview');
   assert.equal(preview.class, 'other'); assert.equal(preview.energy, undefined);
   for (const id of preview.capabilities) {

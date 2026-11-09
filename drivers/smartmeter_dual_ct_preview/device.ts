@@ -9,6 +9,8 @@ import { appAuthClientFromSettings, clearSavedAppAuthCreds, hasSavedAppAuthCreds
 import { dualCtAccountBinding, dualCtPreviewDevices, DUAL_CT_PREVIEW_CONSENT } from '../../lib/dualCtPreviewPairing';
 import { hasOtherAppAuthDevices } from '../../lib/appAuthConsumers';
 import { DualCtMonitor } from '../../lib/dualCtMonitor';
+import { dualCtFreshAge } from '../../lib/dualCtContract';
+import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
 import { dualCtCircuitRole, DualCtDisplayRoles } from '../../lib/dualCtPresentation';
 import manifest from './driver.compose.json';
 
@@ -17,12 +19,18 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   private generation = 0;
   private readonly messageEvidence = new DualCtMessageEvidence();
   private monitor: DualCtMonitor | null = null;
-  private handler: ((payload: Buffer, topic: string) => void) | null = null;
+  private handler: AppFrameHandler | null = null;
   private ticker: ReturnType<typeof setInterval> | null = null;
   private expiry: ReturnType<typeof setTimeout> | null = null;
   private retry: ReturnType<typeof setTimeout> | null = null;
   private retryDelay = 30000;
   private chain: Promise<void> = Promise.resolve();
+  private readonly pendingWrites = new Map<string, Promise<void>>();
+  private readonly cancelWrites = new Set<() => void>();
+  private unavailablePending: Promise<void> | null = null;
+  private availabilityRevision = 0;
+  private connectionEpoch: number | null = null;
+  private lastReceivedMonoMs: number | null = null;
   private enabled = false;
   private renderQueuedGeneration: number | null = null;
   private acceptedPackets = 0;
@@ -119,14 +127,33 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       }
       this.monitor = new DualCtMonitor({ account, device: sn, session: randomUUID() }, this.diagnosticEvents, this.messageEvidence);
       const app = this.homey.app as any;
-      const handler = (payload: Buffer, topic: string) => {
+      const handler: AppFrameHandler = (payload, topic, delivery) => {
         if (!this.enabled || generation !== this.generation || this.handler !== handler) return;
         const now = Date.now();
         this.receivedFrames = Math.min(65535, this.receivedFrames + 1);
         this.lastFrameAt = now;
-        if (this.monitor?.observe(payload, topic, now)) {
+        const epoch = delivery?.connectionEpoch;
+        const epochChanged = epoch !== undefined && epoch !== this.connectionEpoch;
+        const metadataKnown = typeof delivery?.retained === 'boolean' && typeof delivery.duplicate === 'boolean'
+          && Number.isFinite(delivery.receivedMonoMs) && delivery.receivedMonoMs >= 0;
+        const scopeKnown = metadataKnown
+          && (epoch === undefined ? this.connectionEpoch === null : Number.isInteger(epoch) && epoch > 0
+            && (this.connectionEpoch === null || epoch >= this.connectionEpoch));
+        const ordered = scopeKnown && (epochChanged || this.lastReceivedMonoMs === null
+          || delivery!.receivedMonoMs > this.lastReceivedMonoMs);
+        const eligible = ordered && delivery!.retained === false && delivery!.duplicate === false;
+        if (scopeKnown && epoch !== undefined && epochChanged) {
+          this.monitor?.clear(); this.connectionEpoch = epoch;
+          this.lastReceivedMonoMs = null;
+          this.render(generation);
+        }
+        if (ordered && Number.isFinite(now) && now > 0 && Number.isFinite(delivery!.receivedAt)
+          && delivery!.receivedAt > 0 && delivery!.receivedAt <= now && dualCtFreshAge(now - delivery!.receivedAt)) {
+          this.lastReceivedMonoMs = delivery!.receivedMonoMs;
+        }
+        if (eligible && this.monitor?.observe(payload, topic, delivery!.receivedAt, now)) {
           this.acceptedPackets = Math.min(65535, this.acceptedPackets + 1);
-          this.lastAcceptedAt = now;
+          this.lastAcceptedAt = delivery!.receivedAt;
           this.render(generation);
         } else {
           this.rejectedFrames = Math.min(65535, this.rejectedFrames + 1);
@@ -160,6 +187,8 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
   }
 
   private render(generation: number): void {
+    if (!this.enabled || generation !== this.generation || !this.monitor) return;
+    this.scheduleExpiry(generation);
     if (this.renderQueuedGeneration === generation) return;
     this.renderQueuedGeneration = generation;
     this.chain = this.chain.catch(() => {}).then(async () => {
@@ -169,26 +198,101 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       const nextState = view.recent ? 'recent' : 'waiting_stale';
       if (nextState !== this.state) this.diagnosticEvents.record(nextState);
       this.state = nextState;
-      if (this.expiry) this.homey.clearTimeout(this.expiry);
-      this.expiry = view.nextExpiryMs === null ? null : this.homey.setTimeout(() => {
-        this.expiry = null; this.render(generation);
-      }, view.nextExpiryMs);
-      for (const [capability, value] of Object.entries(view.values)) {
+      let displayFailed = false;
+      for (const capability of Object.keys(view.values)) {
         if (!this.enabled || generation !== this.generation) return;
+        const value = this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles).values[capability];
         if (this.getCapabilityValue(capability) !== value) {
           // eslint-disable-next-line no-await-in-loop
-          await this.setCapabilityValue(capability, value);
+          try {
+            await this.writeDisplay(capability, value, generation);
+          } catch {
+            displayFailed = true;
+          }
         }
       }
       if (!this.enabled || generation !== this.generation) return;
-      if (view.recent) await this.setAvailable();
-      else await this.setUnavailable(this.text('waiting_stale'));
+      const current = this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles);
+      if (displayFailed || !this.projectionCurrent(current.values)) {
+        this.state = 'display_failed'; this.markUnavailable('display_failed'); return;
+      }
+      if (current.recent) {
+        await this.writeDisplay('@available', null, generation);
+        if (!this.enabled || generation !== this.generation
+          || !this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles).recent
+          || !this.projectionCurrent(this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles).values)) this.markUnavailable(this.state);
+      } else this.markUnavailable('waiting_stale');
     }).catch(async () => {
       if (generation === this.generation) {
         this.state = 'display_failed';
-        await this.setUnavailable(this.text('display_failed')).catch(() => {});
+        this.markUnavailable('display_failed');
       }
     });
+  }
+
+  private projectionCurrent(values: Record<string, string | number | null>): boolean {
+    return Object.entries(values).filter(([id]) => /^dual_ct_preview_(power|voltage|current|total|net)\./.test(id))
+      .every(([id, value]) => this.getCapabilityValue(id) === value);
+  }
+
+  /** Expiry and logical unavailability must progress independently of SDK display IO. */
+  private scheduleExpiry(generation: number): void {
+    if (!this.monitor || generation !== this.generation || !this.enabled) return;
+    const view = this.monitor.snapshot(Date.now(), (key) => this.text(key), this.displayRoles);
+    if (!view.recent || Object.entries(view.values).some(([id, value]) => (
+      /^dual_ct_preview_(power|voltage|current|total|net)\./.test(id) && value === null && this.getCapabilityValue(id) != null
+    ))) {
+      this.markUnavailable('waiting_stale');
+      for (const cancel of this.cancelWrites) cancel();
+    }
+    if (this.expiry) this.homey.clearTimeout(this.expiry);
+    this.expiry = view.nextExpiryMs === null ? null : this.homey.setTimeout(() => {
+      this.expiry = null; this.render(generation);
+    }, view.nextExpiryMs);
+  }
+
+  private markUnavailable(reason: string): void {
+    if (this.unavailablePending) return;
+    const revision = ++this.availabilityRevision;
+    const pending = this.setUnavailable(this.text(reason));
+    this.unavailablePending = pending;
+    pending.then(() => {
+      if (this.unavailablePending === pending) this.unavailablePending = null;
+      if (this.enabled && revision !== this.availabilityRevision) this.render(this.generation);
+    }, () => {
+      if (this.unavailablePending === pending) this.unavailablePending = null;
+    });
+  }
+
+  /** A deadline cannot cancel the SDK. Keep its slot owned until actual settlement,
+   * then reconcile late values/clears against the current scope. */
+  private async writeDisplay(capability: string, value: string | number | null, generation: number): Promise<void> {
+    if (this.pendingWrites.has(capability)) throw new Error('display_pending');
+    if (capability === '@available') this.availabilityRevision++;
+    const pending = capability === '@available' ? this.setAvailable() : this.setCapabilityValue(capability, value);
+    this.pendingWrites.set(capability, pending);
+    let abandoned = false; let cancel!: () => void; let timer!: ReturnType<typeof setTimeout>;
+    const deadline = new Promise<never>((_resolve, reject) => {
+      cancel = () => {
+        abandoned = true; reject(new Error('display_pending'));
+      };
+      this.cancelWrites.add(cancel);
+      timer = this.homey.setTimeout(cancel, 5000);
+    });
+    const settled = () => {
+      if (this.pendingWrites.get(capability) === pending) this.pendingWrites.delete(capability);
+      if (!abandoned) return;
+      this.markUnavailable(this.enabled ? 'waiting_stale' : this.state);
+      if (this.enabled) this.render(this.generation);
+      else this.clearDisplays(this.generation, this.state).catch(() => {});
+    };
+    pending.then(settled, settled);
+    try {
+      await Promise.race([pending, deadline]);
+      if (generation !== this.generation) throw new Error('display_scope');
+    } finally {
+      this.homey.clearTimeout(timer); this.cancelWrites.delete(cancel);
+    }
   }
 
   private async stop(reason: string): Promise<void> {
@@ -198,6 +302,10 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
     this.acceptedPackets = 0; this.lastAcceptedAt = null;
     this.receivedFrames = 0; this.rejectedFrames = 0; this.lastFrameAt = null;
     const generation = ++this.generation;
+    this.connectionEpoch = null;
+    this.lastReceivedMonoMs = null;
+    this.markUnavailable(reason);
+    for (const cancel of this.cancelWrites) cancel();
     if (this.handler) (this.homey.app as any).unsubscribeAppRealtime(this.getData().sn, this.handler);
     this.handler = null; this.monitor?.clear(); this.monitor = null;
     if (this.ticker) this.homey.clearInterval(this.ticker);
@@ -212,9 +320,9 @@ module.exports = class DualCtPreviewDevice extends Homey.Device {
       for (const capability of this.getCapabilities()) {
         if (generation !== this.generation) return;
         // eslint-disable-next-line no-await-in-loop
-        await this.setCapabilityValue(capability, capability === 'dual_ct_preview_status' ? this.text(reason) : null);
+        await this.writeDisplay(capability, capability === 'dual_ct_preview_status' ? this.text(reason) : null, generation).catch(() => {});
       }
-      if (generation === this.generation) await this.setUnavailable(this.text(reason));
+      if (generation === this.generation) this.markUnavailable(reason);
     });
     await this.chain.catch(async () => {
       if (generation === this.generation) {

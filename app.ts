@@ -16,6 +16,7 @@ import { readStream5000OfficialSoc, Stream5000OfficialSocSample } from './lib/st
 import { EcoFlowDevice } from './lib/types';
 import { CoordinationWorkspace } from './lib/coordinationWorkspace';
 import { CoordinationFlowMonitor } from './lib/coordinationFlowMonitor';
+import { gridNotificationMatches } from './lib/sustainedGridNotifications';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -62,6 +63,10 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (this.homey.settings.get('houseReserveControl')?.enabled === true) this.ensureHouseReserveWatchdog();
     this.streamDiscovery.clear();
     if (this.homey.flow) {
+      this.homey.flow.getDeviceTriggerCard?.('smartmeter_grid_power_sustained').registerRunListener(
+        (args: any, state: any) => gridNotificationMatches(args, state)
+          && args.device.gridNotificationEventCurrent(state.observation),
+      );
       this.homey.flow.getConditionCard('smartmeter_grid_power_above').registerRunListener(
         (args: any) => args.device.gridPowerAbove(args.direction, args.watts),
       );
@@ -70,6 +75,9 @@ module.exports = class EcoFlowApp extends Homey.App {
       );
       this.homey.flow.getConditionCard('stream_5000_reserve_enabled').registerRunListener(
         (args: any) => args.device.configurationReserveEnabled(),
+      );
+      this.homey.flow.getConditionCard('stream_5000_reading_current').registerRunListener(
+        (args: any) => args.device.monitoringReadingCurrent(args.field, args.role),
       );
       for (const [id, kind] of Object.entries({
         coordination_readings_current: 'current',

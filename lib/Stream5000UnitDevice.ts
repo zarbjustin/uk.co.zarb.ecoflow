@@ -91,6 +91,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private workRunning = false;
   private readonly pendingWork = new Map<DeviceWork, WorkTask>();
   private readonly pendingReadings = new Map<ReadingWork, ReadingBatch>();
+  private readonly applyingReadings = new Set<string>();
   private lastValues: Stream5000CapabilityValues = {};
   private lastResubscribeAt = 0;
   private framesReceived = 0;
@@ -126,6 +127,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private officialSocEvidence: Stream5000OfficialSocSample | null = null;
   private deliveryEpoch?: number;
   private deliveryGeneration = 0;
+  private readonly readingGenerations = new Map<string, number>();
 
   /** Aggregate devices contribute to Homey Energy; physical monitors override this. */
   protected isEnergyAggregate(): boolean {
@@ -447,29 +449,35 @@ export class Stream5000UnitDevice extends Homey.Device {
     return this.queueWork(kind, async () => {
       this.pendingReadings.delete(kind);
       if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
-      if (kind === 'accessories') {
-        await this.applyAccessories(batch);
-        return;
-      }
-      // Coalesced power intervals are unknown. Retain totals and anchor only
-      // at the final accepted receipt, never integrate across discarded samples.
-      if (batch.powerInterrupted) this.lastEnergySampleAt = 0;
-      const groups = new Map<number, Stream5000CapabilityValues>();
-      for (const [capability, reading] of Object.entries(batch.readings)) {
-        const group = groups.get(reading.receivedAt) ?? {};
-        group[capability] = reading.value;
-        groups.set(reading.receivedAt, group);
-      }
-      let applied = true;
-      for (const [at, group] of [...groups].sort(([a], [b]) => a - b)) {
+      const acceptedValues = Object.fromEntries(Object.entries(batch.readings).map(([key, reading]) => [key, reading.value]));
+      for (const capability of Object.keys(this.capabilityValuesForRole(acceptedValues))) this.applyingReadings.add(capability);
+      try {
+        if (kind === 'accessories') {
+          await this.applyAccessories(batch);
+          return;
+        }
+        // Coalesced power intervals are unknown. Retain totals and anchor only
+        // at the final accepted receipt, never integrate across discarded samples.
+        if (batch.powerInterrupted) this.lastEnergySampleAt = 0;
+        const groups = new Map<number, Stream5000CapabilityValues>();
+        for (const [capability, reading] of Object.entries(batch.readings)) {
+          const group = groups.get(reading.receivedAt) ?? {};
+          group[capability] = reading.value;
+          groups.set(reading.receivedAt, group);
+        }
+        let applied = true;
+        for (const [at, group] of [...groups].sort(([a], [b]) => a - b)) {
+          if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
+          // eslint-disable-next-line no-await-in-loop
+          applied = await this.applyTelemetry(group, at) && applied;
+        }
         if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
-        // eslint-disable-next-line no-await-in-loop
-        applied = await this.applyTelemetry(group, at) && applied;
+        if (this.hasApplicationFailures()) await this.setOffline(this.applicationFailedMessage());
+        else if (applied && Object.values(batch.readings).some((reading) => reading.usable)) await this.setOnline();
+        await this.updateBatteryPresentation();
+      } finally {
+        this.applyingReadings.clear();
       }
-      if (this.isStopped() || batch.generation !== this.deliveryGeneration) return;
-      if (this.hasApplicationFailures()) await this.setOffline(this.applicationFailedMessage());
-      else if (applied && Object.values(batch.readings).some((reading) => reading.usable)) await this.setOnline();
-      await this.updateBatteryPresentation();
     });
   }
 
@@ -499,7 +507,6 @@ export class Stream5000UnitDevice extends Homey.Device {
       const success = await this.applyLiveReading(capability, value, receivedAt);
       if (success) {
         appliedValues[capability] = value;
-        if (capability === 'measure_battery') this.officialSocEvidence = null;
       }
       applied = success && applied;
     }
@@ -525,31 +532,41 @@ export class Stream5000UnitDevice extends Homey.Device {
     return applied;
   }
 
-  private async applyLiveReading(capability: string, value: number | string | null, receivedAt: number): Promise<boolean> {
+  private async applyLiveReading(
+    capability: string, value: number | string | null, receivedAt: number,
+    sourceEvidence: Stream5000OfficialSocSample | null = null,
+  ): Promise<boolean> {
     if (this.isStopped() || !this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) return false;
-    const generation = this.deliveryGeneration;
-    this.readingAges.receive(capability, receivedAt);
+    this.applyingReadings.add(capability);
     try {
-      if (this.getCapabilityValue(capability) !== value) await this.setCapabilityValue(capability, value);
-    } catch (e) {
-      this.readingAges.failed(capability, receivedAt);
-      this.error(capability, e);
-      // Best effort: a rejected write must not leave an old number looking current.
-      if (!this.isStopped()) await this.setCapabilityValue(capability, null).catch(() => {});
-      return false;
-    }
-    if (this.isStopped() || generation !== this.deliveryGeneration) return false;
-    this.lastValues[capability] = value;
-    this.readingAges.observe({ [capability]: value }, receivedAt);
-    if (!this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) {
-      // Slow SDK writes cannot renew the receipt age or revive expired readings.
-      await this.setCapabilityValue(capability, null).catch((e) => {
+      const generation = this.deliveryGeneration;
+      this.readingAges.receive(capability, receivedAt);
+      try {
+        if (this.getCapabilityValue(capability) !== value) await this.setCapabilityValue(capability, value);
+      } catch (e) {
         this.readingAges.failed(capability, receivedAt);
         this.error(capability, e);
-      });
-      return false;
+        // Best effort: a rejected write must not leave an old number looking current.
+        if (!this.isStopped()) await this.setCapabilityValue(capability, null).catch(() => {});
+        return false;
+      }
+      if (this.isStopped() || generation !== this.deliveryGeneration) return false;
+      this.readingGenerations.set(capability, generation);
+      this.lastValues[capability] = value;
+      this.readingAges.observe({ [capability]: value }, receivedAt);
+      if (!this.readingAges.canApply(capability, receivedAt, Date.now(), this.unavailableAfterMs())) {
+        // Slow SDK writes cannot renew the receipt age or revive expired readings.
+        await this.setCapabilityValue(capability, null).catch((e) => {
+          this.readingAges.failed(capability, receivedAt);
+          this.error(capability, e);
+        });
+        return false;
+      }
+      if (capability === 'measure_battery') this.officialSocEvidence = sourceEvidence;
+      return true;
+    } finally {
+      this.applyingReadings.delete(capability);
     }
-    return true;
   }
 
   private queueConfiguration(): Promise<void> {
@@ -557,19 +574,35 @@ export class Stream5000UnitDevice extends Homey.Device {
       if (this.isStopped()) return;
       const generation = this.deliveryGeneration;
       const values = stream5000ConfigurationValues(this.configurationTracker?.snapshot());
-      for (const [capability, value] of Object.entries(values)) {
+      for (const capability of Object.keys(values)) {
         if (this.isStopped() || generation !== this.deliveryGeneration) return;
         if (!this.hasCapability(capability)) {
           this.configurationWriteFailures.delete(capability);
           continue;
         }
         try {
-          if (this.getCapabilityValue(capability) !== value) {
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const value = stream5000ConfigurationValues(this.configurationTracker?.snapshot())[capability];
+            if (this.getCapabilityValue(capability) === value) break;
+            // An already-dispatched SDK write cannot be cancelled. Correct its
+            // completion against this field's current receipt, not the old snapshot.
             // eslint-disable-next-line no-await-in-loop
             await this.setCapabilityValue(capability, value);
+            if (this.isStopped() || generation !== this.deliveryGeneration) {
+              const current = stream5000ConfigurationValues(this.configurationTracker?.snapshot())[capability];
+              if (attempt === 0 && this.getCapabilityValue(capability) !== current) {
+                // Retire only this already-dispatched field; do not start a new
+                // rendering run or publish the other old-generation fields.
+                // eslint-disable-next-line no-await-in-loop
+                await this.setCapabilityValue(capability, current);
+              }
+              return;
+            }
           }
           if (this.isStopped() || generation !== this.deliveryGeneration) return;
-          this.configurationWriteFailures.delete(capability);
+          const current = stream5000ConfigurationValues(this.configurationTracker?.snapshot())[capability];
+          if (this.getCapabilityValue(capability) === current) this.configurationWriteFailures.delete(capability);
+          else this.configurationWriteFailures.add(capability);
         } catch (e) {
           if (this.isStopped() || generation !== this.deliveryGeneration) return;
           // Keep the device unavailable while a stale tile cannot be cleared.
@@ -656,9 +689,7 @@ export class Stream5000UnitDevice extends Homey.Device {
         if (abort.signal.aborted || this.isStopped() || this.getData().sn !== sn || this.usableSoc()) return;
         const appliedAt = this.readingAges.appliedReceiptAt('measure_battery');
         if (appliedAt !== null && appliedAt <= Date.now() && appliedAt >= sample.requestStartedAt) return;
-        if (await this.applyLiveReading('measure_battery', sample.percent, sample.requestStartedAt)) {
-          this.officialSocEvidence = sample;
-        }
+        await this.applyLiveReading('measure_battery', sample.percent, sample.requestStartedAt, sample);
       };
       this.applyChain = this.applyChain.then(apply, apply);
       await this.applyChain;
@@ -781,12 +812,46 @@ export class Stream5000UnitDevice extends Homey.Device {
   /** Missing/stale configuration throws: returning false would pass an inverted Flow. */
   async configurationModeIs(mode: string): Promise<boolean> {
     if (!['self_powered', 'intelligent_plus', 'custom'].includes(mode)) throw new Error('Invalid STREAM mode');
+    if (this.subscriptionState !== 'active') throw new Error('Fresh STREAM operating mode is unavailable');
     const observed = stream5000ConfigurationValues(this.configurationTracker?.snapshot()).stream_5000_mode;
     if (observed === null) throw new Error('Fresh STREAM operating mode is unavailable');
     return observed === mode;
   }
 
+  /** Guard standard Homey SOC/state/power recipes without granting any control authority. */
+  monitoringReadingCurrent(field: string, role: string): boolean {
+    const actualRole = this.isEnergyAggregate() ? 'system' : 'unit';
+    const capability = {
+      soc: 'measure_battery',
+      state: 'battery_charging_state',
+      power: actualRole === 'system' ? 'measure_power' : 'stream_unit_power_battery_flow',
+    }[field];
+    const now = Date.now();
+    const at = capability ? this.readingAges.appliedReceiptAt(capability) : null;
+    const reading = capability ? this.readingAges.snapshot(now, this.unavailableAfterMs())[capability] as any : null;
+    const value = capability ? this.getCapabilityValue(capability) : null;
+    const sourceCapability = capability === 'stream_unit_power_battery_flow' ? 'measure_power' : capability ?? '';
+    const pending = capability && (this.applyingReadings.has(capability) || [...this.pendingReadings.values()]
+      .some((batch) => Object.prototype.hasOwnProperty.call(batch.readings, capability)
+        || Object.prototype.hasOwnProperty.call(batch.readings, sourceCapability)));
+    const validValue = field === 'state' ? ['charging', 'discharging', 'idle'].includes(value)
+      : typeof value === 'number' && Number.isFinite(value) && (field !== 'soc' || (value >= 0 && value <= 100));
+    if (!capability || !['unit', 'system'].includes(role) || role !== actualRole
+      || this.subscriptionState !== 'active' || !Number.isFinite(now) || at === null || at > now
+      || this.readingGenerations.get(capability) !== this.deliveryGeneration
+      || pending
+      || this.readingAges.receivedReceiptAt(capability) !== at
+      || reading?.stale !== false || reading.applicationStatus !== 'applied'
+      || value !== this.lastValues[capability] || !validValue
+      || (field === 'soc' && this.officialSocEvidence !== null)
+      || (actualRole === 'unit' && ['state', 'power'].includes(field) && this.linkedPowerWarning)) {
+      throw new Error(this.homey.__('device.stream_5000_reading_unavailable'));
+    }
+    return true;
+  }
+
   async configurationReserveEnabled(): Promise<boolean> {
+    if (this.subscriptionState !== 'active') throw new Error('Fresh STREAM backup reserve state is unavailable');
     const snapshot = this.configurationTracker?.snapshot() as any;
     const entry = snapshot?.values?.backupReserveEnabled;
     if (entry?.stale !== false || typeof entry.value !== 'boolean') throw new Error('Fresh STREAM backup reserve state is unavailable');
@@ -1107,6 +1172,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   private async teardown(): Promise<void> {
     this.subscriptionState = 'stopped';
     this.deliveryGeneration += 1;
+    this.configurationTracker = undefined;
     this.pendingWork.clear();
     this.pendingReadings.clear();
     this.officialSocAbort?.abort();

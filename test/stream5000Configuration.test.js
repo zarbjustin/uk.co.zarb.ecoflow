@@ -16,6 +16,24 @@ test('clock rollback makes configuration stale rather than apparently newly rece
   assert.equal(project(tracker.snapshot(1999)).values.maxGridInputW.stale, true);
 });
 
+test('follow-on configuration snapshots fail closed for nonfinite clocks without extending field TTL', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(Buffer.concat([scalar(25, 2), group(30, scalar(1, 0))])), 2000);
+  for (const now of [NaN, Infinity, -Infinity]) {
+    const values = tracker.snapshot(now).values;
+    assert.equal(values.mode.stale, true);
+    assert.equal(values.backupReserveEnabled.stale, true);
+  }
+  tracker.observe(frame(group(30, scalar(2, 0))), 1202000);
+  const boundary = tracker.snapshot(1202000).values;
+  assert.equal(boundary.mode.stale, false, 'retain the established inclusive 20-minute boundary');
+  assert.equal(boundary.backupReserveEnabled.value, false);
+  const expired = tracker.snapshot(1202001).values;
+  assert.equal(expired.mode.stale, true);
+  assert.equal(expired.backupReserveEnabled.stale, true);
+  assert.equal(expired.backupReservePct.stale, false, 'percentage-only receipt cannot renew the enable flag');
+});
+
 function varint(value) {
   let n = BigInt(value);
   const bytes = [];
@@ -97,6 +115,44 @@ test('reserve disabled must be explicitly reported; absent delta does not invent
   assert.deepEqual(parse(frame(group(30, scalar(2, 47))), SN), [{ backupReservePct: 47 }]);
   assert.deepEqual(parse(frame(group(30, scalar(1, 0))), SN), [{ backupReserveEnabled: false }]);
   assert.deepEqual(parse(frame(group(30, Buffer.alloc(0))), SN), []);
+});
+
+test('duplicate singular configuration fields reject the header rather than selecting a superseded value', () => {
+  const reserve = group(30, Buffer.concat([scalar(1, 1), scalar(2, 51)]));
+  const cases = [
+    frame(group(30, Buffer.concat([scalar(1, 1), scalar(1, 0), scalar(2, 51)]))),
+    frame(group(30, Buffer.concat([scalar(2, 50), scalar(2, 51)]))),
+    frame(group(30, Buffer.concat([scalar(1, 1), group(1, Buffer.alloc(0))]))),
+    frame(Buffer.concat([reserve, group(30, scalar(1, 0))])),
+    frame(Buffer.concat([group(10, scalar(2, 100)), group(10, scalar(2, 200))])),
+    frame(group(10, Buffer.concat([scalar(2, 100), scalar(2, 200)]))),
+    frame(Buffer.concat([scalar(25, 2), scalar(25, 0)])),
+    frame(group(19, Buffer.concat([scalar(1, 1), scalar(1, 0)]))),
+    frame(group(1, Buffer.concat([scalar(7, 90), scalar(7, 95)])), 32, 2),
+    frame(Buffer.concat([group(1, scalar(7, 90)), group(1, scalar(7, 95))]), 32, 2),
+    frame(group(40, group(1, Buffer.concat([
+      group(8, group(3, scalar(3, 500))), group(7, varint(7)), group(7, varint(8)),
+    ])))),
+  ];
+  for (const input of cases) assert.deepEqual(parse(input, SN), []);
+});
+
+test('ambiguous configuration cannot renew old field ages and does not discard a valid bundle sibling', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(group(30, Buffer.concat([scalar(1, 0), scalar(2, 40)]))), 1000);
+  const ambiguous = frame(Buffer.concat([
+    group(30, Buffer.concat([scalar(1, 1), scalar(2, 51)])),
+    group(30, scalar(1, 0)),
+  ]));
+  tracker.observe(Buffer.concat([ambiguous, frame(scalar(25, 0))]), 2000);
+  const values = tracker.snapshot(2000).values;
+  assert.deepEqual(values.backupReserveEnabled, { value: false, ageSec: 1, stale: false });
+  assert.deepEqual(values.backupReservePct, { value: 40, ageSec: 1, stale: false });
+  assert.deepEqual(values.mode, { value: 'self_powered', ageSec: 0, stale: false });
+  const expired = tracker.snapshot(1201001).values;
+  assert.equal(expired.backupReserveEnabled.stale, true);
+  assert.equal(expired.backupReservePct.stale, true);
+  assert.equal(expired.mode.stale, false);
 });
 
 test('configuration deltas preserve unrelated fields and age per field; restart has no restored settings', () => {

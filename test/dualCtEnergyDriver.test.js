@@ -15,8 +15,8 @@ const binding = dualCtGridBinding({ account: dualCtAccountBinding(account), devi
 const nested = (f, bytes) => Buffer.concat([varint(f * 8 + 2), varint(bytes.length), bytes]);
 const int = (f, n) => Buffer.concat([varint(f * 8), varint(n)]);
 let sequence = 0;
-const payload = (watts, explicitEncoding = true) => nested(1, Buffer.concat([nested(1, Buffer.concat([[962, watts], [963, 0], [772, 0], [515, watts],
-  [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), ...(explicitEncoding ? [int(6, 0)] : []), int(8, 254), int(9, 21), int(14, ++sequence)]));
+const payload = (watts, explicitEncoding = true, packetSequence = ++sequence) => nested(1, Buffer.concat([nested(1, Buffer.concat([[962, watts], [963, 0], [772, 0], [515, watts],
+  [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), ...(explicitEncoding ? [int(6, 0)] : []), int(8, 254), int(9, 21), int(14, packetSequence)]));
 class Device {
   constructor() {
     this.values = new Map([['measure_power', 99], ['meter_power.imported', null], ['meter_power.exported', null]]);
@@ -71,6 +71,503 @@ function enabledCommunity(device) {
       client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }] }),
       readFirmware: async () => prod.firmware, reader: async () => ({ list: async () => ({}), close() {} }) }) });
 }
+function optionalDetailsHarness() {
+  const { DualCtEnergyDetails } = require('../.homeybuild/lib/dualCtEnergyDetails');
+  const { DUAL_CT_ENERGY_DETAIL_CAPABILITIES } = require('../.homeybuild/lib/dualCtDisplaySettings');
+  let now = 1000;
+  const values = new Map(DUAL_CT_ENERGY_DETAIL_CAPABILITIES.map(id => [id, null]));
+  const calls = [];
+  const port = {
+    hasCapability: id => values.has(id), getCapabilityValue: id => values.get(id),
+    setCapabilityValue: async (id, value) => { calls.push([id, value]); values.set(id, value); },
+  };
+  const details = new DualCtEnergyDetails(port, () => now);
+  const scope = { account: 'synthetic', device: sn, session: 'optional' };
+  details.start(scope);
+  return { details, port, values, calls, scope, now: value => { now = value; },
+    observe(fields) {
+      const bytes = nested(1, Buffer.concat([nested(1, Buffer.concat(fields.map(([f, v]) => scalar(f, v)))),
+        int(6, 0), int(8, 254), int(9, 21)]));
+      details.observe(bytes, `/app/device/property/${sn}`,
+        { receivedAt: now, receivedMonoMs: now, retained: false, duplicate: false }, now);
+    } };
+}
+function deferredSdk() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+test('follow-on optional partial-field expiry bypasses a held sibling SDK write and isolates clear failures', async () => {
+  const h = optionalDetailsHarness();
+  h.observe([[962, 100], [956, 230], [957, 230]]); await h.details.render();
+  const entered = deferredSdk(); const release = deferredSdk(); const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_power.a_p1' && value === 200) { entered.resolve(); await release.promise; }
+    return write(id, value);
+  };
+  h.now(2000); h.observe([[962, 200]]); await entered.promise;
+  h.now(91000); h.observe([[957, 240]]); const expired = h.details.render();
+  try {
+    await settle();
+    assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), null);
+    assert.equal(h.values.get('dual_ct_preview_voltage.a_p2'), 240);
+    const before = h.calls.length;
+    for (let i = 0; i < 100; i++) h.details.render();
+    await settle();
+    assert.equal(h.calls.length, before, 'held slots coalesce repeated ticks');
+  } finally { release.resolve(); await expired; await h.details.stop(); }
+});
+
+test('follow-on optional rejected early clear cannot skip later expired fields', async () => {
+  const h = optionalDetailsHarness(); h.observe([[962, 100], [956, 230]]); await h.details.render();
+  const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_power.a_p1' && value === null) throw Error('synthetic clear rejection');
+    return write(id, value);
+  };
+  h.now(91000);
+  try {
+    await h.details.render();
+    assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), null);
+  } finally { h.port.setCapabilityValue = write; await h.details.stop(); }
+});
+
+test('follow-on optional late own-field expiry and retired completion reconcile without erasing a newer generation', async () => {
+  const h = optionalDetailsHarness();
+  const entered = deferredSdk(); const release = deferredSdk(); const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_power.a_p1' && value === 100) { entered.resolve(); await release.promise; }
+    return write(id, value);
+  };
+  h.observe([[962, 100]]); await entered.promise;
+  h.now(91000); const expired = h.details.render();
+  try {
+    release.resolve(); await expired; await settle();
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+    h.details.start({ ...h.scope, session: 'new' });
+    h.now(92000); h.observe([[962, 300]]); await h.details.render(); await settle();
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), 300);
+  } finally { release.resolve(); await expired; await h.details.stop(); }
+});
+
+test('follow-on optional stop does not await held value work and corrects its completion against the new generation', async () => {
+  const h = optionalDetailsHarness();
+  const entered = deferredSdk(); const release = deferredSdk(); const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_power.a_p1' && value === 100) { entered.resolve(); await release.promise; }
+    return write(id, value);
+  };
+  h.observe([[962, 100]]); await entered.promise;
+  let stopped = false;
+  const stopping = h.details.stop().then(() => { stopped = true; });
+  try {
+    await settle(); assert.equal(stopped, true);
+    h.details.start({ ...h.scope, session: 'recovered' });
+    h.now(2000); h.observe([[962, 300]]);
+    release.resolve(); await stopping; await h.details.render(); await settle();
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), 300);
+  } finally { release.resolve(); await stopping; await h.details.stop(); }
+});
+
+test('follow-on optional rejected numeric field cannot skip a fresh sibling field', async () => {
+  const h = optionalDetailsHarness(); const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_power.a_p1' && value !== null) throw Error('synthetic numeric rejection');
+    return write(id, value);
+  };
+  h.observe([[962, 100], [956, 230]]);
+  try {
+    await h.details.render();
+    assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), 230);
+  } finally { h.port.setCapabilityValue = write; await h.details.stop(); }
+});
+
+test('follow-on optional retired clear completion restores the current generation without another reader or tick', async () => {
+  const h = optionalDetailsHarness(); h.observe([[962, 100]]); await h.details.render();
+  const entered = deferredSdk(); const release = deferredSdk(); const write = h.port.setCapabilityValue; let block = true;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (block && id === 'dual_ct_preview_power.a_p1' && value === null) {
+      block = false; entered.resolve(); await release.promise;
+    }
+    return write(id, value);
+  };
+  h.now(91000); const expired = h.details.render(); await entered.promise;
+  const stopped = h.details.stop();
+  h.details.start({ ...h.scope, session: 'replacement' });
+  h.now(92000); h.observe([[962, 300]]);
+  try {
+    release.resolve(); await Promise.all([expired, stopped]); await settle();
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), 300);
+  } finally { release.resolve(); await Promise.all([expired, stopped]); await h.details.stop(); }
+});
+
+test('follow-on optional held value SDK work cannot gate real driver recovery retry', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d); await d.onInit();
+  const handler = d.subscriptions[0];
+  handler(payload(3600), `/app/device/property/${sn}`); await settle();
+  now += 1000; handler(payload(3600), `/app/device/property/${sn}`); await settle();
+  const entered = deferredSdk(); const release = deferredSdk(); const write = d.setCapabilityValue.bind(d); let block = true;
+  d.setCapabilityValue = async (id, value) => {
+    if (block && id === 'dual_ct_preview_power.a_p1' && value === 7200) {
+      block = false; entered.resolve(); await release.promise;
+    }
+    return write(id, value);
+  };
+  now += 1000; handler(payload(7200), `/app/device/property/${sn}`); await entered.promise; await settle();
+  const saved = structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+  const recovery = d.recover(d.generation, () => true); await settle();
+  try {
+    assert.equal(d.adapter, null);
+    assert.equal(d.values.get('measure_power'), null);
+    assert.equal([...d.timers.values()].some(timer => !timer.interval), true);
+    assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), saved);
+  } finally { release.resolve(); await recovery; await d.onUninit(); }
+});
+
+test('follow-on optional held configuration SDK work cannot gate real driver recovery retry', async t => {
+  t.mock.method(Date, 'now', () => 1000);
+  const d = new Driver(); enabled(d); await d.onInit();
+  const entered = deferredSdk(); const release = deferredSdk(); const options = d.setCapabilityOptions.bind(d); let block = true;
+  d.setCapabilityOptions = async (id, value) => {
+    if (block && id.startsWith('dual_ct_preview_')) { block = false; entered.resolve(); await release.promise; }
+    return options(id, value);
+  };
+  const configuring = d.onSettings({ newSettings: { display_ct1: 'three_phase' }, changedKeys: ['display_ct1'] });
+  await entered.promise;
+  const recovery = d.recover(d.generation, () => true); await settle();
+  try {
+    assert.equal([...d.timers.values()].some(timer => !timer.interval), true);
+    assert.equal(d.values.get('measure_power'), null);
+  } finally { release.resolve(); await Promise.all([configuring, recovery]); await d.onUninit(); }
+});
+
+test('sustained hookup keeps one rule reader/listener across recovery and removes it only on shutdown', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  const card = new EventEmitter(); const args = deferredSdk(); let reads = 0;
+  card.getArgumentValues = () => { reads++; return args.promise; };
+  card.trigger = async () => {};
+  d.homey.flow = { getDeviceTriggerCard: id => { assert.equal(id, 'smartmeter_grid_power_sustained'); return card; } };
+  await d.onInit(); await settle();
+  const notifications = d.gridNotifications;
+  card.emit('update'); card.emit('update'); await settle();
+  assert.equal(reads, 1);
+  await d.recover(d.generation, () => true);
+  assert.equal(d.gridNotifications, notifications);
+  assert.equal(card.listenerCount('update'), 1);
+  assert.equal(reads, 1);
+  args.resolve([]); await settle();
+  await d.onUninit(); assert.equal(card.listenerCount('update'), 0);
+  await d.onInit(); assert.equal(d.gridNotifications, notifications); assert.equal(card.listenerCount('update'), 1);
+  await d.onUninit(); assert.equal(card.listenerCount('update'), 0);
+});
+
+test('sustained hookup only emits from owned fresh qualified CT1 samples and rejects queued superseded events', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  const card = new EventEmitter(); const events = [];
+  card.getArgumentValues = async () => [{ direction: 'import', watts: 10, seconds: 1, hysteresis: 0, cooldown: 0 }];
+  card.trigger = async (device, tokens, state) => { assert.equal(device, d); events.push({ tokens, state }); };
+  d.homey.flow = { getDeviceTriggerCard: () => card };
+  await d.onInit(); await settle();
+  const tick = async () => {
+    for (const timer of d.timers.values()) if (timer.interval && timer.ms === 1000) timer.fn();
+    await settle();
+  };
+  try {
+    await tick(); assert.equal(events.length, 0);
+    const handler = d.subscriptions[0];
+    handler(payload(100), `/app/device/property/${sn}`); await settle(); await tick();
+    assert.equal(events.length, 0);
+    now = 2100; handler(payload(100), `/app/device/property/${sn}`); await settle(); await tick();
+    assert.equal(events.length, 1);
+    assert.equal(d.gridNotificationEventCurrent(events[0].state.observation), true);
+    now = 3100; handler(payload(100), `/app/device/property/${sn}`); await settle();
+    assert.equal(d.gridNotificationEventCurrent(events[0].state.observation), false);
+    const current = d.adapter.currentPowerObservation(now);
+    await d.stop();
+    assert.equal(d.gridNotificationEventCurrent(current), false);
+  } finally { await d.onUninit(); }
+});
+
+async function sustainedContinuityHarness(t, args = {}) {
+  let now = 100000; let seq = 0;
+  t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  const card = new EventEmitter(); const events = [];
+  card.getArgumentValues = async () => [{ direction: 'import', watts: 500, seconds: 3, hysteresis: 100, cooldown: 0, ...args }];
+  card.trigger = async (_device, tokens, state) => { events.push({ tokens, state }); };
+  d.homey.flow = { getDeviceTriggerCard: () => card };
+  await d.onInit(); await settle();
+  t.after(() => d.onUninit());
+  const deliver = (at, watts, metadata = {}) => {
+    now = at;
+    const { packetSequence = ++seq, ...delivery } = metadata;
+    d.subscriptions.at(-1)(payload(watts, true, packetSequence), `/app/device/property/${sn}`,
+      { receivedAt: at, receivedMonoMs: at, retained: false, duplicate: false, connectionEpoch: 1, ...delivery });
+  };
+  return {
+    d, events, deliver,
+    sample: async (at, watts, metadata) => { deliver(at, watts, metadata); await settle(); },
+    tick: async at => {
+      now = at;
+      for (const timer of [...d.timers.values()]) if (timer.interval && timer.ms === 1000) timer.fn();
+      await settle();
+    },
+    setNow: at => { now = at; },
+  };
+}
+
+for (const [label, power] of [['zero', 0], ['entry equality', 500], ['below-entry hysteresis band', 450], ['opposite direction', -600]]) {
+  test(`sustained continuity: SDK-qualified ${label} between ticker calls restarts dwell`, async t => {
+    const h = await sustainedContinuityHarness(t);
+    await h.sample(100000, 600); await h.tick(100000);
+    await h.sample(100500, power);
+    assert.equal(h.d.values.get('measure_power'), power);
+    assert.equal(h.d.adapter.currentPowerObservation(100500).powerW, power);
+    await h.sample(100750, 600);
+    for (const at of [101000, 102000, 103000]) { await h.sample(at, 600); await h.tick(at); }
+    assert.equal(h.events.length, 0, 'the applied interruption cannot be overwritten out of dwell history');
+    await h.sample(103750, 600); await h.tick(103750);
+    assert.equal(h.events.length, 1);
+    assert.equal(h.d.gridNotificationEventCurrent(h.events[0].state.observation), true);
+  });
+}
+
+for (const [label, rejected, recovered] of [
+  ['connection epoch', { connectionEpoch: 2 }, { connectionEpoch: 2 }],
+  ['sequence reset', { packetSequence: 0 }, {}],
+  ['clock discontinuity', { receivedMonoMs: 99000 }, {}],
+]) {
+  test(`sustained continuity: ${label} restart withdraws continuity before anchor IO`, async t => {
+    const h = await sustainedContinuityHarness(t);
+    await h.sample(100000, 600); await h.tick(100000);
+    const prior = h.d.adapter.currentPowerObservation(100000);
+    const session = h.d.adapter.session;
+    const reset = session.resetAnchor.bind(session);
+    const entered = deferredSdk(); const release = deferredSdk();
+    const ticks = []; const observe = h.d.gridNotifications.tick.bind(h.d.gridNotifications);
+    h.d.gridNotifications.tick = (observation, now) => { ticks.push(observation); observe(observation, now); };
+    session.resetAnchor = async () => { entered.resolve(); await release.promise; return reset(); };
+    h.deliver(100500, 600, rejected); await entered.promise;
+    const withdrawnSynchronously = ticks.some(observation => observation === null);
+    const lateEventWithdrawnSynchronously = !h.d.gridNotificationEventCurrent(prior);
+    release.resolve(); await settle();
+    assert.equal(h.d.adapter.currentPowerObservation(100500), null);
+    await h.sample(100750, 600, recovered);
+    for (const at of [101000, 102000, 103000]) { await h.sample(at, 600, recovered); await h.tick(at); }
+    assert.equal(h.events.length, 0, 'the notifier must not bridge the rejected restart packet');
+    assert.equal(withdrawnSynchronously, true, 'withdraw notification ownership before awaiting anchor reset');
+    assert.equal(lateEventWithdrawnSynchronously, true, 'late event evaluation stays fenced while reset IO is held');
+    await h.sample(103750, 600, recovered); await h.tick(103750);
+    assert.equal(h.events.length, 1);
+    assert.equal(h.d.gridNotificationEventCurrent(h.events[0].state.observation), true);
+  });
+}
+
+test('sustained continuity: concrete settled zero reaches the observer before a subsequent projection', async t => {
+  const h = await sustainedContinuityHarness(t);
+  await h.sample(100000, 600); await h.tick(100000);
+  const available = h.d.setAvailable.bind(h.d); let replaced = false; let zero = null; let zeroBeforeReplacement = false;
+  const observe = h.d.gridNotifications.tick.bind(h.d.gridNotifications);
+  h.d.gridNotifications.tick = (observation, now) => {
+    if (observation?.powerW === 0) zero = observation;
+    observe(observation, now);
+  };
+  h.d.setAvailable = async () => {
+    if (!replaced && h.d.values.get('measure_power') === 0) {
+      replaced = true;
+      zeroBeforeReplacement = zero !== null;
+      h.deliver(100750, 600);
+    }
+    return available();
+  };
+  await h.sample(100500, 0);
+  await h.d.adapter.refresh(); await settle();
+  assert.equal(replaced, true);
+  assert.equal(h.d.adapter.currentPowerObservation(100750).powerW, 600);
+  for (const at of [101000, 102000, 103000]) { await h.sample(at, 600); await h.tick(at); }
+  assert.equal(h.events.length, 0, 'an asynchronous latest-value reread would lose the applied zero');
+  assert.equal(zeroBeforeReplacement, true, 'deliver the concrete observation before SDK completion yields further work');
+  assert.equal(Object.isFrozen(zero), true);
+  assert.equal(zero.receivedAt, 100500);
+  assert.equal(zero.powerW, 0, 'later projection cannot mutate the supplied historical receipt');
+  await h.sample(103750, 600); await h.tick(103750);
+  assert.equal(h.events.length, 1);
+});
+
+test('sustained continuity: ordinary multiple high receipts between ticks complete dwell without starvation', async t => {
+  const h = await sustainedContinuityHarness(t);
+  for (let at = 100000; at <= 103000; at += 250) {
+    await h.sample(at, 600 + (at % 1000));
+    if (at % 1000 === 0) await h.tick(at);
+    if (at < 103000) assert.equal(h.events.length, 0);
+  }
+  assert.equal(h.events.length, 1);
+  assert.equal(h.d.gridNotificationEventCurrent(h.events[0].state.observation), true);
+});
+
+test('sustained continuity: source withdrawal resets fired dwell but preserves cooldown', async t => {
+  const h = await sustainedContinuityHarness(t, { cooldown: 10 });
+  for (const at of [100000, 101000, 102000, 103000]) { await h.sample(at, 600); await h.tick(at); }
+  assert.equal(h.events.length, 1);
+  await h.sample(103250, 600, { connectionEpoch: 2 });
+  assert.equal(h.d.adapter.currentPowerObservation(103250), null);
+  await h.sample(103500, 600, { connectionEpoch: 2 });
+  for (let at = 104000; at < 113000; at += 1000) {
+    await h.sample(at, 600, { connectionEpoch: 2 }); await h.tick(at);
+    assert.equal(h.events.length, 1, 'unknown gap cannot erase the previous delivery cooldown');
+  }
+  await h.sample(113000, 600, { connectionEpoch: 2 }); await h.tick(113000);
+  assert.equal(h.events.length, 2);
+});
+
+test('sustained continuity: optional CT2 receipts cannot renew CT1 dwell or expiry', async t => {
+  const h = await sustainedContinuityHarness(t);
+  await h.sample(100000, 600); await h.tick(100000);
+  const expires = h.d.adapter.currentPowerObservation(100000).validUntil;
+  for (const at of [101000, 102000, 103000, expires]) {
+    h.setNow(at);
+    const ct2 = nested(1, Buffer.concat([nested(1, scalar(991, 999999)), int(6, 0), int(8, 254), int(9, 21), int(14, at)]));
+    h.d.subscriptions.at(-1)(ct2, `/app/device/property/${sn}`,
+      { receivedAt: at, receivedMonoMs: at, retained: false, duplicate: false, connectionEpoch: 1 });
+    await settle(); await h.tick(at);
+    assert.equal(h.events.length, 0);
+  }
+  assert.equal(h.d.adapter?.currentPowerObservation(expires) ?? null, null);
+});
+
+test('sustained continuity: failed power SDK settlement cannot advance notification dwell', async t => {
+  const h = await sustainedContinuityHarness(t);
+  await h.sample(100000, 600); await h.tick(100000);
+  const write = h.d.setCapabilityValue.bind(h.d);
+  h.d.setCapabilityValue = async (id, value) => {
+    if (id === 'measure_power' && value === 700) throw Error('synthetic failed publication');
+    return write(id, value);
+  };
+  await h.sample(103000, 700); await h.tick(103000);
+  assert.equal(h.events.length, 0);
+  assert.equal(h.d.adapter, null);
+});
+
+test('sustained continuity: observer callback failure cannot close accounting or reject core projection', async t => {
+  const h = await sustainedContinuityHarness(t);
+  h.d.gridNotifications.tick = () => { throw Error('synthetic optional observer failure'); };
+  await h.sample(100000, 600);
+  assert.equal(h.d.values.get('measure_power'), 600);
+  assert.equal(h.d.adapter.diagnostics().active, true);
+  assert.equal(h.d.adapter.currentPowerObservation(100000).powerW, 600);
+  h.d.gridNotifications.tick = () => {};
+});
+
+test('sustained continuity: failed own SDK tile read withdraws qualification without closing accounting', async t => {
+  const h = await sustainedContinuityHarness(t);
+  await h.sample(100000, 600); await h.tick(100000);
+  const read = h.d.getCapabilityValue.bind(h.d); let unavailable = true;
+  h.d.getCapabilityValue = id => {
+    if (unavailable && id === 'measure_power') throw Error('synthetic unavailable tile metadata');
+    return read(id);
+  };
+  await h.sample(103000, 600);
+  assert.equal(h.d.adapter.diagnostics().active, true);
+  unavailable = false;
+  for (const at of [103250, 104250, 105250]) { await h.sample(at, 600); await h.tick(at); }
+  assert.equal(h.events.length, 0, 'unreadable own SDK qualification cannot leave the old dwell armed');
+  await h.sample(106250, 600); await h.tick(106250);
+  assert.equal(h.events.length, 1);
+});
+
+test('existing qualified Energy subscriber recovers a denied topic with fresh CT1 and preserved counter anchors', async t => {
+  let now = 100000; let healed = false; let propertyCalls = 0; let client;
+  t.mock.method(Date, 'now', () => now);
+  const timers = new Set();
+  t.mock.method(global, 'setTimeout', (fn, ms) => { const timer = { fn, at: now + ms }; timers.add(timer); return timer; });
+  t.mock.method(global, 'clearTimeout', timer => timers.delete(timer));
+  class Client extends EventEmitter {
+    constructor() { super(); this.connected = false; }
+    subscribe(topic, _opts, callback) {
+      if (topic === `/app/device/property/${sn}`) propertyCalls++;
+      callback(null, [{ topic, qos: topic === `/app/device/property/${sn}` && !healed ? 128 : 0 }]);
+    }
+    unsubscribe() {}
+    end(_force, options, callback) { this.connected = false; (typeof options === 'function' ? options : callback)?.(); }
+  }
+  const load = Module._load; let Shared;
+  try {
+    Module._load = function (name, ...args) {
+      if (name === 'mqtt') return { connect() {
+        client = new Client(); queueMicrotask(() => { client.connected = true; client.emit('connect'); }); return client;
+      } };
+      return load.call(this, name, ...args);
+    };
+    Shared = require('../.homeybuild/lib/EcoFlowAppMqtt').EcoFlowAppMqtt;
+  } finally { Module._load = load; }
+  const mqtt = new Shared({ client: { getSession: async () => account,
+    getMqttCredentials: async () => ({ account: 'synthetic', password: 'synthetic', url: 'mqtt-e.ecoflow.com' }) } });
+  const d = new Driver(); enabled(d);
+  d.values.set('meter_power.imported', 9); d.values.set('meter_power.exported', 8);
+  d.store.set(DUAL_CT_ENERGY_CHECKPOINT_KEY, makeDualCtEnergyCheckpoint(binding, contract.timing, 1, 9000, 8000));
+  d.homey.app.subscribeAppRealtime = async (serial, handler) => { await mqtt.connect(); mqtt.subscribe(serial, handler); return true; };
+  d.homey.app.unsubscribeAppRealtime = (serial, handler) => mqtt.unsubscribe(serial, handler);
+  try {
+    await d.onInit(); const socket = client;
+    for (let second = 1; second <= 60; second++) {
+      now = 100000 + second * 1000;
+      if (second === 20) healed = true;
+      for (const timer of [...timers]) if (timer.at <= now) { timers.delete(timer); timer.fn(); }
+      for (const timer of [...d.timers.values()]) if (timer.interval) timer.fn();
+      await settle();
+    }
+    assert.equal(propertyCalls, 4); assert.equal(client, socket);
+    assert.equal(mqtt.getDeliveryDiagnostics(sn).activeTopics, 2);
+    assert.equal(d.available, false, 'accepted SUBACK is not a fresh reading');
+    assert.equal(d.values.get('meter_power.imported'), 9);
+    client.emit('message', `/app/device/property/${sn}`, payload(3600), { retain: false, dup: false }); await settle();
+    assert.equal(d.available, true); assert.equal(d.values.get('measure_power'), 3600);
+    assert.equal(d.values.get('meter_power.imported'), 9, 'first recovery anchors without backfill');
+    now += 1000;
+    client.emit('message', `/app/device/property/${sn}`, payload(3600), { retain: false, dup: false }); await settle();
+    assert.equal(d.values.get('meter_power.imported'), 9.001);
+    assert.equal(d.values.get('meter_power.exported'), 8);
+  } finally { await d.onUninit(); await mqtt.end(); }
+  assert.equal(timers.size, 0);
+});
+test('qualified CT1 condition preserves strict sign/equality and rejects stale, mismatching, withdrawn or optional CT2 inputs', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  const dependencies = d.energyDependencies();
+  const fastContract = { ...contract, freshnessMs: 5000 };
+  d.energyDependencies = () => ({ ...dependencies, resolve: () => fastContract });
+  d.store.set('dualCtEnergySourceBinding', dualCtGridBinding({
+    account: dualCtAccountBinding(account), device: sn, grid: 'homey_property_grid', session: 'one',
+  }, fastContract));
+  await d.onInit();
+  t.after(() => d.onUninit());
+  assert.throws(() => d.gridPowerAbove('import', 0));
+  const handler = d.subscriptions[0];
+  handler(payload(100), `/app/device/property/${sn}`); await settle();
+  assert.equal(d.gridPowerAbove('import', 99), true); assert.equal(d.gridPowerAbove('import', 100), false);
+  assert.equal(d.gridPowerAbove('export', 0), false);
+  for (const [direction, watts] of [['sideways', 0], ['import', NaN], ['import', -1], ['import', '0']]) assert.throws(() => d.gridPowerAbove(direction, watts));
+  d.values.set('measure_power', 99); assert.throws(() => d.gridPowerAbove('import', 0)); d.values.set('measure_power', 100);
+  now += 1; handler(payload(-100), `/app/device/property/${sn}`); await settle();
+  assert.equal(d.gridPowerAbove('export', 99), true); assert.equal(d.gridPowerAbove('export', 100), false);
+  now += 1; handler(payload(0), `/app/device/property/${sn}`); await settle();
+  assert.equal(d.gridPowerAbove('import', 0), false); assert.equal(d.gridPowerAbove('export', 0), false);
+  now += 4999; assert.equal(d.gridPowerAbove('export', 0), false);
+  now += 1; assert.throws(() => d.gridPowerAbove('export', 0));
+  const detailsOnly = nested(1, Buffer.concat([nested(1, scalar(991, 999999)), int(6, 0), int(8, 254), int(9, 21)]));
+  handler(detailsOnly, `/app/device/property/${sn}`); await settle();
+  assert.throws(() => d.gridPowerAbove('import', 0), 'CT2 must not renew CT1');
+  now += 1; handler(payload(100), `/app/device/property/${sn}`); await settle();
+  assert.throws(() => d.gridPowerAbove('import', 0), 'the first post-gap frame resets the existing accounting anchor');
+  now += 1; handler(payload(100), `/app/device/property/${sn}`); await settle();
+  assert.equal(d.gridPowerAbove('import', 0), true);
+  d.store.set('dualCtEnergyConsent', 0); assert.throws(() => d.gridPowerAbove('import', 0));
+  await d.onUninit(); assert.throws(() => d.gridPowerAbove('import', 0));
+});
 test('unadopted Energy driver stays unavailable without auth, subscriptions, timers, store writes or resets', async () => {
   const d = new Driver(); d.store.delete('dualCtEnergyConsent'); d.values.set('meter_power.imported', 9); d.values.set('meter_power.exported', 8); await d.onInit();
   assert.equal(d.available, false); assert.equal(d.values.get('measure_power'), null);

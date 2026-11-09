@@ -18,6 +18,7 @@ function response(t, body, statusCode = 200, event) {
       res.emit('data', Buffer.from(body)); res.emit('end');
     };
     req.destroy = (error) => req.emit('error', error);
+    req.write = () => {};
     return req;
   });
 }
@@ -185,4 +186,96 @@ test('successful requests remove abort listeners and deadline timers', async (t)
   assert.equal(added, 1); assert.equal(removed, 1);
   controller.abort();
   t.mock.timers.tick(60000); // No late timeout or abort after successful completion.
+});
+
+test('control PUT and selective POST preserve actual envelopes for ACK and configuration normalization', async (t) => {
+  const {
+    normalizeStream5000ReserveAck: ack,
+    normalizeStream5000ReserveConfiguration: configuration,
+  } = require('../.homeybuild/lib/stream5000ControlContract');
+  const target = {
+    targetKey: 'synthetic-target', installationKey: 'synthetic-installation',
+    model: 'STREAM_5000', firmware: 'synthetic-only', scope: 'system',
+    routing: 'qualified_system_main', commandTargetSn: 'ES21SYNTHETICMAIN', generation: 1,
+  };
+  const data = { 'bpBackupConfig-backupSocOnOff': true, 'bpBackupConfig-backupSoc': 51 };
+  response(t, JSON.stringify({ code: '0', data }));
+  const c = client();
+  assert.equal(ack('synthetic-op', { transport: 'http', body: await c.setQuotaEnvelope({ sn: target.commandTargetSn }) }).code, 0);
+  const body = await c.getQuotaEnvelope(target.commandTargetSn, Object.keys(data));
+  const context = {
+    now: 1002, target, authority: { revision: 1 },
+    configuration: {
+      source: 'official_native', generation: 1, commandTargetSn: target.commandTargetSn,
+      receivedAt: 1002, reserveEnabled: true, reservePercent: 51,
+    },
+  };
+  const query = { operationId: 'synthetic-op', queryId: 'synthetic-query', requestedAt: 1001 };
+  assert.equal(configuration(context, query, {
+    queryId: query.queryId, receivedAt: 1002, target, authorityRevision: 1,
+    source: 'official_native_selective', independent: true, body,
+  }).reservePercent, 51);
+  assert.deepEqual(await c.setQuota({ sn: target.commandTargetSn }), data, 'legacy consumers retain unwrapped data');
+});
+
+test('control envelopes reject coerced statuses and private error text while legacy numeric success stays compatible', async (t) => {
+  for (const code of [0, null, undefined, '00', '1', 'PRIVATE-IDENTIFIER']) {
+    response(t, JSON.stringify({ code, message: 'PRIVATE-RESPONSE', data: {} }));
+    await assert.rejects(client().setQuotaEnvelope({ sn: 'SYNTHETIC' }), (error) => {
+      assert.doesNotMatch(error.message, /PRIVATE/);
+      return true;
+    });
+    t.mock.restoreAll();
+  }
+  response(t, '{"code":0,"data":{"legacy":true}}');
+  assert.deepEqual(await client().setQuota({ sn: 'SYNTHETIC' }), { legacy: true });
+});
+
+test('control PUT and selective POST honor pre-abort and cancel the one dispatched request', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let requests = 0; let destroyed = 0;
+  t.mock.method(https, 'request', () => {
+    requests++;
+    const req = new EventEmitter();
+    req.end = () => {}; req.write = () => {}; req.destroy = () => { destroyed++; };
+    return req;
+  });
+  for (const method of ['set', 'get']) {
+    const c = client(); const controller = new AbortController();
+    const call = () => method === 'set'
+      ? c.setQuotaEnvelope({ sn: 'SYNTHETIC' }, { signal: controller.signal })
+      : c.getQuotaEnvelope('SYNTHETIC', ['field'], { signal: controller.signal });
+    const pending = call(); const rejected = assert.rejects(pending, /cancelled/);
+    controller.abort(); await rejected;
+    const before = requests;
+    await assert.rejects(call(), /cancelled/);
+    assert.equal(requests, before);
+  }
+  t.mock.timers.tick(60000);
+  assert.equal(requests, 2);
+  assert.equal(destroyed, 2);
+});
+
+test('the control main lookup has one attempt and its total deadline is not extended by trickle', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let requests = 0; let destroyed = 0; let res;
+  t.mock.method(https, 'request', (_options, callback) => {
+    requests++;
+    const req = new EventEmitter();
+    req.destroy = () => { destroyed++; };
+    req.end = () => { res = new EventEmitter(); res.statusCode = 200; callback(res); };
+    return req;
+  });
+  const pending = client().getMainSnEnvelope('SYNTHETIC', { timeoutMs: 1000 });
+  const rejected = assert.rejects(pending, /deadline exceeded/);
+  res.emit('data', Buffer.from(' ')); t.mock.timers.tick(999);
+  res.emit('data', Buffer.from(' ')); t.mock.timers.tick(1);
+  await rejected;
+  t.mock.timers.tick(60000);
+  assert.equal(requests, 1);
+  assert.equal(destroyed, 1);
+  for (const timeoutMs of [0, -1, 15001, 1.5, NaN]) {
+    await assert.rejects(client().getMainSnEnvelope('SYNTHETIC', { timeoutMs }), /invalid request deadline/);
+  }
+  assert.equal(requests, 1);
 });

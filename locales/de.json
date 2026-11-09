@@ -550,6 +550,7 @@
     "developer_api_unsupported_device": "Dieses EcoFlow-Gerät wird von der Developer API nicht unterstützt. Lösche es und füge es erneut mit dem passenden EcoFlow-Gerätetyp hinzu."
   },
   "device": {
+    "stream_5000_reading_unavailable": "Ein aktueller, erfolgreich übernommener STREAM-5000-Messwert für die gewählte Quellenrolle fehlt. Flow-Auswertung auch bei Umkehrung abgebrochen.",
     "stream_5000_system": {
       "monitoring_only": "Homey-Energy-Überwachung · Batterieeinstellungen in EcoFlow verwalten",
       "application_failed": "Neue EcoFlow-Messwerte konnten in Homey nicht übernommen werden. Prüfen Sie den Integrationsbericht."

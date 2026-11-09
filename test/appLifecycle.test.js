@@ -126,14 +126,35 @@ test('5000 read-only conditions route to fresh device observations, not a contro
   const listeners = new Map();
   app.homey.flow = { getConditionCard: (id) => ({ registerRunListener: (fn) => listeners.set(id, fn) }) };
   await app.onInit();
-  assert.deepEqual([...listeners.keys()], ['smartmeter_grid_power_above', 'stream_5000_mode_is', 'stream_5000_reserve_enabled',
+  assert.deepEqual([...listeners.keys()], ['smartmeter_grid_power_above', 'stream_5000_mode_is', 'stream_5000_reserve_enabled', 'stream_5000_reading_current',
     'coordination_readings_current', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_circuit_power_sustained']);
   const device = {
     configurationModeIs: async (mode) => mode === 'custom',
     configurationReserveEnabled: async () => { throw new Error('Fresh state unavailable'); },
+    monitoringReadingCurrent: async (field, role) => field === 'soc' && role === 'unit',
   };
   assert.equal(await listeners.get('stream_5000_mode_is')({ device, mode: 'custom' }), true);
   await assert.rejects(listeners.get('stream_5000_reserve_enabled')({ device }), /Fresh state unavailable/);
+  assert.equal(await listeners.get('stream_5000_reading_current')({ device, field: 'soc', role: 'unit' }), true);
+  assert.equal(await listeners.get('stream_5000_reading_current')({ device, field: 'soc', role: 'system' }), false);
+  await app.onUninit();
+});
+
+test('sustained CT1 trigger rejects changed rules and unqualified late Flow evaluation', async () => {
+  const { app } = harness(); let run;
+  app.homey.flow = {
+    getConditionCard: () => ({ registerRunListener() {} }),
+    getDeviceTriggerCard: () => ({ registerRunListener: (fn) => { run = fn; } }),
+  };
+  await app.onInit();
+  const { gridNotificationKey } = require('../.homeybuild/lib/sustainedGridNotifications');
+  const args = { direction: 'export', watts: 500, seconds: 60, hysteresis: 100, cooldown: 600,
+    device: { gridNotificationEventCurrent: () => true } };
+  const state = { ruleKey: gridNotificationKey(args), observation: {} };
+  assert.equal(run(args, state), true);
+  args.device.gridNotificationEventCurrent = () => false;
+  assert.equal(run(args, state), false);
+  assert.equal(run({ ...args, seconds: 120 }, state), false);
   await app.onUninit();
 });
 

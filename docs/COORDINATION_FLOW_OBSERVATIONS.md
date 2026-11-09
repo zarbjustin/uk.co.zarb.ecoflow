@@ -1,10 +1,16 @@
 # Read-only coordination Flow cards — sprints 1/2
 
-Current follow-up: original observation cards are in Test v1.10.55. The local
-release-hardening wave shares the explicit candidate-source classification and
-adds repeated-session/coexistence replay tests without new cards, consent,
-controls or Energy activation. See RELEASE_CANDIDATE_CHECKLIST.md for remaining
-native/hardware acceptance. Earlier local-only statements below are historical.
+7 November 2026 source clarification: the six cards and pure observation helper
+remain in source, but the current app never constructs the coordination Flow
+monitor. Start/status reject with `external_reader_required`; opening settings
+does not start a reader or observer. The recipes below describe the historical
+17 October design, **not an active observer in 1.11.24**. No broad API permission,
+reader, runner or consent session is restored by the automation sprint candidate.
+Use device-scoped monitoring and explicitly owner-managed Homey logic instead.
+The historical maximum 1800-second dwell also cannot complete before the fixed
+1800-second observation lease expires. See `AUTOMATION_SPRINTS_2026-11-07.md`.
+
+## Historical 17 October design and evidence
 
 17 October 2026. Diagnostic branch only, local/unpublished. No Flow was created
 or installed, no monitor was activated on a Homey, and no control or Energy path

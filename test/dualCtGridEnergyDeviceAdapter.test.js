@@ -36,6 +36,136 @@ function harness(defaultGate = false, freshnessMs) {
     async sample(at, watts) { now = at; await adapter.observe(payload(watts), topic, at); } };
 }
 
+test('follow-on core expiry independently clears watts while unavailable and counter SDK writes are held', async () => {
+  const h = harness(false, 5000); await h.adapter.start(); await h.sample(1000, 3600);
+  const entered = deferred(); const release = deferred(); const unavailableEntered = deferred(); const unavailableRelease = deferred();
+  const cap = h.port.setCapabilityValue; const unavailable = h.port.setUnavailable;
+  let block = true; let statusCalls = 0; let nullCalls = 0;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (block && id === 'meter_power.imported') { block = false; entered.resolve(); await release.promise; }
+    if (id === 'measure_power' && value === null) nullCalls++;
+    return cap(id, value);
+  };
+  const pending = h.sample(2000, 3600); await entered.promise;
+  h.port.setUnavailable = async reason => {
+    statusCalls++; unavailableEntered.resolve(); await unavailableRelease.promise; return unavailable(reason);
+  };
+  h.now(6000);
+  const ticks = Array.from({ length: 100 }, () => h.adapter.refresh()); await unavailableEntered.promise;
+  try {
+    await new Promise(setImmediate);
+    assert.equal(h.caps.get('measure_power'), null);
+    assert.equal(statusCalls, 1); assert.equal(nullCalls, 1);
+    assert(ticks.every(tick => tick === ticks[0]));
+    assert.throws(() => h.adapter.currentPower());
+    assert.equal(h.saved().importedWh, 1);
+    unavailableRelease.resolve(); release.resolve(); await Promise.all([pending, ...ticks]);
+    assert.equal(h.caps.get('measure_power'), 3600);
+    assert.equal(h.available(), true);
+    assert.equal(h.saved().importedWh, 1);
+  } finally { unavailableRelease.resolve(); release.resolve(); await Promise.all([pending, ...ticks]); await h.adapter.close(); }
+});
+
+test('follow-on core stop dispatches invalidation before its counter SDK close barrier', async () => {
+  const h = harness(false, 5000); await h.adapter.start(); await h.sample(1000, 3600);
+  const entered = deferred(); const release = deferred(); const cap = h.port.setCapabilityValue; let block = true;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (block && id === 'meter_power.imported') { block = false; entered.resolve(); await release.promise; }
+    return cap(id, value);
+  };
+  const pending = h.sample(2000, 3600); await entered.promise;
+  const closed = h.adapter.close();
+  try {
+    await new Promise(setImmediate);
+    assert.equal(h.caps.get('measure_power'), null);
+    assert.equal(h.available(), false);
+    assert.throws(() => h.adapter.currentPower());
+    assert.equal(h.saved().importedWh, 1);
+  } finally { release.resolve(); await Promise.all([pending, closed]); }
+});
+
+test('follow-on core stop clears watts before checkpoint IO settles without releasing the writer', async () => {
+  const h = harness(false, 5000); await h.adapter.start(); await h.sample(1000, 3600);
+  const entered = deferred(); const release = deferred();
+  const storage = h.session.options.storage; const write = storage.write;
+  storage.write = async state => { entered.resolve(); await release.promise; return write(state); };
+  const pending = h.sample(2000, 3600); await entered.promise;
+  const closed = h.adapter.close();
+  const owns = () => h.session.options.authority.owns(scope.grid, h.session.binding, h.session.owner);
+  try {
+    await new Promise(setImmediate);
+    assert.equal(h.caps.get('measure_power'), null);
+    assert.equal(owns(), true, 'UI invalidation cannot release a writer with checkpoint IO outstanding');
+    assert.throws(() => h.adapter.currentPower());
+  } finally { release.resolve(); await Promise.all([pending, closed]); }
+  assert.equal(owns(), false);
+  assert.equal(h.saved().importedWh, 1);
+});
+
+test('qualification withdrawal still clears watts despite a rejected unavailable write and held counter projection', async () => {
+  const h = harness(false, 5000); await h.adapter.start(); await h.sample(1000, 3600);
+  const entered = deferred(); const release = deferred(); const cap = h.port.setCapabilityValue; let block = true;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (block && id === 'meter_power.imported') { block = false; entered.resolve(); await release.promise; }
+    return cap(id, value);
+  };
+  const pending = h.sample(2000, 3600); await entered.promise;
+  const status = h.port.setUnavailable;
+  h.port.setUnavailable = async () => { throw Error('synthetic unavailable failure'); };
+  h.revoke(); const refresh = h.adapter.refresh();
+  try {
+    await new Promise(setImmediate);
+    assert.equal(h.caps.get('measure_power'), null);
+    assert.throws(() => h.adapter.currentPower());
+    assert.equal(h.saved().importedWh, 1);
+  } finally {
+    h.port.setUnavailable = status; release.resolve(); await Promise.all([pending, refresh]); await h.adapter.close();
+  }
+});
+
+test('qualified snapshot shares current power authority and preserves the published receipt/deadline during pending SDK IO', async () => {
+  const h = harness(false, 5000); await h.adapter.start();
+  assert.equal(h.adapter.currentPowerObservation(1000), null);
+  await h.sample(1000, 0);
+  const first = h.adapter.currentPowerObservation(1000);
+  assert.deepEqual(first, { powerW: 0, receivedAt: 1000, validUntil: 6000, generation: first.generation });
+  assert.equal(Object.isFrozen(first), true);
+  const entered = deferred(); const release = deferred(); const cap = h.port.setCapabilityValue; let block = true;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (block && id === 'meter_power.imported') { block = false; entered.resolve(); await release.promise; }
+    return cap(id, value);
+  };
+  const pending = h.sample(2000, 0); await entered.promise;
+  try {
+    h.now(5999); assert.equal(h.adapter.currentPower(), 0);
+    assert.deepEqual(h.adapter.currentPowerObservation(5999), first, 'new same-watt receipt cannot renew an old published deadline');
+    h.now(6000); assert.throws(() => h.adapter.currentPower());
+    assert.equal(h.adapter.currentPowerObservation(6000), null);
+    release.resolve(); await pending;
+    assert.deepEqual(h.adapter.currentPowerObservation(6000),
+      { powerW: 0, receivedAt: 2000, validUntil: 7000, generation: first.generation });
+  } finally { release.resolve(); await pending; await h.adapter.close(); }
+  assert.equal(h.adapter.currentPowerObservation(6000), null);
+});
+
+test('qualified snapshot rejects withdrawn source and uses signed power without granting counter authority', async () => {
+  const h = harness(false, 5000); await h.adapter.start(); await h.sample(1000, -20);
+  assert.equal(h.adapter.currentPowerObservation(1000).powerW, -20);
+  h.revoke(); assert.equal(h.adapter.currentPowerObservation(1000), null);
+  assert.throws(() => h.adapter.currentPower());
+  await h.adapter.close();
+});
+
+test('qualified snapshot epochs cannot match a replacement adapter even at identical power and receipt time', async () => {
+  const first = harness(false, 5000); await first.adapter.start(); await first.sample(1000, 20);
+  const before = first.adapter.currentPowerObservation(1000); await first.adapter.close();
+  const second = harness(false, 5000); await second.adapter.start(); await second.sample(1000, 20);
+  const after = second.adapter.currentPowerObservation(1000);
+  assert.equal(after.powerW, before.powerW); assert.equal(after.receivedAt, before.receivedAt);
+  assert.notEqual(after.generation, before.generation);
+  await second.adapter.close();
+});
+
 test('production runtime gate blocks before any Homey or storage write, even with an injected qualified session', async () => {
   const h = harness(true); await h.adapter.start(); await h.sample(1000, 3600); await h.adapter.refresh(); await h.adapter.close();
   assert.equal(h.storeWrites(), 0); assert.deepEqual(h.events, []);

@@ -1,0 +1,38 @@
+{
+  "id": "stream_5000_reading_current",
+  "title": {
+    "en": "STREAM 5000 reading is current for its source role",
+    "de": "STREAM-5000-Messwert ist für seine Quellenrolle aktuell",
+    "nl": "STREAM 5000-meting is actueel voor de bronrol"
+  },
+  "titleFormatted": {
+    "en": "[[field]] has a current [[role]] observation",
+    "de": "[[field]] hat eine aktuelle [[role]]-Beobachtung",
+    "nl": "[[field]] heeft een actuele [[role]]-waarneming"
+  },
+  "hint": {
+    "en": "Read-only guard. Missing, stale, failed or wrong-scope readings reject the Flow, including inversion. Cloud-latest SOC and unverified linked unit power do not qualify. This does not enable battery control.",
+    "de": "Nur lesende Prüfung. Fehlende, veraltete, fehlgeschlagene oder falsch zugeordnete Werte brechen den Flow auch bei Umkehrung ab. Cloud-SOC und ungeprüfte Leistung verbundener Einheiten gelten nicht. Keine Batteriesteuerung.",
+    "nl": "Alleen-lezen controle. Ontbrekende, verouderde, mislukte of verkeerd toegewezen metingen stoppen de Flow, ook bij omkering. Cloud-SOC en ongeverifieerd vermogen van gekoppelde units tellen niet. Geen batterijbesturing."
+  },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=stream_5000_system|stream_5000_unit|stream_ac5000" },
+    {
+      "type": "dropdown", "name": "field",
+      "title": { "en": "Reading", "de": "Messwert", "nl": "Meting" },
+      "values": [
+        { "id": "soc", "title": { "en": "Battery SOC", "de": "Batterie-SOC", "nl": "Batterij-SOC" } },
+        { "id": "state", "title": { "en": "Battery state", "de": "Batteriestatus", "nl": "Batterijstatus" } },
+        { "id": "power", "title": { "en": "Battery power", "de": "Batterieleistung", "nl": "Batterijvermogen" } }
+      ]
+    },
+    {
+      "type": "dropdown", "name": "role",
+      "title": { "en": "Source role", "de": "Quellenrolle", "nl": "Bronrol" },
+      "values": [
+        { "id": "unit", "title": { "en": "Physical unit", "de": "Physische Einheit", "nl": "Fysieke unit" } },
+        { "id": "system", "title": { "en": "System aggregate", "de": "Gesamtsystem", "nl": "Systeemaggregaat" } }
+      ]
+    }
+  ]
+}

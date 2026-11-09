@@ -85,3 +85,16 @@ test('optional detail shutdown failures cannot prevent core recovery and write t
  await assert.doesNotReject(h.detail.stop());assert.equal(h.values.get('meter_power.imported'),12.345);
  assert.equal(Object.isFrozen(ids),true);
 });
+
+test('one optional metadata failure cannot abort sibling retirement and retries after metadata recovery',async()=>{
+ for(const method of ['hasCapability','getCapabilityValue']){
+  const h=harness();await h.detail.configure({},false);h.detail.start(scope);h.deliver();await h.detail.render();
+  const original=h.port[method];h.port[method]=id=>{if(id===ids[0])throw Error('synthetic field metadata failure');return original(id);};
+  assert.doesNotThrow(()=>h.detail.start({...scope,session:'replacement'}));
+  await assert.doesNotReject(h.detail.render());await assert.doesNotReject(h.detail.stop());
+  for(const id of ids.slice(1))assert.equal(h.values.get(id),null,id);
+  assert.equal(h.values.get('measure_power'),600);assert.equal(h.values.get('meter_power.imported'),12.345);
+  h.port[method]=original;h.detail.start({...scope,session:'metadata_recovered'});await h.detail.render();
+  assert.equal(h.values.get(ids[0]),null);await h.detail.stop();
+ }
+});

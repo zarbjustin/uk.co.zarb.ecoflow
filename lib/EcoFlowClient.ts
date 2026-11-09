@@ -19,6 +19,16 @@ export interface EcoFlowClientOptions {
   log?: (...args: any[]) => void;
 }
 
+export interface EcoFlowControlRequestOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+export interface EcoFlowControlEnvelope {
+  code: '0';
+  data?: unknown;
+}
+
 export class EcoFlowApiError extends Error {
   public code: string;
   constructor(code: string, message: string) {
@@ -97,6 +107,34 @@ export class EcoFlowClient {
     return (await this.request('PUT', '/iot-open/sign/device/quota', { body: payload })) as Quota;
   }
 
+  /** Control-only response evidence: one attempt, exact status, no cache or invented envelope. */
+  async setQuotaEnvelope(
+    payload: Record<string, any>, options: EcoFlowControlRequestOptions = {},
+  ): Promise<EcoFlowControlEnvelope> {
+    return this.requestOnce('PUT', '/iot-open/sign/device/quota', {
+      body: payload, signal: options.signal, timeoutMs: options.timeoutMs ?? 10000, preserveEnvelope: true,
+    });
+  }
+
+  async getQuotaEnvelope(
+    sn: string, quotas: string[], options: EcoFlowControlRequestOptions = {},
+  ): Promise<EcoFlowControlEnvelope> {
+    return this.requestOnce('POST', '/iot-open/sign/device/quota', {
+      body: { sn, params: { quotas } },
+      signal: options.signal,
+      timeoutMs: options.timeoutMs ?? 10000,
+      preserveEnvelope: true,
+    });
+  }
+
+  async getMainSnEnvelope(
+    sn: string, options: EcoFlowControlRequestOptions = {},
+  ): Promise<EcoFlowControlEnvelope> {
+    return this.requestOnce('GET', '/iot-open/sign/device/system/main/sn', {
+      query: { sn }, signal: options.signal, timeoutMs: options.timeoutMs ?? 10000, preserveEnvelope: true,
+    });
+  }
+
   /** GET /iot-open/sign/certification — MQTT broker credentials. */
   async getCertification(): Promise<AppCertification> {
     return (await this.request('GET', '/iot-open/sign/certification')) as AppCertification;
@@ -165,8 +203,13 @@ export class EcoFlowClient {
   private requestOnce(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal } = {},
+    opts: { query?: Record<string, any>; body?: Record<string, any>; signal?: AbortSignal;
+      timeoutMs?: number; preserveEnvelope?: boolean } = {},
   ): Promise<any> {
+    const timeoutMs = opts.timeoutMs ?? 15000;
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15000) {
+      return Promise.reject(new Error('EcoFlow API: invalid request deadline.'));
+    }
     const isJson = method === 'POST' || method === 'PUT';
     // Per the signing rule: JSON body => sign the body; otherwise sign the query.
     const signParams = isJson ? opts.body || {} : opts.query || {};
@@ -210,7 +253,7 @@ export class EcoFlowClient {
           path: url.pathname + url.search,
           port: url.port || 443,
           headers,
-          timeout: 15000,
+          timeout: timeoutMs,
         },
         (res) => {
           if (settled) {
@@ -252,11 +295,17 @@ export class EcoFlowClient {
               return;
             }
             const code = String(json.code ?? '');
+            if (opts.preserveEnvelope && json.code !== '0') {
+              const safeCode = typeof json.code === 'string' && /^[0-9]{1,8}$/.test(json.code)
+                ? json.code : 'INVALID_CONTROL_STATUS';
+              reject(new EcoFlowApiError(safeCode, 'Control request failed'));
+              return;
+            }
             if (code !== '0') {
               reject(new EcoFlowApiError(code || String(res.statusCode), json.message || 'Request failed'));
               return;
             }
-            resolve(json.data);
+            resolve(opts.preserveEnvelope ? json : json.data);
           });
         },
       );
@@ -272,7 +321,7 @@ export class EcoFlowClient {
         const error = new Error('EcoFlow API: request deadline exceeded.');
         reject(error);
         req.destroy(error);
-      }, 15000);
+      }, timeoutMs);
       abort = () => {
         const error = new Error('EcoFlow API: request cancelled.');
         reject(error);

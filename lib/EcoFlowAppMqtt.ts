@@ -41,6 +41,8 @@ const MIN_BACKOFF_MS = 5000;
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const SUBSCRIBE_TIMEOUT_MS = 10000;
 const MAX_SUBSCRIBE_ATTEMPTS = 3;
+const SUBSCRIBE_RECOVERY_MS = 30000;
+const END_GRACE_MS = 1000;
 type TopicSubscription = {
   sn: string; state: 'pending' | 'active' | 'rejected' | 'timed_out';
   timer: ReturnType<typeof setTimeout> | null;
@@ -56,11 +58,185 @@ function brokerHost(url: string | undefined): string {
   return ALLOWED_BROKER_HOSTS.has(candidate) ? candidate : DEFAULT_BROKER_HOST;
 }
 
+type TopicOwner = {
+  id: number;
+  options: Readonly<{ qos: 0; nl: false; rap: false; rh: 0 }>;
+  record?: unknown;
+  mapping?: string[];
+};
+type WireCall = {
+  id: number; topic: string; command: 'subscribe' | 'unsubscribe';
+  allocated: boolean; sent: boolean; record?: unknown; mapping?: string[];
+};
+type NativeSubscriptionState = {
+  _storeProcessing: boolean;
+  _storeProcessingQueue: unknown[];
+  outgoing: Record<number, unknown>;
+  messageIdToTopic: Record<number, string[]>;
+  stream: { writableLength: number; writableNeedDrain: boolean; destroyed: boolean; writableEnded: boolean };
+};
+
+/**
+ * Locked MQTT.js 5.15.1 adapter, not a version-independent bookkeeping API.
+ * One immutable intent keeps its ID through every settlement; detach retires it.
+ * MQTT 5 same-ID SUBSCRIBE interoperability remains a broker qualification gate:
+ * a matching ACK can settle this intent, never prove latest-wire authorization.
+ */
+function createTopicTransport() {
+  // 0 free, 1 ordinary native allocation, 2 owner/reserved, 3 retired.
+  const ids = new Uint8Array(65536);
+  const owners = new Map<string, TopicOwner>();
+  let cursor = 0; let last: number | null = null;
+  let selected: WireCall | null = null;
+  let client: MqttClient | null = null;
+  let native = false;
+  let detachListeners = () => {};
+  const bookkeeping = () => client as unknown as NativeSubscriptionState;
+  const validId = (id: number) => Number.isInteger(id) && id > 0 && id < ids.length;
+  const provider = {
+    allocate(): number | null {
+      if (selected && !selected.allocated) {
+        selected.allocated = true; last = selected.id; return last;
+      }
+      for (let n = 0; n < 65535; n++) {
+        cursor = (cursor % 65535) + 1;
+        if (ids[cursor] === 0 && (!native || (!bookkeeping().outgoing?.[cursor] && !bookkeeping().messageIdToTopic?.[cursor]))) {
+          ids[cursor] = 1; last = cursor; return cursor;
+        }
+      }
+      return null;
+    },
+    getLastAllocated: () => last,
+    register(id: number): boolean {
+      if (!validId(id) || ids[id] !== 0) return false;
+      ids[id] = 1; return true;
+    },
+    deallocate(id: number): void {
+      if (validId(id) && ids[id] === 1) ids[id] = 0;
+    },
+    // Native _onConnect calls clear(). Only a new clean client creates a new
+    // ledger; a lifecycle callback must never erase owner/retirement fences.
+    clear() {},
+  };
+  const ready = () => {
+    if (!client?.connected || client.disconnecting) return false;
+    // Legacy injected test clients do not have a native allocator/store.
+    if (!native) return true;
+    const state = bookkeeping();
+    return (client.constructor as typeof MqttClient).VERSION === '5.15.1' && client.messageIdProvider === provider
+      && state._storeProcessing === false && Array.isArray(state._storeProcessingQueue) && state._storeProcessingQueue.length === 0
+      && state.stream?.writableLength === 0 && state.stream.writableNeedDrain === false
+      && state.stream.destroyed === false && state.stream.writableEnded === false;
+  };
+  const cancel = (id: number, record?: unknown, mapping?: string[]) => {
+    if (!native || !client) return;
+    const state = bookkeeping();
+    if (mapping && state.messageIdToTopic[id] === mapping) delete state.messageIdToTopic[id];
+    if (record && state.outgoing[id] === record) client.removeOutgoingMessage(id);
+  };
+  const packetsend = (packet: any) => {
+    if (!selected || packet.cmd !== selected.command || packet.messageId !== selected.id) return;
+    const route = packet.cmd === 'subscribe' ? packet.subscriptions?.[0]?.topic : packet.unsubscriptions?.[0];
+    if (route !== selected.topic) return;
+    selected.sent = true;
+    if (!native) return;
+    selected.record = bookkeeping().outgoing[selected.id];
+    selected.mapping = bookkeeping().messageIdToTopic[selected.id];
+    const owner = owners.get(selected.topic);
+    if (packet.cmd === 'subscribe' && owner?.id === selected.id) {
+      owner.record = selected.record; owner.mapping = selected.mapping;
+    }
+  };
+  const invoke = (call: WireCall, send: () => void) => {
+    const previous = selected;
+    selected = call;
+    try {
+      send();
+      // packetsend precedes serialization; it is NOT write/delivery completion.
+      if (native && (!call.allocated || !call.sent)) throw new Error('App subscription was not synchronously allocated');
+    } finally {
+      selected = previous;
+    }
+  };
+  return {
+    provider,
+    owners,
+    bind(c: MqttClient) {
+      client = c;
+      native = Boolean(c.messageIdProvider || (c.constructor as typeof MqttClient).VERSION);
+      c.on('packetsend', packetsend);
+    },
+    onDetach(callback: () => void) {
+      detachListeners = callback;
+    },
+    detach() {
+      detachListeners(); client?.removeListener('packetsend', packetsend);
+    },
+    ready,
+    owner(topic: string): TopicOwner | undefined {
+      const existing = owners.get(topic);
+      if (existing) return existing;
+      const id = provider.allocate();
+      if (id === null) return undefined;
+      ids[id] = 2;
+      const owner: TopicOwner = {
+        id,
+        options: Object.freeze({
+          qos: 0, nl: false, rap: false, rh: 0,
+        }),
+      };
+      owners.set(topic, owner); return owner;
+    },
+    subscribe(topic: string, owner: TopicOwner, callback: Parameters<MqttClient['subscribe']>[2]) {
+      const call: WireCall = {
+        id: owner.id, topic, command: 'subscribe', allocated: false, sent: false,
+      };
+      try {
+        invoke(call, () => {
+          client!.subscribe(topic, owner.options, callback);
+        });
+      } finally {
+        if (native && call.allocated) {
+          owner.record = call.record ?? bookkeeping().outgoing[owner.id];
+          owner.mapping = call.mapping ?? bookkeeping().messageIdToTopic[owner.id];
+          if (owners.get(topic) !== owner) cancel(owner.id, owner.record, owner.mapping);
+        }
+      }
+    },
+    release(topic: string) {
+      const owner = owners.get(topic);
+      if (!owner) return;
+      owners.delete(topic); ids[owner.id] = 3;
+      // Tombstone and delete mapping before cancellation can allocate/reenter.
+      cancel(owner.id, owner.record, owner.mapping);
+    },
+    unsubscribe(topic: string) {
+      if (!ready()) return;
+      const id = provider.allocate();
+      if (id === null) return;
+      ids[id] = 2;
+      const call: WireCall = {
+        id, topic, command: 'unsubscribe', allocated: false, sent: false,
+      };
+      try {
+        invoke(call, () => {
+          client!.unsubscribe(topic, {}, () => {});
+        });
+      } finally {
+        ids[id] = 3;
+        cancel(id, call.record, call.mapping);
+      }
+    },
+  };
+}
+
 export class EcoFlowAppMqtt {
   private client: MqttClient | null = null;
   private userId = '';
   private connecting: Promise<void> | null = null;
   private ended = false;
+  private ending: Promise<void> | null = null;
+  private transport: ReturnType<typeof createTopicTransport> | null = null;
   private cancelHandshake: (() => void) | null = null;
   private connectionEpoch = 0;
   private socketReceivedFrames = 0;
@@ -97,11 +273,13 @@ export class EcoFlowAppMqtt {
   }
 
   async connect(): Promise<void> {
+    if (this.ending) await this.ending;
     if (this.connecting) {
       await this.connecting;
       return;
     }
     if (this.client) return;
+    this.ending = null;
     this.ended = false;
     this.connecting = this.establish();
     try {
@@ -145,6 +323,7 @@ export class EcoFlowAppMqtt {
 
     this.userId = session.userId;
     const url = `wss://${brokerHost(creds.url)}:${WSS_PORT}${WSS_PATH}`;
+    const transport = createTopicTransport();
     const client = mqtt.connect(url, {
       username: creds.account,
       password: creds.password,
@@ -154,24 +333,34 @@ export class EcoFlowAppMqtt {
       keepalive: KEEPALIVE_S,
       clean: true,
       queueQoSZero: false, // never replay an expired reserve intent after reconnect
+      messageIdProvider: transport.provider,
     });
     this.client = client;
-    client.on('message', (topic, payload, packet) => {
+    this.transport = transport; transport.bind(client);
+    const message = (topic: string, payload: Buffer, packet: any) => {
       // A queued callback from a replaced socket must not gain a new receipt
       // timestamp and appear fresh to consumers on the current connection.
       if (this.ended || this.client !== client) return;
       this.onMessage(topic, payload as Buffer, packet);
-    });
-    client.on('packetreceive', (packet) => {
+    };
+    const packetreceive = (packet: any) => {
       if (this.ended || this.client !== client || packet.cmd !== 'pingresp') return;
       this.socketPingResponses = Math.min(65535, this.socketPingResponses + 1);
       this.socketLastPingAt = Date.now();
-    });
-    client.on('close', () => {
+    };
+    const close = () => {
       if (this.client === client) this.onDisconnect('close');
-    });
-    client.on('offline', () => {
+    };
+    const offline = () => {
       if (this.client === client) this.onDisconnect('offline');
+    };
+    client.on('message', message);
+    client.on('packetreceive', packetreceive);
+    client.on('close', close);
+    client.on('offline', offline);
+    transport.onDetach(() => {
+      client.removeListener('message', message); client.removeListener('packetreceive', packetreceive);
+      client.removeListener('close', close); client.removeListener('offline', offline);
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -211,12 +400,9 @@ export class EcoFlowAppMqtt {
     }).catch((e) => {
       if (this.client === client) {
         this.cancelHandshake = null;
-        this.clearSubscriptions(); this.client = null;
+        this.clearSubscriptions(); this.client = null; this.transport = null;
       }
-      client.removeAllListeners('close');
-      client.removeAllListeners('offline');
-      client.removeAllListeners('message');
-      client.removeAllListeners('packetreceive');
+      transport.detach();
       client.end(true);
       throw e;
     });
@@ -227,6 +413,7 @@ export class EcoFlowAppMqtt {
       if (sn !== undefined && item.sn !== sn) continue;
       if (item.timer) clearTimeout(item.timer);
       this.subscriptions.delete(topic);
+      this.transport?.release(topic);
     }
   }
 
@@ -235,14 +422,12 @@ export class EcoFlowAppMqtt {
     this.cancelHandshake = null;
     this.clearSubscriptions();
     if (!this.client) return;
-    this.client.removeAllListeners('close');
-    this.client.removeAllListeners('offline');
-    this.client.removeAllListeners('message');
-    this.client.removeAllListeners('packetreceive');
+    this.transport?.detach();
     try {
       this.client.end(true);
     } catch { /* ignore */ }
     this.client = null;
+    this.transport = null;
   }
 
   private onDisconnect(reason: string): void {
@@ -302,7 +487,13 @@ export class EcoFlowAppMqtt {
     this.clearSubscriptions(sn);
     this.receipts.delete(sn);
     if (!this.client) return;
-    for (const topic of this.topics(sn)) this.client.unsubscribe(topic);
+    for (const topic of this.topics(sn)) {
+      try {
+        this.transport?.unsubscribe(topic);
+      } catch {
+        this.log('unsubscribe unavailable');
+      }
+    }
   }
 
   /** The read-only telemetry topics for one device. */
@@ -317,13 +508,20 @@ export class EcoFlowAppMqtt {
     for (const topic of this.topics(sn)) this.subscribeTopic(sn, topic);
   }
 
-  private subscribeTopic(sn: string, topic: string, attempt = 1): void {
+  private subscribeTopic(sn: string, topic: string, attempt = 1, recoveryMs = SUBSCRIBE_RECOVERY_MS): void {
     const { client } = this;
     if (!client?.connected || this.ended || !this.handlers.has(sn)) return;
     const item: TopicSubscription = {
       sn, state: 'pending', timer: null,
     };
     this.subscriptions.set(topic, item);
+    const { transport } = this;
+    const owner = transport?.owner(topic);
+    if (!transport || !owner) {
+      item.state = 'rejected';
+      this.log('subscription', 'namespace_exhausted');
+      return;
+    }
     const current = () => !this.ended && this.client === client && this.handlers.has(sn) && this.subscriptions.get(topic) === item;
     const failed = (state: 'rejected' | 'timed_out') => {
       if (!current() || item.state !== 'pending') return;
@@ -336,13 +534,25 @@ export class EcoFlowAppMqtt {
           item.timer = null;
           if (current()) this.subscribeTopic(sn, topic, attempt + 1);
         }, MIN_BACKOFF_MS * attempt);
-      } else item.timer = null;
+      } else {
+        // Recovery continues for existing listeners, at a capped rate, without
+        // replacing the shared socket or restarting the fast retry wave.
+        // eslint-disable-next-line homey-app/global-timers -- owned per-topic recovery, cancelled on detach/end.
+        item.timer = setTimeout(() => {
+          item.timer = null;
+          if (current()) this.subscribeTopic(sn, topic, attempt, Math.min(recoveryMs * 2, MAX_BACKOFF_MS));
+        }, recoveryMs);
+      }
     };
+    // Never append native deferred work or buffered retransmission bytes.
+    if (!transport.ready()) {
+      failed('timed_out'); return;
+    }
     // A connected socket is not proof the broker accepted its subscription.
     // eslint-disable-next-line homey-app/global-timers -- owned acknowledgement deadline, cancelled on detach/end.
     item.timer = setTimeout(() => failed('timed_out'), SUBSCRIBE_TIMEOUT_MS);
     try {
-      client.subscribe(topic, { qos: 0 }, (error, granted) => {
+      transport.subscribe(topic, owner, (error, granted) => {
         if (!current() || item.state !== 'pending') return;
         if (error || !Array.isArray(granted) || granted.length !== 1
           || granted[0].topic !== topic || ![0, 1, 2].includes(granted[0].qos)) {
@@ -438,7 +648,8 @@ export class EcoFlowAppMqtt {
     });
   }
 
-  async end(): Promise<void> {
+  end(): Promise<void> {
+    if (this.ending) return this.ending;
     this.ended = true;
     if (this.cancelHandshake) this.destroyClient();
     this.clearSubscriptions();
@@ -447,18 +658,39 @@ export class EcoFlowAppMqtt {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    if (this.connecting) {
-      try {
-        await this.connecting;
-      } catch { /* ignore */ }
-    }
-    if (this.client) {
-      this.client.removeAllListeners('message');
-      await new Promise<void>((res) => {
-        this.client!.end(false, {}, () => res());
-      });
-    }
+    this.connecting?.catch(() => {});
+    const { client } = this;
+    this.transport?.detach(); this.transport = null;
     this.client = null;
     this.handlers.clear();
+    this.ending = new Promise<void>((resolve) => {
+      if (!client) {
+        resolve(); return;
+      }
+      let settled = false;
+      let deadline: ReturnType<typeof setTimeout> | null = null;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (deadline) clearTimeout(deadline);
+        resolve();
+      };
+      // eslint-disable-next-line homey-app/global-timers -- owned bounded shutdown, independent of MQTT.js end callback.
+      deadline = setTimeout(() => {
+        try {
+          client.stream?.destroy();
+        } catch { /* already closed */ }
+        finish();
+      }, END_GRACE_MS);
+      try {
+        client.end(false, {}, finish);
+      } catch {
+        try {
+          client.stream?.destroy();
+        } catch { /* already closed */ }
+        finish();
+      }
+    });
+    return this.ending;
   }
 }

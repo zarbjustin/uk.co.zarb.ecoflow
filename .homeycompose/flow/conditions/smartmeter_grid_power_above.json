@@ -11,7 +11,7 @@
     "nl": "Netvermogen ([[direction]]) is boven [[watts]] W"
   },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=smartmeter" },
+    { "type": "device", "name": "device", "filter": "driver_id=smartmeter|smartmeter_dual_ct_energy" },
     {
       "type": "dropdown", "name": "direction",
       "title": { "en": "Direction", "de": "Richtung", "nl": "Richting" },

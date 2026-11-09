@@ -6,11 +6,19 @@ import {
 } from './dualCtDisplaySettings';
 import energyManifest from '../drivers/smartmeter_dual_ct_energy/driver.compose.json';
 
+type DetailSlot = {
+  write: Promise<void> | null;
+  clear: Promise<void> | null;
+  revision: number;
+  clearedRevision: number;
+};
+
 export class DualCtEnergyDetails {
   private generation = 0;
   private monitor: DualCtMonitor | null = null;
   private chain: Promise<void> = Promise.resolve();
   private pending: Promise<void> | null = null;
+  private readonly slots = new Map<string, DetailSlot>();
   private readonly port: any;
   private readonly now: () => number;
 
@@ -42,6 +50,7 @@ export class DualCtEnergyDetails {
 
   start(scope: { account: string; device: string; session: string }) {
     ++this.generation; this.monitor?.clear(); this.monitor = new DualCtMonitor(scope);
+    this.reconcile();
   }
 
   observe(payload: Buffer, topic: string, delivery: Readonly<AppFrameDelivery> | undefined, now: number) {
@@ -52,34 +61,71 @@ export class DualCtEnergyDetails {
   }
 
   render(): Promise<void> {
+    // Expiry/retirement never waits for configure(), another field or a held
+    // numeric SDK write. Each known field owns at most one write and one clear.
+    this.reconcile();
     if (this.pending) return this.pending;
     if (!this.monitor) return Promise.resolve();
-    const { generation } = this;
-    const pending = this.enqueue(async () => {
-      if (generation !== this.generation || !this.monitor) return;
-      for (const id of DUAL_CT_ENERGY_DETAIL_CAPABILITIES) {
-        if (generation !== this.generation || !this.monitor) return;
-        const { values } = this.monitor.snapshot(this.now(), (key) => key);
-        if (this.port.hasCapability(id) && this.port.getCapabilityValue(id) !== values[id]) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.port.setCapabilityValue(id, values[id] ?? null);
-        }
-      }
-    }).catch(() => { /* Optional detail failures never revoke Energy accounting. */ }).finally(() => {
+    const pending = Promise.all([...this.slots.values()].flatMap((slot) => [slot.write, slot.clear])).then(() => {}).finally(() => {
       if (this.pending === pending) this.pending = null;
     });
     this.pending = pending; return pending;
   }
 
+  private value(id: string): number | string | null {
+    return this.monitor?.snapshot(this.now(), (key) => key).values[id] ?? null;
+  }
+
+  private reconcile(): void {
+    for (const id of DUAL_CT_ENERGY_DETAIL_CAPABILITIES) this.reconcileField(id, 2);
+  }
+
+  private reconcileField(id: string, corrections: number): void {
+    let value: number | string | null;
+    let displayed: unknown;
+    try {
+      if (!this.port.hasCapability?.(id)) return;
+      value = this.value(id);
+      displayed = this.port.getCapabilityValue(id);
+    } catch {
+      // Metadata is optional SDK IO too. Retry this field later without
+      // aborting sibling retirement or synchronous lifecycle withdrawal.
+      return;
+    }
+    let slot = this.slots.get(id);
+    if (!slot) {
+      slot = {
+        write: null, clear: null, revision: 0, clearedRevision: -1,
+      };
+      this.slots.set(id, slot);
+    }
+    if (value === null) {
+      if (slot.clear || (displayed === null
+        && (!slot.write || slot.clearedRevision === slot.revision))) return;
+    } else if (slot.write || slot.clear || displayed === value) return;
+    const lane = value === null ? 'clear' : 'write';
+    if (lane === 'write') slot.revision++;
+    const { revision } = slot;
+    const owned = slot;
+    let succeeded = false;
+    // Promise wrapping also contains a synchronously throwing optional SDK seam.
+    const pending = Promise.resolve().then(() => this.port.setCapabilityValue(id, value)).then(() => {
+      succeeded = true;
+      if (lane === 'clear') owned.clearedRevision = revision;
+    }).catch(() => { /* Retry only on a later render; isolate each optional field. */ })
+      .finally(() => {
+        if (owned[lane] === pending) owned[lane] = null;
+        // The field's current monitor, not a captured old generation, decides the
+        // correction. Bound immediate catch-up; failures never self-spawn retries.
+        if (succeeded && corrections > 0) this.reconcileField(id, corrections - 1);
+      });
+    owned[lane] = pending;
+  }
+
   stop(): Promise<void> {
     ++this.generation; this.monitor?.clear(); this.monitor = null;
-    return this.enqueue(async () => {
-      for (const id of DUAL_CT_ENERGY_DETAIL_CAPABILITIES) {
-        if (this.port.hasCapability?.(id) && this.port.getCapabilityValue(id) !== null) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.port.setCapabilityValue(id, null).catch(() => {});
-        }
-      }
-    }).catch(() => { /* A failed optional clear must not prevent core Energy shutdown/recovery. */ });
+    this.reconcile();
+    // Numeric/configuration IO is deliberately absent from the shutdown barrier.
+    return Promise.all([...this.slots.values()].map((slot) => slot.clear)).then(() => {});
   }
 }

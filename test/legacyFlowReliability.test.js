@@ -43,7 +43,7 @@ async function harness(t) {
   let now = Date.parse('2026-10-17T11:00:00Z'); t.mock.method(Date, 'now', () => now);
   let timeZone = 'Europe/London', latitude = 51.5;
   const device = new StreamDevice(), listeners = {}, timers = new Map(), events = []; let nextTimer = 0;
-  const card = id => ({ registerRunListener: fn => { listeners[id] = fn; }, trigger: async (_device, tokens) => { events.push({ id, tokens }); } });
+  const card = id => ({ registerRunListener: fn => { listeners[id] = fn; }, trigger: async (_device, tokens, state) => { events.push({ id, tokens, state }); } });
   const homey = { flow: { getConditionCard: card, getActionCard: card, getDeviceTriggerCard: card },
     clock: { getTimezone: () => timeZone }, geolocation: { getLatitude: () => latitude, getLongitude: () => -0.12 },
     setInterval: (fn, ms) => { const id = ++nextTimer; timers.set(id, { fn, ms }); return id; }, clearInterval: id => timers.delete(id),
@@ -131,6 +131,225 @@ test('legacy receipt helper rejects invalid, future, mismatched and out-of-order
   }
   fields.observe('measure_battery', 50, 50, 200000, 100001);
   assert.throws(() => fields.assert(['measure_battery'], () => current, false, 100001), /unavailable/);
+});
+
+const eventMode = mode => ({ [`energyStrategyOperateMode.${mode === 'tou' ? 'operateTouModeOpen' : 'operateSelfPoweredOpen'}`]: true });
+const observationEvents = h => h.events.filter(e => ['battery_level_crossed', 'operating_mode_changed'].includes(e.id));
+
+test('SOC/mode events: SDK rejection breaks only the rejected field and recovery is silent', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') });
+  const write = h.device.setCapabilityValue.bind(h.device); let failed = 'measure_battery';
+  h.device.setCapabilityValue = async (cap, value) => { if (cap === failed) throw new Error('synthetic rejection'); await write(cap, value); };
+  h.events.length = 0; await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['operating_mode_changed']);
+  failed = 'operating_mode'; h.events.length = 0;
+  await h.apply({ cmsBattSoc: 70, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h), [], 'SOC recovery and failed mode are silent');
+  h.device.setCapabilityValue = write;
+  await h.apply({ cmsBattSoc: 80, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['battery_level_crossed']);
+  h.events.length = 0; await h.apply({ cmsBattSoc: 90, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h).map(e => e.id).sort(), ['battery_level_crossed', 'operating_mode_changed']);
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: successful but SDK-mismatching reports break continuity, including equal cached recovery', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  const write = h.device.setCapabilityValue.bind(h.device);
+  h.device.setCapabilityValue = async () => {};
+  await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h), []);
+  h.device.setCapabilityValue = write;
+  await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h), [], 'same cached successful report establishes recovery');
+  await h.apply({ cmsBattSoc: 50, ...eventMode('tou') });
+  assert.equal(observationEvents(h).length, 2);
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: exact field TTL expires despite unrelated fresh power; recovery never infers a crossing', async t => {
+  const h = await harness(t); await h.apply({ ...baseQuota, cmsBattSoc: 40 });
+  h.events.length = 0; h.setTime(h.now() + LEGACY_FLOW_TTL_MS - 1);
+  await h.apply({ powGetBpCms: 100, ...eventMode('self_powered') });
+  h.setTime(h.now() + 1); await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['operating_mode_changed'], 'only renewed mode is continuous');
+  h.events.length = 0; h.setTime(h.now() + LEGACY_FLOW_TTL_MS - 1);
+  await h.apply({ powGetBpCms: 100, cmsBattSoc: 60 });
+  h.setTime(h.now() + 1); await h.apply({ cmsBattSoc: 50, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['battery_level_crossed'], 'only renewed SOC is continuous');
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: repeated successful values renew their own baseline without duplicate events', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  for (let i = 0; i < 3; i++) {
+    h.setTime(h.now() + LEGACY_FLOW_TTL_MS - 1);
+    await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') });
+  }
+  assert.deepEqual(observationEvents(h), []);
+  h.setTime(h.now() + 1); await h.apply({ cmsBattSoc: 50, ...eventMode('tou') });
+  await h.apply({ cmsBattSoc: 50, ...eventMode('tou') });
+  const events = observationEvents(h);
+  assert.equal(events.length, 2);
+  assert.deepEqual(events.find(e => e.id === 'battery_level_crossed'), {
+    id: 'battery_level_crossed', tokens: { battery: 50 }, state: { soc: 50, prevSoc: 40 },
+  });
+  assert.deepEqual(events.find(e => e.id === 'operating_mode_changed').tokens, { mode: 'tou' });
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: stale, future and out-of-order reports break continuity without emission or replay', async t => {
+  const h = await harness(t);
+  for (const kind of ['stale', 'future', 'out_of_order']) {
+    await h.device.setOnlineState(false); await h.device.setOnlineState(true);
+    await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') });
+    const baselineAt = h.now(); h.setTime(h.now() + 10); h.events.length = 0;
+    const at = kind === 'stale' ? h.now() - LEGACY_FLOW_TTL_MS : kind === 'future' ? h.now() + 1 : baselineAt - 1;
+    await h.device.applyQuota({ cmsBattSoc: 60, ...eventMode('tou') }, { receivedAt: at, source: 'mqtt' });
+    assert.deepEqual(observationEvents(h), [], kind);
+    await h.apply({ cmsBattSoc: 70, ...eventMode('tou') });
+    assert.deepEqual(observationEvents(h), [], kind + ' silent recovery');
+    await h.apply({ cmsBattSoc: 80, ...eventMode('self_powered') });
+    assert.equal(observationEvents(h).length, 2, kind + ' continuous change');
+  }
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: malformed SOC and ambiguous mode break independent continuity', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  await h.apply({ cmsBattSoc: 'invalid', ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['operating_mode_changed']);
+  h.events.length = 0;
+  await h.apply({ cmsBattSoc: 60, ...eventMode('self_powered'), ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h), []);
+  await h.apply({ cmsBattSoc: 70, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['battery_level_crossed']);
+  await h.device.onTeardown();
+});
+
+for (const field of ['SOC', 'mode']) {
+  test(`SOC/mode events: malformed ${field} watermark prevents rollback from seeding a false recovery`, async t => {
+    const h = await harness(t);
+    const start = h.now();
+    try {
+      await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') });
+      h.setTime(start + 100);
+      await h.apply(field === 'SOC' ? { cmsBattSoc: 'invalid', ...eventMode('tou') }
+        : { cmsBattSoc: 41, ...eventMode('self_powered'), ...eventMode('tou') });
+      assert.deepEqual(observationEvents(h).map(e => e.id),
+        [field === 'SOC' ? 'operating_mode_changed' : 'battery_level_crossed']);
+      h.events.length = 0;
+      h.setTime(start + 50);
+      await h.apply(field === 'SOC' ? { cmsBattSoc: 60 } : eventMode('tou'));
+      h.setTime(start + 101);
+      await h.apply(field === 'SOC' ? { cmsBattSoc: 70 } : eventMode('self_powered'));
+      assert.deepEqual(observationEvents(h), []);
+      h.setTime(start + 102);
+      await h.apply(field === 'SOC' ? { cmsBattSoc: 80 } : eventMode('tou'));
+      assert.deepEqual(observationEvents(h).map(e => e.id),
+        [field === 'SOC' ? 'battery_level_crossed' : 'operating_mode_changed']);
+    } finally {
+      await h.device.onTeardown();
+    }
+  });
+}
+
+test('SOC/mode events: foreign source reports break only their reported field', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  await h.device.applyQuota({ cmsBattSoc: 60 }, { receivedAt: h.now(), source: 'mqtt', sourceSn: 'SYNTHETIC_OTHER' });
+  assert.deepEqual(observationEvents(h), []);
+  await h.apply({ cmsBattSoc: 70, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h).map(e => e.id), ['operating_mode_changed']);
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: session reset during SDK await cannot emit or seed the new session', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  const write = h.device.setCapabilityValue.bind(h.device); let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  h.device.setCapabilityValue = async (cap, value) => {
+    if (cap === 'measure_battery') { entered(); await new Promise(resolve => { release = resolve; }); }
+    await write(cap, value);
+  };
+  const pending = h.apply({ cmsBattSoc: 60, ...eventMode('tou') }); await started;
+  await h.device.setOnlineState(false); await h.device.setOnlineState(true);
+  release(); await pending;
+  assert.deepEqual(observationEvents(h), []);
+  h.device.setCapabilityValue = write;
+  await h.apply({ cmsBattSoc: 70, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h), []);
+  await h.apply({ cmsBattSoc: 80, ...eventMode('tou') });
+  assert.equal(observationEvents(h).length, 2);
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: observation expiring during SDK await is silent and recovery is a baseline', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  const write = h.device.setCapabilityValue.bind(h.device); let advanced = false;
+  h.device.setCapabilityValue = async (cap, value) => {
+    if (!advanced && cap === 'measure_battery') { advanced = true; h.setTime(h.now() + LEGACY_FLOW_TTL_MS); }
+    await write(cap, value);
+  };
+  await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h), []);
+  h.device.setCapabilityValue = write; await h.apply({ cmsBattSoc: 70, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h), []);
+  await h.apply({ cmsBattSoc: 80, ...eventMode('self_powered') });
+  assert.equal(observationEvents(h).length, 2); await h.device.onTeardown();
+});
+
+test('SOC/mode events: genuine crossings keep exact equality and direction semantics', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  const matches = (event, direction, level) => h.listeners.battery_level_crossed({ direction, level }, event.state);
+  await h.apply({ cmsBattSoc: 50 }); const up = observationEvents(h).at(-1);
+  assert.equal(matches(up, 'above', 50), true); assert.equal(matches(up, 'below', 50), false);
+  await h.apply({ cmsBattSoc: 60 }); const fromEqual = observationEvents(h).at(-1);
+  assert.equal(matches(fromEqual, 'above', 50), false);
+  await h.apply({ cmsBattSoc: 50 }); const down = observationEvents(h).at(-1);
+  assert.equal(matches(down, 'below', 50), true); assert.equal(matches(down, 'above', 50), false);
+  await h.apply({ cmsBattSoc: 40 }); assert.equal(matches(observationEvents(h).at(-1), 'below', 50), false);
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: a superseded generation cannot renew an equal-value baseline during quota application', async t => {
+  const h = await harness(t);
+  for (const generation of ['lifecycleGeneration', 'monitoringSession', 'monitoringGeneration']) {
+    await h.device.setOnlineState(false); await h.device.setOnlineState(true);
+    await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+    const remaining = h.device.applyRemainingTime.bind(h.device); let release, entered;
+    const started = new Promise(resolve => { entered = resolve; });
+    h.device.applyRemainingTime = async () => { entered(); await new Promise(resolve => { release = resolve; }); };
+    const pending = h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); await started;
+    h.device[generation] += 1; release(); await pending;
+    assert.deepEqual(observationEvents(h), [], generation);
+    h.device.applyRemainingTime = remaining;
+    await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+    assert.deepEqual(observationEvents(h), [], generation + ' silent recovery');
+    await h.apply({ cmsBattSoc: 70, ...eventMode('self_powered') });
+    assert.equal(observationEvents(h).length, 2, generation + ' continuous change');
+  }
+  await h.device.onTeardown();
+});
+
+test('SOC/mode events: clock rollback breaks continuity and rejected replay cannot seed recovery', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  const original = h.now(); h.setTime(original - 1);
+  await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+  await h.apply({ cmsBattSoc: 70, ...eventMode('self_powered') });
+  assert.deepEqual(observationEvents(h), []);
+  h.setTime(original + 1); await h.apply({ cmsBattSoc: 80, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h), []);
+  await h.apply({ cmsBattSoc: 90, ...eventMode('self_powered') });
+  assert.equal(observationEvents(h).length, 2); await h.device.onTeardown();
+});
+
+test('SOC/mode events: independent SDK-only cache changes cannot bridge an unobserved transition', async t => {
+  const h = await harness(t); await h.apply({ cmsBattSoc: 40, ...eventMode('self_powered') }); h.events.length = 0;
+  h.device.values.measure_battery = 90; h.device.values.operating_mode = 'tou';
+  await h.apply({ cmsBattSoc: 60, ...eventMode('tou') });
+  assert.deepEqual(observationEvents(h), []);
+  await h.apply({ cmsBattSoc: 70, ...eventMode('self_powered') });
+  assert.equal(observationEvents(h).length, 2); await h.device.onTeardown();
 });
 
 test('invalid comparison directions and non-finite or out-of-range thresholds reject rather than invert', async t => {
@@ -236,13 +455,16 @@ test('forecast calendar arithmetic follows Homey timezone over DST and handles a
   assert.throws(() => fields.assert('solar_forecast_today', 0, 'Europe/London', 'other', now), /unavailable/);
 });
 
-test('wording changes preserve all legacy IDs, arguments, filters, dropdown values and tokens exactly', () => {
+test('legacy IDs, arguments and tokens are preserved, with only additive qualified CT1 eligibility', () => {
   const root = path.join(__dirname, '..');
   const before = legacyContract;
   const strip = card => Object.fromEntries(Object.entries(card).filter(([key]) => !['title', 'titleFormatted', 'hint'].includes(key)));
   for (const [kind, cards] of Object.entries(before.flow)) for (const old of cards) {
     const filename = path.join(root, '.homeycompose', 'flow', kind, old.id + '.json');
     assert.equal(fs.existsSync(filename), true, old.id);
-    const current = JSON.parse(fs.readFileSync(filename)); assert.deepEqual(strip(current), strip(old), old.id);
+    const current = JSON.parse(fs.readFileSync(filename));
+    const expected = structuredClone(old);
+    if (old.id === 'smartmeter_grid_power_above') expected.args[0].filter = 'driver_id=smartmeter|smartmeter_dual_ct_energy';
+    assert.deepEqual(strip(current), strip(expected), old.id);
   }
 });

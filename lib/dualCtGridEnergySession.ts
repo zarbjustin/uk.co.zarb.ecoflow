@@ -278,6 +278,7 @@ export class DualCtGridEnergySession {
     return {
       status: this.status,
       projectionNow: now,
+      powerReceivedAt: fresh ? previous!.receivedAt : null,
       powerFreshUntil: fresh ? Math.min(previous!.receivedAt + (this.contract?.freshnessMs ?? 90000),
         previous!.timing === 'device_measurement' ? previous!.measuredAt! + 90000 : Infinity) : null,
       timingBasis: this.contract?.timing || null,

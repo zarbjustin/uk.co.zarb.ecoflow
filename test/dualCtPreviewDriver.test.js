@@ -147,8 +147,9 @@ function harness(options = {}) {
     app: { subscribeAppRealtime: async (_sn, handler, active) => {
       if (options.pending) await options.pending;
       if (!active()) return false;
-      handlers.add(handler); return options.subscription !== false;
-    }, unsubscribeAppRealtime: (_sn, handler) => handlers.delete(handler) },
+      const delivered = (payload, topic, metadata = { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: false }) => handler(payload, topic, metadata);
+      handlers.add(delivered); return options.subscription !== false;
+    }, unsubscribeAppRealtime: () => handlers.clear() },
     drivers: { getDriver: () => ({ getDevices: () => options.other ? [options.other] : [device] }) },
   };
   device.getData = () => ({ sn }); device.getSetting = key => settingValues[key];
@@ -381,6 +382,234 @@ test('burst telemetry coalesces pending display work and display failures remain
     [...h.timers.values()].find(timer => timer.interval).fn(); await h.device.chain;
     assert.equal(h.device.available, true); assert.equal(h.values.get('dual_ct_preview_total.a'), 102);
   } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('expiry is fail-closed during blocked display IO and late completion cannot revive CT1 using fresh voltage or CT2', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit();
+  const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+  const available = []; const write = h.device.setCapabilityValue; let release; let block = true;
+  h.device.setAvailable = async () => { available.push([Date.now(), h.values.get('dual_ct_preview_total.a')]); h.device.available = true; };
+  h.device.setCapabilityValue = async (id, value) => {
+    if (block && id === 'dual_ct_preview_total.a' && value !== null) {
+      block = false; await new Promise(resolve => { release = resolve; });
+    }
+    await write(id, value);
+  };
+  t.mock.timers.tick(1); handler(frame(packet(5)), topic); await new Promise(setImmediate); assert.ok(release);
+  t.mock.timers.tick(90000);
+  const expiry = [...h.timers].find(([, row]) => !row.interval && row.ms >= 89999);
+  assert.ok(expiry); h.timers.delete(expiry[0]); expiry[1].fn();
+  await new Promise(setImmediate);
+  assert.equal(h.device.available, false, 'expiry availability must not wait for the display promise');
+  handler(frame(Buffer.concat([scalar(956, 240), scalar(985, 241), scalar(991, 12)])), topic);
+  release(); await settlePreview(h);
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+  assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+  assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), 240);
+  assert.equal(h.values.get('dual_ct_preview_power.b_p1'), 12);
+  assert.ok(available.every(([at, power]) => at < 190001 || power === null), 'every late availability transition has a current CT1 projection');
+  await h.device.onUninit();
+});
+
+async function settlePreview(h) { for (let n = 0; n < 5; n++) { await new Promise(setImmediate); await h.device.chain; } }
+
+test('retained, duplicate, unknown, expired and old-order deliveries cannot silently renew the preview', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit(); const handler = [...h.handlers][0];
+  handler(frame(), topic); await h.device.chain;
+  t.mock.timers.tick(90000);
+  for (const metadata of [null, { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: true, duplicate: false },
+    { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: true },
+    { receivedAt: 100000, receivedMonoMs: 100000, retained: false, duplicate: false },
+    { receivedAt: Date.now() + 1, receivedMonoMs: Date.now(), retained: false, duplicate: false },
+    { receivedAt: Date.now() }]) handler(frame(packet(99)), topic, metadata);
+  h.device.render(h.device.generation); await h.device.chain;
+  assert.equal(h.device.available, false); assert.equal(h.device.getDualCtPreviewDiagnostics().acceptedPackets, 1);
+  t.mock.timers.tick(1); handler(frame(packet(4)), topic); await h.device.chain;
+  assert.equal(h.device.available, true);
+  handler(frame(packet(99)), topic, { receivedAt: Date.now() - 1, receivedMonoMs: Date.now() - 1, retained: false, duplicate: false });
+  await h.device.chain; assert.equal(h.values.get('dual_ct_preview_total.a'), 5);
+  await h.device.onUninit();
+});
+
+test('teardown finishes without a never-resolving display write and a late old-generation completion is corrected', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit(); const write = h.device.setCapabilityValue; let release;
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_total.a' && value !== null) await new Promise(resolve => { release = resolve; });
+    await write(id, value);
+  };
+  [...h.handlers][0](frame(), topic); await new Promise(setImmediate); assert.ok(release);
+  const stopped = h.device.onUninit();
+  const result = await Promise.race([stopped.then(() => true), new Promise(resolve => setImmediate(() => resolve(false)))]);
+  assert.equal(h.device.available, false); assert.equal(result, true);
+  assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+  release(); await settlePreview(h);
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+  assert.equal(h.device.available, false); assert.equal(h.timers.size, 0);
+});
+
+test('a timed-out SDK slot stays bounded during bursts and cannot block expiry of other displayed fields', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit();
+  const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+  const write = h.device.setCapabilityValue; let entered; let release; let calls = 0;
+  const started = new Promise(resolve => { entered = resolve; });
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_total.a' && value !== null) { calls++; entered(); await new Promise(resolve => { release = resolve; }); }
+    await write(id, value);
+  };
+  t.mock.timers.tick(1); handler(frame(packet(5)), topic); await started;
+  t.mock.timers.tick(5000);
+  const budget = [...h.timers].find(([, row]) => !row.interval && row.ms === 5000);
+  h.timers.delete(budget[0]); budget[1].fn(); await h.device.chain;
+  for (let n = 0; n < 1000; n++) { t.mock.timers.tick(1); handler(frame(packet(n)), topic); }
+  await h.device.chain;
+  assert.equal(calls, 1); assert.equal(h.device.pendingWrites.size, 1);
+  t.mock.timers.tick(90000); h.device.render(h.device.generation); await h.device.chain;
+  assert.equal(h.device.available, false); assert.equal(h.values.get('dual_ct_preview_power.b_p1'), null);
+  assert.equal(h.device.pendingWrites.size, 1, 'timeouts do not cancel or replace an unresolved SDK operation');
+  await h.device.onUninit(); assert.equal(h.timers.size, 0);
+  release(); await settlePreview(h); assert.equal(h.device.pendingWrites.size, 0);
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+});
+
+test('transport epoch changes clear old fields and delayed receipt age is never replaced with redraw time', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit(); const handler = [...h.handlers][0];
+  const delivery = epoch => ({ receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: false, connectionEpoch: epoch });
+  handler(frame(), topic, delivery(1)); await h.device.chain;
+  t.mock.timers.tick(1); handler(frame(scalar(956, 240)), topic, delivery(2)); await h.device.chain;
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null); assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), 240);
+  t.mock.timers.tick(1); handler(frame(packet(99)), topic, delivery(1)); await h.device.chain;
+  assert.equal(h.device.getDualCtPreviewDiagnostics().acceptedPackets, 2);
+  t.mock.timers.tick(50000);
+  handler(frame(packet(4)), topic, { ...delivery(2), receivedAt: 100003, receivedMonoMs: 100003 }); await h.device.chain;
+  assert.equal(h.device.getDualCtPreviewDiagnostics().lastReceiptAgeSec, 49.999);
+  t.mock.timers.tick(40001); h.device.render(h.device.generation); await h.device.chain;
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null); assert.equal(h.device.available, false);
+  await h.device.onUninit();
+});
+
+for (const [blocked, rejected] of [false, true].flatMap(blocked => (
+  ['unrelated', 'retained', 'duplicate', 'expired'].map(rejected => [blocked, rejected])
+))) {
+  test(`rejected first new-epoch preview frame invalidates before any ticker: ${rejected}, blocked SDK=${blocked}`, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+    t.mock.method(auth, 'appAuthClientFromSettings', () => ({
+      getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow],
+    }));
+    const h = harness(); await h.device.onInit();
+    const handler = [...h.handlers][0];
+    const delivery = (epoch, mono) => ({
+      receivedAt: Date.now(), receivedMonoMs: mono, retained: false, duplicate: false, connectionEpoch: epoch,
+    });
+    handler(frame(), topic, delivery(1, 1000)); await h.device.chain;
+    assert.equal(h.device.available, true);
+    let release;
+    try {
+      if (blocked) {
+        const write = h.device.setCapabilityValue; let entered;
+        const started = new Promise(resolve => { entered = resolve; });
+        h.device.setCapabilityValue = async (id, value) => {
+          if (id === 'dual_ct_preview_total.a' && value !== null) {
+            entered(); await new Promise(resolve => { release = resolve; });
+          }
+          await write(id, value);
+        };
+        t.mock.timers.tick(1); handler(frame(packet(5)), topic, delivery(1, 1001)); await started;
+      }
+      const accepted = h.device.acceptedPackets;
+      t.mock.timers.tick(1);
+      const metadata = delivery(2, 0);
+      if (rejected === 'retained') metadata.retained = true;
+      if (rejected === 'duplicate') metadata.duplicate = true;
+      if (rejected === 'expired') metadata.receivedAt -= 90000;
+      handler(rejected === 'unrelated' ? Buffer.from('{}') : frame(), topic, metadata);
+      assert.equal(h.device.available, false, 'request unavailability independently of render or periodic IO');
+      await h.device.chain;
+      assert.equal(h.device.acceptedPackets, accepted);
+      assert.equal(h.device.monitor.snapshot(Date.now(), text).recent, false);
+      assert.equal(h.values.get('dual_ct_preview_total.b'), null);
+    } finally {
+      await h.device.onUninit();
+      if (release) release();
+      await settlePreview(h);
+    }
+    assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+    assert.equal(h.device.available, false); assert.equal(h.timers.size, 0);
+  });
+}
+
+for (const changed of [false, true]) {
+  test(`known preview monotonic rollback/equality cannot renew live fields, changed bytes=${changed}`, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+    t.mock.method(auth, 'appAuthClientFromSettings', () => ({
+      getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow],
+    }));
+    const h = harness(); await h.device.onInit();
+    const handler = [...h.handlers][0];
+    const delivery = (epoch, mono) => ({
+      receivedAt: Date.now(), receivedMonoMs: mono, retained: false, duplicate: false, connectionEpoch: epoch,
+    });
+    try {
+      handler(frame(), topic, delivery(1, 1000)); await h.device.chain;
+      for (const mono of [900, 1000]) {
+        t.mock.timers.tick(1); handler(changed ? frame(packet(99)) : frame(), topic, delivery(1, mono));
+        await h.device.chain;
+        assert.equal(h.device.acceptedPackets, 1);
+        assert.equal(h.device.lastAcceptedAt, 100000);
+        assert.equal(h.values.get('dual_ct_preview_total.a'), 2);
+      }
+      t.mock.timers.tick(1); handler(frame(), topic, delivery(undefined, 1001)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 1, 'known epoch cannot be downgraded to an unknown delivery scope');
+      t.mock.timers.tick(1); handler(frame(), topic, delivery(1, 1001)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 2, 'genuinely advancing receipt can renew identical bytes');
+      t.mock.timers.tick(1); handler(frame(), topic, delivery(2, 0)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 3, 'new epoch resets monotonic scope');
+      t.mock.timers.tick(1); handler(frame(packet(99)), topic, delivery(1, 5000)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 3);
+      await h.device.onUninit(); await h.device.onInit();
+      t.mock.timers.tick(1); [...h.handlers][0](frame(), topic, delivery(undefined, 0)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 1, 'new device lifecycle admits a new legacy injected scope');
+    } finally {
+      await h.device.onUninit();
+    }
+  });
+}
+
+test('blocked status and availability SDK operations cannot hold logical expiry or teardown hostage', async t => {
+  for (const slot of ['status', 'available', 'unavailable']) await t.test(slot, async sub => {
+    sub.mock.timers.enable({ apis: ['Date'], now: 100000 });
+    sub.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+    const h = harness(); await h.device.onInit(); const handler = [...h.handlers][0];
+    if (slot === 'unavailable') { handler(frame(), topic); await h.device.chain; assert.equal(h.device.available, true); }
+    const method = slot === 'status' ? 'setCapabilityValue' : slot === 'available' ? 'setAvailable' : 'setUnavailable';
+    const original = h.device[method]; let release; let entered; let blocked = false;
+    const started = new Promise(resolve => { entered = resolve; });
+    h.device[method] = async (...args) => {
+      if (!blocked && (slot !== 'status' || args[0] === 'dual_ct_preview_status')) {
+        blocked = true; entered(); await new Promise(resolve => { release = resolve; });
+      }
+      await original.apply(h.device, args);
+    };
+    if (slot === 'unavailable') { sub.mock.timers.tick(90000); h.device.render(h.device.generation); }
+    else handler(frame(), topic);
+    await started;
+    if (slot !== 'unavailable') { sub.mock.timers.tick(90000); h.device.render(h.device.generation); }
+    await h.device.chain;
+    assert.equal(h.device.monitor.snapshot(Date.now(), key => key, h.device.displayRoles).recent, false);
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+    await h.device.onUninit(); assert.equal(h.timers.size, 0);
+    release(); await settlePreview(h);
+    assert.equal(h.device.available, false); assert.match(h.values.get('dual_ct_preview_status'), /disabled/i);
+  });
 });
 
 test('ordinary support export contains preview health but never preview numbers, bindings, raw data or credentials', () => {
