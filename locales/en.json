@@ -1,5 +1,6 @@
 {
   "reserve_request": {
+    "binding": "Check the installation and Developer API settings, then turn off and re-enable experimental reserve requests to verify the main unit.",
     "notice": "Experimental reserve requests enabled. Flow success means API acceptance only; check EcoFlow independently. No automatic restoration.",
     "arguments": "Choose a whole reserve percentage from 0 to 100.",
     "disabled": "Enable experimental reserve requests in this device's Advanced Settings first.",

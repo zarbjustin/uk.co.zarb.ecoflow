@@ -1,5 +1,6 @@
 {
   "reserve_request": {
+    "binding": "Anlage und Developer-API-Einstellungen prüfen. Danach experimentelle Reserveanfragen aus- und erneut einschalten, um das Hauptgerät zu prüfen.",
     "notice": "Experimentelle Reserveanfragen aktiviert. Flow-Erfolg bedeutet nur API-Annahme; unabhängig in EcoFlow prüfen. Keine automatische Wiederherstellung.",
     "arguments": "Eine ganze Reserve-Prozentzahl von 0 bis 100 wählen.",
     "disabled": "Experimentelle Reserveanfragen zuerst in den erweiterten Geräteeinstellungen aktivieren.",

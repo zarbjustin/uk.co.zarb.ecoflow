@@ -135,7 +135,8 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   protected monitoringOnlyMessageKey(): string {
-    return 'device.stream_5000_system.monitoring_only';
+    return this.getSetting('reserve_request_enabled') === true
+      ? 'reserve_request.notice' : 'device.stream_5000_system.monitoring_only';
   }
 
   /** Translate protocol capabilities into the public capabilities for this device role. */
@@ -1116,10 +1117,16 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
     if (changedKeys.includes('reserve_request_enabled')) {
-      getApp(this.homey)?.cancelStream5000ReserveRequests?.();
+      const app = getApp(this.homey);
+      app?.cancelStream5000ReserveRequests?.();
+      const enabled = newSettings.reserve_request_enabled === true;
+      if (this.isEnergyAggregate()) {
+        if (enabled && !app?.configureStream5000ReserveMain) throw Error(this.homey.__('reserve_request.binding'));
+        await app?.configureStream5000ReserveMain?.(this, enabled);
+      }
       let key = this.isEnergyAggregate() ? 'device.stream_5000_system.monitoring_only' : 'device.stream_5000_unit.monitoring_only';
-      if (!this.isEnergyAggregate() && newSettings.reserve_request_enabled === true) key = 'reserve_request.notice';
-      await this.setSettings({ experimental_notice: this.homey.__(key) });
+      if (enabled) key = 'reserve_request.notice';
+      await this.setSettings({ experimental_notice: this.homey.__(key) }).catch(() => {});
     }
     if (!changedKeys.includes('diagnostic_capture_next')) return;
     this.diagnosticCaptureNext = Boolean(newSettings.diagnostic_capture_next);

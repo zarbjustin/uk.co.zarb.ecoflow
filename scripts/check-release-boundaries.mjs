@@ -69,10 +69,10 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
     }
   }
   assert.deepEqual(contract(app.flow.actions.find(card => card.id === 'stream_5000_request_backup_reserve').args), [
-    { type: 'device', name: 'device', filter: 'driver_id=stream_5000_unit|stream_ac5000' },
+    { type: 'device', name: 'device', filter: 'driver_id=stream_5000_unit|stream_ac5000|stream_5000_system' },
     { type: 'number', name: 'percent', min: 0, max: 100, step: 1 },
   ], 'Only the explicitly opted-in, request-only reserve action is admitted');
-  for (const id of ['stream_5000_unit', 'stream_ac5000']) {
+  for (const id of ['stream_5000_unit', 'stream_ac5000', 'stream_5000_system']) {
     assert.equal(app.drivers.find(driver => driver.id === id).settings.find(setting => setting.id === 'reserve_request_enabled').value, false);
   }
   assert.deepEqual(contract(app.flow.conditions.find(card => card.id === 'stream_5000_reading_current').args), [

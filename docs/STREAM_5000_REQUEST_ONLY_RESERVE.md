@@ -9,12 +9,37 @@ release is documented in [the 1.11.25 beta policy](COMMUNITY_TEST_1_11_25.md).
 The owner declined the local pilot and soak; neither is represented as passed.
 Volunteer commissioning does not authorise changes to the owner's Homey.
 
+## Home Battery source candidate for review
+
+The candidate adds the existing STREAM 5000 Home Battery to the same reserve
+THEN card. Existing physical-unit card selections and arguments are preserved.
+The Home Battery has a separate default-off opt-in in Advanced Settings.
+Enabling it uses a read-only Developer API lookup to record the main unit for
+the already paired address. The private binding also records a fingerprint of
+the Developer credentials and region. Enabling the option sends no reserve
+request.
+
+Each invocation requires both fresh main lookups to match that saved binding.
+If the binding is missing, the main unit differs or Developer credentials have
+changed, review the installation and disable and re-enable the setting. If linked
+membership changes, review the installation even when EcoFlow reports the same
+main. The lookup establishes routing and does not verify every linked unit.
+Disabling the setting immediately withdraws local permission to dispatch.
+
+The aggregate and physical cards share the same one-request slot, mode and
+reserve guards, and acceptance-only result. Pairing, capabilities, Energy,
+and cumulative meter identities are preserved. Software review on 9 November
+2026 passed 1,826 tests, lint with four existing warnings, the release boundary
+check and Homey CLI 4.5.3 verified validation. Actual aggregate commissioning
+and exact-runtime soak remain open. This candidate is an uncommitted source
+diff and has not been installed or published.
+
 ## What the card does
 
 **Request installation backup reserve (no confirmation)** is a real THEN handler,
-not a dry run. It is available for paired STREAM 5000 Series Unit and existing
-deprecated AC 5000 physical devices, never the Home Battery aggregate or original
-STREAM. Each device defaults to opt-out. Explicitly enabling **Allow experimental
+not a dry run. In released 1.11.26 it is available for paired STREAM 5000 Series
+Unit and existing deprecated AC 5000 physical devices. Each device defaults to
+opt-out. Explicitly enabling **Allow experimental
 reserve requests** in its Advanced Settings permits requests; enabling that
 setting alone sends nothing. Developer API keys/region are required separately
 from the EcoFlow app sign-in used for monitoring.

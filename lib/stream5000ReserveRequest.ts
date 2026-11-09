@@ -1,7 +1,8 @@
 import type { EcoFlowClient } from './EcoFlowClient';
 
 type ReserveRequestClient = Pick<EcoFlowClient, 'getMainSnEnvelope' | 'getQuotaEnvelope' | 'setQuotaEnvelope'>;
-export type ReserveRequestFailure = 'arguments' | 'cancelled' | 'preflight' | 'uncertain';
+export type ReserveRequestFailure = 'arguments' | 'cancelled' | 'preflight' | 'binding' | 'uncertain';
+export const RESERVE_MAIN_BINDING = 'reserveRequestMainBinding';
 
 export class ReserveRequestError extends Error {
   constructor(public readonly reason: ReserveRequestFailure) {
@@ -9,15 +10,26 @@ export class ReserveRequestError extends Error {
   }
 }
 
-const family = (sn: unknown): sn is string => typeof sn === 'string' && /^ES2[12][A-Z0-9]{4,60}$/.test(sn);
+export const isReserveRequestSerial = (sn: unknown): sn is string => typeof sn === 'string' && /^ES2[12][A-Z0-9]{4,60}$/.test(sn);
 const quotas = ['bpBackupConfig-backupSocOnOff', 'bpBackupConfig-backupSoc', 'workMode'];
+
+export async function readReserveRequestMain(
+  client: Pick<ReserveRequestClient, 'getMainSnEnvelope'>, sn: string, signal: AbortSignal,
+): Promise<string> {
+  if (!isReserveRequestSerial(sn) || signal.aborted) throw new ReserveRequestError('preflight');
+  const response = await client.getMainSnEnvelope(sn, { signal, timeoutMs: 5000 });
+  const main = (response?.data as { sn?: unknown } | undefined)?.sn;
+  if (response?.code !== '0' || !isReserveRequestSerial(main)) throw new ReserveRequestError('preflight');
+  return main;
+}
 
 /** One official API request, not applied control, physical verification or a restoration lease. */
 export async function requestStream5000Reserve(
   client: ReserveRequestClient, sn: string, percent: number,
-  signal: AbortSignal, active: () => boolean, now: () => number = Date.now,
+  signal: AbortSignal, active: () => boolean,
+  { now = Date.now, approvedMain }: { now?: () => number; approvedMain?: string } = {},
 ): Promise<{ requestAccepted: true; applicationConfirmed: false }> {
-  if (!family(sn) || !Number.isSafeInteger(percent) || percent < 0 || percent > 100) {
+  if (!isReserveRequestSerial(sn) || !Number.isSafeInteger(percent) || percent < 0 || percent > 100) {
     throw new ReserveRequestError('arguments');
   }
   const started = now();
@@ -32,15 +44,11 @@ export async function requestStream5000Reserve(
     previous = time;
   };
   const options = { signal, timeoutMs: 5000 };
-  const mainFrom = (response: { code: string; data?: unknown }): string => {
-    const main = (response?.data as { sn?: unknown } | undefined)?.sn;
-    if (response?.code !== '0' || !family(main)) throw new ReserveRequestError('preflight');
-    return main;
-  };
   try {
     check();
-    const main = mainFrom(await client.getMainSnEnvelope(sn, options));
+    const main = await readReserveRequestMain(client, sn, signal);
     check();
+    if (approvedMain !== undefined && main !== approvedMain) throw new ReserveRequestError('binding');
     const report = await client.getQuotaEnvelope(main, [...quotas], options);
     check();
     const data = report?.data as Record<string, unknown> | undefined;
@@ -48,9 +56,9 @@ export async function requestStream5000Reserve(
       || !Number.isSafeInteger(data['bpBackupConfig-backupSoc'])
       || Number(data['bpBackupConfig-backupSoc']) < 0 || Number(data['bpBackupConfig-backupSoc']) > 100
       || data.workMode !== 'SELF_CONSUMPTION') throw new ReserveRequestError('preflight');
-    const confirmedMain = mainFrom(await client.getMainSnEnvelope(sn, options));
+    const confirmedMain = await readReserveRequestMain(client, sn, signal);
     check();
-    if (confirmedMain !== main) throw new ReserveRequestError('preflight');
+    if (confirmedMain !== main) throw new ReserveRequestError(approvedMain === undefined ? 'preflight' : 'binding');
     // Main routing is cloud-reported installation scope, never proof of unit-only effects.
     possibleSubmission = true;
     const response = await client.setQuotaEnvelope({

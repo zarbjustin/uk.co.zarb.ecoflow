@@ -115,6 +115,21 @@
   },
   "settings": [
     {
+      "id": "reserve_request_enabled",
+      "type": "checkbox",
+      "value": false,
+      "label": {
+        "en": "Allow experimental reserve requests",
+        "de": "Experimentelle Reserveanfragen erlauben",
+        "nl": "Experimentele reserveaanvragen toestaan"
+      },
+      "hint": {
+        "en": "Enabling verifies the current main unit using Developer API keys. Flow requests may affect the linked installation. If the main unit or Developer credentials change, review the installation and enable again. Reserve must already be on in Self-consumption mode. Flow success means API acceptance only.",
+        "de": "Beim Aktivieren wird das aktuelle Hauptgerät mit Developer-API-Schlüsseln geprüft. Flow-Anfragen können die verbundene Anlage betreffen. Nach einer Änderung des Hauptgeräts oder der Developer-Zugangsdaten die Anlage prüfen und erneut aktivieren. Die Reserve muss im Eigenverbrauch bereits aktiv sein. Flow-Erfolg bedeutet nur API-Annahme.",
+        "nl": "Bij inschakelen wordt de huidige hoofdeenheid gecontroleerd met Developer-API-sleutels. Flow-aanvragen kunnen de gekoppelde installatie beïnvloeden. Controleer de installatie en schakel opnieuw in als de hoofdeenheid of Developer-inloggegevens wijzigen. Reserve moet al aanstaan in Zelfverbruik-modus. Flow-succes betekent alleen API-acceptatie."
+      }
+    },
+    {
       "id": "installed_capacity_kwh",
       "type": "number",
       "label": {

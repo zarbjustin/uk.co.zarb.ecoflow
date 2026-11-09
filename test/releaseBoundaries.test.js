@@ -14,9 +14,10 @@ test('release check rejects accidental Energy, actions, public routes, permissio
   for (const mutate of [
     value => { value.app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_preview').energy = { cumulative: true }; },
     value => { value.app.flow.actions.push({ id: 'coordination_force_charge' }); },
-    value => { value.app.flow.actions.find(card => card.id === 'stream_5000_request_backup_reserve').args[0].filter += '|stream_5000_system'; },
+    value => { value.app.flow.actions.find(card => card.id === 'stream_5000_request_backup_reserve').args[0].filter += '|stream'; },
     value => { value.app.flow.actions.find(card => card.id === 'stream_5000_request_backup_reserve').args[1].max = 101; },
     value => { value.app.drivers.find(driver => driver.id === 'stream_5000_unit').settings.find(setting => setting.id === 'reserve_request_enabled').value = true; },
+    value => { value.app.drivers.find(driver => driver.id === 'stream_5000_system').settings.find(setting => setting.id === 'reserve_request_enabled').value = true; },
     value => { value.app.api.coordinationWorkspace.public = true; },
     value => { value.app.permissions.push('homey:manager:flow'); },
     value => { value.app.permissions.push('homey:manager:api'); },

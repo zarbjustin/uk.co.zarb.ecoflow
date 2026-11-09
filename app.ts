@@ -1,7 +1,7 @@
 'use strict';
 
 import Homey from 'homey';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { houseInstallationSnapshot } from './lib/houseInstallationSnapshot';
 import { houseReserveFrame, freshReserveSnapshot, assertHouseNoDischarge } from './lib/houseReserveControl';
 import type { ReportingObservation } from './lib/streamReportingDiagnostics';
@@ -17,7 +17,9 @@ import { EcoFlowDevice } from './lib/types';
 import { CoordinationWorkspace } from './lib/coordinationWorkspace';
 import { CoordinationFlowMonitor } from './lib/coordinationFlowMonitor';
 import { gridNotificationMatches } from './lib/sustainedGridNotifications';
-import { requestStream5000Reserve, ReserveRequestError } from './lib/stream5000ReserveRequest';
+import {
+  isReserveRequestSerial, readReserveRequestMain, requestStream5000Reserve, ReserveRequestError, RESERVE_MAIN_BINDING,
+} from './lib/stream5000ReserveRequest';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -34,6 +36,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   private appSettingsTimer: NodeJS.Timeout | null = null;
   private stopping = false;
   private reserveRequest: AbortController | null = null;
+  private readonly withdrawnReserveBindings = new WeakSet<Homey.Device>();
   private pendingRealtime = 0;
   private pendingAppRealtime = 0;
   private releaseResearchMqttWhenIdle = false;
@@ -215,30 +218,87 @@ module.exports = class EcoFlowApp extends Homey.App {
     this.reserveRequest?.abort();
   }
 
-  async requestStream5000BackupReserve(device: Homey.Device, percent: number): Promise<boolean> {
-    const fail = (reason: string): never => {
-      throw new Error(this.homey.__(`reserve_request.${reason}`));
-    };
-    if (this.reserveRequest) return fail('busy');
-    if (!Number.isSafeInteger(percent) || percent < 0 || percent > 100) return fail('arguments');
-    const paired = () => ['stream_5000_unit', 'stream_ac5000'].some((id) => {
+  private reserveRequestDriver(device: Homey.Device): string | undefined {
+    return ['stream_5000_system', 'stream_5000_unit', 'stream_ac5000'].find((id) => {
       try {
         return this.homey.drivers.getDriver(id).getDevices().includes(device);
       } catch {
         return false;
       }
     });
-    if (!device || !paired()) return fail('unavailable');
+  }
+
+  private reserveCredentialsFingerprint(credentials: ReturnType<EcoFlowApp['getCredentials']>): string {
+    return createHash('sha256').update(JSON.stringify([
+      credentials.accessKey, credentials.secretKey, credentials.host,
+    ])).digest('hex');
+  }
+
+  /** Explicit aggregate opt-in records the official route using a read only. */
+  async configureStream5000ReserveMain(device: Homey.Device, enabled: boolean): Promise<void> {
+    this.withdrawnReserveBindings.add(device);
+    if (!enabled) {
+      // Opt-out takes effect immediately even if removing the saved binding fails.
+      await device.unsetStoreValue(RESERVE_MAIN_BINDING).catch(() => {});
+      return;
+    }
+    if (this.reserveRequest) throw new Error(this.homey.__('reserve_request.busy'));
+    const credentials = this.getCredentials();
+    if (!credentials.accessKey || !credentials.secretKey) throw new Error(this.homey.__('reserve_request.credentials'));
+    const anchor = device.getData().sn;
+    const fingerprint = this.reserveCredentialsFingerprint(credentials);
+    const controller = new AbortController();
+    const active = () => !this.stopping && !controller.signal.aborted && device.getAvailable()
+      && this.reserveRequestDriver(device) === 'stream_5000_system' && device.getData().sn === anchor
+      && this.reserveCredentialsFingerprint(this.getCredentials()) === fingerprint;
+    if (!active() || !isReserveRequestSerial(anchor)) throw new Error(this.homey.__('reserve_request.unavailable'));
+    this.reserveRequest = controller;
+    const timer = this.homey.setTimeout(() => controller.abort(), 5000);
+    try {
+      const main = await readReserveRequestMain(new EcoFlowClient({
+        accessKey: credentials.accessKey, secretKey: credentials.secretKey, host: credentials.host,
+      }), anchor, controller.signal);
+      if (!active()) throw Error('Reserve binding interrupted');
+      await device.setStoreValue(RESERVE_MAIN_BINDING, { anchor, main, fingerprint });
+      if (!active()) throw Error('Reserve binding interrupted');
+      this.withdrawnReserveBindings.delete(device);
+    } catch {
+      throw new Error(this.homey.__('reserve_request.binding'));
+    } finally {
+      this.homey.clearTimeout(timer);
+      if (this.reserveRequest === controller) this.reserveRequest = null;
+    }
+  }
+
+  async requestStream5000BackupReserve(device: Homey.Device, percent: number): Promise<boolean> {
+    const fail = (reason: string): never => {
+      throw new Error(this.homey.__(`reserve_request.${reason}`));
+    };
+    if (this.reserveRequest) return fail('busy');
+    if (!Number.isSafeInteger(percent) || percent < 0 || percent > 100) return fail('arguments');
+    const driver = device && this.reserveRequestDriver(device);
+    if (!driver) return fail('unavailable');
     if (device.getSetting('reserve_request_enabled') !== true) return fail('disabled');
     const credentials = this.getCredentials();
     if (!credentials.accessKey || !credentials.secretKey) return fail('credentials');
     const sn = device.getData().sn as string;
+    const system = driver === 'stream_5000_system';
+    const fingerprint = system ? this.reserveCredentialsFingerprint(credentials) : null;
+    const approvedMain = () => {
+      if (this.withdrawnReserveBindings.has(device)) return undefined;
+      const binding = device.getStoreValue(RESERVE_MAIN_BINDING);
+      return binding?.anchor === sn && binding.fingerprint === fingerprint && isReserveRequestSerial(binding.main)
+        ? binding.main : undefined;
+    };
+    const main = system ? approvedMain() : undefined;
+    if (system && !main) return fail('binding');
     const controller = new AbortController();
     const active = () => {
       const current = this.getCredentials();
       const lease = this.homey.settings.get('houseReserveLease');
-      return !this.stopping && !controller.signal.aborted && paired() && device.getAvailable()
+      return !this.stopping && !controller.signal.aborted && this.reserveRequestDriver(device) === driver && device.getAvailable()
         && device.getSetting('reserve_request_enabled') === true && device.getData().sn === sn
+        && (!system || approvedMain() === main)
         && current.accessKey === credentials.accessKey && current.secretKey === credentials.secretKey && current.host === credentials.host
         && this.homey.settings.get('houseReserveControl')?.enabled !== true && (!lease || lease.completed === true);
     };
@@ -249,7 +309,7 @@ module.exports = class EcoFlowApp extends Homey.App {
       const client = new EcoFlowClient({
         accessKey: credentials.accessKey, secretKey: credentials.secretKey, host: credentials.host,
       });
-      await requestStream5000Reserve(client, sn, percent, controller.signal, active);
+      await requestStream5000Reserve(client, sn, percent, controller.signal, active, { approvedMain: main });
       return true;
     } catch (error) {
       return fail(error instanceof ReserveRequestError ? error.reason : 'preflight');

@@ -4,10 +4,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const { EventEmitter } = require('node:events');
-const { requestStream5000Reserve, ReserveRequestError } = require('../.homeybuild/lib/stream5000ReserveRequest');
+const { requestStream5000Reserve, ReserveRequestError, RESERVE_MAIN_BINDING } = require('../.homeybuild/lib/stream5000ReserveRequest');
 const { EcoFlowClient } = require('../.homeybuild/lib/EcoFlowClient');
 const originalLoad = Module._load;
-let App; let Unit;
+let App; let Unit; let System;
 try {
   Module._load = function load(request, ...args) {
     if (request === 'homey') return { App: class {}, Device: class {} };
@@ -15,6 +15,7 @@ try {
   };
   App = require('../.homeybuild/app');
   Unit = require('../.homeybuild/lib/Stream5000UnitDevice').Stream5000PhysicalUnitDevice;
+  System = require('../.homeybuild/drivers/stream_5000_system/device');
 } finally { Module._load = originalLoad; }
 
 const unitSn = 'ES22SYNTHETIC0001';
@@ -127,32 +128,42 @@ test('expired, backwards and invalid clocks cannot submit', async () => {
     const h = fixture(); let clock = 1000;
     const read = h.client.getQuotaEnvelope;
     h.client.getQuotaEnvelope = async (...args) => { const result = await read(...args); clock = late; return result; };
-    await assert.rejects(requestStream5000Reserve(h.client, unitSn, 51, h.controller.signal, h.active, () => clock), reason('cancelled'));
+    await assert.rejects(requestStream5000Reserve(h.client, unitSn, 51, h.controller.signal, h.active, { now: () => clock }), reason('cancelled'));
     assert.equal(h.calls.filter(c => c[0] === 'set').length, 0);
   }
 });
 
-function appHarness(t) {
+function appHarness(t, { system = false } = {}) {
   const h = fixture(); const app = new App(); const values = {
     accessKey: 'synthetic-access', secretKey: 'synthetic-secret', host: 'https://api-e.ecoflow.com',
   };
-  let enabled = true; let available = true; let paired = true;
-  const device = {
+  let enabled = !system; let available = true; let paired = true;
+  const bindingStore = new Map();
+  const device = Object.assign(system ? new System() : {}, {
     getData: () => ({ sn: unitSn }), getAvailable: () => available,
     getSetting: key => key === 'reserve_request_enabled' && enabled,
-  };
+    getStoreValue: key => bindingStore.get(key),
+    setStoreValue: async (key, value) => { assert.equal(key, RESERVE_MAIN_BINDING); bindingStore.set(key, value); },
+    unsetStoreValue: async key => { assert.equal(key, RESERVE_MAIN_BINDING); bindingStore.delete(key); },
+    setSettings: async value => assert.deepEqual(Object.keys(value), ['experimental_notice']),
+  });
+  const physicalPeer = {};
   const settings = new EventEmitter(); settings.get = key => values[key];
   settings.set = () => assert.fail('No settings or optimistic state write');
   const timers = new Map(); let timer = 0; const actions = new Map();
   app.homey = {
     settings, app, __: key => key,
-    drivers: { getDriver: id => ({ getDevices: () => id === 'stream_5000_unit' && paired ? [device] : [] }) },
+    drivers: { getDriver: id => ({ getDevices: () => {
+      if (id === (system ? 'stream_5000_system' : 'stream_5000_unit') && paired) return [device];
+      return system && id === 'stream_5000_unit' ? [physicalPeer] : [];
+    } }) },
     flow: {
       getActionCard: id => ({ registerRunListener: run => actions.set(id, run) }),
       getConditionCard: () => ({ registerRunListener() {} }),
     },
     setTimeout: fn => { timers.set(++timer, fn); return timer; }, clearTimeout: id => timers.delete(id),
   };
+  device.homey = app.homey;
   app.log = () => {}; app.error = () => {};
   for (const method of ['getMainSnEnvelope', 'getQuotaEnvelope', 'setQuotaEnvelope']) {
     const original = EcoFlowClient.prototype[method];
@@ -160,7 +171,11 @@ function appHarness(t) {
     t.after(() => { EcoFlowClient.prototype[method] = original; });
   }
   return {
-    ...h, app, device, values, actions, timers,
+    ...h, app, device, physicalPeer, values, actions, timers, bindingStore,
+    setOptIn: async next => {
+      await device.onSettings({ newSettings: { reserve_request_enabled: next }, changedKeys: ['reserve_request_enabled'] });
+      enabled = next;
+    },
     disable: () => { enabled = false; }, offline: () => { available = false; }, remove: () => { paired = false; },
     run: () => app.requestStream5000BackupReserve(device, 51),
   };
@@ -174,7 +189,7 @@ test('actual registered THEN listener reaches the one-attempt client and returns
   await h.app.onUninit();
 });
 
-test('actual app rejects opt-out, missing credentials, offline/removed/aggregate targets and active private controllers', async t => {
+test('actual app rejects opt-out, missing credentials, unavailable targets and active private controllers', async t => {
   const h = appHarness(t);
   h.disable(); await assert.rejects(h.run(), /disabled/);
   assert.equal(h.calls.length, 0);
@@ -192,6 +207,72 @@ test('actual app rejects opt-out, missing credentials, offline/removed/aggregate
       await assert.rejects(x.run(), /unavailable/); assert.equal(x.calls.length, 0);
     });
   }
+});
+
+test('the existing THEN listener admits the Home Battery after read-only opt-in and uses its approved main', async t => {
+  const h = appHarness(t, { system: true }); await h.app.onInit();
+  const listener = h.actions.get('stream_5000_request_backup_reserve');
+  const run = () => listener({ device: h.device, percent: 51 });
+  await assert.rejects(run(), /disabled/);
+  assert.equal(h.calls.length, 0);
+  await h.setOptIn(true);
+  assert.deepEqual(h.calls.map(c => c[0]), ['main']);
+  assert.equal(h.bindingStore.get(RESERVE_MAIN_BINDING).main, mainSn);
+  assert.equal(await run(), true);
+  assert.deepEqual(h.calls.map(c => c[0]), ['main', 'main', 'read', 'main', 'set']);
+  assert.equal(h.calls.at(-1)[1].sn, mainSn);
+  assert.deepEqual(h.calls.at(-1)[1].params, { bpBackupConfig: { backupSoc: 51 } });
+  await h.setOptIn(false);
+  assert.equal(h.bindingStore.has(RESERVE_MAIN_BINDING), false);
+  await assert.rejects(run(), /disabled/);
+  await h.app.onUninit();
+});
+
+test('a Home Battery requires opt-in with a supported main and rejects missing or changed binding', async t => {
+  const h = appHarness(t, { system: true });
+  h.setMain('BK21SYNTHETIC0001');
+  await assert.rejects(h.setOptIn(true), /binding/);
+  await assert.rejects(h.run(), /disabled/);
+  h.setMain(mainSn);
+  await h.setOptIn(true);
+  const binding = h.bindingStore.get(RESERVE_MAIN_BINDING);
+  h.bindingStore.clear();
+  await assert.rejects(h.run(), /binding/);
+  h.bindingStore.set(RESERVE_MAIN_BINDING, binding);
+  h.setMain('ES22SYNTHETIC9999');
+  await assert.rejects(h.run(), /binding/);
+  h.setMain(mainSn);
+  h.values.secretKey = 'synthetic-replacement';
+  await assert.rejects(h.run(), /binding/);
+  assert.ok(h.calls.every(c => c[0] === 'main'), 'mismatches must stop before configuration reads or submission');
+});
+
+test('a Home Battery detects rerouting at the final check and shares the physical-unit request slot', async t => {
+  const h = appHarness(t, { system: true });
+  await h.setOptIn(true);
+  let completeRead;
+  h.client.getQuotaEnvelope = () => new Promise(resolve => { completeRead = resolve; });
+  const pending = h.run();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(typeof completeRead, 'function');
+  await assert.rejects(h.app.requestStream5000BackupReserve(h.physicalPeer, 51), /busy/);
+  h.setMain('ES22SYNTHETIC9999');
+  completeRead({ code: '0', data: report() });
+  await assert.rejects(pending, /binding/);
+  assert.equal(h.calls.filter(c => c[0] === 'set').length, 0);
+});
+
+test('withdrawing aggregate consent blocks new requests while the local store is clearing', async t => {
+  const h = appHarness(t, { system: true }); await h.setOptIn(true);
+  let finishClear;
+  h.device.unsetStoreValue = key => new Promise(resolve => {
+    finishClear = () => { h.bindingStore.delete(key); resolve(); };
+  });
+  const disabling = h.setOptIn(false);
+  await assert.rejects(h.run(), /binding/);
+  finishClear(); await disabling;
+  await assert.rejects(h.run(), /disabled/);
+  assert.deepEqual(h.calls.map(c => c[0]), ['main']);
 });
 
 test('app serializes requests without queueing and fences settings changes during preflight', async t => {

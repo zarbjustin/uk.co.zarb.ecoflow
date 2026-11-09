@@ -16,7 +16,7 @@
     "nl": "Activeer in de geavanceerde apparaatinstellingen en stel Developer-API-sleutels in. Richt zich op het door EcoFlow gemelde hoofdapparaat en kan gekoppelde units beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. Succes betekent alleen API-acceptatie, niet toepassing of laden. Geen automatische herhaling of herstel. Controleer onafhankelijk in EcoFlow."
   },
   "args": [
-    { "type": "device", "name": "device", "filter": "driver_id=stream_5000_unit|stream_ac5000" },
+    { "type": "device", "name": "device", "filter": "driver_id=stream_5000_unit|stream_ac5000|stream_5000_system" },
     {
       "type": "number", "name": "percent", "min": 0, "max": 100, "step": 1,
       "title": { "en": "Requested reserve", "de": "Angeforderte Reserve", "nl": "Aangevraagde reserve" },

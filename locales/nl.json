@@ -1,5 +1,6 @@
 {
   "reserve_request": {
+    "binding": "Controleer de installatie en de Developer-API-instellingen. Schakel experimentele reserveaanvragen uit en opnieuw in om de hoofdeenheid te verifiëren.",
     "notice": "Experimentele reserveaanvragen ingeschakeld. Flow-succes betekent alleen API-acceptatie; controleer onafhankelijk in EcoFlow. Geen automatisch herstel.",
     "arguments": "Kies een geheel reservepercentage van 0 tot 100.",
     "disabled": "Schakel eerst experimentele reserveaanvragen in de geavanceerde apparaatinstellingen in.",

@@ -1,4 +1,9 @@
 {
+  "1.11.27": {
+    "en": "The experimental reserve THEN card can now select a STREAM 5000 Home Battery. Opt-in is off by default and records the main unit through a read-only check. Requests require both fresh checks to match. Flow success means API acceptance only.",
+    "de": "Die experimentelle Reserve-THEN-Karte unterstützt jetzt die STREAM 5000 Home Battery. Die Freigabe ist standardmäßig aus und speichert das Hauptgerät nach einer Leseprüfung. Beide aktuellen Prüfungen müssen übereinstimmen. Flow-Erfolg bedeutet nur API-Annahme.",
+    "nl": "De experimentele reserve-THEN-kaart ondersteunt nu de STREAM 5000 Home Battery. Opt-in staat standaard uit en registreert de hoofdeenheid via een leescontrole. Beide actuele controles moeten overeenkomen. Flow-succes betekent alleen API-acceptatie."
+  },
   "1.11.26": {
     "en": "Restores original STREAM Home Battery monitoring when EcoFlow verifies the previously bound main unit again. Keeps the existing energy totals and holds battery controls after a main identity change.",
     "de": "Die Überwachung des ursprünglichen STREAM-Heimspeichers wird fortgesetzt, wenn EcoFlow das zuvor zugeordnete Hauptgerät erneut bestätigt. Energiezähler bleiben erhalten und die Batteriesteuerung bleibt nach einem Wechsel des Hauptgeräts gesperrt.",
