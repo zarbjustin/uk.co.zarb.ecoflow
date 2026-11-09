@@ -249,7 +249,7 @@ test('sustained hookup keeps one rule reader/listener across recovery and remove
   const card = new EventEmitter(); const args = deferredSdk(); let reads = 0;
   card.getArgumentValues = () => { reads++; return args.promise; };
   card.trigger = async () => {};
-  d.homey.flow = { getDeviceTriggerCard: id => { assert.equal(id, 'smartmeter_grid_power_sustained'); return card; } };
+  d.homey.flow = { getDeviceTriggerCard: id => id === 'smartmeter_grid_power_sustained' ? card : undefined };
   await d.onInit(); await settle();
   const notifications = d.gridNotifications;
   card.emit('update'); card.emit('update'); await settle();
@@ -437,6 +437,55 @@ test('sustained continuity: optional CT2 receipts cannot renew CT1 dwell or expi
     assert.equal(h.events.length, 0);
   }
   assert.equal(h.d.adapter?.currentPowerObservation(expires) ?? null, null);
+});
+
+test('below Flow keeps CT1 and CT2 dwell independent and rejects missing, partial and stale power', async t => {
+  let now = 100000; let seq = 0; let connected = true;
+  t.mock.method(Date, 'now', () => now);
+  const device = new Driver(); enabled(device);
+  device.displaySettings.display_ct2 = 'single_phase';
+  const card = new EventEmitter(); const events = [];
+  card.getArgumentValues = async () => ['ct1', 'ct2'].map(channel => ({ channel, direction: 'import', watts: 500,
+    seconds: 1, hysteresis: 100, cooldown: 0 }));
+  card.trigger = async (_device, tokens, state) => events.push({ tokens, state });
+  device.homey.flow = { getDeviceTriggerCard: id => id === 'smartmeter_dual_ct_power_below_sustained' ? card : undefined };
+  await device.onInit(); await settle();
+  t.after(() => device.onUninit());
+  async function sample(at, fields, metadata = {}) {
+    now = at;
+    const bytes = nested(1, Buffer.concat([nested(1, Buffer.concat(fields.map(([field, power]) => scalar(field, power)))),
+      int(6, 0), int(8, 254), int(9, 21), int(14, ++seq)]));
+    device.subscriptions[0](bytes, `/app/device/property/${sn}`,
+      { receivedAt: at, receivedMonoMs: at, retained: false, duplicate: false, connectionEpoch: 1, isCurrent: () => connected, ...metadata });
+    await settle();
+  }
+  const ct1 = [[515, 120], [962, 120], [963, 0], [772, 0]];
+  const ct2 = [[998, -100], [991, -100], [992, 0], [993, 0]];
+  await sample(100000, ct2); await sample(101000, ct2);
+  assert.equal(events.length, 0, 'CT2 is off until its polarity is confirmed');
+  device.displaySettings.ct2_flow_import_sign = 'negative';
+  await sample(102000, ct1);
+  await sample(103000, ct2);
+  await sample(103400, [[991, 0]]);
+  await sample(104000, ct2);
+  assert.equal(events.length, 0, 'partial CT2 must restart dwell, and CT2 must not advance CT1');
+  await sample(105000, ct1);
+  assert.equal(events[0].state.channel, 'ct1');
+  await sample(105100, ct2);
+  assert.equal(events.length, 2);
+  assert.equal(events[1].state.channel, 'ct2');
+  assert.equal(events[1].tokens.power, 100);
+  assert.equal(device.belowNotificationEventCurrent('ct2', events[1].state.observation), true);
+  assert.equal(device.belowNotificationEventCurrent('ct1', events[1].state.observation), false);
+  connected = false;
+  assert.equal(device.belowNotificationEventCurrent('ct1', events[0].state.observation), false, 'CT1 rejects pending delivery immediately on disconnect');
+  assert.equal(device.belowNotificationEventCurrent('ct2', events[1].state.observation), false, 'CT2 rejects pending delivery immediately on disconnect');
+  connected = true;
+  await sample(110100, ct2, { retained: true });
+  assert.equal(device.belowNotificationEventCurrent('ct2', events[1].state.observation), false, 'exact expiry despite retained packet');
+  now = events[0].state.observation.validUntil;
+  assert.equal(device.belowNotificationEventCurrent('ct1', events[0].state.observation), false);
+  assert.equal(events.length, 2);
 });
 
 test('sustained continuity: failed power SDK settlement cannot advance notification dwell', async t => {

@@ -3,7 +3,15 @@
 import mqtt, { MqttClient } from 'mqtt';
 import { EcoFlowClient } from './EcoFlowClient';
 
-export type QuotaHandler = (quota: Record<string, any>) => void;
+export interface MqttDelivery {
+  receivedAt: number;
+  retained: boolean;
+  duplicate: boolean;
+  connectionEpoch?: number;
+  isCurrent?: () => boolean;
+}
+
+export type QuotaHandler = (quota: Record<string, any>, delivery?: MqttDelivery) => void;
 export type StatusHandler = (online: boolean) => void;
 
 export interface EcoFlowMqttOptions {
@@ -25,6 +33,7 @@ export class EcoFlowMqtt {
   private ended = false;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private backoffMs = 0;
+  private connectionEpoch = 0;
   // Multiple devices may share one SN (e.g. the STREAM system device, the main
   // unit sub-device and the Smart Meter all read the main SN), so each SN keeps
   // a set of handlers rather than a single one.
@@ -111,8 +120,14 @@ export class EcoFlowMqtt {
       clean: true,
     });
     this.client = client;
-    client.on('message', (topic, payload) => {
-      if (!this.ended && this.client === client) this.onMessage(topic, payload);
+    const connectionEpoch = ++this.connectionEpoch;
+    const isCurrent = () => !this.ended && this.client === client && client.connected;
+    client.on('message', (topic, payload, packet) => {
+      if (!this.ended && this.client === client) {
+        this.onMessage(topic, payload, packet && {
+          receivedAt: Date.now(), retained: packet.retain, duplicate: packet.dup, connectionEpoch, isCurrent,
+        });
+      }
     });
     client.on('close', () => {
       if (this.client === client) this.onDisconnect('close');
@@ -233,7 +248,7 @@ export class EcoFlowMqtt {
     this.client.subscribe(this.topic(sn, 'status'), (e) => e && this.log('subscribe status', e.message));
   }
 
-  private onMessage(topic: string, payload: Buffer): void {
+  private onMessage(topic: string, payload: Buffer, delivery?: MqttDelivery): void {
     let data: any;
     try {
       data = JSON.parse(payload.toString('utf8'));
@@ -247,7 +262,7 @@ export class EcoFlowMqtt {
       const quota = this.extractQuota(data);
       this.quotaHandlers.get(sn)?.forEach((h) => {
         try {
-          h(quota);
+          h(quota, delivery);
         } catch {
           this.log('quota handler failed');
         }

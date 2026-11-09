@@ -11,6 +11,33 @@ const sample = (receivedAt, powerW = -600, generation = 1) => ({
   receivedAt, powerW, generation, validUntil: receivedAt + 5000,
 });
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+
+test('below rule uses fresh directed magnitude with strict entry and upper rearm', () => {
+  const rule = new SustainedGridRule({ ...args, seconds: 1, cooldown: 0 }, true);
+  const observe = (at, power) => rule.observe(sample(at, power), at);
+  assert.equal(observe(1000, -500), false);
+  assert.equal(observe(2000, -500), false, 'equality never completes dwell');
+  assert.equal(observe(3000, 0), false);
+  assert.equal(observe(4000, 120), true, 'fresh opposite direction is zero export');
+  assert.equal(observe(5000, -599), false);
+  assert.equal(observe(6000, -20), false);
+  assert.equal(observe(7000, -20), false, 'the hysteresis band must not rearm');
+  assert.equal(observe(8000, -600), false);
+  assert.equal(observe(9000, -20), false);
+  assert.equal(observe(10000, -20), true);
+});
+
+test('below dwell cannot complete on a cached, missing or expired zero', () => {
+  const rule = new SustainedGridRule({ ...args, seconds: 3, cooldown: 0 }, true);
+  const zero = sample(1000, 0);
+  assert.equal(rule.observe(zero, 1000), false);
+  assert.equal(rule.observe(zero, 4000), false, 'cached reading cannot complete dwell');
+  assert.equal(rule.observe(zero, 6000), false, 'exact expiry resets dwell');
+  assert.equal(rule.observe(sample(7000, 0), 7000), false);
+  assert.equal(rule.observe(null, 8000), false);
+  assert.equal(rule.observe(sample(10000, 0), 10000), false, 'missing reading restarts the wait');
+  assert.equal(rule.observe(sample(13000, 0), 13000), true);
+});
 function harness(ports) {
   let current = { observation: null, now: 0 };
   const monitor = new QualifiedGridNotifications({ ...ports, readCurrent: () => current });

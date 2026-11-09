@@ -4,7 +4,7 @@ import Homey from 'homey';
 import { StreamDeliveryDiagnostics } from './streamDeliveryDiagnostics';
 import { EcoFlowApiError, EcoFlowClient } from './EcoFlowClient';
 import { EcoFlowAppApi, getApp } from './appApi';
-import { QuotaHandler, StatusHandler } from './EcoFlowMqtt';
+import { MqttDelivery, QuotaHandler, StatusHandler } from './EcoFlowMqtt';
 import {
   DEVELOPER_API_UNSUPPORTED_FALLBACK,
   DEVELOPER_API_UNSUPPORTED_MESSAGE_KEY,
@@ -28,6 +28,7 @@ export interface QuotaSampleContext {
   receivedAt: number;
   source: 'mqtt' | 'rest';
   sourceSn?: string;
+  mqttDelivery?: MqttDelivery;
   /** A whole report was lost before this receipt; power intervals must re-anchor. */
   accountingDiscontinuity?: boolean;
 }
@@ -378,19 +379,20 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
 
     const sn = this.getRealtimeSn();
     this.subscribedSn = sn;
-    this.quotaHandler = (q) => {
+    this.quotaHandler = (q, delivery) => {
       if (!active()) return;
       this.lastRealtimeAt = Date.now();
       this.realtimeRevision += 1;
       if (q && typeof q === 'object') {
         for (const key of Object.keys(q)) this.pendingRestFields?.add(key);
       }
-      this.queueQuota(q, 'mqtt', undefined, new Set(), sn, generation).catch((e) => this.error('mqtt apply', e));
+      this.queueQuota(q, 'mqtt', undefined, new Set(), sn, generation, delivery).catch((e) => this.error('mqtt apply', e));
     };
     if (this.handlesStatus()) {
       this.statusHandler = (online) => {
         if (!active() || sn !== this.getRealtimeSn() || this.developerApiQuarantineReason) return;
         this.mqttOffline = !online;
+        if (!online) this.onRealtimeOffline();
         this.queueRealtimeStatus(online, generation, sn);
       };
     }
@@ -525,7 +527,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
   }
 
   private queueQuota(quota: Record<string, any>, source: 'mqtt' | 'rest', requestedRevision?: number,
-    newerFields: ReadonlySet<string> = new Set(), sourceSn = this.getReadSn(), generation = this.lifecycleGeneration): Promise<void> {
+    newerFields: ReadonlySet<string> = new Set(), sourceSn = this.getReadSn(), generation = this.lifecycleGeneration,
+    mqttDelivery?: MqttDelivery): Promise<void> {
     if (this.stopping || generation !== this.lifecycleGeneration) return Promise.resolve();
     const context = { receivedAt: Date.now(), source, sourceSn };
     const diagnostics = this.deliveryDiagnostics;
@@ -538,7 +541,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       diagnostics.dropped(source);
       return Promise.resolve();
     }
-    const sample: QuotaSampleContext = { ...context, accountingDiscontinuity: this.quotaGapPending };
+    const sample: QuotaSampleContext = { ...context, mqttDelivery, accountingDiscontinuity: this.quotaGapPending };
     this.quotaGapPending = false;
     this.queuedQuotas += 1;
     const run = () => {
@@ -669,6 +672,8 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     this.quotaHandler = undefined;
     this.statusHandler = undefined;
   }
+
+  protected onRealtimeOffline(): void { /* Optional synchronous status boundary. */ }
 
   /** Apply availability. Subclasses can override to add flow triggers etc. */
   protected async setOnlineState(online: boolean, message?: string): Promise<void> {

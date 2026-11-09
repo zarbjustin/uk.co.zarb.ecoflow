@@ -141,20 +141,25 @@ test('5000 read-only conditions route to fresh device observations, not a contro
 });
 
 test('sustained CT1 trigger rejects changed rules and unqualified late Flow evaluation', async () => {
-  const { app } = harness(); let run;
+  const { app } = harness(); const listeners = new Map();
   app.homey.flow = {
     getConditionCard: () => ({ registerRunListener() {} }),
-    getDeviceTriggerCard: () => ({ registerRunListener: (fn) => { run = fn; } }),
+    getDeviceTriggerCard: id => ({ registerRunListener: fn => listeners.set(id, fn) }),
   };
   await app.onInit();
   const { gridNotificationKey } = require('../.homeybuild/lib/sustainedGridNotifications');
   const args = { direction: 'export', watts: 500, seconds: 60, hysteresis: 100, cooldown: 600,
     device: { gridNotificationEventCurrent: () => true } };
   const state = { ruleKey: gridNotificationKey(args), observation: {} };
+  const run = listeners.get('smartmeter_grid_power_sustained');
   assert.equal(run(args, state), true);
   args.device.gridNotificationEventCurrent = () => false;
   assert.equal(run(args, state), false);
   assert.equal(run({ ...args, seconds: 120 }, state), false);
+  const below = listeners.get('smartmeter_dual_ct_power_below_sustained');
+  const channelArgs = { ...args, channel: 'ct2', device: { belowNotificationEventCurrent: channel => channel === 'ct2' } };
+  assert.equal(below(channelArgs, { ...state, channel: 'ct2' }), true);
+  assert.equal(below(channelArgs, { ...state, channel: 'ct1' }), false);
   await app.onUninit();
 });
 

@@ -5,12 +5,14 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const originalLoad = Module._load;
 let StreamUnit;
+let StreamUnitDriver;
 try {
   Module._load = function load(request, ...args) {
-    if (request === 'homey') return { Device: class {} };
+    if (request === 'homey') return { Device: class {}, Driver: class {} };
     return originalLoad.call(this, request, ...args);
   };
   StreamUnit = require('../.homeybuild/drivers/stream_unit/device');
+  StreamUnitDriver = require('../.homeybuild/drivers/stream_unit/driver');
 } finally { Module._load = originalLoad; }
 
 async function harness(sn, mainSn = sn, app, configure) {
@@ -476,4 +478,142 @@ test('failed role refresh keeps existing system capability identities but blocks
   assert.equal(h.reads.length, 0);
   assert.equal(h.writes.length, 0);
   await h.d.onTeardown();
+});
+
+function unitAlertFlows() {
+  const events = [];
+  const listeners = new Map();
+  const flow = {
+    getDeviceTriggerCard: (card) => ({
+      registerRunListener: listener => listeners.set(card, listener),
+      trigger: async (device, tokens, state) => events.push({ card, device, tokens, state }),
+    }),
+  };
+  const driver = new StreamUnitDriver();
+  driver.homey = { flow };
+  driver.log = () => {};
+  return {
+    events, flow, init: () => driver.onInit(),
+    run: (event, args = {}) => listeners.get(event.card)({ device: event.device, ...args }, event.state),
+  };
+}
+
+test('Ultra X SOC alert requires a fresh same-unit threshold crossing and reanchors after reconnect', async t => {
+  let now = 1000000; let epoch = 1;
+  t.mock.method(Date, 'now', () => now);
+  const sn = 'BK61SYNTHETIC0001';
+  const flows = unitAlertFlows(); await flows.init();
+  const { d } = await harness(sn, undefined, undefined, (device, caps) => {
+    caps.add('measure_battery'); device.homey.flow = flows.flow;
+    device.setUnavailable = async () => {};
+  });
+  const send = (quota, overrides = {}) => {
+    now += 1000;
+    const session = epoch;
+    return d.applyQuota(quota, {
+      receivedAt: now, source: 'mqtt', sourceSn: sn,
+      mqttDelivery: { receivedAt: now, retained: false, duplicate: false,
+        connectionEpoch: session, isCurrent: () => session === epoch, ...overrides.delivery },
+      ...overrides.context,
+    });
+  };
+  await send({ f32ShowSoc: 15 });
+  await send({ cmsBattSoc: 90 });
+  await send({ f32ShowSoc: 90 }, { context: { source: 'rest' } });
+  await send({ f32ShowSoc: 90 }, { context: { sourceSn: 'BK61DIFFERENTUNIT' } });
+  await send({ f32ShowSoc: 90 }, { delivery: { retained: true } });
+  await send({ f32ShowSoc: 90 }, { delivery: { duplicate: true } });
+  assert.equal(flows.events.length, 0);
+  await send({ f32ShowSoc: 20 });
+  const first = flows.events[0];
+  assert.equal(first.card, 'stream_unit_battery_level_crossed');
+  assert.deepEqual(first.tokens, { battery: 20 });
+  assert.equal(await flows.run(first, { direction: 'above', level: 20 }), true);
+  assert.equal(await flows.run(first, { direction: 'below', level: 20 }), false);
+  assert.equal(await flows.run(first, { direction: 'above', level: 21 }), false);
+  await send({ f32ShowSoc: 20 });
+  assert.equal(flows.events.length, 1);
+  assert.equal(await flows.run(first, { direction: 'above', level: 20 }), true);
+  epoch += 1;
+  assert.equal(await flows.run(first, { direction: 'above', level: 20 }), false);
+  await send({ f32ShowSoc: 30 }, { delivery: { connectionEpoch: 1, isCurrent: () => false } });
+  await send({ f32ShowSoc: 30 });
+  assert.equal(flows.events.length, 1);
+  await send({ f32ShowSoc: 20 });
+  assert.equal(await flows.run(flows.events[1], { direction: 'below', level: 20 }), true);
+  now += 180001;
+  assert.equal(await flows.run(flows.events[1], { direction: 'below', level: 20 }), false);
+  await send({ f32ShowSoc: 80 }, { delivery: { receivedAt: now - 180001 } });
+  await send({ f32ShowSoc: 80 });
+  assert.equal(flows.events.length, 2, 'expiry starts a new baseline');
+  await send({ gridConnectionPower: 120 }, { context: { accountingDiscontinuity: true } });
+  await send({ f32ShowSoc: 5 });
+  assert.equal(flows.events.length, 2, 'a dropped quota cannot be bridged by a sparse update');
+  await d.setOnlineState(false);
+  await send({ f32ShowSoc: 95 });
+  assert.equal(flows.events.length, 2, 'offline invalidates the last threshold baseline');
+  await d.onTeardown();
+});
+
+test('AC Pro charge/discharge alerts use only live own-unit BMS and reanchor after gaps', async t => {
+  let now = 1000000; let epoch = 1;
+  t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const flows = unitAlertFlows(); await flows.init();
+  const { d } = await harness(sn, 'BK61SYNTHETIC0001', app, device => { device.homey.flow = flows.flow; });
+  const property = `/app/device/property/${sn}`;
+  const send = async (charge, discharge, overrides = {}) => {
+    now += 1000;
+    const session = epoch;
+    handler(bmsFrame(charge, discharge, overrides.sn || sn), overrides.topic || property,
+      { receivedAt: now, retained: false, duplicate: false,
+        connectionEpoch: session, isCurrent: () => session === epoch, ...overrides.delivery });
+    await d.pvChain;
+  };
+  await send(0, 0);
+  await send(300, 0, { topic: `/app/test/${sn}/thing/property/get_reply` });
+  await send(300, 0, { sn: 'BK31OTHERUNIT' });
+  await send(300, 0, { delivery: { duplicate: true } });
+  await send(300, 0, { delivery: { retained: true } });
+  assert.equal(flows.events.length, 0);
+  await send(300, 0);
+  assert.equal(flows.events[0].card, 'stream_unit_charging_started');
+  assert.deepEqual(flows.events[0].tokens, { power: 300 });
+  assert.equal(await flows.run(flows.events[0]), true);
+  await send(305, 0);
+  assert.equal(flows.events.length, 1);
+  epoch += 1;
+  assert.equal(await flows.run(flows.events[0]), false);
+  await send(0, 150);
+  assert.equal(flows.events.length, 1, 'no direction edge on the first new-session reading');
+  await send(5, 0);
+  await send(0, 150);
+  assert.equal(flows.events[1].card, 'stream_unit_discharging_started');
+  assert.deepEqual(flows.events[1].tokens, { power: -150 });
+  assert.equal(await flows.run(flows.events[1]), true);
+  now += 180001;
+  assert.equal(await flows.run(flows.events[1]), false);
+  await send(200, 0, { delivery: { receivedAt: now - 180001 } });
+  await send(200, 0);
+  assert.equal(flows.events.length, 2);
+  await d.onTeardown();
+  assert.equal(await flows.run(flows.events[1]), false);
+});
+
+test('other physical STREAM models do not emit Ultra X or AC Pro alerts', async () => {
+  const sn = 'BK11SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const flows = unitAlertFlows(); await flows.init();
+  const { d } = await harness(sn, sn, app, (device, caps) => {
+    caps.add('measure_battery'); device.homey.flow = flows.flow;
+  });
+  for (const [soc, watts] of [[15, 0], [25, 200]]) {
+    const receivedAt = Date.now();
+    const delivery = { receivedAt, retained: false, duplicate: false, connectionEpoch: 1, isCurrent: () => true };
+    await d.applyQuota({ f32ShowSoc: soc }, { receivedAt, source: 'mqtt', sourceSn: sn, mqttDelivery: delivery });
+    handler(bmsFrame(watts, 0, sn), `/app/device/property/${sn}`, delivery); await d.pvChain;
+  }
+  assert.deepEqual(flows.events, []);
+  await d.onTeardown();
 });

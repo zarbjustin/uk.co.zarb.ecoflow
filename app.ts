@@ -75,6 +75,10 @@ module.exports = class EcoFlowApp extends Homey.App {
         (args: any, state: any) => gridNotificationMatches(args, state)
           && args.device.gridNotificationEventCurrent(state.observation),
       );
+      this.homey.flow.getDeviceTriggerCard?.('smartmeter_dual_ct_power_below_sustained').registerRunListener(
+        (args: any, state: any) => gridNotificationMatches(args, state) && args.channel === state.channel
+          && args.device.belowNotificationEventCurrent(args.channel, state.observation),
+      );
       this.homey.flow.getConditionCard('smartmeter_grid_power_above').registerRunListener(
         (args: any) => args.device.gridPowerAbove(args.direction, args.watts),
       );

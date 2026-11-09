@@ -7,6 +7,7 @@ import { OperatingMode } from '../../lib/streamProtocol';
 import { executeStreamControl, readStreamControlState, StreamControlIntent } from '../../lib/streamControls';
 import { EcoFlowAppApi, getApp } from '../../lib/appApi';
 import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
+import type { MqttDelivery } from '../../lib/EcoFlowMqtt';
 import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/streamBkPvDiagnostics';
 import { migrateReadingTitle, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
 import { StreamUnitComparison } from '../../lib/streamDiagnosticChecks';
@@ -14,11 +15,12 @@ import { decodeStreamLimits, StreamLimitObservations } from '../../lib/streamLim
 import { decodeBkBatteryReading } from '../../lib/streamBkBatteryTelemetry';
 import { StreamPowerHistory } from '../../lib/streamPowerHistory';
 import { CoalescedTelemetryQueue } from '../../lib/coalescedTelemetryQueue';
+import { UNIT_ALERT_CARDS, UnitAlertEdge, UnitAlertEvent } from '../../lib/streamUnitAlerts';
 
 type ControlWait = () => void;
 type TimedValue = { value: number; at: number };
 type DiagnosticBatch = { pv: Record<string, TimedValue>; limits: Record<string, TimedValue>;
-  battery?: { reading: NonNullable<ReturnType<typeof decodeBkBatteryReading>>; at: number } };
+  battery?: { reading: NonNullable<ReturnType<typeof decodeBkBatteryReading>>; at: number; delivery?: MqttDelivery; discontinuity?: boolean } };
 
 /**
  * A single physical STREAM inverter/battery unit. The device is tailored to its
@@ -51,6 +53,40 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private limitObservations = new StreamLimitObservations();
   private powerHistory = new StreamPowerHistory();
   private pvWork?: CoalescedTelemetryQueue<DiagnosticBatch>;
+
+  private unitAlertOfflineAt = 0;
+  private readonly socAlert = new UnitAlertEdge<number>();
+  private readonly directionAlert = new UnitAlertEdge<string>();
+
+  private supportsUnitAlerts(): boolean {
+    return /^(BK31|BK61)/i.test(this.getData().sn);
+  }
+
+  private resetUnitAlerts(): void {
+    this.socAlert.reset();
+    this.directionAlert.reset();
+  }
+
+  async matchesUnitAlert(card: string, args: { direction?: string; level?: number }, event?: UnitAlertEvent): Promise<boolean> {
+    if (!event || this.mqttOffline || this.isShuttingDown() || !this.supportsUnitAlerts()) return false;
+    if (card === UNIT_ALERT_CARDS.soc) {
+      const { level, direction } = args;
+      const { previous, value } = event;
+      if (typeof level !== 'number' || !Number.isFinite(level) || level < 0 || level > 100
+        || typeof previous !== 'number' || typeof value !== 'number'
+        || !this.socAlert.matches(event, this.getCapabilityValue('measure_battery'))) return false;
+      return direction === 'above' ? previous < level && value >= level
+        : direction === 'below' && previous > level && value <= level;
+    }
+    if (card !== UNIT_ALERT_CARDS.charging && card !== UNIT_ALERT_CARDS.discharging) return false;
+    const direction = card === UNIT_ALERT_CARDS.charging ? 'charging' : 'discharging';
+    return event.value === direction && this.directionAlert.matches(event, this.getCapabilityValue('battery_charging_state'));
+  }
+
+  private emitUnitAlert(card: string, tokens: Record<string, number>, event: UnitAlertEvent): void {
+    if (this.isShuttingDown()) return;
+    this.homey.flow.getDeviceTriggerCard(card).trigger(this, tokens, event).catch((e) => this.error(card, e));
+  }
 
   getPowerHistoryDiagnostics() {
     return this.powerHistory.evidence();
@@ -99,12 +135,16 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     if (!app?.subscribeAppRealtime) return;
     this.pvWork?.stop();
     this.pvWork = new CoalescedTelemetryQueue<DiagnosticBatch>((old, next) => ({
-      pv: { ...old.pv, ...next.pv }, limits: { ...old.limits, ...next.limits }, battery: next.battery || old.battery,
+      pv: { ...old.pv, ...next.pv },
+      limits: { ...old.limits, ...next.limits },
+      battery: old.battery && next.battery ? { ...next.battery, discontinuity: true } : next.battery || old.battery,
     }), async (batch) => {
       if (!active()) return;
       for (const [key, field] of Object.entries(batch.limits)) this.limitObservations.observe({ [key]: field.value }, field.at, 'app_property');
       if (batch.battery) {
-        const { reading, at } = batch.battery; const batteryPower = reading.powerW;
+        const {
+          reading, at, delivery, discontinuity,
+        } = batch.battery; const batteryPower = reading.powerW;
         await this.queueDeviceWork(async () => {
           if (!active()) return;
           const applied = await this.applyLiveReading('stream_unit_power_battery_flow', batteryPower, at);
@@ -118,9 +158,17 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
             let state = 'idle';
             if (batteryPower > 5) state = 'charging';
             if (batteryPower < -5) state = 'discharging';
-            await this.applyLiveReading('battery_charging_state', state, at);
+            const stateApplied = await this.applyLiveReading('battery_charging_state', state, at);
+            if (active() && this.supportsUnitAlerts() && this.canUseAlertDelivery(delivery)) {
+              const event = this.directionAlert.observe(stateApplied ? state : undefined, delivery, discontinuity);
+              if (event && state !== 'idle') {
+                const card = state === 'charging' ? UNIT_ALERT_CARDS.charging : UNIT_ALERT_CARDS.discharging;
+                this.emitUnitAlert(card, { power: batteryPower }, event);
+              }
+            }
             await this.applyRemainingTimePower(batteryPower, at);
           } else {
+            if (this.canUseAlertDelivery(delivery)) this.directionAlert.observe(undefined, delivery, discontinuity);
             this.unitComparison.failed('stream_unit_power_battery_flow');
             await this.applyLiveReading('battery_charging_state', null, at);
             await this.applyRemainingTimePower(null, at);
@@ -135,7 +183,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       }
       await expire();
     });
-    const handler: AppFrameHandler = (payload, topic) => {
+    const handler: AppFrameHandler = (payload, topic, delivery) => {
       if (!active() || !(topic === `/app/device/property/${sn}`
         || (/^\/app\/[^/]+\/[^/]+\/thing\/property\/get_reply$/.test(topic)
           && topic.split('/')[3] === sn))) return;
@@ -146,7 +194,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       const reading = topic === `/app/device/property/${sn}` ? decodeBkBatteryReading(payload, sn) : undefined;
       if (!reading && !Object.keys(values).length && !Object.keys(limits).length) return;
       const timed = (fields: Record<string, number>) => Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, { value, at }]));
-      this.pvChain = this.pvWork!.submit({ pv: timed(values), limits: timed(limits), battery: reading ? { reading, at } : undefined });
+      this.pvChain = this.pvWork!.submit({ pv: timed(values), limits: timed(limits), battery: reading ? { reading, at, delivery } : undefined });
     };
     this.pvApp = app; this.pvSn = sn; this.pvHandler = handler;
     let subscribed = false;
@@ -211,6 +259,8 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   };
 
   protected async onReady(): Promise<void> {
+    this.unitAlertOfflineAt = 0;
+    this.resetUnitAlerts();
     this.unitComparison = new StreamUnitComparison();
     this.controlGeneration += 1;
     await this.startRemainingTime('unit');
@@ -370,6 +420,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.resetUnitAlerts();
     this.stopLiveReadings();
     this.stopRemainingTime();
     this.controlGeneration += 1;
@@ -411,10 +462,31 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     return true;
   }
 
+  private canUseAlertDelivery(delivery?: MqttDelivery): delivery is MqttDelivery {
+    return !this.mqttOffline && !!delivery && delivery.receivedAt > this.unitAlertOfflineAt;
+  }
+
+  protected onRealtimeOffline(): void {
+    this.unitAlertOfflineAt = Date.now();
+    this.resetUnitAlerts();
+  }
+
+  protected async setOnlineState(online: boolean, message?: string): Promise<void> {
+    if (!online) this.onRealtimeOffline();
+    await super.setOnlineState(online, message);
+  }
+
   async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
     this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
     await this.applyRemainingTime(quota, context);
     const values = mapStreamQuota(quota, 'unit');
+    const ownSocDelivery = context?.source === 'mqtt' && context.sourceSn === this.getData().sn && this.supportsUnitAlerts()
+      ? context.mqttDelivery : undefined;
+    if (context?.accountingDiscontinuity) this.socAlert.reset();
+    // Only the original unit SOC fields accepted by the unit mapper are evidence.
+    const ownSocReported = !!ownSocDelivery
+      && ['f32ShowSoc', 'soc', 'actSoc'].some((field) => Object.prototype.hasOwnProperty.call(quota, field));
+    let socApplied = false;
     delete values.charge_remaining;
     delete values.discharge_remaining;
     for (const [source, target] of Object.entries(StreamUnitDevice.POWER_CAP_MAP)) {
@@ -438,6 +510,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
           }
         } else
           if (this.getCapabilityValue(cap) !== value) await this.setCapabilityValue(cap, value);
+        if (cap === 'measure_battery') socApplied = true;
         this.unitComparison.observe(cap, value, context?.receivedAt ?? Date.now());
         if (cap === 'stream_unit_power_grid' && typeof value === 'number') {
           this.powerHistory.observe('gridPortW', value, context?.receivedAt ?? Date.now());
@@ -446,6 +519,12 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
         this.unitComparison.failed(cap);
         this.error(`setCapabilityValue ${cap}`, e);
       }
+    }
+    if (ownSocReported && this.canUseAlertDelivery(ownSocDelivery)) {
+      const soc = values.measure_battery;
+      const valid = socApplied && typeof soc === 'number' && soc >= 0 && soc <= 100;
+      const event = this.socAlert.observe(valid ? soc : undefined, ownSocDelivery);
+      if (event && valid) this.emitUnitAlert(UNIT_ALERT_CARDS.soc, { battery: soc }, event);
     }
     await this.expireLiveReadings();
   }

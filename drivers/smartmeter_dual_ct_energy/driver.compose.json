@@ -314,6 +314,47 @@
       ]
     },
     {
+      "id": "ct2_flow_import_sign",
+      "type": "dropdown",
+      "value": "off",
+      "label": {
+        "en": "CT2 notifications: import direction",
+        "de": "CT2-Benachrichtigungen: Bezugsrichtung",
+        "nl": "CT2-meldingen: afnamerichting"
+      },
+      "hint": {
+        "en": "Experimental. Select the CT2 phase layout and compare its watts and sign against your known circuit before enabling. Choose the sign that means import on this circuit.",
+        "de": "Experimentell. Vor dem Aktivieren das CT2-Phasenlayout auswählen und Wattwerte und Vorzeichen am bekannten Stromkreis prüfen. Das Vorzeichen für Bezug auswählen.",
+        "nl": "Experimenteel. Kies de CT2-fase-indeling en vergelijk het vermogen en teken met je bekende circuit. Kies het teken dat afname betekent."
+      },
+      "values": [
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "de": "Aus",
+            "nl": "Uit"
+          }
+        },
+        {
+          "id": "positive",
+          "label": {
+            "en": "Positive means import",
+            "de": "Positiv bedeutet Bezug",
+            "nl": "Positief betekent afname"
+          }
+        },
+        {
+          "id": "negative",
+          "label": {
+            "en": "Negative means import",
+            "de": "Negativ bedeutet Bezug",
+            "nl": "Negatief betekent afname"
+          }
+        }
+      ]
+    },
+    {
       "id": "display_ct2",
       "type": "dropdown",
       "value": "default",

@@ -28,6 +28,7 @@ export interface AppFrameDelivery {
   duplicate: boolean;
   /** Local socket epoch only; no account/broker identifier. Absent on legacy injected deliveries. */
   connectionEpoch?: number;
+  isCurrent?: () => boolean;
 }
 export type AppFrameHandler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => void;
 
@@ -606,13 +607,16 @@ export class EcoFlowAppMqtt {
     this.receipts.set(sn, { count: Math.min(65535, (prior?.count || 0) + 1), at: Date.now() });
     // Optional third argument preserves existing consumers. Missing transport
     // metadata stays unknown; a future Energy consumer must not assume live.
+    const epoch = this.connectionEpoch;
+    const { client } = this;
     const delivery = packet && typeof packet.retain === 'boolean' && typeof packet.dup === 'boolean'
       ? Object.freeze({
         receivedAt: Date.now(),
         receivedMonoMs: performance.now(),
         retained: packet.retain,
         duplicate: packet.dup,
-        connectionEpoch: this.connectionEpoch,
+        connectionEpoch: epoch,
+        isCurrent: () => !this.ended && this.client === client && !!client?.connected && this.connectionEpoch === epoch,
       }) : undefined;
     for (const handler of set) {
       try {

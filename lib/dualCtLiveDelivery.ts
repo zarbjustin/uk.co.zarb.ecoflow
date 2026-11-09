@@ -57,6 +57,11 @@ function sequence(payload: Buffer): number | null {
 /** Per owned subscription epoch. No storage, capability, Energy or network operations. */
 export class DualCtLiveDelivery {
   private previous: { seq: number; wall: number; mono: number; epoch?: number } | null = null;
+  private readonly powerFields: readonly number[];
+
+  constructor(powerFields: readonly number[] = [515, 962, 963, 772]) {
+    this.powerFields = powerFields;
+  }
 
   inspect(payload: Buffer, topic: string, expectedTopic: string, delivery: Readonly<AppFrameDelivery> | undefined, now: number) {
     const reject = (status: string, restartAnchor = false) => {
@@ -77,7 +82,7 @@ export class DualCtLiveDelivery {
       const headers = decodeFrameHeaders(payload);
       if (headers.length !== 1 || headers[0].candidateHeaderValid === false
         || headers[0].cmdFunc !== 254 || headers[0].cmdId !== 21) return reject('not_ct1_property_upload');
-      const hasPower = headers[0].pdata && dualCtContainsFields(headers[0].pdata, [515, 962, 963, 772]);
+      const hasPower = headers[0].pdata && dualCtContainsFields(headers[0].pdata, this.powerFields);
       if (hasPower === false) return reject('unrelated_grid_packet');
       if (!hasPower) return reject('invalid_grid_payload');
     } catch {

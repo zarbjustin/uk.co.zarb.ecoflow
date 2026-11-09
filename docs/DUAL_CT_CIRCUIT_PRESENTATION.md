@@ -1,5 +1,29 @@
 # Dual CT circuit and phase presentation — 17 October 2026
 
+## Sustained below-threshold Flow candidate
+
+The new **Dual CT import/export stays below a threshold** trigger has separate
+CT1 and CT2 selections. For example, use CT1 import below 2,500 W for 120 seconds
+for a notification after high demand subsides. Entry is strict and the selected
+direction uses a nonnegative magnitude. A fresh reading in the other direction
+counts as zero. Hysteresis rearms at the threshold plus the margin, and cooldown
+limits repeats. Each channel starts its own dwell from advancing live receipts.
+A gap or loss of qualification restarts it. Late Flow evaluation rechecks the
+same channel, sample and live MQTT connection.
+
+CT1 uses the existing qualified Energy power feed. CT2 notifications default to
+Off. Before enabling them, choose the CT2 phase layout and compare its watts and
+sign with a known circuit in EcoFlow, then choose the import direction in
+Advanced Settings. CT2 remains experimental pending physical validation.
+It requires a current owned live packet with all three explicit power fields
+and a matching reported total. Single-phase CT2 also requires explicit zero on
+the other phases. Partial or inconsistent power packets withdraw CT2 immediately.
+Retained, duplicate, missing and expired readings cannot advance the wait.
+CT2 expires after five seconds from its own receipt and uses the existing
+subscription. It supplies notifications separately from property Energy.
+
+The combined Development candidate is 1.11.28. Physical CT2 validation remains open.
+
 Local diagnostic-branch continuation only. Not published. Mainline, Live,
 existing meter/battery accounting, API commands and Energy adoption unchanged.
 

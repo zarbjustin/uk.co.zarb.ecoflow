@@ -55,8 +55,9 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
     assert.equal(current.class, old.class); assert.deepEqual(current.energy || null, old.energy);
     for (const capability of old.capabilities) assert(current.capabilities.includes(capability));
   }
+  const unitTriggers = ['stream_unit_battery_level_crossed', 'stream_unit_charging_started', 'stream_unit_discharging_started'];
   const additions = {
-    triggers: ['coordination_assessment_changed', 'coordination_readings_changed', 'smartmeter_grid_power_sustained'],
+    triggers: ['coordination_assessment_changed', 'coordination_readings_changed', 'smartmeter_grid_power_sustained', 'smartmeter_dual_ct_power_below_sustained', ...unitTriggers],
     conditions: ['coordination_circuit_power_sustained', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_readings_current', 'stream_5000_reading_current'],
     actions: ['stream_5000_request_backup_reserve'],
   };
@@ -80,6 +81,14 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
     { type: 'dropdown', name: 'field', values: [{ id: 'soc' }, { id: 'state' }, { id: 'power' }] },
     { type: 'dropdown', name: 'role', values: [{ id: 'unit' }, { id: 'system' }] },
   ], 'Only the reviewed, read-only device-scoped monitoring guard is admitted');
+  for (const id of unitTriggers) {
+    const unit = app.flow.triggers.find(card => card.id === id);
+    const system = app.flow.triggers.find(card => card.id === id.slice('stream_unit_'.length));
+    const args = contract(system.args);
+    args[0] = { type: 'device', name: 'device', filter: 'driver_id=stream_unit' };
+    assert.deepEqual(contract(unit.args), args);
+    assert.deepEqual(contract(unit.tokens), contract(system.tokens));
+  }
   const sustained = app.flow.triggers.find(card => card.id === 'smartmeter_grid_power_sustained');
   assert.deepEqual(contract(sustained.args), [
     { type: 'device', name: 'device', filter: 'driver_id=smartmeter_dual_ct_energy' },
@@ -93,6 +102,15 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
     { name: 'direction', type: 'string' }, { name: 'power', type: 'number' },
     { name: 'grid_power', type: 'number' },
   ]);
+  const below = app.flow.triggers.find(card => card.id === 'smartmeter_dual_ct_power_below_sustained');
+  const [meter, direction, watts, ...timing] = contract(sustained.args);
+  assert.deepEqual(contract(below.args), [meter,
+    { type: 'dropdown', name: 'channel', values: [{ id: 'ct1' }, { id: 'ct2' }] },
+    direction, { ...watts, min: 1 }, ...timing]);
+  assert.deepEqual(contract(below.tokens), [{ name: 'channel', type: 'string' }, ...contract(sustained.tokens)]);
+  const ct2Direction = app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_energy').settings.find(setting => setting.id === 'ct2_flow_import_sign');
+  assert.equal(ct2Direction.value, 'off');
+  assert.deepEqual(ct2Direction.values.map(value => value.id), ['off', 'positive', 'negative']);
   const preview = app.drivers.find(driver => driver.id === 'smartmeter_dual_ct_preview');
   assert.equal(preview.class, 'other'); assert.equal(preview.energy, undefined);
   for (const id of preview.capabilities) {

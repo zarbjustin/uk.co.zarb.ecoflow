@@ -15,12 +15,14 @@ import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint, dualCtHomeyEnergy
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED, dualCtGridBinding, resolveDualCtGridEnergyContract } from '../../lib/dualCtGridEnergySource';
 import { AppFrameDelivery } from '../../lib/EcoFlowAppMqtt';
 import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
+import { DualCtCt2FlowInput } from '../../lib/dualCtCt2FlowInput';
 import {
   QualifiedGridNotifications, SustainedGridObservation, gridNotificationObservationMatches,
 } from '../../lib/sustainedGridNotifications';
 
 // Shared by every instance in this app process; never one authority per device.
 const authority = new DualCtEnergyAuthority();
+type FlowChannel = 'ct1' | 'ct2';
 
 module.exports = class DualCtEnergyDevice extends Homey.Device {
   private startupFailure: { startupStage: string; context: unknown; admission: string | null } = { startupStage: 'idle', context: null, admission: null };
@@ -50,6 +52,56 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     trigger: (tokens, state) => this.gridNotificationCard?.trigger(this, tokens, state) ?? Promise.resolve(),
     onError: () => (this as any).error?.('Grid notification arguments or delivery unavailable'),
   });
+
+  private readonly ct2FlowInput = new DualCtCt2FlowInput();
+  private ct1BelowDelivery?: Readonly<AppFrameDelivery>;
+  private ct2SourceCurrent: (() => boolean) | null = null;
+  private belowNotificationCard: any = null;
+  private readonly belowNotifications = { ct1: this.makeBelowNotifications('ct1'), ct2: this.makeBelowNotifications('ct2') };
+  private readonly reloadBelowNotifications = () => Object.values(this.belowNotifications).forEach((observer) => observer.reload());
+
+  private makeBelowNotifications(channel: FlowChannel): QualifiedGridNotifications {
+    return new QualifiedGridNotifications({
+      loadRules: async () => {
+        const rules = await (this.belowNotificationCard?.getArgumentValues(this) ?? []);
+        if (!Array.isArray(rules) || rules.length > 256) throw Error('Invalid Dual CT notification rules');
+        return rules.filter((rule) => rule?.channel === channel);
+      },
+      readCurrent: () => {
+        const now = Date.now();
+        return { observation: this.currentBelowObservation(channel, now), now };
+      },
+      trigger: (tokens, state) => this.belowNotificationCard?.trigger(this, { ...tokens, channel: channel.toUpperCase() }, { ...state, channel }) ?? Promise.resolve(),
+      onError: () => (this as any).error?.('Dual CT below notification unavailable'),
+    }, true);
+  }
+
+  private ct2FlowConfiguration(): string | null {
+    const phases = this.getSetting('display_ct2');
+    const sign = this.getSetting('ct2_flow_import_sign');
+    return (phases === 'single_phase' || phases === 'three_phase') && (sign === 'positive' || sign === 'negative')
+      ? `${phases}:${sign}` : null;
+  }
+
+  private currentBelowObservation(channel: FlowChannel, now: number): SustainedGridObservation | null {
+    if (channel === 'ct1') {
+      const observation = this.currentGridNotificationObservation(now);
+      const delivery = this.ct1BelowDelivery;
+      return observation && delivery?.receivedAt === observation.receivedAt && delivery.isCurrent?.() ? observation : null;
+    }
+    try {
+      const configuration = this.ct2FlowConfiguration();
+      return configuration && this.ct2SourceCurrent?.() ? this.ct2FlowInput.current(configuration, now) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  belowNotificationEventCurrent(channel: unknown, observation: SustainedGridObservation | null): boolean {
+    if (channel !== 'ct1' && channel !== 'ct2') return false;
+    const now = Date.now();
+    return gridNotificationObservationMatches(observation, this.currentBelowObservation(channel, now), now);
+  }
 
   private readonly accountChanged = (key: string) => {
     if (['appAuthEmail', 'appAuthPassword', 'appAuthHost'].includes(key)) this.stop().catch(() => {});
@@ -102,6 +154,15 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     } catch {
       // Monitoring failure must not block core expiry, restart or shutdown.
     }
+    this.tickBelowNotifications('ct1', observation ? this.currentBelowObservation('ct1', now) : null, now);
+  }
+
+  private tickBelowNotifications(channel: FlowChannel, observation: SustainedGridObservation | null, now: number): void {
+    try {
+      this.belowNotifications[channel].tick(observation, now);
+    } catch {
+      // Notification errors are isolated from meter readings and accounting.
+    }
   }
 
   async onInit(): Promise<void> {
@@ -112,6 +173,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       this.gridNotificationCard?.on('update', this.reloadGridNotifications);
     }
     this.gridNotifications.start();
+    if (!this.belowNotificationCard) {
+      this.belowNotificationCard = this.homey.flow?.getDeviceTriggerCard('smartmeter_dual_ct_power_below_sustained') ?? null;
+      this.belowNotificationCard?.on('update', this.reloadBelowNotifications);
+    }
+    Object.values(this.belowNotifications).forEach((observer) => observer.start());
     await this.connect();
     // Optional capability/UI setup must never delay the core Energy subscription.
     if (this.getStoreValue('dualCtEnergyConsent') === 1) await this.configureDetails().catch(() => {});
@@ -193,9 +259,34 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       }
       if (!adapter.diagnostics().active) throw new Error('blocked');
       this.details.start(scope);
+      this.ct2SourceCurrent = () => {
+        if (generation !== this.generation || !this.handler || !dependencies.enabled() || !adapter.diagnostics().active
+          || this.getStoreValue('dualCtEnergyConsent') !== 1
+          || this.getStoreValue('dualCtEnergySourceBinding') !== binding
+          || this.credentialRevision !== dualCtCredentialsRevision(this.homey)) return false;
+        const current = context.snapshot();
+        return current?.inventory.complete === true && current.source.account === source.account
+          && current.source.device === source.device && current.source.grid === source.grid
+          && current.source.identity.productType === source.identity.productType
+          && current.source.identity.firmware === source.identity.firmware;
+      };
       const deliveryGuard = new DualCtLiveDelivery();
       const handler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => {
         if (generation === this.generation && this.handler === handler) {
+          const now = Date.now();
+          try {
+            const configuration = this.ct2FlowConfiguration();
+            if (configuration && this.ct2SourceCurrent?.()) {
+              this.ct2FlowInput.observe(source.device, contract.encoding, configuration, payload, topic, delivery, now);
+              this.tickBelowNotifications('ct2', this.ct2FlowInput.current(configuration, now), now);
+            } else if (configuration) {
+              this.ct2FlowInput.reset();
+              this.tickBelowNotifications('ct2', null, now);
+            }
+          } catch {
+            this.ct2FlowInput.reset();
+            this.tickBelowNotifications('ct2', null, now);
+          }
           this.details.observe(payload, topic, delivery, Date.now());
           const result = deliveryGuard.inspect(payload, topic, `/app/device/property/${source.device}`, delivery, Date.now());
           let topicKind = 'other';
@@ -207,6 +298,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
             this.communityFeedback.record('delivery_rejected'); this.communityFeedback.record(result.status);
           }
           if (result.restartAnchor) {
+            this.ct1BelowDelivery = undefined;
             const anchorRevision = ++this.gridNotificationAnchorRevision;
             this.gridNotificationAnchorPending = true;
             this.tickGridNotifications(null, Date.now());
@@ -217,6 +309,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
             }).catch(() => this.recover(generation, dependencies.enabled).catch(() => {})); return;
           }
           if (!result.accepted || !delivery) return;
+          this.ct1BelowDelivery = delivery;
           adapter.observe(payload, topic, delivery.receivedAt).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
         }
       };
@@ -235,6 +328,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         if (generation !== this.generation || this.adapter !== adapter) return;
         const now = Date.now();
         this.tickGridNotifications(this.currentGridNotificationObservation(now), now);
+        this.tickBelowNotifications('ct2', this.currentBelowObservation('ct2', now), now);
         this.details.render().catch(() => {});
         adapter.refresh().then(() => {
           if (generation === this.generation && !adapter.diagnostics().active) this.recover(generation, dependencies.enabled).catch(() => {});
@@ -285,6 +379,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     ++this.gridNotificationAnchorRevision;
     this.gridNotificationAnchorPending = false;
     this.tickGridNotifications(null, Date.now());
+    this.ct1BelowDelivery = undefined;
+    this.ct2SourceCurrent = null;
+    this.ct2FlowInput.reset();
+    this.tickBelowNotifications('ct2', null, Date.now());
     if (this.retry) this.homey.clearTimeout(this.retry);
     this.retry = null;
     if (this.ticker) this.homey.clearInterval(this.ticker);
@@ -316,6 +414,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.includes('display_ct2') || changedKeys.includes('ct2_flow_import_sign')) {
+      this.ct2FlowInput.reset();
+      this.tickBelowNotifications('ct2', null, Date.now());
+    }
     if (changedKeys.some((key) => DUAL_CT_DISPLAY_SETTINGS.includes(key))) await this.configureDetails(newSettings);
   }
 
@@ -346,6 +448,9 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     this.gridNotifications.stop();
     this.gridNotificationCard?.removeListener('update', this.reloadGridNotifications);
     this.gridNotificationCard = null;
+    Object.values(this.belowNotifications).forEach((observer) => observer.stop());
+    this.belowNotificationCard?.removeListener('update', this.reloadBelowNotifications);
+    this.belowNotificationCard = null;
     this.homey.settings.removeListener('set', this.accountChanged);
     this.homey.settings.removeListener('unset', this.accountChanged);
     await this.stop();

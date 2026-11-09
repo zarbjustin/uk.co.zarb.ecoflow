@@ -65,7 +65,7 @@ export class SustainedGridRule {
   private lastEmittedAt: number | null = null;
   private readonly rule: GridRule;
 
-  constructor(args: unknown) {
+  constructor(args: unknown, private readonly below = false) {
     this.rule = gridNotificationRule(args);
   }
 
@@ -95,17 +95,20 @@ export class SustainedGridRule {
     if (this.previous && observation.receivedAt === this.previous.receivedAt) return false;
     this.previous = { ...observation };
     const directed = observation.powerW * (this.rule.direction === 'export' ? -1 : 1);
-    if (directed <= this.rule.watts - this.rule.hysteresis) {
+    // Both comparisons use the same dwell/rearm logic on opposite axes.
+    const score = this.below ? -Math.max(0, directed) : directed;
+    const threshold = this.below ? -this.rule.watts : this.rule.watts;
+    if (score <= threshold - this.rule.hysteresis) {
       this.startedAt = null;
       this.fired = false;
       return false;
     }
-    if (!this.fired && directed <= this.rule.watts) {
+    if (!this.fired && score <= threshold) {
       this.startedAt = null;
       return false;
     }
     if (this.startedAt === null) {
-      if (directed > this.rule.watts) this.startedAt = now;
+      if (score > threshold) this.startedAt = now;
       return false;
     }
     if (!allowEmit || this.fired || observation.receivedAt - this.startedAt < this.rule.seconds * 1000
@@ -148,7 +151,7 @@ export class QualifiedGridNotifications {
 
   private readonly ports: NotificationPorts;
 
-  constructor(ports: NotificationPorts) {
+  constructor(ports: NotificationPorts, private readonly below = false) {
     this.ports = ports;
   }
 
@@ -182,7 +185,7 @@ export class QualifiedGridNotifications {
       for (const value of args) {
         const rule = gridNotificationRule(value);
         const key = gridNotificationKey(rule);
-        next.set(key, this.rules.get(key) || { rule, observer: new SustainedGridRule(rule) });
+        next.set(key, this.rules.get(key) || { rule, observer: new SustainedGridRule(rule, this.below) });
         if (next.size > 64) throw new Error('Too many grid notification rules');
       }
       this.rules = next;
@@ -204,9 +207,10 @@ export class QualifiedGridNotifications {
       this.emitting = true;
       const { revision } = this;
       const eventObservation = { ...observation! };
+      const directed = observation!.powerW * (entry.rule.direction === 'export' ? -1 : 1);
       const tokens = {
         direction: entry.rule.direction,
-        power: observation!.powerW * (entry.rule.direction === 'export' ? -1 : 1),
+        power: this.below ? Math.max(0, directed) : directed,
         grid_power: observation!.powerW,
       };
       Promise.resolve().then(() => {

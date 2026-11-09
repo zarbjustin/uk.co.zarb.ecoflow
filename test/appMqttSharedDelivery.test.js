@@ -27,6 +27,7 @@ class Client extends EventEmitter {
 }
 const originalLoad = Module._load;
 let EcoFlowAppMqtt;
+let EcoFlowMqtt;
 try {
   Module._load = function (request, ...args) {
     if (request === 'mqtt') return { connect(_url, options) {
@@ -38,6 +39,7 @@ try {
     return originalLoad.call(this, request, ...args);
   };
   EcoFlowAppMqtt = require('../.homeybuild/lib/EcoFlowAppMqtt').EcoFlowAppMqtt;
+  EcoFlowMqtt = require('../.homeybuild/lib/EcoFlowMqtt').EcoFlowMqtt;
 } finally { Module._load = originalLoad; }
 const auth = {
   getSession: async () => ({ userId: 'synthetic' }),
@@ -60,6 +62,7 @@ test('shared same-meter consumers subscribe once, detach independently and resub
     assert.equal(preview[0], energy[0], 'both consumers receive the same immutable receipt');
     assert.ok(Object.isFrozen(preview[0]));
     assert.equal(preview[0].connectionEpoch, 1);
+    assert.equal(preview[0].isCurrent(), true);
     client.emit('message', topic, Buffer.from('retained'), { retain: true, dup: true });
     assert.equal(energy[1].retained, true); assert.equal(energy[1].duplicate, true);
     mqtt.unsubscribe(sn, e); assert.equal(client.unsubscribed.length, 0);
@@ -70,6 +73,8 @@ test('shared same-meter consumers subscribe once, detach independently and resub
     next.emit('message', topic, Buffer.from('synthetic'), { retain: false, dup: false });
     assert.equal(preview.length, 4); assert.equal(energy.length, 3);
     assert.equal(energy[2].connectionEpoch, 2, 'new socket gives both existing consumers a new epoch');
+    assert.equal(preview[0].isCurrent(), false);
+    assert.equal(energy[2].isCurrent(), true);
     assert.equal(preview[3], energy[2]);
     mqtt.unsubscribe(sn, p); assert.equal(next.unsubscribed.length, 0);
     mqtt.unsubscribe(sn, e); assert.equal(next.unsubscribed.length, 2);
@@ -727,4 +732,35 @@ test('native F4 graceful shutdown is bounded and double/late completion cannot c
     late?.(); late?.(); await nativeSettle();
     assert.equal(h.app.client, next); assert.equal(h.app.connected, true);
   } finally { await h.clean(); }
+});
+
+test('Developer quota receipts cannot keep a per-unit alert current across socket replacement', async t => {
+  const { EcoFlowClient } = require('../.homeybuild/lib/EcoFlowClient');
+  t.mock.method(EcoFlowClient.prototype, 'getCertification', async () => ({
+    protocol: 'mqtts', url: 'broker.invalid', port: 8883,
+    certificateAccount: 'synthetic', certificatePassword: 'synthetic',
+  }));
+  const mqtt = new EcoFlowMqtt({ accessKey: 'synthetic', secretKey: 'synthetic' });
+  const readings = [];
+  mqtt.subscribe(sn, (quota, delivery) => readings.push({ quota, delivery }));
+  const topic = `/open/synthetic/${sn}/quota`;
+  const payload = Buffer.from('{"f32ShowSoc":20}');
+  try {
+    await mqtt.connect();
+    const old = clients.at(-1);
+    const queued = old.listeners('message')[0];
+    old.emit('message', topic, payload, { retain: true, dup: true });
+    assert.deepEqual(readings[0].quota, { f32ShowSoc: 20 });
+    assert.equal(readings[0].delivery.retained, true);
+    assert.equal(readings[0].delivery.duplicate, true);
+    assert.equal(readings[0].delivery.isCurrent(), true);
+    await mqtt.reconnect();
+    assert.equal(readings[0].delivery.isCurrent(), false);
+    queued(topic, payload, { retain: false, dup: false });
+    assert.equal(readings.length, 1);
+    clients.at(-1).emit('message', topic, payload, { retain: false, dup: false });
+    assert.equal(readings[1].delivery.connectionEpoch, readings[0].delivery.connectionEpoch + 1);
+    assert.equal(readings[1].delivery.isCurrent(), true);
+  } finally { await mqtt.end(); }
+  assert.equal(readings[1].delivery.isCurrent(), false);
 });

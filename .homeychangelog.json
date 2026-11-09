@@ -1,4 +1,9 @@
 {
+  "1.11.28": {
+    "en": "Adds a sustained below-threshold import/export Flow for Dual CT, with experimental CT2 support, and battery threshold and charging alerts for individual STREAM Ultra X and AC Pro units.",
+    "de": "Ergänzt einen Dual-CT-Flow für länger anhaltenden Netzbezug oder Einspeisung unter einem Grenzwert mit experimenteller CT2-Unterstützung sowie Alarme für Batteriestand, Laden und Entladen einzelner STREAM Ultra X und AC Pro.",
+    "nl": "Voegt een Dual CT-Flow toe voor aanhoudende import of export onder een drempel, met experimentele CT2-ondersteuning, en meldingen voor batterijniveau, laden en ontladen van afzonderlijke STREAM Ultra X- en AC Pro-units."
+  },
   "1.11.27": {
     "en": "The experimental reserve THEN card can now select a STREAM 5000 Home Battery. Opt-in is off by default and records the main unit through a read-only check. Requests require both fresh checks to match. Flow success means API acceptance only.",
     "de": "Die experimentelle Reserve-THEN-Karte unterstützt jetzt die STREAM 5000 Home Battery. Die Freigabe ist standardmäßig aus und speichert das Hauptgerät nach einer Leseprüfung. Beide aktuellen Prüfungen müssen übereinstimmen. Flow-Erfolg bedeutet nur API-Annahme.",

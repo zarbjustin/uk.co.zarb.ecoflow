@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.11.27",
+  "version": "1.11.28",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -650,6 +650,167 @@
         ]
       },
       {
+        "id": "smartmeter_dual_ct_power_below_sustained",
+        "title": {
+          "en": "Dual CT import/export stays below a threshold",
+          "de": "Dual CT Bezug/Einspeisung bleibt unter einer Schwelle",
+          "nl": "Dual CT afname/teruglevering blijft onder een drempel"
+        },
+        "titleFormatted": {
+          "en": "[[channel]] [[direction]] below [[watts]] W for [[seconds]] s, hysteresis [[hysteresis]] W, cooldown [[cooldown]] s",
+          "de": "[[channel]] [[direction]] unter [[watts]] W für [[seconds]] s, Hysterese [[hysteresis]] W, Pause [[cooldown]] s",
+          "nl": "[[channel]] [[direction]] onder [[watts]] W gedurende [[seconds]] s, hysterese [[hysteresis]] W, pauze [[cooldown]] s"
+        },
+        "hint": {
+          "en": "Fresh readings must stay strictly below the threshold. Gaps restart the wait. A live reading flowing in the opposite direction counts as zero for the selected direction. CT2 requires a confirmed phase layout and import direction in device settings. Use for notifications.",
+          "de": "Aktuelle Messwerte müssen unter der Schwelle bleiben. Lücken starten die Wartezeit neu. Ein aktueller Wert in Gegenrichtung zählt in der gewählten Richtung als null. Für CT2 Phasen und Bezugsrichtung in den Geräteeinstellungen bestätigen. Für Benachrichtigungen verwenden.",
+          "nl": "Actuele metingen moeten onder de drempel blijven. Hiaten starten de wachttijd opnieuw. Een actuele meting in de tegengestelde richting telt als nul voor de gekozen richting. Bevestig voor CT2 de fasen en afnamerichting in de apparaatinstellingen. Gebruik voor meldingen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=smartmeter_dual_ct_energy"
+          },
+          {
+            "type": "dropdown",
+            "name": "channel",
+            "title": {
+              "en": "Channel",
+              "de": "Kanal",
+              "nl": "Kanaal"
+            },
+            "values": [
+              {
+                "id": "ct1",
+                "title": {
+                  "en": "CT1",
+                  "de": "CT1",
+                  "nl": "CT1"
+                }
+              },
+              {
+                "id": "ct2",
+                "title": {
+                  "en": "CT2",
+                  "de": "CT2",
+                  "nl": "CT2"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "import",
+                "title": {
+                  "en": "import",
+                  "de": "Bezug",
+                  "nl": "afname"
+                }
+              },
+              {
+                "id": "export",
+                "title": {
+                  "en": "export",
+                  "de": "Einspeisung",
+                  "nl": "teruglevering"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 1,
+            "max": 100000,
+            "title": {
+              "en": "Threshold W",
+              "de": "Schwelle W",
+              "nl": "Drempel W"
+            }
+          },
+          {
+            "type": "number",
+            "name": "seconds",
+            "min": 1,
+            "max": 1800,
+            "title": {
+              "en": "Dwell seconds",
+              "de": "Dauer Sekunden",
+              "nl": "Duur seconden"
+            }
+          },
+          {
+            "type": "number",
+            "name": "hysteresis",
+            "min": 0,
+            "max": 100000,
+            "title": {
+              "en": "Hysteresis W",
+              "de": "Hysterese W",
+              "nl": "Hysterese W"
+            }
+          },
+          {
+            "type": "number",
+            "name": "cooldown",
+            "min": 0,
+            "max": 86400,
+            "title": {
+              "en": "Cooldown seconds",
+              "de": "Pause Sekunden",
+              "nl": "Pauze seconden"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "channel",
+            "type": "string",
+            "title": {
+              "en": "Channel",
+              "de": "Kanal",
+              "nl": "Kanaal"
+            }
+          },
+          {
+            "name": "direction",
+            "type": "string",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            }
+          },
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Import/export W",
+              "de": "Bezug/Einspeisung W",
+              "nl": "Afname/teruglevering W"
+            }
+          },
+          {
+            "name": "grid_power",
+            "type": "number",
+            "title": {
+              "en": "Signed channel W",
+              "de": "Kanalleistung mit Vorzeichen W",
+              "nl": "Kanaalvermogen met teken W"
+            }
+          }
+        ]
+      },
+      {
         "id": "smartmeter_grid_power_sustained",
         "title": {
           "en": "Grid import/export power is sustained",
@@ -805,6 +966,151 @@
             "example": 450
           }
         ]
+      },
+      {
+        "id": "stream_unit_battery_level_crossed",
+        "title": {
+          "en": "Unit battery level crossed",
+          "de": "Batteriestand der Einheit hat den Schwellenwert erreicht",
+          "nl": "Batterijniveau van de unit passeert drempel"
+        },
+        "titleFormatted": {
+          "en": "Unit battery level goes [[direction]] [[level]]%",
+          "de": "Batteriestand der Einheit geht [[direction]] [[level]]%",
+          "nl": "Batterijniveau van de unit gaat [[direction]] [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_unit"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "title": {
+              "en": "Battery level",
+              "de": "Batteriestand",
+              "nl": "Batterijniveau"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "battery",
+            "type": "number",
+            "title": {
+              "en": "Battery",
+              "de": "Batterie",
+              "nl": "Batterij"
+            },
+            "example": 20
+          }
+        ],
+        "hint": {
+          "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+          "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+          "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+        }
+      },
+      {
+        "id": "stream_unit_charging_started",
+        "title": {
+          "en": "Unit battery started charging",
+          "de": "Batterie der Einheit lädt jetzt",
+          "nl": "Batterij van de unit is begonnen met opladen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_unit"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
+            },
+            "example": 800
+          }
+        ],
+        "hint": {
+          "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+          "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+          "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+        }
+      },
+      {
+        "id": "stream_unit_discharging_started",
+        "title": {
+          "en": "Unit battery started discharging",
+          "de": "Batterie der Einheit entlädt jetzt",
+          "nl": "Batterij van de unit is begonnen met ontladen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_unit"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
+            },
+            "example": -600
+          }
+        ],
+        "hint": {
+          "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+          "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+          "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+        }
       }
     ],
     "conditions": [
@@ -2638,6 +2944,47 @@
                 "en": "Three phase",
                 "de": "Dreiphasig",
                 "nl": "Driefase"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ct2_flow_import_sign",
+          "type": "dropdown",
+          "value": "off",
+          "label": {
+            "en": "CT2 notifications: import direction",
+            "de": "CT2-Benachrichtigungen: Bezugsrichtung",
+            "nl": "CT2-meldingen: afnamerichting"
+          },
+          "hint": {
+            "en": "Experimental. Select the CT2 phase layout and compare its watts and sign against your known circuit before enabling. Choose the sign that means import on this circuit.",
+            "de": "Experimentell. Vor dem Aktivieren das CT2-Phasenlayout auswählen und Wattwerte und Vorzeichen am bekannten Stromkreis prüfen. Das Vorzeichen für Bezug auswählen.",
+            "nl": "Experimenteel. Kies de CT2-fase-indeling en vergelijk het vermogen en teken met je bekende circuit. Kies het teken dat afname betekent."
+          },
+          "values": [
+            {
+              "id": "off",
+              "label": {
+                "en": "Off",
+                "de": "Aus",
+                "nl": "Uit"
+              }
+            },
+            {
+              "id": "positive",
+              "label": {
+                "en": "Positive means import",
+                "de": "Positiv bedeutet Bezug",
+                "nl": "Positief betekent afname"
+              }
+            },
+            {
+              "id": "negative",
+              "label": {
+                "en": "Negative means import",
+                "de": "Negativ bedeutet Bezug",
+                "nl": "Negatief betekent afname"
               }
             }
           ]

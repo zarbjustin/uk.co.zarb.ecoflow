@@ -1,5 +1,18 @@
 # Codex cross-machine handover
 
+## 9 November 2026 - Combined Development 1.11.28 Flow candidate
+
+Adds a sustained below-threshold import/export trigger for Dual CT CT1
+and experimental CT2, plus per-unit battery threshold, charging and
+discharging triggers for original STREAM Ultra X and AC Pro devices.
+Review added socket ownership checks so a pending below-threshold
+Flow cannot run after either channel's MQTT source disconnects.
+Existing Energy accounting and saved Flow contracts are preserved.
+CT2 direction defaults to Off. See [Dual CT setup](DUAL_CT_CIRCUIT_PRESENTATION.md#sustained-below-threshold-flow-candidate).
+
+This is the Development candidate source checkpoint. Exact CI, installation
+preservation, Flow card registration and physical delivery have separate receipts.
+
 ## 7 November2026 — 1.11.24 source push, conditional install and Office role approved
 
 Owner approved commit/push of the reviewed1.11.24, exact CI, then one non-clean
