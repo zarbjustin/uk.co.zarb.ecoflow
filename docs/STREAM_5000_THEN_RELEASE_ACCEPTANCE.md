@@ -2,7 +2,10 @@
 
 This is a separate, currently OPEN qualification scope. Monitoring acceptance
 explicitly excludes new controls; it cannot qualify EdNL's battery THEN request.
-No battery writer, card, runner, permission, version or publication is enabled.
+This strong applied-control scope remains unbound. The separately owner-approved
+[experimental request-only reserve card](STREAM_5000_REQUEST_ONLY_RESERVE.md)
+does not qualify these gates or claim confirmed/restored control. No installed
+runtime or store publication follows from adding that source-only card.
 
 `npm run release:check` validates this ledger structurally and reports pending
 gates. `npm run release:then` fails closed until every required gate passes for

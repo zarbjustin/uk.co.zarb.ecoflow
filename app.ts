@@ -17,6 +17,7 @@ import { EcoFlowDevice } from './lib/types';
 import { CoordinationWorkspace } from './lib/coordinationWorkspace';
 import { CoordinationFlowMonitor } from './lib/coordinationFlowMonitor';
 import { gridNotificationMatches } from './lib/sustainedGridNotifications';
+import { requestStream5000Reserve, ReserveRequestError } from './lib/stream5000ReserveRequest';
 import {
   APP_AUTH_EMAIL_SETTING, APP_AUTH_HOST_SETTING, APP_AUTH_PASSWORD_SETTING,
   appAuthClientFromSettings, getSavedAppAuthCreds,
@@ -32,6 +33,7 @@ module.exports = class EcoFlowApp extends Homey.App {
   private settingsTimer: NodeJS.Timeout | null = null;
   private appSettingsTimer: NodeJS.Timeout | null = null;
   private stopping = false;
+  private reserveRequest: AbortController | null = null;
   private pendingRealtime = 0;
   private pendingAppRealtime = 0;
   private releaseResearchMqttWhenIdle = false;
@@ -63,6 +65,9 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (this.homey.settings.get('houseReserveControl')?.enabled === true) this.ensureHouseReserveWatchdog();
     this.streamDiscovery.clear();
     if (this.homey.flow) {
+      this.homey.flow.getActionCard?.('stream_5000_request_backup_reserve').registerRunListener(
+        (args: any) => this.requestStream5000BackupReserve(args.device, args.percent),
+      );
       this.homey.flow.getDeviceTriggerCard?.('smartmeter_grid_power_sustained').registerRunListener(
         (args: any, state: any) => gridNotificationMatches(args, state)
           && args.device.gridNotificationEventCurrent(state.observation),
@@ -105,6 +110,9 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   private onSettingChanged(key: string): void {
     if (this.stopping) return;
+    if (['accessKey', 'secretKey', 'host', 'houseReserveControl', 'houseReserveLease', ...APP_AUTH_SETTINGS].includes(key)) {
+      this.cancelStream5000ReserveRequests();
+    }
     if (['streamCoordinationBindingsV1', ...APP_AUTH_SETTINGS, 'accessKey', 'secretKey', 'host'].includes(key)) {
       this.coordinationFlowRevision += 1;
       this.coordinationFlowMonitor?.stop('monitor_sources_changed');
@@ -150,6 +158,7 @@ module.exports = class EcoFlowApp extends Homey.App {
 
   async onUninit(): Promise<void> {
     this.stopping = true;
+    this.cancelStream5000ReserveRequests();
     if (this.houseReserveTimer) this.homey.clearInterval(this.houseReserveTimer);
     this.houseReserveTimer = null;
     this.coordinationFlowRevision += 1;
@@ -200,6 +209,54 @@ module.exports = class EcoFlowApp extends Homey.App {
       secretKey: this.homey.settings.get('secretKey'),
       host: this.homey.settings.get('host'),
     };
+  }
+
+  cancelStream5000ReserveRequests(): void {
+    this.reserveRequest?.abort();
+  }
+
+  async requestStream5000BackupReserve(device: Homey.Device, percent: number): Promise<boolean> {
+    const fail = (reason: string): never => {
+      throw new Error(this.homey.__(`reserve_request.${reason}`));
+    };
+    if (this.reserveRequest) return fail('busy');
+    if (!Number.isSafeInteger(percent) || percent < 0 || percent > 100) return fail('arguments');
+    const paired = () => ['stream_5000_unit', 'stream_ac5000'].some((id) => {
+      try {
+        return this.homey.drivers.getDriver(id).getDevices().includes(device);
+      } catch {
+        return false;
+      }
+    });
+    if (!device || !paired()) return fail('unavailable');
+    if (device.getSetting('reserve_request_enabled') !== true) return fail('disabled');
+    const credentials = this.getCredentials();
+    if (!credentials.accessKey || !credentials.secretKey) return fail('credentials');
+    const sn = device.getData().sn as string;
+    const controller = new AbortController();
+    const active = () => {
+      const current = this.getCredentials();
+      const lease = this.homey.settings.get('houseReserveLease');
+      return !this.stopping && !controller.signal.aborted && paired() && device.getAvailable()
+        && device.getSetting('reserve_request_enabled') === true && device.getData().sn === sn
+        && current.accessKey === credentials.accessKey && current.secretKey === credentials.secretKey && current.host === credentials.host
+        && this.homey.settings.get('houseReserveControl')?.enabled !== true && (!lease || lease.completed === true);
+    };
+    if (!active()) return fail('unavailable');
+    this.reserveRequest = controller;
+    const timer = this.homey.setTimeout(() => controller.abort(), 15000);
+    try {
+      const client = new EcoFlowClient({
+        accessKey: credentials.accessKey, secretKey: credentials.secretKey, host: credentials.host,
+      });
+      await requestStream5000Reserve(client, sn, percent, controller.signal, active);
+      return true;
+    } catch (error) {
+      return fail(error instanceof ReserveRequestError ? error.reason : 'preflight');
+    } finally {
+      this.homey.clearTimeout(timer);
+      if (this.reserveRequest === controller) this.reserveRequest = null;
+    }
   }
 
   /** Read-only system SOC; never starts MQTT, commands, pairing or accounting. */

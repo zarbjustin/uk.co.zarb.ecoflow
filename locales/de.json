@@ -1,4 +1,15 @@
 {
+  "reserve_request": {
+    "notice": "Experimentelle Reserveanfragen aktiviert. Flow-Erfolg bedeutet nur API-Annahme; unabhängig in EcoFlow prüfen. Keine automatische Wiederherstellung.",
+    "arguments": "Eine ganze Reserve-Prozentzahl von 0 bis 100 wählen.",
+    "disabled": "Experimentelle Reserveanfragen zuerst in den erweiterten Geräteeinstellungen aktivieren.",
+    "credentials": "Zuerst EcoFlow-Developer-API-Schlüssel und Region in den App-Einstellungen einrichten.",
+    "busy": "Eine andere Reserveanfrage läuft. Keine neue Anfrage gesendet.",
+    "unavailable": "Die gekoppelte Einheit muss verfügbar und aktiviert sein, ohne aktive Hausreserve-Steuerung oder Lease.",
+    "cancelled": "Reserveanfrage vor dem Absenden abgebrochen oder abgelaufen.",
+    "preflight": "Keine Reserveanfrage gesendet: Developer-Zugang, Hauptgerät, bereits aktive Reserve und Eigenverbrauch prüfen. Einstellungen nicht nur zum Umgehen dieser Prüfung ändern.",
+    "uncertain": "Reserveübermittlung ungewiss; die Anfrage kann noch wirksam werden. Keine automatische Wiederholung oder Wiederherstellung. Vor einer weiteren Anfrage in EcoFlow prüfen."
+  },
   "stream_live": { "unavailable": "Warte auf aktuelle EcoFlow-Messwerte." },
   "stream_5000_pairing": {
     "catalogue": "Bekannte überlappende Vertreter werden ausgeblendet. Bei anderen Kandidaten ist die Anlagenzuordnung nicht verifiziert. Fügen Sie pro eigenständiger Anlage nur eine Home Battery hinzu. Bestehender Verlauf und Flows bleiben erhalten; physische Monitore können zusätzlich gekoppelt werden.",

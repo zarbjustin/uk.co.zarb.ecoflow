@@ -1,4 +1,15 @@
 {
+  "reserve_request": {
+    "notice": "Experimentele reserveaanvragen ingeschakeld. Flow-succes betekent alleen API-acceptatie; controleer onafhankelijk in EcoFlow. Geen automatisch herstel.",
+    "arguments": "Kies een geheel reservepercentage van 0 tot 100.",
+    "disabled": "Schakel eerst experimentele reserveaanvragen in de geavanceerde apparaatinstellingen in.",
+    "credentials": "Stel eerst EcoFlow Developer-API-sleutels en regio in bij de app-instellingen.",
+    "busy": "Een andere reserveaanvraag loopt. Geen nieuwe aanvraag verzonden.",
+    "unavailable": "Deze gekoppelde unit moet beschikbaar en aangemeld zijn, zonder actieve huisreserveregelaar of lease.",
+    "cancelled": "Reserveaanvraag vóór verzending geannuleerd of verlopen.",
+    "preflight": "Geen reserveaanvraag verzonden: controleer Developer-toegang, hoofdapparaat, reeds ingeschakelde reserve en Zelfverbruik-modus. Wijzig geen instellingen alleen om deze controle te omzeilen.",
+    "uncertain": "Reserveverzending is onzeker en kan nog worden toegepast. Geen automatische herhaling of herstel. Controleer EcoFlow vóór een nieuwe aanvraag."
+  },
   "stream_live": { "unavailable": "Wachten op actuele EcoFlow-metingen." },
   "stream_5000_pairing": {
     "catalogue": "Bekende overlappende vertegenwoordigers worden niet getoond. De installatie van andere kandidaten is niet geverifieerd. Voeg per afzonderlijke installatie één Home Battery toe. Bestaande geschiedenis en Flows blijven behouden; fysieke monitors kunnen daarnaast worden gekoppeld.",

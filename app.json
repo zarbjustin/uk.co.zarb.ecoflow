@@ -2116,6 +2116,48 @@
             ]
           }
         ]
+      },
+      {
+        "id": "stream_5000_request_backup_reserve",
+        "title": {
+          "en": "Request installation backup reserve (no confirmation)",
+          "de": "Notstromreserve der Anlage anfordern (ohne Bestätigung)",
+          "nl": "Back-upreserve voor installatie aanvragen (geen bevestiging)"
+        },
+        "titleFormatted": {
+          "en": "Request installation backup reserve of [[percent]]% (no confirmation)",
+          "de": "Notstromreserve der Anlage von [[percent]]% anfordern (ohne Bestätigung)",
+          "nl": "Back-upreserve voor installatie van [[percent]]% aanvragen (geen bevestiging)"
+        },
+        "hint": {
+          "en": "Opt in in this device's Advanced Settings and configure Developer API keys. Targets EcoFlow's reported main device and may affect linked units. Requires reserve already on and Self-consumption mode. Success means API acceptance only, not application or charging. No automatic retry or restoration. Check EcoFlow independently.",
+          "de": "In den erweiterten Geräteeinstellungen aktivieren und Developer-API-Schlüssel einrichten. Ziel ist das von EcoFlow gemeldete Hauptgerät; verbundene Einheiten können betroffen sein. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. Erfolg bedeutet nur API-Annahme, nicht Anwendung oder Laden. Keine automatische Wiederholung oder Wiederherstellung. Unabhängig in EcoFlow prüfen.",
+          "nl": "Activeer in de geavanceerde apparaatinstellingen en stel Developer-API-sleutels in. Richt zich op het door EcoFlow gemelde hoofdapparaat en kan gekoppelde units beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. Succes betekent alleen API-acceptatie, niet toepassing of laden. Geen automatische herhaling of herstel. Controleer onafhankelijk in EcoFlow."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_5000_unit|stream_ac5000"
+          },
+          {
+            "type": "number",
+            "name": "percent",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "title": {
+              "en": "Requested reserve",
+              "de": "Angeforderte Reserve",
+              "nl": "Aangevraagde reserve"
+            },
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ]
       }
     ]
   },
@@ -4124,6 +4166,21 @@
       },
       "settings": [
         {
+          "id": "reserve_request_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Allow experimental reserve requests",
+            "de": "Experimentelle Reserveanfragen erlauben",
+            "nl": "Experimentele reserveaanvragen toestaan"
+          },
+          "hint": {
+            "en": "Allows the request-only THEN card using Developer API keys. Requests target EcoFlow's reported main device and may affect the linked installation, not just this unit. Requires reserve already on and Self-consumption mode. API acceptance is not application or charging confirmation. No automatic retry/restoration. Do not combine with other controllers. Turning this off cannot cancel an already submitted request.",
+            "de": "Erlaubt die reine Anfrage-THEN-Karte mit Developer-API-Schlüsseln. Anfragen gehen an das von EcoFlow gemeldete Hauptgerät und können die verbundene Anlage betreffen. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. API-Annahme bestätigt weder Anwendung noch Laden. Keine automatische Wiederholung/Wiederherstellung. Nicht mit anderen Steuerungen kombinieren. Deaktivieren widerruft keine bereits gesendete Anfrage.",
+            "nl": "Staat de alleen-aanvragen-THEN-kaart toe met Developer-API-sleutels. Aanvragen richten zich op het door EcoFlow gemelde hoofdapparaat en kunnen de gekoppelde installatie beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. API-acceptatie bevestigt geen toepassing of laden. Geen automatische herhaling/herstel. Niet combineren met andere regelaars. Uitschakelen annuleert geen al verzonden aanvraag."
+          }
+        },
+        {
           "type": "group",
           "label": {
             "en": "Device information",
@@ -4368,6 +4425,21 @@
         "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
       },
       "settings": [
+        {
+          "id": "reserve_request_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Allow experimental reserve requests",
+            "de": "Experimentelle Reserveanfragen erlauben",
+            "nl": "Experimentele reserveaanvragen toestaan"
+          },
+          "hint": {
+            "en": "Allows the request-only THEN card using Developer API keys. Requests target EcoFlow's reported main device and may affect the linked installation, not just this unit. Requires reserve already on and Self-consumption mode. API acceptance is not application or charging confirmation. No automatic retry/restoration. Do not combine with other controllers. Turning this off cannot cancel an already submitted request.",
+            "de": "Erlaubt die reine Anfrage-THEN-Karte mit Developer-API-Schlüsseln. Anfragen gehen an das von EcoFlow gemeldete Hauptgerät und können die verbundene Anlage betreffen. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. API-Annahme bestätigt weder Anwendung noch Laden. Keine automatische Wiederholung/Wiederherstellung. Nicht mit anderen Steuerungen kombinieren. Deaktivieren widerruft keine bereits gesendete Anfrage.",
+            "nl": "Staat de alleen-aanvragen-THEN-kaart toe met Developer-API-sleutels. Aanvragen richten zich op het door EcoFlow gemelde hoofdapparaat en kunnen de gekoppelde installatie beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. API-acceptatie bevestigt geen toepassing of laden. Geen automatische herhaling/herstel. Niet combineren met andere regelaars. Uitschakelen annuleert geen al verzonden aanvraag."
+          }
+        },
         {
           "type": "group",
           "label": {

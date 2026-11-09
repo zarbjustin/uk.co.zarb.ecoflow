@@ -58,7 +58,7 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
   const additions = {
     triggers: ['coordination_assessment_changed', 'coordination_readings_changed', 'smartmeter_grid_power_sustained'],
     conditions: ['coordination_circuit_power_sustained', 'coordination_external_priority', 'coordination_grid_export_sustained', 'coordination_readings_current', 'stream_5000_reading_current'],
-    actions: [],
+    actions: ['stream_5000_request_backup_reserve'],
   };
   for (const [kind, oldCards] of Object.entries(legacy.flow)) {
     assert.deepEqual(app.flow[kind].map(card => card.id).sort(), [...oldCards.map(card => card.id), ...additions[kind]].sort(), 'unexpected Flow identities');
@@ -67,6 +67,13 @@ export function assertReleaseBoundaries({ homeyReader, app, compose, pkg, lock, 
       if (old.id === 'smartmeter_grid_power_above') expected[0].filter = 'driver_id=smartmeter|smartmeter_dual_ct_energy';
       assert.deepEqual(contract(app.flow[kind].find(card => card.id === old.id).args || []), contract(expected), `legacy arguments: ${old.id}`);
     }
+  }
+  assert.deepEqual(contract(app.flow.actions.find(card => card.id === 'stream_5000_request_backup_reserve').args), [
+    { type: 'device', name: 'device', filter: 'driver_id=stream_5000_unit|stream_ac5000' },
+    { type: 'number', name: 'percent', min: 0, max: 100, step: 1 },
+  ], 'Only the explicitly opted-in, request-only reserve action is admitted');
+  for (const id of ['stream_5000_unit', 'stream_ac5000']) {
+    assert.equal(app.drivers.find(driver => driver.id === id).settings.find(setting => setting.id === 'reserve_request_enabled').value, false);
   }
   assert.deepEqual(contract(app.flow.conditions.find(card => card.id === 'stream_5000_reading_current').args), [
     { type: 'device', name: 'device', filter: 'driver_id=stream_5000_system|stream_5000_unit|stream_ac5000' },

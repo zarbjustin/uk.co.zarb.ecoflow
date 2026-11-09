@@ -1,4 +1,15 @@
 {
+  "reserve_request": {
+    "notice": "Experimental reserve requests enabled. Flow success means API acceptance only; check EcoFlow independently. No automatic restoration.",
+    "arguments": "Choose a whole reserve percentage from 0 to 100.",
+    "disabled": "Enable experimental reserve requests in this device's Advanced Settings first.",
+    "credentials": "Configure EcoFlow Developer API keys and region in app settings first.",
+    "busy": "Another reserve request is pending. No new request was sent.",
+    "unavailable": "This paired unit must be available and opted in, without an active house-reserve controller or lease.",
+    "cancelled": "Reserve request cancelled or expired before submission.",
+    "preflight": "No reserve request submitted: check Developer access, main routing, reserve already on, and Self-consumption mode. Do not change settings merely to bypass this check.",
+    "uncertain": "Reserve submission is uncertain and may still apply. No automatic retry or restoration. Check EcoFlow before another request."
+  },
   "stream_live": { "unavailable": "Waiting for fresh EcoFlow readings." },
   "stream_5000_pairing": {
     "catalogue": "Known overlapping representatives are omitted. Other candidates have unverified installation scope. Add one Home Battery per distinct installation. Keep existing history and Flows; physical monitors can coexist.",

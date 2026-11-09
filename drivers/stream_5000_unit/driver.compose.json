@@ -104,6 +104,21 @@
   },
   "settings": [
     {
+      "id": "reserve_request_enabled",
+      "type": "checkbox",
+      "value": false,
+      "label": {
+        "en": "Allow experimental reserve requests",
+        "de": "Experimentelle Reserveanfragen erlauben",
+        "nl": "Experimentele reserveaanvragen toestaan"
+      },
+      "hint": {
+        "en": "Allows the request-only THEN card using Developer API keys. Requests target EcoFlow's reported main device and may affect the linked installation, not just this unit. Requires reserve already on and Self-consumption mode. API acceptance is not application or charging confirmation. No automatic retry/restoration. Do not combine with other controllers. Turning this off cannot cancel an already submitted request.",
+        "de": "Erlaubt die reine Anfrage-THEN-Karte mit Developer-API-Schlüsseln. Anfragen gehen an das von EcoFlow gemeldete Hauptgerät und können die verbundene Anlage betreffen. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. API-Annahme bestätigt weder Anwendung noch Laden. Keine automatische Wiederholung/Wiederherstellung. Nicht mit anderen Steuerungen kombinieren. Deaktivieren widerruft keine bereits gesendete Anfrage.",
+        "nl": "Staat de alleen-aanvragen-THEN-kaart toe met Developer-API-sleutels. Aanvragen richten zich op het door EcoFlow gemelde hoofdapparaat en kunnen de gekoppelde installatie beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. API-acceptatie bevestigt geen toepassing of laden. Geen automatische herhaling/herstel. Niet combineren met andere regelaars. Uitschakelen annuleert geen al verzonden aanvraag."
+      }
+    },
+    {
       "type": "group",
       "label": {
         "en": "Device information",

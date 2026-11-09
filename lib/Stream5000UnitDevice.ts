@@ -1115,6 +1115,12 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   async onSettings({ newSettings, changedKeys }: { newSettings: any; changedKeys: string[] }): Promise<void> {
+    if (changedKeys.includes('reserve_request_enabled')) {
+      getApp(this.homey)?.cancelStream5000ReserveRequests?.();
+      let key = this.isEnergyAggregate() ? 'device.stream_5000_system.monitoring_only' : 'device.stream_5000_unit.monitoring_only';
+      if (!this.isEnergyAggregate() && newSettings.reserve_request_enabled === true) key = 'reserve_request.notice';
+      await this.setSettings({ experimental_notice: this.homey.__(key) });
+    }
     if (!changedKeys.includes('diagnostic_capture_next')) return;
     this.diagnosticCaptureNext = Boolean(newSettings.diagnostic_capture_next);
     if (this.diagnosticCaptureNext && this.telemetryAdapter) {
@@ -1170,6 +1176,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async teardown(): Promise<void> {
+    getApp(this.homey)?.cancelStream5000ReserveRequests?.();
     this.subscriptionState = 'stopped';
     this.deliveryGeneration += 1;
     this.configurationTracker = undefined;
@@ -1224,7 +1231,8 @@ export class Stream5000PhysicalUnitDevice extends Stream5000UnitDevice {
   }
 
   protected monitoringOnlyMessageKey(): string {
-    return 'device.stream_5000_unit.monitoring_only';
+    return this.getSetting('reserve_request_enabled') === true
+      ? 'reserve_request.notice' : 'device.stream_5000_unit.monitoring_only';
   }
 
   protected capabilityValuesForRole(values: Stream5000CapabilityValues): Stream5000CapabilityValues {
