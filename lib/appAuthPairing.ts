@@ -2,7 +2,7 @@
 
 import { createHash } from 'crypto';
 import { hasOtherAppAuthDevices } from './appAuthConsumers';
-import { AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
+import { AppAuthSession, AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
 
 /**
  * App-auth account handling for STREAM 5000-family drivers and the explicit
@@ -232,4 +232,11 @@ export function registerAppAuthHandlers(
 export function appAuthCredentialsRevision(homey: any): string {
   return createHash('sha256').update(JSON.stringify([APP_AUTH_EMAIL_SETTING, APP_AUTH_PASSWORD_SETTING, APP_AUTH_HOST_SETTING]
     .map((key) => homey.settings.get(key)))).digest('hex');
+}
+
+/** Local binding only. Never include account identity or this digest in reports. */
+export function appAccountBinding(session: Pick<AppAuthSession, 'host' | 'userId'>): string {
+  if (!session || !['https://api.ecoflow.com', 'https://api-e.ecoflow.com'].includes(session.host)
+    || typeof session.userId !== 'string' || !session.userId.trim()) throw new Error('EcoFlow account unavailable.');
+  return createHash('sha256').update(JSON.stringify([session.host, session.userId])).digest('hex');
 }

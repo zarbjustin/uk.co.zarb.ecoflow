@@ -19,7 +19,7 @@ export interface EcoFlowAppApi {
    * App-auth (WSS) realtime feed for admitted STREAM monitoring adapters and
    * optional BK PV diagnostics. Separate from the supported `/open` surface.
    */
-  subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean>;
+  subscribeAppRealtime(sn: string, onFrame: AppFrameHandler, active?: () => boolean): Promise<boolean>;
   unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void;
 }
 

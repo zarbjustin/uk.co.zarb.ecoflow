@@ -12,6 +12,7 @@ import { AppDevice } from './lib/appDevices';
 import { DualCtResearch } from './lib/dualCtResearch';
 import { mergeDualCtInventory, probeDualCtDeveloper, dualCtInventorySummary } from './lib/dualCtSources';
 import { EcoFlowClient } from './lib/EcoFlowClient';
+import { offerSolarFrame } from './lib/stream5000Solar';
 import { readStream5000OfficialSoc, Stream5000OfficialSocSample } from './lib/stream5000OfficialSoc';
 import { EcoFlowDevice } from './lib/types';
 import { CoordinationWorkspace } from './lib/coordinationWorkspace';
@@ -1134,7 +1135,11 @@ module.exports = class EcoFlowApp extends Homey.App {
     if (!this.appMqtt) {
       const client = appAuthClientFromSettings(this.homey, (...a) => this.log('[app-mqtt]', ...a));
       if (!client) return null;
-      this.appMqtt = new EcoFlowAppMqtt({ client, log: (...a) => this.log('[app-mqtt]', ...a) });
+      this.appMqtt = new EcoFlowAppMqtt({
+        client,
+        log: (...a) => this.log('[app-mqtt]', ...a),
+        observeSolar: (frame, topic, receipt) => offerSolarFrame(this, frame, topic, receipt),
+      });
       this.appMqttCredsKey = credsKey;
     }
     try {

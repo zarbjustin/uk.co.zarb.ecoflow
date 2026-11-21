@@ -1,4 +1,11 @@
 {
+  "solar5000": {
+    "setup": "Choose one Solar device for each STREAM 5000 with panels connected directly to its PV inputs. Homey Energy combines their generation. Skip any source already represented by another solar device.",
+    "continue": "Continue",
+    "selection": "Solar selection expired. Reopen the device list.",
+    "waiting": "Waiting for a fresh direct solar power reading.",
+    "history": "Solar counter or source needs review."
+  },
   "reserve_request": {
     "binding": "Check the installation and Developer API settings, then turn off and re-enable experimental reserve requests to verify the main unit.",
     "notice": "Experimental reserve requests enabled. Flow success means API acceptance only; check EcoFlow independently. No automatic restoration.",

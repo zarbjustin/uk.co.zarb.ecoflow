@@ -1,18 +1,11 @@
-import { createHash } from 'crypto';
 import { AppDevice } from './appDevices';
-import { registerAppAuthHandlers } from './appAuthPairing';
-import { AppAuthSession } from './EcoFlowAppAuthClient';
+import { appAccountBinding as dualCtAccountBinding, registerAppAuthHandlers } from './appAuthPairing';
 import { dualCtDiscoveryIdentity } from './dualCtSources';
 
 export const DUAL_CT_PREVIEW_DRIVER = 'smartmeter_dual_ct_preview';
 export const DUAL_CT_PREVIEW_CONSENT = 1;
 
-/** Local binding only. Never include account identity or this digest in reports. */
-export function dualCtAccountBinding(session: Pick<AppAuthSession, 'host' | 'userId'>): string {
-  if (!session || !['https://api.ecoflow.com', 'https://api-e.ecoflow.com'].includes(session.host)
-    || typeof session.userId !== 'string' || !session.userId.trim()) throw new Error('EcoFlow account unavailable.');
-  return createHash('sha256').update(JSON.stringify([session.host, session.userId])).digest('hex');
-}
+export { dualCtAccountBinding };
 
 /** Same provisional identity policy as research, but not restricted to two capture slots. */
 export function dualCtPreviewDevices(devices: AppDevice[]): AppDevice[] {

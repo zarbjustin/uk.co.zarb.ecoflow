@@ -486,7 +486,7 @@ function mergeUnitTelemetry(previous: Es22UnitTelemetry | undefined, next: Es22U
 }
 
 /** Read each f50/f54 entry independently; serial strings are never walked as messages. */
-function readUnitRecords(payload: Buffer): {
+function readUnitRecords(payload: Buffer, solarTotals?: Map<string, number | null>): {
   units: Record<string, Es22UnitTelemetry>; count: number; soc?: number; sn?: string;
 } {
   const units: Record<string, Es22UnitTelemetry> = {};
@@ -514,6 +514,8 @@ function readUnitRecords(payload: Buffer): {
       try {
         const unit: Es22UnitTelemetry = {};
         const pv: Stream5000PvTelemetry = {};
+        let totalFields = 0;
+        let serialFields = 0;
         let pvFieldsSeen = false;
         let invalidPvFields = false;
         let serial: string | undefined;
@@ -524,6 +526,7 @@ function readUnitRecords(payload: Buffer): {
           const valueWire = Number(valueTag.value & 7n);
           const value = readField(entry.bytes, valueTag.next, valueWire);
           valuePos = value.next;
+          if (valueNumber === 1) serialFields += 1;
           if (valueNumber === 1 && valueWire === 2) {
             const text = value.bytes.toString('ascii');
             if (/^[A-Z0-9]{1,64}$/.test(text) && Buffer.from(text, 'ascii').equals(value.bytes)) serial = text;
@@ -537,12 +540,20 @@ function readUnitRecords(payload: Buffer): {
             const power = decodeScalar(valueWire, value.bytes, 'int');
             if (power !== undefined && Number.isFinite(power)) unit.batteryPowerRawW = power * HALF_WATT;
           } else if (number === 50 && PV_FIELDS[valueNumber]) {
+            if (valueNumber === 3) totalFields += 1;
             pvFieldsSeen = true;
             const power = valueWire === 5 ? decodeScalar(valueWire, value.bytes, 'float') : undefined;
             if (power !== undefined && Number.isFinite(power)) pv[PV_FIELDS[valueNumber]] = power;
             else invalidPvFields = true;
           }
           // f50.1.4 latches at rest: deliberately never use it for battery power.
+        }
+        if (solarTotals && number === 50 && serial && serialFields === 1) {
+          // Energy requires an explicit aggregate MPPT measurement. Display-only
+          // zero completion and the four string breakdowns never enter this path.
+          const watts = pv.totalW;
+          solarTotals.set(serial, !solarTotals.has(serial) && totalFields === 1 && !invalidPvFields
+            && watts !== undefined && watts >= 0 && watts <= 5000 ? watts : null);
         }
         if (number === 50) unit.pv = completePvEntry(pv, pvFieldsSeen, invalidPvFields);
         if (serial) units[serial] = mergeUnitTelemetry(units[serial], unit);
@@ -561,6 +572,21 @@ function readUnitRecords(payload: Buffer): {
   return {
     units, count, soc: count === 1 ? candidateSoc : undefined, sn: count === 1 ? candidateSn : undefined,
   };
+}
+
+/** Read only serial-labelled ES21 direct PV totals from an owned live property frame. */
+export function es21SolarTotals(frame: Buffer, reporter: string): Map<string, number | null> {
+  const totals = new Map<string, number | null>();
+  if (!frame.length || frame.length > 256 * 1024) return totals;
+  try {
+    for (const header of decodeFrameHeaders(frame)) {
+      if (header.candidateHeaderValid === false || (header.deviceSn && header.deviceSn !== reporter)) return new Map();
+      if (header.cmdFunc === 254 && header.cmdId === 39 && header.pdata) readUnitRecords(header.pdata, totals);
+    }
+  } catch {
+    totals.clear();
+  }
+  return totals;
 }
 
 /**

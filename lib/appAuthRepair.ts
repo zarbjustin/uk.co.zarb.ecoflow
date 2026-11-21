@@ -6,7 +6,7 @@ import { dualCtAccountBinding } from './dualCtPreviewPairing';
 
 function references(homey: any, current: any) {
   const found = new Set<any>();
-  for (const id of [...STREAM_5000_DRIVER_IDS, 'stream_unit', 'smartmeter_dual_ct_preview', 'smartmeter_dual_ct_energy']) {
+  for (const id of [...STREAM_5000_DRIVER_IDS, 'stream_5000_solar', 'stream_unit', 'smartmeter_dual_ct_preview', 'smartmeter_dual_ct_energy']) {
     let driver;
     try {
       driver = homey.drivers.getDriver(id);
@@ -26,7 +26,7 @@ function references(homey: any, current: any) {
     return {
       sn,
       preview: device.getStoreValue?.('dualCtAccountBinding') || null,
-      energy: device.getStoreValue?.('dualCtEnergyAccountBinding') || null,
+      energy: device.getStoreValue?.('dualCtEnergyAccountBinding') || device.getStoreValue?.('solarAccountBinding') || null,
     };
   });
   rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));

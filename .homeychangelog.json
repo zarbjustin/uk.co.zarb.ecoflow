@@ -1,4 +1,9 @@
 {
+  "1.11.29": {
+    "en": "Adds STREAM 5000 Solar for directly connected ES21 panels, with live watts and estimated generated kWh per physical unit in Homey Energy.",
+    "de": "STREAM 5000 Solar zeigt in Homey Energy die aktuelle Leistung und die geschätzte erzeugte Energie für direkt angeschlossene Solarmodule pro ES21 an.",
+    "nl": "STREAM 5000 Solar toont in Homey Energy het actuele vermogen en de geschatte opgewekte energie van direct aangesloten zonnepanelen per ES21."
+  },
   "1.11.28": {
     "en": "Adds a sustained below-threshold import/export Flow for Dual CT, with experimental CT2 support, and battery threshold and charging alerts for individual STREAM Ultra X and AC Pro units.",
     "de": "Ergänzt einen Dual-CT-Flow für länger anhaltenden Netzbezug oder Einspeisung unter einem Grenzwert mit experimenteller CT2-Unterstützung sowie Alarme für Batteriestand, Laden und Entladen einzelner STREAM Ultra X und AC Pro.",

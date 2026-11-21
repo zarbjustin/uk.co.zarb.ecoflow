@@ -1,4 +1,11 @@
 {
+  "solar5000": {
+    "setup": "Kies één zonneapparaat per STREAM 5000 met panelen direct op de PV-ingangen. Homey Energy telt de opwekking bij elkaar op. Sla een bron over als een ander zonneapparaat deze al meet.",
+    "continue": "Verder",
+    "selection": "De selectie is verlopen. Open de apparatenlijst opnieuw.",
+    "waiting": "Wachten op een actuele meting van direct zonnevermogen.",
+    "history": "Controleer de zonne-energiemeter of de bron."
+  },
   "reserve_request": {
     "binding": "Controleer de installatie en de Developer-API-instellingen. Schakel experimentele reserveaanvragen uit en opnieuw in om de hoofdeenheid te verifiëren.",
     "notice": "Experimentele reserveaanvragen ingeschakeld. Flow-succes betekent alleen API-acceptatie; controleer onafhankelijk in EcoFlow. Geen automatisch herstel.",

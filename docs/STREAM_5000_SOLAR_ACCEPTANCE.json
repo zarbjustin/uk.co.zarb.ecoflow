@@ -1,0 +1,53 @@
+{
+  "scope": "es21_direct_pv",
+  "gates": [
+    {
+      "id": "linked_source_identity",
+      "status": "open",
+      "candidateFingerprint": null,
+      "observedAt": null,
+      "startedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "native_watts_and_zero",
+      "status": "open",
+      "candidateFingerprint": null,
+      "observedAt": null,
+      "startedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "generated_kwh_interval",
+      "status": "open",
+      "candidateFingerprint": null,
+      "observedAt": null,
+      "startedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "restart_and_gap_recovery",
+      "status": "open",
+      "candidateFingerprint": null,
+      "observedAt": null,
+      "startedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "homey_energy_projection",
+      "status": "open",
+      "candidateFingerprint": null,
+      "observedAt": null,
+      "startedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "normal_use_48h",
+      "status": "open",
+      "candidateFingerprint": null,
+      "observedAt": null,
+      "startedAt": null,
+      "evidence": null
+    }
+  ]
+}

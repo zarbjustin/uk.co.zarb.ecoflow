@@ -1,5 +1,14 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 21 November 2026 - 1.11.29 STREAM 5000 Solar daylight candidate
+
+One Solar device per panel-equipped ES21 contributes direct PV watts and
+estimated generated kWh to Homey Energy. Linked duplicates are covered in
+replay. Pairing checks source ownership and rejects supplied counter state.
+The isolated solar source passed 1,841 tests. Its six hardware gates,
+including native daylight comparisons and the 48-hour soak, are open.
+See [the daylight procedure and runtime fingerprint](STREAM_5000_SOLAR_ENERGY.md).
+
 ## 9 November 2026 - Combined Development 1.11.28 Flow candidate
 
 Adds a sustained below-threshold import/export trigger for Dual CT CT1

@@ -1,4 +1,11 @@
 {
+  "solar5000": {
+    "setup": "Füge für jeden STREAM 5000 mit direkt angeschlossenen Solarmodulen ein Solargerät hinzu. Homey Energy summiert die Erzeugung. Bereits durch ein anderes Solargerät erfasste Quellen überspringen.",
+    "continue": "Weiter",
+    "selection": "Auswahl abgelaufen. Öffne die Geräteliste erneut.",
+    "waiting": "Warten auf eine aktuelle Messung der direkten Solarleistung.",
+    "history": "Solarzähler oder Quelle prüfen."
+  },
   "reserve_request": {
     "binding": "Anlage und Developer-API-Einstellungen prüfen. Danach experimentelle Reserveanfragen aus- und erneut einschalten, um das Hauptgerät zu prüfen.",
     "notice": "Experimentelle Reserveanfragen aktiviert. Flow-Erfolg bedeutet nur API-Annahme; unabhängig in EcoFlow prüfen. Keine automatische Wiederherstellung.",

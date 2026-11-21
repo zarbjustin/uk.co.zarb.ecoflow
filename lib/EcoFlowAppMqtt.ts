@@ -50,6 +50,7 @@ type TopicSubscription = {
 };
 
 export interface EcoFlowAppMqttOptions {
+  observeSolar?: AppFrameHandler;
   client: EcoFlowAppAuthClient;
   log?: (...args: any[]) => void;
 }
@@ -253,9 +254,11 @@ export class EcoFlowAppMqtt {
   private readonly receipts = new Map<string, { count: number; at: number }>();
   private readonly log: (...args: any[]) => void;
   private auth: EcoFlowAppAuthClient;
+  private readonly observeSolar?: AppFrameHandler;
 
   constructor(opts: EcoFlowAppMqttOptions) {
     this.auth = opts.client;
+    this.observeSolar = opts.observeSolar;
     this.log = opts.log || (() => {});
   }
 
@@ -618,6 +621,13 @@ export class EcoFlowAppMqtt {
         connectionEpoch: epoch,
         isCurrent: () => !this.ended && this.client === client && !!client?.connected && this.connectionEpoch === epoch,
       }) : undefined;
+    if (delivery && sn.startsWith('ES21') && topic === `/app/device/property/${sn}`) {
+      try {
+        this.observeSolar?.(payload, topic, delivery);
+      } catch {
+        this.log('solar observation unavailable');
+      }
+    }
     for (const handler of set) {
       try {
         handler(payload, topic, delivery);
