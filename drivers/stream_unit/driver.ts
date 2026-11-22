@@ -1,12 +1,17 @@
 'use strict';
 
 import Homey from 'homey';
+import { registerAppAuthRepair } from '../../lib/appAuthRepair';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits } from '../../lib/streamPairing';
+import { UNIT_ALERT_CARDS } from '../../lib/streamUnitAlerts';
 import { streamModelFromSn } from '../../lib/streamModels';
 
 module.exports = class StreamUnitDriver extends Homey.Driver {
   async onInit(): Promise<void> {
+    for (const card of Object.values(UNIT_ALERT_CARDS)) {
+      this.homey.flow.getDeviceTriggerCard(card).registerRunListener((args, state) => args.device?.matchesUnitAlert(card, args, state) ?? false);
+    }
     this.log('STREAM Unit driver initialised');
   }
 
@@ -27,5 +32,9 @@ module.exports = class StreamUnitDriver extends Homey.Driver {
         };
       });
     });
+  }
+
+  async onRepair(session: any, device: any): Promise<void> {
+    registerAppAuthRepair(this, session, device);
   }
 };

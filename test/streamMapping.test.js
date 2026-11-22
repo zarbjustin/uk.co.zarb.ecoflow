@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { mapStreamQuota } = require('../.homeybuild/lib/streamMapping.js');
+const { mapStreamQuota, solarPowerWatts } = require('../.homeybuild/lib/streamMapping.js');
 
 // Real STREAM main-SN quota sample (whole-home aggregates populated).
 const MAIN = {
@@ -43,6 +43,28 @@ test('unit grid never borrows whole-home grid when own feed is absent', () => {
   assert.strictEqual(v['measure_power.grid'], undefined);
 });
 
+test('system meter cannot fall back to unit-port or installation AC power on partial packets', () => {
+  for (const q of [{ gridConnectionPower: 600 }, { sysGridConnectionPower: 600 },
+    { powGetSysGrid: NaN, gridConnectionPower: 600 }]) {
+    assert.strictEqual(mapStreamQuota(q)['measure_power.grid'], undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ powGetSysGrid: 0, gridConnectionPower: 600 })['measure_power.grid'], 0);
+  assert.strictEqual(mapStreamQuota({ powGetSysGrid: -40, sysGridConnectionPower: 600 })['measure_power.grid'], -40);
+});
+
+test('remaining-time scope separates BMS unit estimates from CMS system estimates', () => {
+  const q = { bmsChgRemTime: 5939, bmsDsgRemTime: 207, cmsChgRemTime: 75, cmsDsgRemTime: 140 };
+  assert.strictEqual(mapStreamQuota(q, 'unit').discharge_remaining, 207);
+  assert.strictEqual(mapStreamQuota(q).discharge_remaining, 140);
+  assert.strictEqual(mapStreamQuota({ bmsChgRemTime: 5939 }).charge_remaining, undefined);
+  assert.strictEqual(mapStreamQuota({ cmsDsgRemTime: 140 }, 'unit').discharge_remaining, undefined);
+  assert.strictEqual(mapStreamQuota({ bmsChgRemTime: 5939 }, 'unit').charge_remaining, 5939);
+  for (const value of [-1, NaN, Infinity, '', null, true, 'invalid']) {
+    assert.strictEqual(mapStreamQuota({ cmsDsgRemTime: value }).discharge_remaining, undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ cmsDsgRemTime: '0' }).discharge_remaining, 0);
+});
+
 test('unit scope reads per-unit SoC and ignores system cmsBattSoc', () => {
   // Member MQTT BMS: the unit's own SoC.
   assert.strictEqual(mapStreamQuota({ f32ShowSoc: 28.2, soc: 28 }, 'unit')['measure_battery'], 28.2);
@@ -58,6 +80,21 @@ test('solar is per-unit (own strings) for unit scope, system total for system sc
   assert.strictEqual(mapStreamQuota(q)['measure_power.pv'], 845);
   // Unit: sums the unit's own strings, ignoring the system total.
   assert.strictEqual(mapStreamQuota(q, 'unit')['measure_power.pv'], 369);
+});
+
+test('partial or unit-only PV reports cannot replace system generation or feed solar Energy', () => {
+  for (const quota of [
+    { powGetPv: 410 },
+    { powGetPv: 410, powGetPv2: 600, powGetPv3: 0, powGetPv4: 0 },
+    { plugInInfoPvAmp: 2, plugInInfoPvVol: 40 },
+    { powGetPvSum: null, powGetPv: 410 },
+  ]) {
+    assert.strictEqual(mapStreamQuota(quota)['measure_power.pv'], undefined);
+    assert.strictEqual(solarPowerWatts(quota), undefined);
+  }
+  assert.strictEqual(mapStreamQuota({ powGetPv: 410 })['measure_power.pv1'], 410);
+  assert.strictEqual(mapStreamQuota({ powGetPvSum: 0, powGetPv: 410 })['measure_power.pv'], 0);
+  assert.strictEqual(solarPowerWatts({ powGetPvSum: '1010', powGetPv: 410 }), 1010);
 });
 
 test('self_heating is mapped only when the device reports a heating field', () => {

@@ -1,14 +1,14 @@
 {
   "id": "set_feed_in",
   "title": {
-    "en": "Set grid feed-in",
-    "de": "Netzeinspeisung einstellen",
-    "nl": "Teruglevering aan net instellen"
+    "en": "Set grid feed-in permission",
+    "de": "Freigabe der Netzeinspeisung einstellen",
+    "nl": "Toestemming voor netexport instellen"
   },
   "titleFormatted": {
-    "en": "Turn grid feed-in [[state]]",
-    "de": "Netzeinspeisung [[state]] schalten",
-    "nl": "Teruglevering aan net [[state]] zetten"
+    "en": "Set grid feed-in permission [[state]]",
+    "de": "Freigabe der Netzeinspeisung [[state]] setzen",
+    "nl": "Toestemming voor netexport [[state]] zetten"
   },
   "args": [
     {
@@ -43,5 +43,10 @@
         }
       ]
     }
-  ]
+  ],
+  "hint": {
+    "en": "Changes the reported feed-in setting, not a wattage target. Native modes, schedules and limits determine actual power flow; check grid readings separately.",
+    "de": "Ändert die gemeldete Einspeiseeinstellung, keinen Watt-Sollwert. Native Modi, Zeitpläne und Grenzen bestimmen den tatsächlichen Leistungsfluss; Netzwerte separat prüfen.",
+    "nl": "Wijzigt de gemelde terugleverinstelling, geen wattdoel. Eigen modi, schema's en limieten bepalen de werkelijke energiestroom; controleer netmetingen apart."
+  }
 }

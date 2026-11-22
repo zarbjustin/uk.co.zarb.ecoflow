@@ -259,3 +259,55 @@ test('invalidateSession forces the next call to log in again', async () => {
 test('the client refuses to be constructed without credentials', () => {
   assert.throws(() => new EcoFlowAppAuthClient({ email: '', password: '' }), /email and password are required/);
 });
+
+test('certification decrypts with its request token when another request refreshes the session', async () => {
+  let release; let started; let logins = 0;
+  const requested = new Promise(resolve => { started = resolve; });
+  const pending = new Promise(resolve => { release = resolve; });
+  const client = new EcoFlowAppAuthClient({ email: EMAIL, password: PASSWORD, transport: async req => {
+    if (req.url.endsWith('/auth/login')) return ok({ token: ++logins === 1 ? TOKEN : 'new.synthetic.token', user: { userId: USER_ID } });
+    started(); return pending;
+  } });
+  const credentials = client.getMqttCredentials();
+  await requested;
+  await client.getSession(true);
+  release(ok(encryptCertificationForTest(TOKEN, { certificateAccount: 'synthetic', certificatePassword: 'synthetic', url: 'mqtt-e.ecoflow.com' })));
+  assert.strictEqual((await credentials).account, 'synthetic');
+});
+
+test('late old-token rejection reuses the refreshed session instead of logging in a third time', async () => {
+  let logins = 0; let release; let started;
+  const requested = new Promise(resolve => { started = resolve; });
+  const pending = new Promise(resolve => { release = resolve; });
+  const client = new EcoFlowAppAuthClient({ email: EMAIL, password: PASSWORD, transport: async req => {
+    if (req.url.endsWith('/auth/login')) return ok({ token: ++logins === 1 ? TOKEN : 'new.synthetic.token', user: { userId: USER_ID } });
+    if (req.headers.Authorization === `Bearer ${TOKEN}`) { started(); return pending; }
+    return ok([]);
+  } });
+  const inventory = client.getDeviceList();
+  await requested; await client.getSession(true);
+  release(fail('401', 'expired synthetic token', 401));
+  await inventory;
+  assert.strictEqual(logins, 2);
+});
+
+test('concurrent failed sign-ins share one bounded region attempt and later recover', async () => {
+  let requests = 0; let failing = true;
+  const client = new EcoFlowAppAuthClient({ email: EMAIL, password: PASSWORD, transport: async () => {
+    requests++; if (failing) return fail('401', 'synthetic rejection', 401); return loginOk();
+  } });
+  const results = await Promise.allSettled(Array.from({ length: 20 }, () => client.getSession()));
+  assert.ok(results.every(result => result.status === 'rejected'));
+  assert.ok(requests <= 2, 'one login attempt per allowed region, not per consumer');
+  const before = requests; failing = false;
+  await Promise.all(Array.from({ length: 20 }, () => client.getSession()));
+  assert.equal(requests, before + 1);
+});
+
+test('transport failure logs never include arbitrary upstream exception text', async () => {
+  const logs = [];
+  const client = new EcoFlowAppAuthClient({ email: EMAIL, password: PASSWORD,
+    log: (...args) => logs.push(args), transport: async () => { throw Error('PRIVATE token household'); } });
+  await assert.rejects(client.getSession());
+  assert.doesNotMatch(JSON.stringify(logs), /PRIVATE|token|household/);
+});

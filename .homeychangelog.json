@@ -1,4 +1,69 @@
 {
+  "1.11.31": {
+    "en": "Single-phase Dual CT meters can show live grid power in Homey Energy during a direct CT1 gap when a linked STREAM 5000 reports fresh readings for the same meter. Import and export kWh counters still use direct CT1 readings.",
+    "de": "Bei einem einphasigen Dual CT kann Homey Energy die aktuelle Netzleistung auch bei einer Lücke im direkten CT1-Signal anzeigen, wenn ein verknüpfter STREAM 5000 frische Werte desselben Zählers meldet. Die kWh-Zähler für Bezug und Einspeisung nutzen weiterhin direkte CT1-Messwerte.",
+    "nl": "Bij een eenfasige Dual CT kan Homey Energy het actuele netvermogen blijven tonen als directe CT1-metingen uitblijven en een gekoppelde STREAM 5000 verse metingen van dezelfde meter doorgeeft. De kWh-tellers voor afname en teruglevering gebruiken nog steeds directe CT1-metingen."
+  },
+  "1.11.30": {
+    "en": "Improves original battery and meter recovery, protects energy totals across missing readings and relinks, and fixes simultaneous Dual CT Flow alerts. Includes clearer pairing and linked ES21 solar monitoring.",
+    "de": "Verbessert die Wiederherstellung von Batterie- und Zählerdaten, schützt Energiezähler bei Datenlücken und korrigiert gleichzeitige Dual-CT-Flow-Meldungen. Mit klarerer Kopplung und Solarüberwachung für gekoppelte ES21.",
+    "nl": "Verbetert het herstel van batterij- en metergegevens, beschermt energietellers bij ontbrekende metingen en herstelt gelijktijdige Dual CT-meldingen. Met duidelijkere koppeling en zonnemetingen voor gekoppelde ES21-units."
+  },
+  "1.11.29": {
+    "en": "Adds STREAM 5000 Solar for directly connected ES21 panels, with live watts and estimated generated kWh per physical unit in Homey Energy.",
+    "de": "STREAM 5000 Solar zeigt in Homey Energy die aktuelle Leistung und die geschätzte erzeugte Energie für direkt angeschlossene Solarmodule pro ES21 an.",
+    "nl": "STREAM 5000 Solar toont in Homey Energy het actuele vermogen en de geschatte opgewekte energie van direct aangesloten zonnepanelen per ES21."
+  },
+  "1.11.28": {
+    "en": "Adds a sustained below-threshold import/export Flow for Dual CT, with experimental CT2 support, and battery threshold and charging alerts for individual STREAM Ultra X and AC Pro units.",
+    "de": "Ergänzt einen Dual-CT-Flow für länger anhaltenden Netzbezug oder Einspeisung unter einem Grenzwert mit experimenteller CT2-Unterstützung sowie Alarme für Batteriestand, Laden und Entladen einzelner STREAM Ultra X und AC Pro.",
+    "nl": "Voegt een Dual CT-Flow toe voor aanhoudende import of export onder een drempel, met experimentele CT2-ondersteuning, en meldingen voor batterijniveau, laden en ontladen van afzonderlijke STREAM Ultra X- en AC Pro-units."
+  },
+  "1.11.27": {
+    "en": "The experimental reserve THEN card can now select a STREAM 5000 Home Battery. Opt-in is off by default and records the main unit through a read-only check. Requests require both fresh checks to match. Flow success means API acceptance only.",
+    "de": "Die experimentelle Reserve-THEN-Karte unterstützt jetzt die STREAM 5000 Home Battery. Die Freigabe ist standardmäßig aus und speichert das Hauptgerät nach einer Leseprüfung. Beide aktuellen Prüfungen müssen übereinstimmen. Flow-Erfolg bedeutet nur API-Annahme.",
+    "nl": "De experimentele reserve-THEN-kaart ondersteunt nu de STREAM 5000 Home Battery. Opt-in staat standaard uit en registreert de hoofdeenheid via een leescontrole. Beide actuele controles moeten overeenkomen. Flow-succes betekent alleen API-acceptatie."
+  },
+  "1.11.26": {
+    "en": "Restores original STREAM Home Battery monitoring when EcoFlow verifies the previously bound main unit again. Keeps the existing energy totals and holds battery controls after a main identity change.",
+    "de": "Die Überwachung des ursprünglichen STREAM-Heimspeichers wird fortgesetzt, wenn EcoFlow das zuvor zugeordnete Hauptgerät erneut bestätigt. Energiezähler bleiben erhalten und die Batteriesteuerung bleibt nach einem Wechsel des Hauptgeräts gesperrt.",
+    "nl": "Hervat monitoring van de oorspronkelijke STREAM-thuisbatterij zodra EcoFlow de eerder gekoppelde hoofdeenheid opnieuw bevestigt. Behoudt de energietellers en houdt batterijbediening geblokkeerd na een wijziging van de hoofdeenheid."
+  },
+  "1.11.25": {
+    "en": "Experimental Community Test: adds a default-off STREAM 5000/AC 5000 THEN card to request installation backup reserve using Developer API keys. Reserve must already be on in Self-consumption. Success means API acceptance, not application; linked units may be affected. No automatic retry or restoration. Hardware pilot and soak have not been performed. Includes 1.11.22-24 monitoring fixes and removal of whole-Homey API access: previous in-app cross-app coordination cannot start; use separate owner automation. Keep existing paired devices and history.",
+    "de": "Experimenteller Community-Test: neue, standardmäßig ausgeschaltete STREAM-5000/AC-5000-THEN-Karte für Anfragen zur Anlagen-Notstromreserve mit Entwickler-API-Schlüsseln. Reserve muss im Eigenverbrauch bereits eingeschaltet sein. Erfolg bedeutet API-Annahme, nicht Umsetzung; verbundene Geräte können betroffen sein. Keine automatische Wiederholung oder Wiederherstellung. Hardwarepilot und Langzeittest wurden nicht durchgeführt. Enthält die Überwachungskorrekturen aus 1.11.22-24 und entfernt den vollständigen Homey-API-Zugriff: bisherige appübergreifende Koordination kann nicht starten; eigene Automation verwenden. Gekoppelte Geräte und Verlauf behalten.",
+    "nl": "Experimentele communitytest: nieuwe, standaard uitgeschakelde STREAM 5000/AC 5000-THEN-kaart om met ontwikkelaars-API-sleutels de back-upreserve van de installatie aan te vragen. Reserve moet bij Zelfverbruik al aanstaan. Succes betekent API-acceptatie, niet toepassing; gekoppelde units kunnen worden beïnvloed. Geen automatische herhaling of herstel. Hardwarepilot en duurtest zijn niet uitgevoerd. Bevat monitoringcorrecties uit 1.11.22-24 en verwijdert volledige Homey-API-toegang: eerdere appoverstijgende coördinatie kan niet starten; gebruik eigen automatisering. Behoud gekoppelde apparaten en historie."
+  },
+  "1.11.24": {
+      "en": "Keeps the microinverter’s last complete solar reading until its original expiry during sparse updates, without integrating missing energy. Adds explicit review of EcoFlow meter roles when Homey Energy flags are unavailable to the SDK; existing counters and identities are preserved.",
+      "de": "Behält bei Teilmeldungen den letzten vollständigen Solarwert bis zu seinem ursprünglichen Ablauf, ohne fehlende Energie zu integrieren. Ergänzt eine ausdrückliche Prüfung der EcoFlow-Zählerrolle, wenn Energy-Flags im SDK fehlen. Zählerstände und Identitäten bleiben erhalten.",
+      "nl": "Behoudt bij gedeeltelijke berichten de laatste volledige zonne-uitlezing tot de oorspronkelijke vervaltijd, zonder ontbrekende energie te berekenen. Voegt expliciete controle van EcoFlow-meterrollen toe wanneer de SDK Energy-vlaggen niet ziet. Tellers en identiteiten blijven behouden."
+  },
+  "1.11.23": {
+    "en": "Adds local read-only Dual CT startup and owned-meter diagnostics for single-phase and three-phase installations. Preserves counters, freshness and overlap safeguards; the cause of the 1.11.22 reconnecting issue is still under investigation.",
+    "de": "Ergänzt lokale, rein lesende Dual-CT-Start- und Zählerdiagnosen für ein- und dreiphasige Installationen. Zählerstände sowie Aktualitäts- und Überschneidungsprüfungen bleiben erhalten; die Ursache des Verbindungsproblems in 1.11.22 wird noch untersucht.",
+    "nl": "Voegt lokale alleen-lezen Dual CT-opstart- en meterdiagnostiek toe voor één- en driefasige installaties. Tellers, actualiteitscontroles en overlapbeveiliging blijven behouden; de oorzaak van het verbindingsprobleem in 1.11.22 wordt nog onderzocht."
+  },
+  "1.11.22": {
+    "en": "Removes whole-Homey API access. Dual CT continues to check EcoFlow meters automatically; other apps’ property meters require your explicit Homey Energy review. Saved devices, counters, history and Flow card identities are retained. Previous in-app cross-app coordination cannot start; advanced coordination needs a separately configured owner automation. No battery settings are changed.",
+    "de": "Entfernt den vollständigen Homey-API-Zugriff. Dual CT prüft EcoFlow-Zähler weiterhin automatisch; Zähler anderer Apps müssen Sie ausdrücklich in Homey Energy prüfen. Geräte, Zählerstände, Historie und Flow-Karten bleiben erhalten. Die bisherige appübergreifende Koordination kann nicht starten; sie benötigt eine eigene Automation. Keine Batterieeinstellungen werden geändert.",
+    "nl": "Verwijdert volledige Homey-API-toegang. Dual CT controleert EcoFlow-meters automatisch; woningmeters van andere apps moet u zelf in Homey Energy controleren. Apparaten, tellers, historie en Flow-kaarten blijven behouden. De eerdere appoverstijgende coördinatie kan niet starten; hiervoor is eigen automatisering nodig. Batterijinstellingen worden niet gewijzigd."
+  },
+  "1.11.21": {
+    "en": "Improves counter continuity, startup recovery and stale-reading handling across STREAM batteries, meters, solar, microinverters and sockets. Preserves custom meter titles and improves diagnostics and pairing feedback. Community Test: ambiguous native-counter resets can undercount; queue overload reports accounting gaps. Hardware qualification remains in progress.",
+    "de": "Verbessert Zählerkontinuität, Wiederanlauf und die Behandlung veralteter Messwerte bei STREAM-Batterien, Zählern, Solar, Mikro-Wechselrichtern und Steckdosen. Eigene Zählertitel bleiben erhalten; Diagnosen und Rückmeldungen beim Hinzufügen wurden verbessert. Community-Test: Unklare Zählerrücksetzungen können zu Unterzählung führen; Überlast meldet Lücken in der Energieberechnung. Hardwareprüfung läuft weiter.",
+    "nl": "Verbetert tellercontinuïteit, herstel na opstarten en verwerking van verouderde metingen voor STREAM-batterijen, meters, zonnepanelen, micro-omvormers en stopcontacten. Behoudt eigen metertitels en verbetert diagnostiek en meldingen tijdens koppelen. Communitytest: onduidelijke tellerresets kunnen te weinig tellen; overbelasting meldt hiaten in de energieberekening. Hardwarevalidatie loopt nog."
+  },
+  "1.11.18": {
+    "en": "Improves Dual CT support diagnostics by separating shared socket traffic, routing rejections and broker ping responses from meter readings. No changes to accounting, freshness limits or device commands.",
+    "de": "Verbessert Dual-CT-Supportdiagnosen durch getrennte Zähler für Socket-Verkehr, Routing-Ablehnungen und Broker-Ping-Antworten. Keine Änderung der Energieberechnung, Aktualitätsgrenzen oder Gerätebefehle.",
+    "nl": "Verbetert Dual CT-diagnostiek met aparte tellers voor socketverkeer, afgewezen routering en brokerping-antwoorden. Geen wijzigingen aan energieberekening, actualiteitsgrenzen of apparaatcommando’s."
+  },
+  "1.11.17": {
+    "en": "Adds a focused Dual CT support summary with specific message rejection reasons and bounded recent recovery events. No changes to meter accounting or freshness limits. Includes the reviewed house reserve configuration refresh fix.",
+    "de": "Ergänzt eine gezielte Dual-CT-Supportübersicht mit Ablehnungsgründen und begrenztem Ereignisverlauf. Keine Änderung der Zählerberechnung oder Aktualitätsgrenzen. Enthält die geprüfte Aktualisierung der Hausreserve-Konfiguration.",
+    "nl": "Voegt een gericht Dual CT-ondersteuningsoverzicht toe met afwijsredenen en beperkte recente gebeurtenissen. Geen wijzigingen aan meterberekening of actualiteitsgrenzen. Bevat de beoordeelde vernieuwing van de huisreserveconfiguratie."
+  },
   "1.7.8": {
     "en": "Renamed the app to \"EcoFlow - Stream Systems\" to better reflect its focus on the STREAM range."
   },
@@ -187,5 +252,175 @@
   },
   "1.10.26": {
     "en": "Refresh STREAM 5000 icons and store artwork from the AC 5000 product photo. Rename the devices to STREAM 5000 Series Unit and STREAM Home Battery (5000), without the Beta suffix. Existing pairings, monitoring-only safeguards and Homey Energy accounting are unchanged."
+  },
+  "1.10.27": {
+    "en": "Improve original Smart Meter telemetry with direct MQTT readings and linked-installation fallback, fresh per-phase measurements, and clear meter-source diagnostics. Add read-only battery reporter and counter evidence checks. Energy accounting, existing pairings and control safeguards remain unchanged; Dual CT support is not enabled."
+  },
+  "1.10.28": {
+    "en": "Correct the STREAM 5000 Series Unit and STREAM Home Battery (5000) store pictures to use the supplied AC 5000 product photo on white. Keep the existing wireframe device icons. No pairing, Energy accounting or control changes."
+  },
+  "1.10.29": {
+    "en": "Add read-only mixed-generation reporter comparisons with exact identity correlation, per-field freshness, UTC support report timestamps and safer lookup lifecycle handling. Homey Energy accounting and controls remain unchanged."
+  },
+  "1.10.30": {
+    "en": "Adds an optional linked 5000 monitoring reporter trial with fresh-source checks, rollback safeguards, clearer reading scope, readiness guidance and downloadable integration reports. Default-off; controls remain blocked during the trial and original energy accounting/history are unchanged."
+  },
+  "1.10.31": {
+    "en": "Improved mixed-generation diagnostics with anonymous per-battery readings and independent freshness checks. Clarified reported grid-meter versus flow-derived grid power, and added regression tests. Battery controls and energy accounting remain unchanged."
+  },
+  "1.10.32": {
+    "en": "Improved support-report timeouts and snapshot-age labels, added clock-recovery safeguards and bounded monitoring reliability summaries, and expanded outage/restart regression tests. Battery controls and energy accounting remain unchanged."
+  },
+  "1.10.33": {
+    "en": "Improved linked STREAM monitoring during reading updates, tightened power freshness, added individual-unit diagnostic observations and clearer support guidance. Battery controls and energy accounting remain unchanged."
+  },
+  "1.10.34": {
+    "en": "Improve original STREAM reading freshness, correct Home Battery grid and remaining-time scopes, clarify Unit/System labels, and add matched support capture guidance with anonymous peer/counter and read-only limit diagnostics. Energy accounting and control safeguards remain unchanged."
+  },
+  "1.10.35": {
+    "en": "Align the original STREAM grid tile with EcoFlow: Unit grid connection port. Existing default labels migrate while custom names and Flow references are preserved. Readings, signs, energy accounting and controls are unchanged."
+  },
+  "1.10.36": {
+    "en": "Fix original STREAM Unit startup failing with Invalid Capability: stream_unit_power_grid when capability options are unavailable. Cosmetic title migration can no longer block device startup. Existing devices, Flows, readings and energy accounting are preserved; no re-pairing is required."
+  },
+  "1.10.37": {
+    "en": "Improves integration report downloads with a complete numbered-parts fallback, restores original STREAM unit battery flow from fresh BMS telemetry when available, and shows remaining-time estimates only for matching fresh battery direction. Energy accounting and device pairing remain unchanged."
+  },
+  "1.10.38": {
+    "en": "Adds scoped BMS, peer and grid reading comparisons with short session-only histories, bounds queued original STREAM telemetry during slow Homey writes, and protects pasted integration report parts against forum formatting. Energy accounting, device pairing and hardware controls remain unchanged."
+  },
+  "1.10.39": {
+    "en": "Add opt-in read-only Dual CT discovery across saved app and Developer accounts, clearer local capture summaries and anonymous observation history. Harden slow-connection cancellation and shared subscription cleanup. Remove the one-minute support capture deadline. Dual CT pairing, channel readings, Energy and controls remain disabled pending verification."
+  },
+  "1.10.40": {
+    "en": "Add compact Dual CT reports with bounded model-code evidence, safe telemetry structure, copy/download feedback and read-only preview guidance. Dual CT readings, pairing, Energy, Flows and controls remain disabled pending verification."
+  },
+  "1.10.41": {
+    "en": "Allow field-observed app productType 421 in opt-in read-only Dual CT discovery. Show provisional identity and clearer connection/capture outcomes, preserving selected-meter evidence in compact reports. Dual CT pairing, readings, Energy, Flows and controls remain disabled."
+  },
+  "1.10.42": {
+    "en": "Retain representative Dual CT JSON and protobuf structure in compact reports instead of discarding all structure at the size limit. Merge duplicates, show partial coverage and record received-source provenance. Diagnostic only; Dual CT pairing, readings, Energy, Flows and controls remain disabled."
+  },
+  "1.10.43": {
+    "en": "Add optional read-only Dual CT numeric candidate preview with explicit consent, per-field expiry and clearer unavailable reasons. Provide a separate reviewed candidate JSON export; normal support reports remain structure-only. Units, channel roles and direction remain unverified; no Dual CT pairing, Energy, Flows or controls."
+  },
+  "1.10.44": {
+    "en": "Fix Dual CT receipt confirmation and add compact encoding/preview diagnostics. Show effective capture mode, keep consent explicit and refresh the local summary and preview together. Numeric candidates remain separate, unverified and excluded from normal reports; no Dual CT Energy, Flows or controls."
+  },
+  "1.10.45": {
+    "en": "Improve optional read-only Dual CT candidate decoding for omitted encoding markers, add field provenance and unitless additional candidates, and clarify compact report coverage. Energy accounting and controls are unchanged."
+  },
+  "1.10.46": {
+    "en": "Fix read-only Dual CT export expiry: retain a separately consented historical snapshot for up to 15 minutes while live preview fields still expire individually at 90 seconds. Add explicit historical labels, bounded export coverage and privacy cleanup. Energy accounting and controls are unchanged."
+  },
+  "1.10.47": {
+    "en": "Add read-only Dual CT candidate bank labels, per-payload provenance and signed same-payload power-sum diagnostics. Keep bank roles, units and direction unverified; no Energy accounting or controls changes."
+  },
+  "1.10.48": {
+    "en": "Read-only Dual CT comparison cards, optional unscaled counter candidates and receipt-based continuity diagnostics. Improved compact and combined exports and capture cleanup. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.49": {
+    "en": "Improved read-only Dual CT preview with provisional Grid and Solar/inverter labels and candidate energy values. Fixed counter freshness between sparse updates and preserved more evidence in compact comparison exports. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.50": {
+    "en": "Made read-only Dual CT export availability clearer, with specific reasons for disabled options and matching combined-report availability. Improved freshness consistency and duplicate-packet handling, with additional replay and upgrade regression checks. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.51": {
+    "en": "Made read-only Dual CT export availability clearer, with specific reasons for disabled options and matching combined-report availability, including expired snapshots after a later refresh. Improved freshness consistency and duplicate-packet handling, with additional replay and upgrade regression checks. No changes to pairing, Homey Energy, Flows or device controls."
+  },
+  "1.10.52": {
+    "en": "Added an optional read-only Dual CT preview device with separate raw bank readings and freshness status. Simplified capture and combined JSON export. Prepared and tested a power-based Energy path; Dual CT Energy adoption and controls remain disabled pending validation."
+  },
+  "1.10.53": {
+    "en": "Clarified the read-only Dual CT preview with CT1/CT2 labels, localized V/A/W values and readable precision. Raw counters now warn that units, period and circuit are unconfirmed, with individual receipt ages. Existing device identities are preserved; Dual CT Energy and controls remain disabled."
+  },
+  "1.10.54": {
+    "en": "Dual CT preview: separate per-phase power, voltage and current readings, guarded circuit phase sums, and optional circuit descriptions. Existing previews upgrade without re-pairing. Includes disabled grid Energy preparation; no Dual CT Energy activation or controls."
+  },
+  "1.10.55": {
+    "en": "Add opt-in read-only battery coordination previews and observation Flow cards. Clarify circuit scopes and existing battery-limit wording. Reject stale or missing STREAM and dated solar-forecast readings while preserving existing Flow identities. No new charging controls or Dual CT Energy activation."
+  },
+  "1.10.56": {
+    "en": "Fix recovery after timed-out coordination reads, clarify source freshness and permission lifetimes, and strengthen lifecycle and release checks. Existing Flows are preserved; no new controls or Dual CT Energy activation."
+  },
+  "1.10.57": {
+    "en": "Fix original STREAM updates being suppressed by unrelated realtime messages. Protect newer readings and energy counters. Recover widget refresh after stalled requests and page restoration. Clarify that configured capacity is used for widget estimates."
+  },
+  "1.10.58": {
+    "en": "Improve Dual CT telemetry health diagnostics and prepare guarded Energy adoption and hardware acceptance. Energy activation and new battery controls remain disabled."
+  },
+  "1.10.59": {
+    "en": "Prepare separate Dual CT property Energy pairing and persistent accounting safeguards, plus account repair without re-pairing. Dual CT Energy remains disabled pending source and hardware qualification."
+  },
+  "1.11.0": {
+    "en": "Adds Homey Energy setup for single-phase CT1 on Smart Meter Dual CT firmware 1.0.0.41, with approximate power and estimated import/export totals. Improves reporting-gap and accounting handling, clears the persistent research warning, and preserves existing devices and history. Add the property Energy meter separately; CT2 and three-phase accounting are excluded. Test validation continues before production."
+  },
+  "1.11.5": {
+    "en": "Fixes Smart Meter Dual CT Energy recovery when Homey’s rounded counters are restored after a restart or reporting interruption. Keeps accumulated totals and precise internal accounting, and shows a reconnecting message instead of an unsupported-meter error. Preserves the existing reserve-control bridge. Supported Energy scope remains single-phase CT1 on firmware 1.0.0.41; CT2 and three-phase Energy remain excluded. Existing paired Energy meters recover without re-pairing."
+  },
+  "1.11.6": {
+    "en": "Adds an opt-in three-phase Dual CT CT1 community trial for Homey Energy on firmware 1.0.0.41. Uses signed phase netting, separate counter bindings, complete-packet and freshness guards, and local classification-only feedback in the integration support report. Single-phase pairing and existing counters are preserved. Three-phase field validation remains ongoing; CT2 is excluded.",
+    "de": "Optionaler Dreiphasen-Community-Test für Dual CT CT1 in Homey Energy mit Firmware 1.0.0.41. Separate Zählerbindung, saldierte Phasen und lokales Feedback im Integrationsbericht. Bestehende einphasige Geräte und Zähler bleiben erhalten. Feldvalidierung läuft; CT2 ist ausgeschlossen.",
+    "nl": "Optionele driefase-communitytest voor Dual CT CT1 in Homey Energy met firmware 1.0.0.41. Gesaldeerde fasen, aparte tellerbinding en lokale feedback in het integratierapport. Bestaande eenfase-apparaten en tellers blijven behouden. Praktijkvalidatie loopt; CT2 is uitgesloten."
+  },
+  "1.11.7": {
+    "en": "Adds per-device CT1 single-/three-phase display and independent optional CT2 views. Adds voltage/current and per-phase details to the property Energy device without changing its accounting mode or counters. Detailed monitor diagnostics can be shown or hidden. Existing capability IDs, custom titles, history and Flow references are retained. Keeps healthy Dual CT Energy meters available during routine and overlapping updates, while retaining stale-data/failure warnings and precise counters.",
+    "de": "CT1-Anzeige für eine oder drei Phasen und unabhängige optionale CT2-Ansichten. Zusätzliche Spannungs-/Strom- und Phasendetails am Energy-Gerät ohne Änderung der Berechnung oder Zähler. Monitordiagnose ein-/ausblendbar. Bestehende IDs, Titel, Verlauf und Flow-Verweise bleiben erhalten. Verhindert Verfügbarkeitsflackern bei normalen und überlappenden Dual-CT-Energy-Updates; veraltete Daten und Fehler werden weiterhin angezeigt, präzise Zähler bleiben erhalten.",
+    "nl": "CT1-weergave voor een of drie fasen en onafhankelijke optionele CT2-weergaven. Extra spanning/stroom en fasedetails op het Energy-apparaat zonder wijziging van berekening of tellers. Monitordiagnose kan worden getoond of verborgen. Bestaande IDs, titels, geschiedenis en Flow-verwijzingen blijven behouden. Houdt gezonde Dual CT Energy-meters beschikbaar bij normale en overlappende updates; waarschuwingen voor verouderde gegevens en fouten en precieze tellers blijven behouden."
+  },
+  "1.11.8": {
+    "en": "Makes Dual CT Energy meter verification visible with progress, a 30-second timeout and clear source, firmware, inventory or overlap failure messages. Corrects three-phase scope confirmation. Late responses cannot admit an expired review. Existing accounting, counters, single-phase devices and three-phase trial safeguards are unchanged.",
+    "de": "Dual-CT-Energy-Zählerprüfung mit Fortschrittsanzeige, 30-Sekunden-Zeitlimit und klaren Meldungen zu Quelle, Firmware, Geräteprüfung oder überlappenden Zählern. Korrigiert die Dreiphasen-Bestätigung. Verspätete Antworten können keine abgelaufene Prüfung freigeben. Bestehende Berechnung, Zähler und Schutzprüfungen bleiben unverändert.",
+    "nl": "Maakt de Dual CT Energy-metercontrole zichtbaar met voortgang, een time-out van 30 seconden en duidelijke meldingen over bron, firmware, apparatencontrole of overlappende meters. Corrigeert de driefasebevestiging. Late antwoorden kunnen een verlopen controle niet toelaten. Bestaande berekening, tellers en beveiligingen blijven ongewijzigd."
+  },
+  "1.11.9": {
+    "en": "Improves shared Dual CT connections: confirming the same EcoFlow account keeps existing listeners running, multiple views share one meter subscription, and late callbacks from replaced connections cannot refresh readings or interrupt recovery. Identifies blocking Energy meters by name during pairing. Preserves existing devices, history, Flows and counters, single-phase accounting and three-phase community trial safeguards. Stale readings remain unavailable and reporting gaps are not backfilled.",
+    "de": "Verbessert gemeinsam genutzte Dual-CT-Verbindungen: Die Bestätigung desselben EcoFlow-Kontos unterbricht bestehende Beobachter nicht, mehrere Ansichten teilen ein Zählerabonnement und verspätete Rückmeldungen alter Verbindungen aktualisieren keine Messwerte und stören die Wiederherstellung nicht. Nennt blockierende Energy-Zähler bei der Kopplung. Bestehende Geräte, Verlauf, Flows, Zählerstände sowie Einphasen-Berechnung und Schutzprüfungen des Dreiphasen-Community-Tests bleiben erhalten. Veraltete Werte bleiben nicht verfügbar; Meldelücken werden nicht nachträglich aufgefüllt.",
+    "nl": "Verbetert gedeelde Dual CT-verbindingen: bevestiging van hetzelfde EcoFlow-account houdt bestaande ontvangers actief, meerdere weergaven delen één meterabonnement en late terugmeldingen van vervangen verbindingen kunnen metingen niet verversen of herstel verstoren. Toont bij het koppelen de namen van blokkerende Energy-meters. Behoudt bestaande apparaten, geschiedenis, Flows, tellers, eenfaseberekening en beveiligingen van de driefase-communitytest. Verouderde metingen blijven niet beschikbaar en rapportagegaten worden niet aangevuld."
+  },
+  "1.11.10": {
+    "en": "Restores missing STREAM Home Battery (5000) battery percentages, including 0%, using the documented system SOC API when Developer credentials are configured. Preserves newer app readings, existing devices, power accounting and cumulative counters. Reports the source as the latest cloud report without claiming a device measurement timestamp. Physical-unit monitoring is unchanged.",
+    "de": "Stellt fehlende Batteriestände der STREAM-Hausbatterie (5000), einschließlich 0 %, über die dokumentierte System-SOC-API wieder her, wenn Entwickler-Zugangsdaten eingerichtet sind. Neuere App-Messwerte, bestehende Geräte, Leistungsbilanz und kumulative Zähler bleiben erhalten. Kennzeichnet die Quelle als letzten Cloud-Bericht ohne behaupteten Geräte-Messzeitpunkt. Die Überwachung physischer Einheiten bleibt unverändert.",
+    "nl": "Herstelt ontbrekende batterijpercentages van de STREAM-thuisbatterij (5000), inclusief 0%, via de gedocumenteerde systeem-SOC-API wanneer Developer-inloggegevens zijn ingesteld. Behoudt nieuwere appmetingen, bestaande apparaten, energieberekening en cumulatieve tellers. Vermeldt de bron als het laatste cloudrapport zonder een meettijdstip van het apparaat te claimen. Monitoring van fysieke units blijft ongewijzigd."
+  },
+  "1.11.11": {
+    "en": "Improves Dual CT Energy recovery after reporting gaps without dropping its shared connection. Preserves counters and skips missing intervals for both single-phase and three-phase community meters. Adds local recovery classifications and protects original STREAM MQTT consumers from replaced connections and failing listeners. Three-phase Energy remains a community trial pending hardware validation.",
+    "de": "Verbessert die Wiederherstellung von Dual CT Energy nach Meldelücken ohne Abbruch der gemeinsamen Verbindung. Zählerstände bleiben bei Einphasen- und Dreiphasen-Community-Zählern erhalten; fehlende Intervalle werden nicht ergänzt. Ergänzt lokale Diagnosekategorien und schützt ursprüngliche STREAM-MQTT-Empfänger vor alten Verbindungen und fehlerhaften Beobachtern. Dreiphasen-Energy bleibt bis zur Hardwarevalidierung ein Community-Test.",
+    "nl": "Verbetert Dual CT Energy-herstel na rapportagegaten zonder de gedeelde verbinding te verbreken. Behoudt tellers en slaat ontbrekende intervallen over voor eenfase- en driefase-communitymeters. Voegt lokale herstelcategorieën toe en beschermt oorspronkelijke STREAM-MQTT-ontvangers tegen vervangen verbindingen en falende ontvangers. Driefase-Energy blijft een communitytest in afwachting van hardwarevalidatie."
+  },
+  "1.11.12": {
+    "en": "Improves shared Dual CT telemetry startup and recovery: concurrent consumers wait for connection readiness, failed or unanswered subscriptions receive bounded retries, and late acknowledgements cannot affect replacement connections. Adds local delivery and frame-rejection diagnostics without raw household data or automatic uploads. Preserves devices, history, Flows, counters and single-/three-phase Energy accounting safeguards. Three-phase Energy remains a community trial.",
+    "de": "Verbessert Start und Wiederherstellung gemeinsamer Dual-CT-Telemetrie: Gleichzeitige Empfänger warten auf die Verbindung; fehlgeschlagene oder unbeantwortete Abonnements werden begrenzt wiederholt. Verspätete Bestätigungen beeinflussen keine Ersatzverbindungen. Ergänzt lokale Diagnosekategorien ohne rohe Haushaltsdaten oder automatische Uploads. Geräte, Verlauf, Flows, Zähler und Energy-Schutzprüfungen bleiben erhalten. Dreiphasen-Energy bleibt ein Community-Test.",
+    "nl": "Verbetert het opstarten en herstel van gedeelde Dual CT-telemetrie: gelijktijdige ontvangers wachten op de verbinding, mislukte of onbeantwoorde abonnementen krijgen begrensde herpogingen en late bevestigingen beïnvloeden geen vervangende verbindingen. Voegt lokale diagnosecategorieën toe zonder ruwe huishoudgegevens of automatische uploads. Behoudt apparaten, geschiedenis, Flows, tellers en Energy-beveiligingen. Driefase-Energy blijft een communitytest."
+  },
+  "1.11.13": {
+    "en": "Restores original STREAM telemetry after temporary source-verification failures when the same main unit is verified again, and refreshes changed API credentials before verification. Prevents Dual CT Energy accounting across separate MQTT connections while preserving counters and stale-data safeguards. Adds regression coverage for sparse feeds and single-/three-phase recovery. Three-phase Energy remains a community trial; the cause of sparse meter delivery is still under investigation.",
+    "de": "Stellt die ursprüngliche STREAM-Telemetrie nach vorübergehenden Fehlern der Quellenprüfung wieder her, sobald dieselbe Haupteinheit erneut bestätigt wurde. Aktualisiert geänderte API-Zugangsdaten vor der Prüfung. Verhindert Dual-CT-Energieberechnung über getrennte MQTT-Verbindungen hinweg; Zählerstände und Schutz vor veralteten Daten bleiben erhalten. Ergänzt Regressionstests für lückenhafte Meldungen und Ein-/Dreiphasen-Wiederherstellung. Dreiphasen-Energy bleibt ein Community-Test; die Ursache seltener Zählermeldungen wird weiter untersucht.",
+    "nl": "Herstelt oorspronkelijke STREAM-telemetrie na tijdelijke fouten bij bronverificatie zodra dezelfde hoofdeenheid opnieuw is bevestigd, en vernieuwt gewijzigde API-inloggegevens vóór verificatie. Voorkomt Dual CT-energieberekening over verschillende MQTT-verbindingen met behoud van tellers en bescherming tegen verouderde gegevens. Voegt regressietests toe voor schaarse meldingen en een-/driefaseherstel. Driefase-Energy blijft een communitytest; de oorzaak van schaarse metermeldingen wordt nog onderzocht."
+  },
+  "1.11.14": {
+    "en": "Improve shared EcoFlow account recovery, connection cleanup and STREAM 5000 retry handling. Preserve energy counters and stale-reading safeguards; improve connection messages and diagnostic privacy.",
+    "de": "Verbessert die Wiederherstellung der EcoFlow-Verbindung und STREAM-5000-Wiederholungen. Energiezähler und Schutz vor veralteten Messwerten bleiben erhalten.",
+    "nl": "Verbetert herstel van de EcoFlow-verbinding en STREAM 5000-verbindingspogingen. Energietellers en bescherming tegen verouderde metingen blijven behouden."
+  },
+  "1.11.15": {
+    "en": "One Smart Meter Dual CT choice for new pairing, with optional phase and CT2 readings. Existing detailed monitors remain supported. Shows the paired Energy mode separately from display settings. Clearer setup guidance and STREAM 5000 Home Battery naming; counters and existing devices retained.",
+    "de": "Ein Smart Meter Dual CT für neues Koppeln, mit optionalen Phasen- und CT2-Werten. Bestehende Detailmonitore bleiben unterstützt. Gekoppelter Energy-Modus getrennt von Anzeigeeinstellungen; klarere Einrichtung und STREAM 5000 Hausbatterie. Bestehende Geräte und Zähler bleiben erhalten.",
+    "nl": "Eén Smart Meter Dual CT voor nieuw koppelen, met optionele fase- en CT2-metingen. Bestaande detailmonitors blijven ondersteund. Gekoppelde Energy-modus los van weergave; duidelijkere installatie en STREAM 5000 Thuisbatterij. Bestaande apparaten en tellers blijven behouden."
+  },
+  "1.11.16": {
+    "en": "Improves recovery when a shared Dual CT subscription has exhausted its retries. Adds bounded startup failure classifications to three-phase support reports. Preserves healthy subscriptions, counters and stale-data safeguards.",
+    "de": "Verbessert die Wiederherstellung gemeinsam genutzter Dual-CT-Abonnements nach ausgeschöpften Wiederholungen. Ergänzt Fehlerkategorien beim Start in Dreiphasen-Supportberichten. Zähler und Aktualitätsprüfungen bleiben erhalten.",
+    "nl": "Verbetert herstel van gedeelde Dual CT-abonnementen na uitgeputte pogingen. Voegt opstartfoutcategorieën toe aan driefasen-supportrapporten. Tellers en controles op verouderde gegevens blijven behouden."
+  },
+  "1.11.19": {
+    "en": "Adds a focused three-stage Dual CT support comparison with bounded message metadata to investigate sparse readings. Preserves counters, source binding and stale-data safeguards.",
+    "de": "Ergänzt einen gezielten dreistufigen Dual-CT-Supportvergleich mit begrenzten Nachrichtendaten zur Untersuchung seltener Messwerte. Zähler, Quellenbindung und Aktualitätsprüfungen bleiben erhalten.",
+    "nl": "Voegt een gerichte Dual CT-supportvergelijking in drie stappen toe met begrensde berichtmetadata voor onderzoek naar schaarse metingen. Tellers, bronbinding en controles op verouderde gegevens blijven behouden."
+  },
+  "1.11.20": {
+    "en": "Prevents overlapping original STREAM refreshes from competing over source verification. Preserves counters and stale-data safeguards.",
+    "de": "Verhindert konkurrierende Quellenprüfungen bei überlappenden STREAM-Aktualisierungen. Zähler und Aktualitätsprüfungen bleiben erhalten.",
+    "nl": "Voorkomt concurrerende broncontroles bij overlappende STREAM-verversingen. Tellers en controles op verouderde gegevens blijven behouden."
   }
 }

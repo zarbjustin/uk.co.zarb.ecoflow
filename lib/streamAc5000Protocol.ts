@@ -270,42 +270,67 @@ export interface Es22FrameHeader {
   cmdId: number;
   deviceSn?: string;
   pdata?: Buffer;
+  /** Preserve actual marker presence; only a scoped research policy may trial an absent marker. */
+  encType?: number;
+  candidateHeaderValid?: boolean;
 }
 
 function decodeHeader(buf: Buffer): Es22FrameHeader {
   const header: Es22FrameHeader = { cmdFunc: -1, cmdId: -1 };
+  const seen = new Set<number>();
+  let declaredLength: number | undefined;
   let pos = 0;
   while (pos < buf.length) {
     const tag = readVarint(buf, pos);
     pos = tag.next;
+    if (tag.value < 8n || tag.value > 0xffffffffn) header.candidateHeaderValid = false;
     const fieldNumber = Number(tag.value >> 3n);
     const wireType = Number(tag.value & 0x07n);
+    if ([1, 6, 8, 9, 10, 25].includes(fieldNumber)) {
+      if (seen.has(fieldNumber) || wireType !== ([1, 25].includes(fieldNumber) ? 2 : 0)) {
+        header.candidateHeaderValid = false;
+      }
+      seen.add(fieldNumber);
+    }
     const field = readField(buf, pos, wireType);
     pos = field.next;
     if (fieldNumber === HEADER_PDATA && wireType === 2) header.pdata = field.bytes;
     else if (fieldNumber === HEADER_DEVICE_SN && wireType === 2) header.deviceSn = field.bytes.toString('utf8');
     else if (wireType === 0) {
-      const value = signedFromVarint(readVarint(field.bytes, 0).value);
+      const raw = readVarint(field.bytes, 0).value;
+      const value = signedFromVarint(raw);
+      // Research validity only: an over-wide integer must not wrap into a zero marker.
+      if ([6, 8, 9, 10].includes(fieldNumber) && (raw >= TWO_POW_64 || !Number.isSafeInteger(value))) header.candidateHeaderValid = false;
       if (fieldNumber === HEADER_CMD_FUNC) header.cmdFunc = value;
       else if (fieldNumber === HEADER_CMD_ID) header.cmdId = value;
+      else if (fieldNumber === 6) header.encType = value;
+      else if (fieldNumber === 10) declaredLength = value;
     }
   }
+  if (declaredLength !== undefined && (!header.pdata || declaredLength !== header.pdata.length)) header.candidateHeaderValid = false;
   return header;
 }
 
 /** Decode the EcoFlow frame wrapper into its headers (field 1, repeated). */
 export function decodeFrameHeaders(frame: Buffer): Es22FrameHeader[] {
   const headers: Es22FrameHeader[] = [];
+  let candidateWrapperValid = true;
   let pos = 0;
   while (pos < frame.length) {
     const tag = readVarint(frame, pos);
     pos = tag.next;
     const fieldNumber = Number(tag.value >> 3n);
     const wireType = Number(tag.value & 0x07n);
+    if (tag.value < 8n || tag.value > 0xffffffffn || (fieldNumber === 1 && wireType !== 2)) candidateWrapperValid = false;
     const field = readField(frame, pos, wireType);
     pos = field.next;
     if (fieldNumber !== 1 || wireType !== 2) continue;
     headers.push(decodeHeader(field.bytes));
+  }
+  if (!candidateWrapperValid) {
+    headers.forEach((header) => {
+      header.candidateHeaderValid = false;
+    });
   }
   return headers;
 }
@@ -350,6 +375,8 @@ export interface Es22Telemetry {
   battW?: number;
   battChargePowerW?: number;
   battDischargePowerW?: number;
+  /** Same-frame flow edges for read-only derivation diagnostics, not accounting. */
+  batteryFlowEdges?: Record<string, number>;
   /** Signed grid power (W) from the linked meter; positive imports. */
   gridW?: number;
   /** Non-negative grid import (W), derived from the flow matrix. */
@@ -410,6 +437,17 @@ function finalize(parsed: Record<string, number>): Es22Telemetry {
   // numbers means this frame actually carried `f12`; an absent group leaves
   // battW out so the caller keeps the last known value.
   if (typeof homeFromBattW === 'number' && typeof battToGrid === 'number' && typeof gridToBatt === 'number') {
+    out.batteryFlowEdges = {
+      mpptToBatteryW: raw._mpptToBattW ?? 0,
+      solarToBatteryW: solarToBatt ?? 0,
+      gridToBatteryW: gridToBatt,
+      batteryToHomeW: homeFromBattW,
+      batteryToGridW: battToGrid,
+      batteryToSocketW: raw._battToSocketW ?? 0,
+      gridToHomeW: homeFromGridW ?? 0,
+      gridToSocketW: raw._gridToSocketW ?? 0,
+      solarToGridW: solarToGrid ?? 0,
+    };
     const into = gridToBatt + (typeof solarToBatt === 'number' ? solarToBatt : 0) + (raw._mpptToBattW ?? 0);
     out.battW = into - (homeFromBattW + battToGrid + (raw._battToSocketW ?? 0));
     out.battChargePowerW = out.battW > 0 ? out.battW : 0;
@@ -448,7 +486,7 @@ function mergeUnitTelemetry(previous: Es22UnitTelemetry | undefined, next: Es22U
 }
 
 /** Read each f50/f54 entry independently; serial strings are never walked as messages. */
-function readUnitRecords(payload: Buffer): {
+function readUnitRecords(payload: Buffer, solarTotals?: Map<string, number | null>): {
   units: Record<string, Es22UnitTelemetry>; count: number; soc?: number; sn?: string;
 } {
   const units: Record<string, Es22UnitTelemetry> = {};
@@ -476,6 +514,8 @@ function readUnitRecords(payload: Buffer): {
       try {
         const unit: Es22UnitTelemetry = {};
         const pv: Stream5000PvTelemetry = {};
+        let totalFields = 0;
+        let serialFields = 0;
         let pvFieldsSeen = false;
         let invalidPvFields = false;
         let serial: string | undefined;
@@ -486,6 +526,7 @@ function readUnitRecords(payload: Buffer): {
           const valueWire = Number(valueTag.value & 7n);
           const value = readField(entry.bytes, valueTag.next, valueWire);
           valuePos = value.next;
+          if (valueNumber === 1) serialFields += 1;
           if (valueNumber === 1 && valueWire === 2) {
             const text = value.bytes.toString('ascii');
             if (/^[A-Z0-9]{1,64}$/.test(text) && Buffer.from(text, 'ascii').equals(value.bytes)) serial = text;
@@ -499,12 +540,20 @@ function readUnitRecords(payload: Buffer): {
             const power = decodeScalar(valueWire, value.bytes, 'int');
             if (power !== undefined && Number.isFinite(power)) unit.batteryPowerRawW = power * HALF_WATT;
           } else if (number === 50 && PV_FIELDS[valueNumber]) {
+            if (valueNumber === 3) totalFields += 1;
             pvFieldsSeen = true;
             const power = valueWire === 5 ? decodeScalar(valueWire, value.bytes, 'float') : undefined;
             if (power !== undefined && Number.isFinite(power)) pv[PV_FIELDS[valueNumber]] = power;
             else invalidPvFields = true;
           }
           // f50.1.4 latches at rest: deliberately never use it for battery power.
+        }
+        if (solarTotals && number === 50 && serial && serialFields === 1) {
+          // Energy requires an explicit aggregate MPPT measurement. Display-only
+          // zero completion and the four string breakdowns never enter this path.
+          const watts = pv.totalW;
+          solarTotals.set(serial, !solarTotals.has(serial) && totalFields === 1 && !invalidPvFields
+            && watts !== undefined && watts >= 0 && watts <= 5000 ? watts : null);
         }
         if (number === 50) unit.pv = completePvEntry(pv, pvFieldsSeen, invalidPvFields);
         if (serial) units[serial] = mergeUnitTelemetry(units[serial], unit);
@@ -523,6 +572,107 @@ function readUnitRecords(payload: Buffer): {
   return {
     units, count, soc: count === 1 ? candidateSoc : undefined, sn: count === 1 ? candidateSn : undefined,
   };
+}
+
+export interface Es21MeterPhaseOne {
+  meter: string;
+  power: number;
+  voltage?: number;
+  current?: number;
+}
+export interface Es21MeterReading {
+  watts: number;
+  phaseOne?: Es21MeterPhaseOne;
+}
+
+// Field 3 names the physical meter inside the reporting ES21's block 16.
+// Accept only explicit single-phase measurements from this same block.
+function meterPhaseOne(block: Buffer, net: number): Es21MeterPhaseOne | undefined {
+  let meter: string | undefined;
+  const values = new Map<number, number>();
+  for (let at = 0; at < block.length;) {
+    const tag = readVarint(block, at);
+    const id = Number(tag.value >> 3n);
+    const wire = Number(tag.value & 7n);
+    const field = readField(block, tag.next, wire); at = field.next;
+    if (id === 3) {
+      if (meter !== undefined || wire !== 2) return undefined;
+      meter = field.bytes.toString('utf8');
+    }
+    if ([4, 5, 6, 7, 10].includes(id)) {
+      if (values.has(id) || wire !== 5) return undefined;
+      const value = field.bytes.readFloatLE();
+      if (!Number.isFinite(value)) return undefined;
+      values.set(id, value);
+    }
+  }
+  const power = values.get(4);
+  if (!meter || !/^ES81[A-Z0-9]{4,60}$/.test(meter) || power === undefined || Math.abs(power - net) > 1
+    || (values.get(5) ?? 0) !== 0 || (values.get(6) ?? 0) !== 0) return undefined;
+  const voltage = values.get(7);
+  const current = values.get(10);
+  return {
+    meter,
+    power,
+    voltage: voltage !== undefined && voltage >= 0 && voltage <= 500 ? voltage : undefined,
+    current: current !== undefined && Math.abs(current) <= 1000 ? current : undefined,
+  };
+}
+
+/** Only one plain display upload and one explicit signed meter field can supply the linked meter display. */
+export function es21MeterReading(frame: Buffer, reporter: string): Es21MeterReading | null {
+  if (!/^ES21[A-Z0-9]{4,60}$/.test(reporter) || !frame.length || frame.length > 65536) return null;
+  try {
+    const headers = decodeFrameHeaders(frame);
+    const [h] = headers;
+    if (headers.length !== 1 || !h.pdata || h.candidateHeaderValid === false || (h.encType ?? 0) !== 0
+      || (h.deviceSn !== undefined && h.deviceSn !== reporter) || h.cmdFunc !== 254 || h.cmdId !== 39) return null;
+    let watts: number | null = null;
+    let meterBlocks = 0;
+    let phaseBlock: Buffer | undefined;
+    for (let at = 0; at < h.pdata.length;) {
+      const tag = readVarint(h.pdata, at);
+      if (tag.value < 8n || tag.value > 0xffffffffn) return null;
+      const field = readField(h.pdata, tag.next, Number(tag.value & 7n)); at = field.next;
+      const block = Number(tag.value >> 3n);
+      if (block !== 15 && block !== 16) continue;
+      if ((tag.value & 7n) !== 2n) return null;
+      meterBlocks++;
+      if (block === 16 && h.deviceSn === reporter) phaseBlock = field.bytes;
+      for (let inner = 0; inner < field.bytes.length;) {
+        const key = readVarint(field.bytes, inner);
+        if (key.value < 8n || key.value > 0xffffffffn) return null;
+        const wire = Number(key.value & 7n);
+        const value = readField(field.bytes, key.next, wire); inner = value.next;
+        if (Number(key.value >> 3n) !== (block === 15 ? 3 : 16)) continue;
+        if (watts !== null || wire !== 5) return null;
+        watts = value.bytes.readFloatLE();
+      }
+    }
+    if (watts === null || !Number.isFinite(watts) || Math.abs(watts) > 100000) return null;
+    return { watts, phaseOne: meterBlocks === 1 && phaseBlock ? meterPhaseOne(phaseBlock, watts) : undefined };
+  } catch {
+    return null;
+  }
+}
+
+export function es21MeterBlockWatts(frame: Buffer, reporter: string): number | null {
+  return es21MeterReading(frame, reporter)?.watts ?? null;
+}
+
+/** Read only serial-labelled ES21 direct PV totals from an owned live property frame. */
+export function es21SolarTotals(frame: Buffer, reporter: string): Map<string, number | null> {
+  const totals = new Map<string, number | null>();
+  if (!frame.length || frame.length > 256 * 1024) return totals;
+  try {
+    for (const header of decodeFrameHeaders(frame)) {
+      if (header.candidateHeaderValid === false || (header.deviceSn && header.deviceSn !== reporter)) return new Map();
+      if (header.cmdFunc === 254 && header.cmdId === 39 && header.pdata) readUnitRecords(header.pdata, totals);
+    }
+  } catch {
+    totals.clear();
+  }
+  return totals;
 }
 
 /**

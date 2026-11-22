@@ -6,12 +6,129 @@ const { pairedStream5000Serials, registerStream5000Pairing } = require('../.home
 const { EcoFlowAppAuthClient } = require('../.homeybuild/lib/EcoFlowAppAuthClient.js');
 const { normalizeAppDeviceList, streamAc5000Devices } = require('../.homeybuild/lib/appDevices.js');
 const {
-  isStream5000BetaEnabled,
-  requireStream5000BetaAccess,
-  STREAM_5000_BETA_DISABLED_MESSAGE,
-} = require('../.homeybuild/lib/stream5000Beta.js');
+  isStream5000AggregatePairingEnabled,
+  requireStream5000PairingAccess,
+  stream5000PairingRole,
+  STREAM_5000_AGGREGATE_DISABLED_MESSAGE,
+} = require('../.homeybuild/lib/stream5000PairingAccess.js');
 
 const device = (sn) => ({ getData: () => ({ sn }) });
+
+async function overlapHarness(t, owners = []) {
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getDeviceList', async () => normalizeAppDeviceList({ bound: {
+    ES22TESTUNITBBBB: { online: 1 }, ES21TESTUNITCCCC: { online: 1 },
+  } }));
+  const system = { id: 'stream_5000_system', getDevices: () => owners };
+  const legacy = { id: 'stream', getDevices: () => [] };
+  const unit = { id: 'stream_5000_unit', getDevices: () => [] };
+  const homey = {
+    settings: { get: key => ({ appAuthEmail: 'tester@example.invalid',
+      appAuthPassword: 'synthetic-password', stream5000AggregatePairingEnabled: true }[key]) },
+    drivers: { getDriver: id => ({ stream_5000_system: system, stream: legacy, stream_5000_unit: unit }[id]) },
+  };
+  const register = driver => {
+    driver.homey = homey;
+    const handlers = {};
+    registerStream5000Pairing(driver, { setHandler: (name, handler) => { handlers[name] = handler; } });
+    return handlers;
+  };
+  return { system, legacy, unit, handlers: register(system), register };
+}
+
+test('aggregate pairing hides fresh observed peers, not unknown installations or physical monitors', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const { TOPOLOGY_STALE_AFTER_MS } = require('../.homeybuild/lib/streamTopology');
+  const owner = { ...device('ES22TESTUNITAAAA'), getTopologyEvidence: () => ({
+    source: 'es22_peer_records', addressSn: 'ES22TESTUNITAAAA',
+    peers: [{ sn: 'ES22TESTUNITBBBB', seenAt: 100000 }], lastPeerRecordAt: 100000,
+    maxReportedRecordCount: 2, systemSocObserved: true, truncated: false,
+  }) };
+  const h = await overlapHarness(t, [owner]);
+  assert.deepStrictEqual((await h.handlers.list_devices()).map(entry => entry.data.sn), ['ES21TESTUNITCCCC']);
+  assert.deepStrictEqual((await h.register(h.unit).list_devices()).map(entry => entry.data.sn),
+    ['ES21TESTUNITCCCC', 'ES22TESTUNITBBBB']);
+  now += TOPOLOGY_STALE_AFTER_MS + 1;
+  assert.equal((await h.handlers.list_devices()).length, 2, 'stale observations cannot prove shared ownership');
+  now = 99999;
+  assert.equal((await h.handlers.list_devices()).length, 2, 'future receipts cannot suppress another installation');
+});
+
+test('aggregate pairing excludes a fresh legacy reporter only while its read-address binding matches', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const h = await overlapHarness(t);
+  let currentReadSn = 'BK61SYNTHETIC0001';
+  let receivedAt = 100000;
+  h.legacy.getDevices = () => [{ ...device('BK61SYNTHETIC0001'), getResolvedReporterEvidence: () => ({
+    sn: 'ES22TESTUNITBBBB', readSn: 'BK61SYNTHETIC0001', currentReadSn, receivedAt,
+  }) }];
+  assert.deepStrictEqual((await h.handlers.list_devices()).map(entry => entry.data.sn), ['ES21TESTUNITCCCC']);
+  currentReadSn = 'BK61SYNTHETIC0002';
+  assert.equal((await h.handlers.list_devices()).length, 2);
+  currentReadSn = 'BK61SYNTHETIC0001';
+  receivedAt = -2000000;
+  assert.equal((await h.handlers.list_devices()).length, 2);
+});
+
+test('final aggregate Add rechecks fresh overlap and rejects unlisted or unconfirmed candidates', async t => {
+  t.mock.method(Date, 'now', () => 100000);
+  const owners = [];
+  const h = await overlapHarness(t, owners);
+  const candidates = await h.handlers.list_devices();
+  const linked = candidates.find(candidate => candidate.data.sn === 'ES22TESTUNITBBBB');
+  const separate = candidates.find(candidate => candidate.data.sn === 'ES21TESTUNITCCCC');
+  await assert.rejects(h.handlers.add_device(linked), /installation|Installation/);
+  assert.equal(await h.handlers.confirm_stream_5000_installation_scope(true), true);
+  await assert.rejects(h.handlers.add_device({ data: { sn: 'ES22NOTLISTED' } }), /selection|Selection/);
+  owners.push({ ...device('ES22TESTUNITAAAA'), getTopologyEvidence: () => ({
+    source: 'es22_peer_records', addressSn: 'ES22TESTUNITAAAA',
+    peers: [{ sn: 'ES22TESTUNITBBBB', seenAt: 100000 }], lastPeerRecordAt: 100000,
+    maxReportedRecordCount: 2, systemSocObserved: true, truncated: false,
+  }) });
+  await assert.rejects(h.handlers.add_device(linked), /overlap|Overlap|already/);
+  await h.handlers.add_device(separate);
+});
+
+test('aggregate selections expire after account rotation or session disposal', async t => {
+  const h = await overlapHarness(t);
+  const { EcoFlowAppAuthClient } = require('../.homeybuild/lib/EcoFlowAppAuthClient');
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getSession', async () => ({ host: 'https://example.invalid' }));
+  const [candidate] = await h.handlers.list_devices();
+  await h.handlers.confirm_stream_5000_installation_scope(true);
+  await h.handlers.app_login({ email: 'replacement@example.invalid', password: 'synthetic-only' });
+  await assert.rejects(h.handlers.add_device(candidate), /Selection|selection/);
+  const [rediscovered] = await h.handlers.list_devices();
+  await h.handlers.disconnect();
+  await assert.rejects(h.handlers.add_device(rediscovered), /Selection|selection/);
+});
+
+test('retired aggregate discovery cannot replace the newer selection allowlist', async t => {
+  const h = await overlapHarness(t);
+  const { EcoFlowAppAuthClient } = require('../.homeybuild/lib/EcoFlowAppAuthClient');
+  let finishOld;
+  let calls = 0;
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getDeviceList', async () => {
+    calls++;
+    if (calls === 1) return new Promise(resolve => { finishOld = resolve; });
+    return [{ sn: 'ES21NEWSELECTION', deviceName: 'New', productType: 421 }];
+  });
+  const old = h.handlers.list_devices();
+  const obsolete = assert.rejects(old, /Selection|selection/);
+  const latest = await h.handlers.list_devices();
+  finishOld([{ sn: 'ES22OLDSELECTION', deviceName: 'Old', productType: 422 }]);
+  await obsolete;
+  await h.handlers.confirm_stream_5000_installation_scope(true);
+  await assert.rejects(h.handlers.add_device({ data: { sn: 'ES22OLDSELECTION' } }), /Selection|selection/);
+  await h.handlers.add_device(latest[0]);
+  await assert.rejects(h.handlers.add_device(latest[0]), /Selection|selection/);
+});
+
+test('aggregate inventory failures reject admission instead of treating owners as absent', async t => {
+  const h = await overlapHarness(t);
+  h.system.getDevices = () => { throw new Error('synthetic inventory unavailable'); };
+  await assert.rejects(h.handlers.list_devices(), /inventory|Inventory/);
+  assert.equal((await h.register(h.unit).list_devices()).length, 2, 'physical monitoring remains available');
+});
 
 test('physical-unit pairing suppresses serials under active and compatibility unit drivers', () => {
   const current = {
@@ -64,26 +181,32 @@ test('cross-driver duplicate detection tolerates missing and malformed drivers',
   assert.deepStrictEqual([...pairedStream5000Serials(driver)], ['ES22VALID0001']);
 });
 
-test('STREAM 5000 beta access is opt-in and only explicit true enables it', () => {
+test('aggregate Energy pairing is default-off and only explicit true enables it', () => {
   const homey = { settings: { get: () => undefined } };
-  assert.strictEqual(isStream5000BetaEnabled(homey), false);
+  assert.strictEqual(isStream5000AggregatePairingEnabled(homey), false);
   homey.settings.get = () => 'true';
-  assert.strictEqual(isStream5000BetaEnabled(homey), false);
+  assert.strictEqual(isStream5000AggregatePairingEnabled(homey), false);
   homey.settings.get = () => true;
-  assert.strictEqual(isStream5000BetaEnabled(homey), true);
+  assert.strictEqual(isStream5000AggregatePairingEnabled(homey), true);
 });
 
-test('the shared pairing gate gives actionable guidance when beta access is off', () => {
+test('only aggregate pairing needs an opt-in; unknown roles fail closed', () => {
   const homey = { settings: { get: () => false } };
   assert.throws(
-    () => requireStream5000BetaAccess(homey),
-    (err) => err.message === STREAM_5000_BETA_DISABLED_MESSAGE,
+    () => requireStream5000PairingAccess('system', homey),
+    (err) => err.message === STREAM_5000_AGGREGATE_DISABLED_MESSAGE,
   );
   homey.settings.get = () => true;
-  assert.doesNotThrow(() => requireStream5000BetaAccess(homey));
+  assert.doesNotThrow(() => requireStream5000PairingAccess('system', homey));
+  assert.doesNotThrow(() => requireStream5000PairingAccess('unit', { settings: { get: () => { throw Error('must not read a gate'); } } }));
+  assert.throws(() => requireStream5000PairingAccess('unknown', homey));
+  assert.equal(stream5000PairingRole('stream_5000_system'), 'system');
+  assert.equal(stream5000PairingRole('stream_5000_unit'), 'unit');
+  assert.equal(stream5000PairingRole('stream_ac5000'), 'unit');
+  assert.throws(() => stream5000PairingRole('stream'));
 });
 
-test('ES21 pairs into both beta roles with explicit model metadata, never the legacy AC driver', async (t) => {
+test('ES21/ES22 unit discovery is independent from the default-off aggregate gate', async (t) => {
   let discoveries = 0;
   const accountDevices = normalizeAppDeviceList({ bound: {
     ES21TESTUNITAAAA: { productName: '', online: 1 },
@@ -91,11 +214,11 @@ test('ES21 pairs into both beta roles with explicit model metadata, never the le
     ES23UNVERIFIED: { productName: 'STREAM 5000', online: 1 },
   } });
   t.mock.method(EcoFlowAppAuthClient.prototype, 'getDeviceList', async () => { discoveries += 1; return accountDevices; });
-  let beta = false;
-  const system = { getDevices: () => [] };
-  const unit = { getDevices: () => [device('ES21TESTUNITAAAA')] };
+  let aggregate = false;
+  const system = { id: 'stream_5000_system', getDevices: () => [] };
+  const unit = { id: 'stream_5000_unit', getDevices: () => [device('ES21TESTUNITAAAA')] };
   const homey = {
-    settings: { get: (key) => ({ appAuthEmail: 'tester@example.invalid', appAuthPassword: 'fake-password', stream5000BetaEnabled: beta }[key]) },
+    settings: { get: (key) => ({ appAuthEmail: 'tester@example.invalid', appAuthPassword: 'fake-password', stream5000BetaEnabled: true, stream5000AggregatePairingEnabled: aggregate }[key]) },
     drivers: { getDriver: (id) => ({ stream_5000_system: system, stream_5000_unit: unit }[id]) },
   };
   const observations = [];
@@ -107,12 +230,17 @@ test('ES21 pairs into both beta roles with explicit model metadata, never the le
     return handlers;
   };
   const systemHandlers = register(system, { duplicateDriverIds: ['stream_5000_system'] });
-  await assert.rejects(systemHandlers.list_devices(), /beta access is disabled/);
+  await assert.rejects(systemHandlers.list_devices(), /Home Battery pairing is disabled/);
+  await assert.rejects(systemHandlers.add_device(), /Home Battery pairing is disabled/);
   assert.strictEqual(discoveries, 0);
   assert.strictEqual(observations.length, 0);
-  beta = true;
+  const unitHandlers = register(unit);
+  assert.equal(unitHandlers.check_stream_5000_aggregate_access, undefined);
+  const initialUnits = await unitHandlers.list_devices();
+  assert.deepStrictEqual(initialUnits.map(entry => entry.data.sn), ['ES22TESTUNITBBBB']);
+  aggregate = true;
   const systems = await systemHandlers.list_devices();
-  assert.strictEqual(discoveries, 1, 'inventory must not fetch an extra list');
+  assert.strictEqual(discoveries, 2, 'one inventory fetch per allowed discovery');
   assert.strictEqual(observations[0], accountDevices, 'observe before unknown devices and paired duplicates are filtered');
   assert.deepStrictEqual(systems[0], {
     name: 'STREAM 5000', data: { sn: 'ES21TESTUNITAAAA' },
@@ -123,6 +251,64 @@ test('ES21 pairs into both beta roles with explicit model metadata, never the le
   assert.deepStrictEqual(units.map((entry) => entry.data.sn), ['ES22TESTUNITBBBB'], 'same-role ES21 duplicate is hidden');
   unit.getDevices = () => [];
   assert.strictEqual((await register(unit).list_devices())[0].store.stream5000TelemetryAdapter, 'es21');
-  const legacy = await register({ getDevices: () => [] }, { selectDevices: streamAc5000Devices }).list_devices();
+  const legacy = await register({ id: 'stream_ac5000', getDevices: () => [] }, { selectDevices: streamAc5000Devices }).list_devices();
   assert.deepStrictEqual(legacy.map((entry) => entry.data.sn), ['ES22TESTUNITBBBB']);
+});
+
+test('the retired flag cannot grant Energy access and no admission check writes settings', () => {
+  for (const oldValue of [undefined, false, true]) {
+    const read = [];
+    const homey = { settings: { get: key => { read.push(key); return key === 'stream5000BetaEnabled' ? oldValue : undefined; },
+      set: () => assert.fail('must not migrate/write settings'), unset: () => assert.fail('must not delete settings') } };
+    assert.equal(isStream5000AggregatePairingEnabled(homey), false);
+    assert.doesNotThrow(() => requireStream5000PairingAccess('unit', homey));
+    assert.throws(() => requireStream5000PairingAccess('system', homey));
+    assert.ok(read.every(key => key === 'stream5000AggregatePairingEnabled'));
+  }
+});
+
+test('aggregate opt-out during discovery rejects the late list and subsequent add', async (t) => {
+  let resolve;
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getDeviceList', () => new Promise(done => { resolve = done; }));
+  let enabled = true; let observations = 0; let writes = 0;
+  const driver = { id: 'stream_5000_system', getDevices: () => [], homey: {
+    settings: { get: key => ({ appAuthEmail: 'tester@example.invalid', appAuthPassword: 'fake-password', stream5000AggregatePairingEnabled: enabled }[key]),
+      set: () => { writes += 1; } },
+    app: { beginStreamDiscoveryObservation: () => () => { observations += 1; } },
+  } };
+  const handlers = {};
+  registerStream5000Pairing(driver, { setHandler: (name, handler) => { handlers[name] = handler; } });
+  const pending = handlers.list_devices();
+  enabled = false;
+  resolve(normalizeAppDeviceList({ bound: { ES22TESTUNITBBBB: { online: 1 } } }));
+  await assert.rejects(pending, /Home Battery pairing is disabled/);
+  await assert.rejects(handlers.add_device(), /Home Battery pairing is disabled/);
+  assert.equal(observations, 0); assert.equal(writes, 0);
+});
+
+test('unknown pairing drivers fail before reading credentials or registering handlers', () => {
+  const driver = { id: 'stream_unknown', homey: { settings: { get: () => assert.fail('no credentials read') } } };
+  assert.throws(() => registerStream5000Pairing(driver, { setHandler: () => assert.fail('no handler') }), /Unsupported/);
+});
+
+test('revoked aggregate consent cannot commit a newly entered account, but unit pairing still can', async (t) => {
+  t.mock.method(EcoFlowAppAuthClient.prototype, 'getSession', async () => ({ host: 'https://api-e.ecoflow.com' }));
+  for (const id of ['stream_5000_system', 'stream_5000_unit']) {
+    const store = new Map([['stream5000AggregatePairingEnabled', true], ['stream5000BetaEnabled', true]]);
+    const driver = { id, getDevices: () => [], homey: { settings: {
+      get: key => store.get(key), set: (key, value) => store.set(key, value),
+    } } };
+    const handlers = {};
+    registerStream5000Pairing(driver, { setHandler: (name, handler) => { handlers[name] = handler; } });
+    await handlers.app_login({ email: 'tester@example.invalid', password: 'synthetic-password' });
+    store.set('stream5000AggregatePairingEnabled', false);
+    if (id === 'stream_5000_system') {
+      await assert.rejects(handlers.add_device(), /Home Battery pairing is disabled/);
+      assert.equal(store.has('appAuthPassword'), false);
+    } else {
+      await handlers.add_device();
+      assert.equal(store.get('appAuthPassword'), 'synthetic-password');
+    }
+    assert.equal(store.get('stream5000BetaEnabled'), true);
+  }
 });

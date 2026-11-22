@@ -6,6 +6,210 @@ const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
 const api = require('../.homeybuild/api');
 const manifest = require('../.homeycompose/app.json');
 
+test('passive timer research is not reflected into support reports or promoted to legacy remaining-time readings', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getTimeObserverDiagnostics: () => ({ status: 'collecting', samples: [{ receivedAt: 100000,
+      fields: [{ path: 'f33.10', value: 1234, serial: 'PRIVATE_TIMER' }] }] }),
+    getRemainingTimeDiagnostics: () => ({ discharge_remaining: { reportedMinutes: 1234, source: 'PRIVATE_TIMER' } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const unit = report.drivers.find(driver => driver.id === 'stream_5000_unit');
+  assert.deepEqual(unit.remainingTime, []);
+  assert.equal(unit.timeObserver, undefined);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE_TIMER|f33\.10|1234/);
+  assert.equal(Object.values(manifest.api).some(route => /time-observer|timer-research/.test(route.path)), false);
+});
+
+test('recent power and queue diagnostics use bounded fixed projections and isolate hostile getters', t => {
+  const now = 100000; t.mock.method(Date, 'now', () => now);
+  const instance = homey();
+  const sample = { value: -450, receivedAt: now - 1000, appliedAt: now - 500, sn: 'PRIVATE' };
+  const devices = [{ getPowerHistoryDiagnostics: () => ({ fields: { bmsBatteryW: Array(100).fill(sample),
+    secret: [{ value: 'PRIVATE' }], gridPortW: [{ value: NaN, receivedAt: now, appliedAt: now }] } }),
+  getTelemetryQueueDiagnostics: () => ({ running: true, pending: true, coalesced: 200, batches: 2,
+    payload: 'PRIVATE', maxPendingBatches: 999 }),
+  }, { getPowerHistoryDiagnostics() { throw new Error('PRIVATE'); },
+    getTelemetryQueueDiagnostics: () => ({ get running() { throw new Error('PRIVATE'); } }) }];
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? devices : [] });
+  const report = createSupportSnapshot(instance);
+  const unit = report.drivers.find(d => d.id === 'stream_unit');
+  assert.equal(unit.recentPower[0].fields.bmsBatteryW.length, 16);
+  assert.equal(unit.recentPower[0].fields.bmsBatteryW[0].queueDelaySec, 0.5);
+  assert.equal(unit.recentPower[0].fields.gridPortW, undefined);
+  assert.deepEqual(unit.recentPower[1].fields, {});
+  assert.equal(unit.telemetryQueue[0].maxPendingBatches, 1);
+  assert.equal(unit.telemetryQueue[0].coalesced, 200);
+  assert.equal(unit.telemetryQueue[1].coalesced, 0);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('optional history failure does not lose an otherwise valid peer identity comparison', () => {
+  const now = Date.now(); const instance = homey(); const sn = 'BK31PRIVATE000001';
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [{
+    getData: () => ({ sn }), getUnitCorrelationDiagnostics: () => ({ bmsBatteryW: { value: -450, ageSec: 0, stale: false } }),
+    getPowerHistoryDiagnostics() { throw new Error('PRIVATE'); },
+  }] : id === 'stream_5000_unit' ? [{ getTopologyEvidence: () => ({ source: 'es22_peer_records', addressSn: 'ES22PRIVATE000001',
+    peers: [{ sn, seenAt: now, readings: { batteryPowerRawW: { value: 280, receivedAt: now } } }] }) }] : [] });
+  const result = createSupportSnapshot(instance);
+  assert.equal(result.peerCorrelation[0].peers[0].status, 'exact_identity_match');
+  assert.equal(result.peerCorrelation[0].peers[0].comparisons.rawPowerVersusBms.magnitudeDifferenceW, -170);
+  assert.ok(!JSON.stringify(result).includes('PRIVATE'));
+});
+
+test('original live freshness and limit projection are fixed, anonymous and read-only', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [{
+    getReadingDiagnostics: () => ({ stream_unit_power_grid: { ageSec: 0, receivedAgeSec: 0,
+      stale: false, applicationStatus: 'applied', secret: 'PRIVATE' }, PRIVATE: {} }),
+    getLimitDiagnostics: () => ({ feedGridModePowLimit: { value: 1200, ageSec: 0, stale: false,
+      source: 'app_property', scopeVerified: true, controlEnabled: true, secret: 'PRIVATE' },
+    sysGridInPwrLimit: { value: 7200, ageSec: 181, stale: false, source: 'PRIVATE' } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const driver = report.drivers.find(d => d.id === 'stream_unit');
+  assert.equal(driver.readingFreshness[0].readings.stream_unit_power_grid.applicationStatus, 'applied');
+  const limits = driver.originalLimits[0].fields;
+  assert.equal(limits.feedGridModePowLimit.value, 1200);
+  assert.equal(limits.feedGridModePowLimit.controlEnabled, false);
+  assert.equal(limits.feedGridModePowLimit.scopeVerified, false);
+  assert.equal(limits.sysGridInPwrLimit.value, null);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('counter projection isolates nested getters and rejects unsupported stall claims', () => {
+  const instance = homey();
+  const bad = { get powerComparisonScope() { throw new Error('PRIVATE'); } };
+  const input = { fields: {
+    get accuChgEnergy() { throw new Error('PRIVATE'); },
+    accuDsgEnergy: { status: 'invalid', ageSec: 1, unchangedSec: 900, possibleStall: true },
+  } };
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream' ? [bad, input].map(data => ({
+    getCounterContinuityDiagnostics: () => data,
+  })) : [] });
+  const report = createSupportSnapshot(instance);
+  const counters = report.drivers.find(d => d.id === 'stream').counterContinuity;
+  assert.equal(counters[0].fields.accuDsgEnergy.status, 'missing');
+  assert.equal(counters[1].fields.accuChgEnergy.status, 'missing');
+  assert.equal(counters[1].fields.accuDsgEnergy.possibleStall, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('support report anonymously correlates exact paired peers, with no migration or private getter leakage', () => {
+  const now = Date.now(); const instance = homey();
+  const sn = 'BK31PRIVATE000001';
+  const devices = {
+    stream_unit: [{ getData: () => ({ sn }),
+      getUnitCorrelationDiagnostics: () => ({ gridPortW: { value: 421, ageSec: 0, stale: false, secret: 'PRIVATE' } }) }],
+    stream_5000_unit: [{ getTopologyEvidence: () => ({ source: 'es22_peer_records', addressSn: 'ES22PRIVATE000001',
+      peers: [{ sn, seenAt: now, readings: { batteryPowerRawW: { value: 419, receivedAt: now } } }] }) }],
+    stream: [{ getCounterContinuityDiagnostics: () => ({ secret: 'PRIVATE', sourceMigrationAllowed: true,
+      powerComparisonScope: 'PRIVATE', fields: { accuDsgEnergy: { status: 'PRIVATE', ageSec: 181,
+        possibleStall: true, stallVerified: true, raw: 'PRIVATE' } } }) }],
+  };
+  instance.drivers.getDriver = id => ({ getDevices: () => devices[id] || [] });
+  const report = createSupportSnapshot(instance);
+  const match = report.peerCorrelation[0].peers[0];
+  assert.deepEqual(match.pairedDevice, { driverId: 'stream_unit', deviceIndex: 0 });
+  assert.equal(match.comparisons.rawPowerVersusPort.peerMinusUnit, -2);
+  assert.equal(match.accountingUsed, false);
+  const counters = report.drivers.find(d => d.id === 'stream').counterContinuity[0];
+  assert.equal(counters.fields.accuDsgEnergy.possibleStall, false);
+  assert.equal(counters.fields.accuDsgEnergy.stallVerified, false);
+  assert.equal(counters.sourceMigrationAllowed, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('remaining-time diagnostics export only scoped source and application ages, never private payloads', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream' ? [{
+    getRemainingTimeDiagnostics: () => ({
+      discharge_remaining: { source: 'system_cms_mqtt', ageSec: 0, receivedAgeSec: 0,
+        stale: false, applicationStatus: 'write_failed', value: 207, sn: 'PRIVATE', raw: 'PRIVATE' },
+      charge_remaining: { source: 'PRIVATE', ageSec: -1, receivedAgeSec: NaN,
+        stale: false, applicationStatus: 'PRIVATE' },
+      secret: 'PRIVATE',
+    }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const readings = report.drivers.find(d => d.id === 'stream').remainingTime[0].readings;
+  assert.equal(readings.discharge_remaining.stale, true);
+  assert.equal(readings.discharge_remaining.applicationStatus, 'write_failed');
+  assert.equal(readings.charge_remaining.source, 'unobserved');
+  assert.equal(readings.charge_remaining.ageSec, null);
+  assert.equal(Object.keys(readings).length, 2);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('original BMS power and suppressed durations expose only finite anonymous scoped diagnostics', () => {
+  const instance = homey();
+  const device = {
+    getReadingDiagnostics: () => ({ stream_unit_power_battery_flow: { ageSec: 1, stale: false, applicationStatus: 'applied' } }),
+    getCapabilityValue: () => -404,
+    getRemainingTimeDiagnostics: () => ({ charge_remaining: { source: 'unit_bms_mqtt', receivedAgeSec: 2,
+      ageSec: null, stale: true, applicationStatus: 'unavailable', displayReason: 'inactive_direction',
+      reportedMinutes: 5939, serial: 'PRIVATE', raw: 'PRIVATE' } }),
+  };
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_unit' ? [device] : [] });
+  let driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_unit');
+  assert.equal(driver.originalUnitBattery[0].valueW, -404); assert.equal(driver.originalUnitBattery[0].energyContribution, false);
+  assert.equal(driver.originalUnitBattery[0].measurementSide, 'dc_pack');
+  assert.equal(driver.remainingTime[0].readings.charge_remaining.reportedMinutes, 5939);
+  assert.equal(driver.remainingTime[0].readings.charge_remaining.displayReason, 'inactive_direction');
+  assert.ok(!JSON.stringify(driver).includes('PRIVATE'));
+  device.getCapabilityValue = () => Infinity;
+  driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_unit');
+  assert.equal(driver.originalUnitBattery[0].valueW, null); assert.equal(driver.originalUnitBattery[0].stale, true);
+});
+
+test('active meter source projection is private and rejects stale or malformed readings', () => {
+  for (const ageSec of [0, 91, -1, null, NaN]) {
+    const instance = homey();
+    instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
+      getMeterDiagnostics: () => ({ activeGrid: { source: 'linked_installation', value: -10, ageSec,
+        stale: false, sn: 'PRIVATE', secret: 'PRIVATE' } }),
+    }] : [] });
+    const report = createSupportSnapshot(instance);
+    const grid = report.smartMeters[0].evidence.activeGrid;
+    assert.equal(grid.value, ageSec === 0 ? -10 : null);
+    assert.equal(grid.stale, ageSec !== 0);
+    assert.equal(grid.source, 'linked_installation');
+    assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+  }
+});
+
+test('counter support projection cannot promote native migration or malformed freshness', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
+    getMeterDiagnostics: () => ({ counterEvidence: { status: 'consistent', stale: false,
+      lastRecordAgeSec: -1, migrationAllowed: true, unitsVerified: true, midnightBehaviourVerified: true,
+      secret: 'PRIVATE' } }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const evidence = report.smartMeters[0].evidence.counterEvidence;
+  assert.equal(evidence.stale, true);
+  assert.equal(evidence.migrationAllowed, false);
+  assert.equal(evidence.unitsVerified, false);
+  assert.equal(evidence.midnightBehaviourVerified, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
+test('original-meter support evidence retains signed values but never forwards private fields', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter' ? [{
+    getMeterDiagnostics: () => ({ samples: 2, directGridFresh: true, sn: 'PRIVATE',
+      readings: { measure_power: { value: -100, ageSec: 1, stale: false, token: 'PRIVATE' }, PRIVATE: {} },
+      counterCandidates: { todayActive: { value: 500, ageSec: 2, stale: false }, PRIVATE: {} },
+      nativeCounterMigrationEnabled: true }),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  const evidence = report.smartMeters[0].evidence;
+  assert.equal(evidence.readings.measure_power.value, -100);
+  assert.equal(evidence.counterCandidates.todayActive.value, 500);
+  assert.equal(evidence.nativeCounterMigrationEnabled, false);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+});
+
 test('BK PV freshness support fields are fixed-list and never forward identities or power', () => {
   const instance = homey();
   instance.drivers.getDriver = (id) => ({ getDevices: () => id === 'stream_unit' ? [{
@@ -120,7 +324,7 @@ test('per-reading freshness projection excludes identities and catches nested ge
   }] : [] });
   const report = createSupportSnapshot(instance);
   assert.deepEqual(report.drivers.find(d => d.id === 'stream_5000_unit').readingFreshness[0].readings,
-    { measure_power: { ageSec: 12, stale: false } });
+    { measure_power: { ageSec: 12, receivedAgeSec: null, stale: false, applicationStatus: 'unknown' } });
   assert.ok(!JSON.stringify(report).includes('PRIVATE'));
   malicious = true;
   assert.ok(!JSON.stringify(createSupportSnapshot(instance)).includes('PRIVATE'));
@@ -131,12 +335,28 @@ function homey() {
     version: '13.5.0', platform: 'local',
     manifest: { version: '1.10.17', drivers: [{ id: 'stream_5000_system' }, { id: 'stream_5000_unit' }] },
     settings: { get: (key) => {
-      assert.equal(key, 'stream5000BetaEnabled', 'report must not read credentials');
+      assert.equal(key, 'stream5000AggregatePairingEnabled', 'report must not read credentials or retired settings');
       return true;
     } },
     drivers: { getDriver: () => { throw new Error('private serial ES22PRIVATE000001'); } },
   };
 }
+
+test('failed application projection separates receipt from applied freshness with fixed vocabulary', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getReadingDiagnostics: () => ({
+      'measure_power.load': { ageSec: 10, receivedAgeSec: 0, stale: false, applicationStatus: 'write_failed', error: 'PRIVATE' },
+      measure_temperature: { ageSec: null, receivedAgeSec: -1, stale: false, applicationStatus: 'PRIVATE' },
+    }),
+  }] : [] });
+  const readings = createSupportSnapshot(instance).drivers.find(driver => driver.id === 'stream_5000_unit').readingFreshness[0].readings;
+  assert.deepEqual(readings['measure_power.load'], { ageSec: 10, receivedAgeSec: 0, stale: true, applicationStatus: 'write_failed' });
+  assert.equal(readings.measure_temperature.stale, true);
+  assert.equal(readings.measure_temperature.applicationStatus, 'unknown');
+  assert.equal(readings.measure_temperature.receivedAgeSec, null);
+  assert.ok(!JSON.stringify(readings).includes('PRIVATE'));
+});
 
 test('support report projects anonymous read-only configuration with receipt age and no private fields', () => {
   const instance = homey();
@@ -158,7 +378,8 @@ test('support report distinguishes packaged drivers from runtime registration', 
   const snapshot = createSupportSnapshot(homey());
   assert.equal(snapshot.appVersion, '1.10.17');
   assert.equal(snapshot.homeyVersion, '13.5.0');
-  assert.equal(snapshot.betaPairingEnabled, true);
+  assert.equal(snapshot.betaPairingEnabled, false);
+  assert.deepEqual(snapshot.stream5000Pairing, { unitMonitoringRequiresOptIn: false, aggregateEnergyOptInEnabled: true });
   const driver = snapshot.drivers.find((item) => item.id === 'stream_5000_system');
   assert.equal(driver.packaged, true);
   assert.equal(driver.registered, false);
@@ -192,7 +413,61 @@ test('support accounting projection drops unexpected fields and non-finite readi
 test('support API is a read-only GET with no credential validation or cloud call', async () => {
   assert.deepEqual(manifest.api.supportSnapshot, { method: 'GET', path: '/support-snapshot' });
   const report = await api.supportSnapshot({ homey: homey() });
-  assert.equal(report.schemaVersion, 6);
+  assert.equal(report.schemaVersion, 20);
+});
+
+test('self observations and linked-power explanation are re-projected without private fields or authority', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [{
+    getOwnUnitDiagnostics: () => ({ fields: { batteryPowerRawW: { value: 2260, ageSec: 1, stale: false, sn: 'PRIVATE' } },
+      accountingUsed: true, rawBatteryPowerSignAndScaleVerified: true }),
+    getPhysicalPowerDiagnostics: () => ({ status: 'linked_power_unverified', secret: 'PRIVATE', energyContribution: true }),
+  }] : [] });
+  const driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_5000_unit');
+  assert.equal(driver.ownUnit[0].fields.batteryPowerRawW.value, 2260);
+  assert.equal(driver.ownUnit[0].accountingUsed, false);
+  assert.equal(driver.ownUnit[0].rawBatteryPowerSignAndScaleVerified, false);
+  assert.equal(driver.physicalPower[0].status, 'linked_power_unverified');
+  assert.equal(driver.physicalPower[0].energyContribution, false);
+  assert.ok(!JSON.stringify(driver).includes('PRIVATE'));
+});
+
+test('last standby report is bounded, anonymous and cannot claim live readings or Energy use', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'last_reported_standby', lastStandbyAgeSec: 420.4,
+      live: true, energyUsed: true, value: 1234567, sn: 'PRIVATE' }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'last_reported_standby', lastStandbyAgeSec: Infinity }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'last_reported_standby', lastStandbyAgeSec: 1201 }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ status: 'PRIVATE', lastStandbyAgeSec: 1 }) },
+    { getBatteryReadingStatusDiagnostics: () => ({ get status() { throw new Error('PRIVATE'); } }) },
+  ] : [] });
+  const entries = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_5000_unit').batteryReadingStatus;
+  assert.deepEqual(entries[0], { deviceIndex: 0, status: 'last_reported_standby', live: false,
+    energyUsed: false, lastStandbyAgeSec: 420 });
+  assert.deepEqual(entries.slice(1).map(e => e.status), ['expired', 'expired', 'waiting', 'waiting']);
+  assert.equal(entries.every(e => e.energyUsed === false), true);
+  assert.doesNotMatch(JSON.stringify(entries), /PRIVATE|1234567/);
+});
+
+test('physical reading availability is a fixed privacy projection, never scope or Energy authority', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_unit' ? [
+    { getPhysicalPowerDiagnostics: () => ({ status: 'unit_reading_available', physicalScopeVerified: true,
+      energyContribution: true, linkedSystemPowerCopiedToUnit: true, secret: 'PRIVATE' }) },
+    { getPhysicalPowerDiagnostics: () => ({ status: 'PRIVATE' }) },
+    { getPhysicalPowerDiagnostics: () => { throw new Error('PRIVATE'); } },
+  ] : [] });
+  const driver = createSupportSnapshot(instance).drivers.find(d => d.id === 'stream_5000_unit');
+  assert.equal(driver.physicalPower[0].status, 'unit_reading_available');
+  assert.equal(driver.physicalPower[1].status, 'waiting_for_unit_evidence');
+  assert.equal(driver.physicalPower[2].status, 'waiting_for_unit_evidence');
+  driver.physicalPower.forEach(entry => {
+    assert.equal(entry.physicalScopeVerified, false);
+    assert.equal(entry.energyContribution, false);
+    assert.equal(entry.linkedSystemPowerCopiedToUnit, false);
+  });
+  assert.doesNotMatch(JSON.stringify(driver), /PRIVATE/);
 });
 
 test('support report re-projects cached discovery without network or identity access', () => {
@@ -238,4 +513,44 @@ test('topology report flags aggregate overlap anonymously and ignores optional p
   const output = JSON.stringify(report);
   assert.ok(!output.includes('SYNTHETIC'));
   assert.ok(!output.includes('PRIVATE'));
+});
+
+test('official system SOC provenance is bounded, excludes private identifiers and never claims a hardware timestamp', () => {
+  const h = homey();
+  h.drivers.getDriver = id => ({ getDevices: () => id === 'stream_5000_system' ? [{
+    getOfficialSocDiagnostics: () => ({ source: 'developer_api', basis: 'cloud_latest_report',
+      hardwareReportedAt: null, receiptAgeSec: 2, requestDurationMs: 60, stale: false,
+      serial: 'PRIVATE_SOC', accessKey: 'PRIVATE_SOC', rawQuota: 'PRIVATE_SOC' }),
+  }, { getOfficialSocDiagnostics() { throw new Error('PRIVATE_SOC'); } }] : [] });
+  const report = createSupportSnapshot(h); const system = report.drivers.find(d => d.id === 'stream_5000_system');
+  assert.deepEqual(system.officialSoc, [{ deviceIndex: 0, source: 'developer_api', basis: 'cloud_latest_report',
+    hardwareReportedAt: null, receiptAgeSec: 2, requestDurationMs: 60, stale: false }]);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE_SOC'));
+});
+
+
+test('support includes anonymous single-phase recovery and owned SDK scan diagnostics without cloud/API access', () => {
+  const instance = homey();
+  instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter_dual_ct_energy' ? [{
+    getDualCtEnergyDiagnostics: () => ({ mode: 'single_phase', startupStage: 'source', retryScheduled: true, active: false,
+      transport: { connected: true, listening: true, activeTopics: 2, receivedFrames: 0, socketReceivedFrames: 19, topic: 'PRIVATE' },
+      linkedPowerStatus: 'PRIVATE_INTERNAL', messageEvidence: { raw: 'PRIVATE', groups: [] },
+      feed: { lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 120, lastRejectionAgeSec: -3,
+        lastRejectionReason: 'PRIVATE_error', raw: 'PRIVATE' },
+      context: { stage: 'inventory', reason: 'owned_inventory_read_failed', inventoryStage: 'settings', driver: 'smartmeter' }, private: 'PRIVATE' }),
+    getData: () => ({ sn: 'PRIVATE' }), getEnergy: () => ({ cumulative: true }), getCapabilities: () => ['measure_power'], getSettings: () => ({}),
+  }] : [] });
+  const report = createSupportSnapshot(instance);
+  assert.equal(report.dualCtEnergyRecovery[0].mode, 'single_phase');
+  assert.equal(report.dualCtEnergyRecovery[0].context.inventoryStage, 'settings');
+  assert.deepEqual(report.dualCtEnergyRecovery[0].feed, { lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 120,
+    lastRejectionAgeSec: null, lastRejectionReason: 'other_rejection' });
+  assert.equal(report.dualCtEnergyRecovery[0].linkedPowerStatus, null);
+  assert.equal(report.dualCtEnergyRecovery[0].transport.activeTopics, 2);
+  assert.equal(report.dualCtEnergyRecovery[0].transport.receivedFrames, 0);
+  assert.equal(report.dualCtEnergyRecovery[0].transport.socketReceivedFrames, 19);
+  assert.deepEqual(report.dualCtEnergyRecovery[0].messageEvidence.groups, []);
+  assert.equal(report.dualCtCommunityTrials.length, 0);
+  assert.doesNotMatch(JSON.stringify(report.dualCtEnergyRecovery), /PRIVATE/);
+  assert.equal(report.dualCtOwnedInventory.readOnly, true);
 });

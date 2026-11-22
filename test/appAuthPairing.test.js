@@ -325,3 +325,75 @@ test('clearSavedAppAuthCreds removes every credential key', () => {
   assert.deepStrictEqual(storedKeys(homey), []);
   assert.strictEqual(hasSavedAppAuthCreds(homey), false);
 });
+
+test('a sign-in completing after cancellation cannot restore pending credentials or commit them', async () => {
+  let release; const pending = new Promise(resolve => { release = resolve; });
+  const homey = fakeHomey(); const session = fakeSession();
+  const transport = okTransport();
+  const controller = registerAppAuthHandlers(fakeDriver(homey), session, { transport: async req => { if (req.url.endsWith('/auth/login')) await pending; return transport(req); } });
+  const signingIn = login(session); await new Promise(setImmediate); await session.call('disconnect'); release();
+  await assert.rejects(signingIn, /session changed/); controller.commit();
+  assert.strictEqual(controller.getClient(), null); assert.deepStrictEqual(storedKeys(homey), []);
+});
+test('an older overlapping sign-in cannot replace the newer validated account credentials', async () => {
+  let release; const pending = new Promise(resolve => { release = resolve; }); let requests = 0;
+  const homey = fakeHomey(); const session = fakeSession(); const transport = okTransport();
+  registerAppAuthHandlers(fakeDriver(homey), session, { transport: async req => {
+    if (req.url.endsWith('/auth/login') && ++requests === 1) await pending;
+    return transport(req);
+  } });
+  const old = login(session); await new Promise(setImmediate);
+  await session.call('app_login', { email: EMAIL, password: 'new-synthetic-password', host: 'https://api.ecoflow.com' });
+  release(); await assert.rejects(old, /session changed/); await session.call('add_device', {});
+  assert.strictEqual(homey.values.get(APP_AUTH_PASSWORD_SETTING), 'new-synthetic-password');
+});
+
+test('confirming unchanged app credentials does not emit settings writes that stop existing listeners', async () => {
+  const homey = fakeHomey();
+  homey.values.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  homey.values.set(APP_AUTH_PASSWORD_SETTING, PASSWORD);
+  homey.values.set(APP_AUTH_HOST_SETTING, 'https://api.ecoflow.com');
+  const writes = []; const set = homey.settings.set.bind(homey.settings);
+  homey.settings.set = (key, value) => { writes.push(key); set(key, value); };
+  const session = fakeSession();
+  registerAppAuthHandlers(fakeDriver(homey), session, { transport: okTransport() });
+  await login(session); await session.call('add_device', {});
+  assert.deepStrictEqual(writes, []);
+  const changed = fakeSession();
+  registerAppAuthHandlers(fakeDriver(homey), changed, { transport: okTransport() });
+  await changed.call('app_login', {
+    email: EMAIL, password: 'changed-synthetic', host: 'https://api.ecoflow.com',
+  });
+  await changed.call('add_device', {});
+  assert.deepStrictEqual(writes, [APP_AUTH_PASSWORD_SETTING]);
+});
+
+test('saved-account consumers share one login and credential changes retire that cache', async () => {
+  const { appAuthClientFromSettings } = require('../.homeybuild/lib/appAuthPairing.js');
+  const homey = fakeHomey();
+  homey.settings.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  homey.settings.set(APP_AUTH_PASSWORD_SETTING, PASSWORD);
+  const first = appAuthClientFromSettings(homey);
+  let logins = 0;
+  first.transport = async () => {
+    logins++;
+    return { status: 200, body: { code: '0', data: { token: TOKEN, user: { userId: USER_ID } } } };
+  };
+  await Promise.all([first.getSession(), appAuthClientFromSettings(homey).getSession(), appAuthClientFromSettings(homey).getSession()]);
+  await appAuthClientFromSettings(homey).getSession();
+  assert.strictEqual(logins, 1, 'concurrent startup and later inventory reuse the same login');
+  assert.strictEqual(appAuthClientFromSettings(homey), first);
+  homey.settings.set(APP_AUTH_PASSWORD_SETTING, 'changed-synthetic-password');
+  const changed = appAuthClientFromSettings(homey);
+  assert.notStrictEqual(changed, first);
+  assert.strictEqual(appAuthClientFromSettings(homey), changed);
+  clearSavedAppAuthCreds(homey);
+  assert.strictEqual(appAuthClientFromSettings(homey), null);
+  homey.settings.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  homey.settings.set(APP_AUTH_PASSWORD_SETTING, 'changed-synthetic-password');
+  assert.notStrictEqual(appAuthClientFromSettings(homey), changed);
+  const other = fakeHomey();
+  other.settings.set(APP_AUTH_EMAIL_SETTING, EMAIL);
+  other.settings.set(APP_AUTH_PASSWORD_SETTING, 'changed-synthetic-password');
+  assert.notStrictEqual(appAuthClientFromSettings(other), appAuthClientFromSettings(homey));
+});

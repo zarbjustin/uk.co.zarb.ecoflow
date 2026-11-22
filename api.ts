@@ -5,6 +5,35 @@ import { createSupportSnapshot } from './lib/supportSnapshot';
 import { streamCoordinationPreview } from './lib/streamCoordinationPreview';
 
 module.exports = {
+  async coordinatedReadings({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
+    if (body && Object.keys(body).length) throw new Error('Read endpoint takes no targets or commands');
+    return homey.app.refreshCoordinatedReadings();
+  },
+  async coordinatedReserveControl({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
+    return homey.app.requestCoordinatedReserve(body);
+  },
+  async houseReserveControl({ homey, body }: { homey: any; body: any }): Promise<Record<string, unknown>> {
+    return homey.app.requestHouseReserve(body);
+  },
+  async coordinationFlowMonitor({ homey, body }: { homey: any; body: any }): Promise<Record<string, any>> {
+    return homey.app.requestCoordinationFlowMonitor(body);
+  },
+  async coordinationWorkspace({ homey, body }: { homey: any; body: any }): Promise<Record<string, any>> {
+    return homey.app.requestCoordinationWorkspace(body);
+  },
+  async startDualCtResearch({ homey, body }: { homey: any; body?: any }): Promise<Record<string, unknown>> {
+    return homey.app.startDualCtResearch(body?.previewEnabled === true, body?.previewEnabled === true && body?.counterPreviewEnabled === true);
+  },
+  async dualCtPreview({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    return homey.app.getDualCtPreviewSnapshot();
+  },
+  async dualCtResearchView({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    // No cloud call, supplied serial, clock or permission changes.
+    return homey.app.getDualCtResearchView();
+  },
+  async stopDualCtResearch({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    return homey.app.stopDualCtResearch();
+  },
   async coordinationPreview({ body }: { body: any }): Promise<Record<string, unknown>> {
     // The endpoint owns its clock; a supplied "now" cannot make stale readings fresh.
     const input = body?.input;
@@ -12,12 +41,28 @@ module.exports = {
       now: Date.now(),
       manualOverride: input?.manualOverride,
       controllerConflict: input?.controllerConflict,
+      schemaVersion: input?.schemaVersion,
+      circuits: input?.circuits,
+      externalBattery: input?.externalBattery,
+      streamBattery: input?.streamBattery,
+      otherSourcesReviewed: input?.otherSourcesReviewed,
       bydSoc: input?.bydSoc,
       bydBatteryW: input?.bydBatteryW,
       streamBatteryW: input?.streamBatteryW,
     }, body?.previous, body?.policy);
   },
   async supportSnapshot({ homey }: { homey: unknown }): Promise<Record<string, unknown>> {
+    return createSupportSnapshot(homey);
+  },
+  async refreshReporterDiagnostics({ homey }: { homey: any }): Promise<Record<string, unknown>> {
+    // Fixed driver, sequential and capped: no supplied serials or account enumeration.
+    const devices = homey.drivers.getDriver('stream').getDevices();
+    for (const device of devices.slice(0, 8)) {
+      if (typeof device.refreshReporterDiagnostics === 'function') {
+        // eslint-disable-next-line no-await-in-loop
+        await device.refreshReporterDiagnostics();
+      }
+    }
     return createSupportSnapshot(homey);
   },
   async validateCredentials({ body }: { body: Record<string, unknown> }): Promise<{ ok: true }> {

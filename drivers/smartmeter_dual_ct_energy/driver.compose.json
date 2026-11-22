@@ -1,0 +1,452 @@
+{
+  "name": {
+    "en": "Smart Meter Dual CT",
+    "de": "Smart Meter Dual CT",
+    "nl": "Smart Meter Dual CT"
+  },
+  "class": "sensor",
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
+  "capabilities": [
+    "measure_power",
+    "meter_power.imported",
+    "meter_power.exported",
+    "dual_ct_preview_power.a_p1",
+    "dual_ct_preview_voltage.a_p1",
+    "dual_ct_preview_current.a_p1",
+    "dual_ct_preview_power.a_p2",
+    "dual_ct_preview_voltage.a_p2",
+    "dual_ct_preview_current.a_p2",
+    "dual_ct_preview_power.a_p3",
+    "dual_ct_preview_voltage.a_p3",
+    "dual_ct_preview_current.a_p3",
+    "dual_ct_preview_power.b_p1",
+    "dual_ct_preview_voltage.b_p1",
+    "dual_ct_preview_current.b_p1",
+    "dual_ct_preview_power.b_p2",
+    "dual_ct_preview_voltage.b_p2",
+    "dual_ct_preview_current.b_p2",
+    "dual_ct_preview_power.b_p3",
+    "dual_ct_preview_voltage.b_p3",
+    "dual_ct_preview_current.b_p3",
+    "dual_ct_preview_net.b"
+  ],
+  "capabilitiesOptions": {
+    "dual_ct_linked_grid_power": {
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "measure_power": {
+      "approximation": true
+    },
+    "meter_power.imported": {
+      "title": {
+        "en": "Imported energy",
+        "de": "Bezogene Energie",
+        "nl": "Afgenomen energie"
+      }
+    },
+    "meter_power.exported": {
+      "title": {
+        "en": "Exported energy",
+        "de": "Eingespeiste Energie",
+        "nl": "Teruggeleverde energie"
+      }
+    },
+    "dual_ct_preview_power.a_p1": {
+      "title": {
+        "en": "CT1 phase 1 power",
+        "de": "CT1 Phase 1 Leistung",
+        "nl": "CT1 fase 1 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.a_p1": {
+      "title": {
+        "en": "CT1 phase 1 voltage",
+        "de": "CT1 Phase 1 Spannung",
+        "nl": "CT1 fase 1 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.a_p1": {
+      "title": {
+        "en": "CT1 phase 1 current",
+        "de": "CT1 Phase 1 Strom",
+        "nl": "CT1 fase 1 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.a_p2": {
+      "title": {
+        "en": "CT1 phase 2 power",
+        "de": "CT1 Phase 2 Leistung",
+        "nl": "CT1 fase 2 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.a_p2": {
+      "title": {
+        "en": "CT1 phase 2 voltage",
+        "de": "CT1 Phase 2 Spannung",
+        "nl": "CT1 fase 2 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.a_p2": {
+      "title": {
+        "en": "CT1 phase 2 current",
+        "de": "CT1 Phase 2 Strom",
+        "nl": "CT1 fase 2 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.a_p3": {
+      "title": {
+        "en": "CT1 phase 3 power",
+        "de": "CT1 Phase 3 Leistung",
+        "nl": "CT1 fase 3 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.a_p3": {
+      "title": {
+        "en": "CT1 phase 3 voltage",
+        "de": "CT1 Phase 3 Spannung",
+        "nl": "CT1 fase 3 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.a_p3": {
+      "title": {
+        "en": "CT1 phase 3 current",
+        "de": "CT1 Phase 3 Strom",
+        "nl": "CT1 fase 3 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.b_p1": {
+      "title": {
+        "en": "CT2 phase 1 power",
+        "de": "CT2 Phase 1 Leistung",
+        "nl": "CT2 fase 1 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.b_p1": {
+      "title": {
+        "en": "CT2 phase 1 voltage",
+        "de": "CT2 Phase 1 Spannung",
+        "nl": "CT2 fase 1 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.b_p1": {
+      "title": {
+        "en": "CT2 phase 1 current",
+        "de": "CT2 Phase 1 Strom",
+        "nl": "CT2 fase 1 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.b_p2": {
+      "title": {
+        "en": "CT2 phase 2 power",
+        "de": "CT2 Phase 2 Leistung",
+        "nl": "CT2 fase 2 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.b_p2": {
+      "title": {
+        "en": "CT2 phase 2 voltage",
+        "de": "CT2 Phase 2 Spannung",
+        "nl": "CT2 fase 2 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.b_p2": {
+      "title": {
+        "en": "CT2 phase 2 current",
+        "de": "CT2 Phase 2 Strom",
+        "nl": "CT2 fase 2 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_power.b_p3": {
+      "title": {
+        "en": "CT2 phase 3 power",
+        "de": "CT2 Phase 3 Leistung",
+        "nl": "CT2 fase 3 vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_voltage.b_p3": {
+      "title": {
+        "en": "CT2 phase 3 voltage",
+        "de": "CT2 Phase 3 Spannung",
+        "nl": "CT2 fase 3 spanning"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_current.b_p3": {
+      "title": {
+        "en": "CT2 phase 3 current",
+        "de": "CT2 Phase 3 Strom",
+        "nl": "CT2 fase 3 stroom"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "dual_ct_preview_net.b": {
+      "title": {
+        "en": "CT2 total power",
+        "de": "CT2 Gesamtleistung",
+        "nl": "CT2 totaal vermogen"
+      },
+      "preventTag": true,
+      "preventInsights": true
+    }
+  },
+  "energy": {
+    "cumulative": true,
+    "cumulativeImportedCapability": "meter_power.imported",
+    "cumulativeExportedCapability": "meter_power.exported"
+  },
+  "images": {
+    "small": "/drivers/smartmeter_dual_ct_preview/assets/images/small.png",
+    "large": "/drivers/smartmeter_dual_ct_preview/assets/images/large.png",
+    "xlarge": "/drivers/smartmeter_dual_ct_preview/assets/images/xlarge.png"
+  },
+  "pair": [
+    {
+      "id": "energy_setup"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "app_account_repair"
+    }
+  ],
+  "settings": [
+    {
+      "id": "paired_mode_summary",
+      "type": "label",
+      "label": {
+        "en": "Paired Energy mode",
+        "de": "Gekoppelter Energy-Modus",
+        "nl": "Gekoppelde Energy-modus"
+      },
+      "value": "—",
+      "hint": {
+        "en": "Recorded at pairing. The phase display settings below do not change this accounting mode. CT2 is never added to property grid totals.",
+        "de": "Beim Koppeln festgelegt. Die Phasenanzeige unten ändert diesen Berechnungsmodus nicht. CT2 wird nie zur Netzbilanz addiert.",
+        "nl": "Vastgelegd bij koppelen. De faseweergave hieronder verandert deze berekening niet. CT2 wordt nooit bij het netverbruik opgeteld."
+      }
+    },
+    {
+      "id": "display_ct1",
+      "type": "dropdown",
+      "value": "default",
+      "label": {
+        "en": "CT1 phase display",
+        "de": "CT1 Phasenanzeige",
+        "nl": "CT1 faseweergave"
+      },
+      "hint": {
+        "en": "Display only. Does not change your Energy source, accounting mode, signs or counters. Hidden readings remain available internally; no history or Flow references are removed. Default keeps the monitor layout or follows the paired Energy mode. Details use independently received readings for up to 90 seconds; Energy power keeps its stricter freshness checks. Reopen the device view after saving.",
+        "de": "Nur Anzeige. Ändert weder Energy-Quelle, Abrechnung, Vorzeichen noch Zähler. Ausgeblendete Werte bleiben intern erhalten; Verlauf und Flow-Verweise werden nicht entfernt. Standard behält die Monitoransicht bzw. folgt dem gekoppelten Energy-Modus. Details zeigen separat empfangene Werte bis zu 90 Sekunden lang; Energy-Leistung behält ihre strengeren Aktualitätsprüfungen. Geräteansicht nach dem Speichern erneut öffnen.",
+        "nl": "Alleen weergave. Wijzigt geen Energy-bron, rekenmethode, tekens of tellers. Verborgen waarden blijven intern beschikbaar; geschiedenis en Flow-verwijzingen blijven behouden. Standaard behoudt de monitorweergave of volgt de gekoppelde Energy-modus. Details tonen afzonderlijk ontvangen waarden tot 90 seconden; Energy-vermogen behoudt zijn strengere actualiteitscontroles. Open de apparaatweergave opnieuw na opslaan."
+      },
+      "values": [
+        {
+          "id": "default",
+          "label": {
+            "en": "Default layout",
+            "de": "Standardansicht",
+            "nl": "Standaardweergave"
+          }
+        },
+        {
+          "id": "single_phase",
+          "label": {
+            "en": "Single phase",
+            "de": "Einphasig",
+            "nl": "Eenfase"
+          }
+        },
+        {
+          "id": "three_phase",
+          "label": {
+            "en": "Three phase",
+            "de": "Dreiphasig",
+            "nl": "Driefase"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ct2_flow_import_sign",
+      "type": "dropdown",
+      "value": "off",
+      "label": {
+        "en": "CT2 notifications: import direction",
+        "de": "CT2-Benachrichtigungen: Bezugsrichtung",
+        "nl": "CT2-meldingen: afnamerichting"
+      },
+      "hint": {
+        "en": "Experimental. Select the CT2 phase layout and compare its watts and sign against your known circuit before enabling. Choose the sign that means import on this circuit.",
+        "de": "Experimentell. Vor dem Aktivieren das CT2-Phasenlayout auswählen und Wattwerte und Vorzeichen am bekannten Stromkreis prüfen. Das Vorzeichen für Bezug auswählen.",
+        "nl": "Experimenteel. Kies de CT2-fase-indeling en vergelijk het vermogen en teken met je bekende circuit. Kies het teken dat afname betekent."
+      },
+      "values": [
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "de": "Aus",
+            "nl": "Uit"
+          }
+        },
+        {
+          "id": "positive",
+          "label": {
+            "en": "Positive means import",
+            "de": "Positiv bedeutet Bezug",
+            "nl": "Positief betekent afname"
+          }
+        },
+        {
+          "id": "negative",
+          "label": {
+            "en": "Negative means import",
+            "de": "Negativ bedeutet Bezug",
+            "nl": "Negatief betekent afname"
+          }
+        }
+      ]
+    },
+    {
+      "id": "display_ct2",
+      "type": "dropdown",
+      "value": "default",
+      "label": {
+        "en": "CT2 display",
+        "de": "CT2 Anzeige",
+        "nl": "CT2 weergave"
+      },
+      "hint": {
+        "en": "Choose Off, single phase or three phase for optional CT2 readings. CT2 does not contribute to whole-property Energy totals. Display changes preserve history and Flow references. Reopen the device after saving.",
+        "de": "Wählen Sie Aus, einphasig oder dreiphasig für optionale CT2-Werte. CT2 trägt nicht zur Hausenergie bei. Anzeigeänderungen erhalten Verlauf und Flow-Verweise. Öffnen Sie das Gerät nach dem Speichern erneut.",
+        "nl": "Kies Uit, één fase of drie fasen voor optionele CT2-metingen. CT2 telt niet mee in de woningenergie. Weergavewijzigingen behouden historie en Flow-verwijzingen. Open het apparaat opnieuw na opslaan."
+      },
+      "values": [
+        {
+          "id": "default",
+          "label": {
+            "en": "Default layout",
+            "de": "Standardansicht",
+            "nl": "Standaardweergave"
+          }
+        },
+        {
+          "id": "off",
+          "label": {
+            "en": "Hide CT2",
+            "de": "CT2 ausblenden",
+            "nl": "CT2 verbergen"
+          }
+        },
+        {
+          "id": "single_phase",
+          "label": {
+            "en": "Single phase",
+            "de": "Einphasig",
+            "nl": "Eenfase"
+          }
+        },
+        {
+          "id": "three_phase",
+          "label": {
+            "en": "Three phase",
+            "de": "Dreiphasig",
+            "nl": "Driefase"
+          }
+        }
+      ]
+    },
+    {
+      "id": "property_meter_role",
+      "type": "dropdown",
+      "label": {
+        "en": "Homey Energy meter role",
+        "de": "Zählerrolle in Homey Energy",
+        "nl": "Meterrol in Homey Energy"
+      },
+      "value": "unreviewed",
+      "values": [
+        {
+          "id": "unreviewed",
+          "label": {
+            "en": "Not reviewed",
+            "de": "Nicht geprüft",
+            "nl": "Niet gecontroleerd"
+          }
+        },
+        {
+          "id": "included",
+          "label": {
+            "en": "Included as a whole-property meter",
+            "de": "Als Gesamtzähler einbezogen",
+            "nl": "Opgenomen als hoofdmeter"
+          }
+        },
+        {
+          "id": "not_included",
+          "label": {
+            "en": "Excluded or configured as a submeter",
+            "de": "Ausgeschlossen oder als Unterzähler eingerichtet",
+            "nl": "Uitgesloten of ingesteld als tussenmeter"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Review this meter in Homey Energy before choosing a role. This review is used when the app SDK cannot read Homey’s inclusion flags. It does not change Energy inclusion or counters. Review again after changing Energy inclusion or wiring. The selected Dual CT does not need its own review; other cumulative EcoFlow meters do.",
+        "de": "Prüfen Sie diesen Zähler in Homey Energy, bevor Sie eine Rolle wählen. Diese Angabe wird verwendet, wenn das App-SDK die Einbeziehung nicht lesen kann. Sie ändert weder Energy-Einstellungen noch Zählerstände. Nach Änderungen an Einbeziehung oder Verdrahtung erneut prüfen. Der ausgewählte Dual CT benötigt keine eigene Prüfung, andere kumulative EcoFlow-Zähler schon.",
+        "nl": "Controleer deze meter in Homey Energy voordat u een rol kiest. Deze controle wordt gebruikt als de app-SDK de deelname niet kan lezen. Dit verandert de Energy-instellingen of tellerstanden niet. Controleer opnieuw na wijzigingen in deelname of bedrading. De geselecteerde Dual CT heeft zelf geen controle nodig; andere cumulatieve EcoFlow-meters wel."
+      }
+    }
+  ]
+}

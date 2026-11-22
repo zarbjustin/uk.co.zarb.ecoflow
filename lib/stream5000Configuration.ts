@@ -79,8 +79,15 @@ function fields(buffer: Buffer): Field[] {
   return result;
 }
 
+function singular(list: Field[], number: number): Field | undefined {
+  // This partially verified schema rejects ambiguous singular fields rather than merging them.
+  const matches = list.filter((entry) => entry.number === number);
+  if (matches.length > 1) throw new RangeError('ambiguous singular field');
+  return matches[0];
+}
+
 function child(list: Field[], number: number): Field[] | undefined {
-  const field = list.find((entry) => entry.number === number);
+  const field = singular(list, number);
   if (!field) return undefined;
   if (field.wire !== 2 || !Buffer.isBuffer(field.value)) throw new RangeError('invalid group');
   return fields(field.value);
@@ -88,7 +95,7 @@ function child(list: Field[], number: number): Field[] | undefined {
 
 function integer(list: Field[], number: number, max = 100000): number | undefined {
   // Decoder sanity bound, NEVER an approved electrical/control limit.
-  const field = list.find((entry) => entry.number === number);
+  const field = singular(list, number);
   if (!field) return undefined;
   if (field.wire !== 0 || typeof field.value !== 'number' || field.value > max) throw new RangeError('invalid scalar');
   return field.value;
@@ -111,7 +118,7 @@ function taskList(list: Field[]): Stream5000Task[] | undefined {
     const result: Stream5000Task = { enabled: (integer(task, 3, 1) ?? 0) === 1 };
     const slot = integer(task, 2);
     if (slot !== undefined) result.slot = slot;
-    const window = task.find((entry) => entry.number === 7);
+    const window = singular(task, 7);
     if (window) {
       if (window.wire !== 2 || !Buffer.isBuffer(window.value) || !window.value.length) throw new RangeError('invalid window');
       const packed = varint(window.value, 0);
@@ -163,7 +170,10 @@ export function parseStream5000Configuration(frame: Buffer, expectedSerial: stri
           if (socket) result.backupSocketEnabled = (integer(socket, 1, 1) ?? 0) === 1;
           const reserve = child(list, 30);
           if (reserve) {
-            result.backupReserveEnabled = (integer(reserve, 1, 1) ?? 0) === 1;
+            // Configuration pushes are deltas. A percentage-only reply does
+            // not report the enable flag and cannot turn it off or renew it.
+            const enabled = integer(reserve, 1, 1);
+            if (enabled !== undefined) result.backupReserveEnabled = enabled === 1;
             put('backupReservePct', integer(reserve, 2, 100));
           }
           const tasks = taskList(list);
@@ -208,8 +218,8 @@ export class Stream5000ConfigurationTracker {
       controlsEnabled: false,
       values: Object.fromEntries([...this.entries].map(([key, entry]) => [key, {
         value: JSON.parse(JSON.stringify(entry.value)),
-        ageSec: Math.max(0, Math.floor((now - entry.at) / 1000)),
-        stale: entry.at > now || now - entry.at > STALE_AFTER_MS,
+        ageSec: Number.isFinite(now) ? Math.max(0, Math.floor((now - entry.at) / 1000)) : null,
+        stale: !Number.isFinite(now) || now < 0 || entry.at > now || now - entry.at > STALE_AFTER_MS,
       }])),
     };
   }
@@ -261,7 +271,9 @@ export function stream5000ConfigurationSnapshot(input: any): Record<string, unkn
       if (!valid) continue;
       value = tasks;
     }
-    values[key] = { value, ageSec: Math.floor(entry.ageSec), stale: entry.stale === true || entry.ageSec * 1000 > STALE_AFTER_MS };
+    // Only explicit freshness is evidence; a malformed/custom snapshot must not
+    // turn an omitted status into a fresh setting in the report or preview.
+    values[key] = { value, ageSec: Math.floor(entry.ageSec), stale: entry.stale !== false || entry.ageSec * 1000 > STALE_AFTER_MS };
   }
   return {
     source: 'captured_app_protocol', scope: 'subscription_source', ordering: 'receipt_only', controlsEnabled: false, values,

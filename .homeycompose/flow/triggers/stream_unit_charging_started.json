@@ -1,0 +1,32 @@
+{
+  "id": "stream_unit_charging_started",
+  "title": {
+    "en": "Unit battery started charging",
+    "de": "Batterie der Einheit lädt jetzt",
+    "nl": "Batterij van de unit is begonnen met opladen"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream_unit"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Battery power",
+        "de": "Batterieleistung",
+        "nl": "Batterijvermogen"
+      },
+      "example": 800
+    }
+  ],
+  "hint": {
+    "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+    "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+    "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+  }
+}

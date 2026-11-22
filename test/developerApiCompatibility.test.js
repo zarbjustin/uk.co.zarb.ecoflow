@@ -28,7 +28,7 @@ function loadWithHomeyMock(modulePath) {
 
 const { BaseEcoFlowDevice } = loadWithHomeyMock('../.homeybuild/lib/BaseEcoFlowDevice.js');
 const StreamDevice = loadWithHomeyMock('../.homeybuild/drivers/stream/device.js');
-const LOCALIZED_ES22_MESSAGE = 'Enable beta pairing, then delete this device and add it again as STREAM Home Battery (5000).';
+const LOCALIZED_ES22_MESSAGE = 'Use STREAM 5000 Unit Monitor for monitoring; Home Battery Energy pairing has a separate opt-in.';
 const LOCALIZED_UNSUPPORTED_MESSAGE = 'Delete this unsupported device and add its dedicated type.';
 
 class TestDevice extends BaseEcoFlowDevice {
@@ -188,7 +188,7 @@ test('an already-paired ES22 stops before lifecycle setup and stays stopped', as
   assert.strictEqual(device.timerCalls, 0);
   assert.strictEqual(device.subscribeCalls, 0);
   assert.ok(device.logs.some((message) => message.includes('STREAM Home Battery (5000)')));
-  assert.ok(!device.logs.some((message) => message.includes('add it again as STREAM 5000 Series Unit')));
+  assert.ok(!device.logs.some((message) => message.includes('add it again as STREAM 5000 Unit Monitor')));
 
   await device.onSettings({ newSettings: { poll_interval: 10 }, changedKeys: ['poll_interval'] });
   await assert.rejects(device.manualPoll(), {
@@ -290,4 +290,75 @@ test('backup-reserve quarantine errors are rethrown unchanged without warning or
   );
   assert.strictEqual(warningCalls, 0);
   assert.strictEqual(timeoutCalls, 0);
+});
+
+
+test('legacy ES22 upgrade preserves both actual driver identities, history and counters without starting network work', async () => {
+  const StreamUnitDevice = loadWithHomeyMock('../.homeybuild/drivers/stream_unit/device.js');
+  for (const Driver of [StreamDevice, StreamUnitDevice]) {
+    const device = new Driver();
+    const saved = {
+      data: { sn: 'ES22SYNTHETIC0001' },
+      store: { mainSn: 'ES22SYNTHETIC0001', checkpoint: { chargedKwh: 4.381, dischargedKwh: 3.146 } },
+      settings: { note: 'existing installation', capacity: 5 },
+      capabilities: ['measure_battery', 'measure_power', 'meter_power.charged', 'meter_power.discharged'],
+      values: { measure_battery: 0, 'meter_power.charged': 4.381, 'meter_power.discharged': 3.146 },
+    };
+    const before = structuredClone(saved);
+    let message;
+    const forbidden = () => { assert.fail('Quarantined legacy pairing must not mutate state or start device work'); };
+    device.homey = { __: key => key, settings: { get: forbidden }, setInterval: forbidden, setTimeout: forbidden };
+    device.getData = () => saved.data;
+    device.getStoreValue = key => saved.store[key];
+    device.setUnavailable = async value => { message = value; };
+    device.log = () => {};
+    for (const method of ['setSettings', 'setStoreValue', 'setCapabilityValue', 'addCapability', 'removeCapability', 'onReady', 'poll']) {
+      device[method] = forbidden;
+    }
+    await device.onInit();
+    assert.match(message, /STREAM 5000 Unit Monitor/);
+    assert.deepStrictEqual(saved, before);
+    await device.onSettings({ newSettings: { poll_interval: 10 }, changedKeys: ['poll_interval'] });
+    assert.deepStrictEqual(saved, before);
+  }
+});
+
+test('original consumer diagnostics distinguish queued delivery, blocked application, failure and recovery without payloads', async () => {
+  const { reportingSnapshot } = require('../.homeybuild/lib/streamReportingDiagnostics.js');
+  const d = new TestDevice('BK31SYNTHETIC0001');
+  let release; let entered;
+  const began = new Promise(resolve => { entered = resolve; });
+  const blocked = d.queueDeviceWork(async () => { entered(); await new Promise(resolve => { release = resolve; }); });
+  await began;
+  let fail = true;
+  d.applyQuota = async () => { if (fail) throw new Error('PRIVATE_PAYLOAD'); };
+  const pending = d.queueQuota({ secret: 'PRIVATE_PAYLOAD' }, 'mqtt');
+  let report = reportingSnapshot(d, Date.now());
+  assert.equal(report.delivery.mqtt.queued, 1);
+  assert.equal(report.delivery.mqtt.pending, 1);
+  assert.equal(report.delivery.mqtt.started, 0);
+  release(); await blocked;
+  await assert.rejects(pending, /PRIVATE_PAYLOAD/);
+  report = reportingSnapshot(d, Date.now());
+  assert.equal(report.delivery.mqtt.pending, 0);
+  assert.equal(report.delivery.mqtt.failed, 1);
+  assert.equal(report.delivery.mqtt.running, 0);
+  fail = false; d.mqttOffline = true;
+  await d.queueQuota({ secret: 'PRIVATE_PAYLOAD' }, 'mqtt');
+  report = reportingSnapshot(d, Date.now());
+  assert.equal(report.delivery.mqtt.completed, 1);
+  assert.equal(report.delivery.completionIsReadingAcceptance, false);
+  assert.ok(!JSON.stringify(report.delivery).includes('PRIVATE_PAYLOAD'));
+  assert.equal(report.delivery.rest.queued, 0);
+});
+
+test('consumer evidence export rejects injected identities, timestamps and invalid counts', () => {
+  const { streamDeliverySnapshot } = require('../.homeybuild/lib/streamDeliveryDiagnostics.js');
+  const report = streamDeliverySnapshot({ mqtt: { queued: 999999, pending: -1, completed: 2,
+    lastQueuedAt: 1000, lastCompletedAt: 5000, secret: 'PRIVATE' }, privateTopic: 'PRIVATE' }, 2000);
+  assert.equal(report.mqtt.queued, 0); assert.equal(report.mqtt.pending, 0);
+  assert.equal(report.mqtt.completed, 2); assert.equal(report.mqtt.lastQueuedAgeSec, 1);
+  assert.equal(report.mqtt.lastCompletedAgeSec, null);
+  assert.ok(!JSON.stringify(report).includes('PRIVATE'));
+  assert.ok(!Object.hasOwn(report.mqtt, 'lastQueuedAt'));
 });

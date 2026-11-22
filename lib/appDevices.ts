@@ -1,6 +1,7 @@
 'use strict';
 
 import { isStreamAc5000Sn } from './deviceIdentity';
+import { dualCtModelCodes } from './dualCtMetadata';
 import {
   isSupportedStream5000Sn,
   stream5000DeviceName,
@@ -26,6 +27,7 @@ export { isStreamAc5000Sn, STREAM_AC5000_PREFIX } from './deviceIdentity';
 export { STREAM_AC5000_MODEL } from './stream5000Models';
 
 export interface AppDevice {
+  modelCodes?: Array<{ field: string; code: number }>;
   sn: string;
   /** Best available name; falls back to a model + serial-tail label. */
   name: string;
@@ -66,6 +68,7 @@ function pushDevice(
   const productName = String(raw.productName || raw.productType || '').trim();
   const deviceName = String(raw.deviceName || raw.name || '').trim();
   out.push({
+    ...(dualCtModelCodes(raw).length ? { modelCodes: dualCtModelCodes(raw) } : {}),
     sn,
     name: isSupportedStream5000Sn(sn)
       ? stream5000DeviceName(sn, productName, deviceName)

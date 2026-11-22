@@ -1,0 +1,106 @@
+{
+  "id": "coordination_circuit_power_sustained",
+  "title": {
+    "en": "Selected branch power is sustained above a threshold",
+    "de": "Gewählte Zweigleistung liegt anhaltend über einer Schwelle",
+    "nl": "Geselecteerd circuitvermogen blijft boven een drempel"
+  },
+  "titleFormatted": {
+    "en": "Observed [[role]] power [[direction]] exceeds [[watts]] W for [[seconds]] seconds",
+    "de": "Beobachtete [[role]]-Leistung [[direction]] übersteigt [[watts]] W für [[seconds]] Sekunden",
+    "nl": "Waargenomen [[role]]-vermogen [[direction]] is hoger dan [[watts]] W gedurende [[seconds]] seconden"
+  },
+  "hint": {
+    "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+    "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+    "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+  },
+  "args": [
+    {
+      "name": "role",
+      "type": "dropdown",
+      "title": {
+        "en": "Configured branch role",
+        "de": "Konfigurierte Zweigfunktion",
+        "nl": "Ingestelde circuitrol"
+      },
+      "values": [
+        {
+          "id": "solar_inverter",
+          "title": {
+            "en": "Solar-only inverter",
+            "de": "Reiner Solarwechselrichter",
+            "nl": "Alleen-zonne-omvormer"
+          }
+        },
+        {
+          "id": "hybrid_inverter",
+          "title": {
+            "en": "Hybrid solar and battery inverter",
+            "de": "Hybridwechselrichter für Solar und Batterie",
+            "nl": "Hybride zonne- en batterijomvormer"
+          }
+        },
+        {
+          "id": "load",
+          "title": {
+            "en": "Load branch",
+            "de": "Verbrauchszweig",
+            "nl": "Verbruikscircuit"
+          }
+        }
+      ]
+    },
+    {
+      "name": "direction",
+      "type": "dropdown",
+      "title": {
+        "en": "Flow direction",
+        "de": "Flussrichtung",
+        "nl": "Stroomrichting"
+      },
+      "values": [
+        {
+          "id": "to_house",
+          "title": {
+            "en": "towards the house",
+            "de": "zum Haus",
+            "nl": "naar het huis"
+          }
+        },
+        {
+          "id": "from_house",
+          "title": {
+            "en": "away from the house",
+            "de": "vom Haus weg",
+            "nl": "van het huis af"
+          }
+        }
+      ]
+    },
+    {
+      "name": "watts",
+      "type": "number",
+      "title": {
+        "en": "Power threshold (W)",
+        "de": "Leistungsschwelle (W)",
+        "nl": "Vermogensdrempel (W)"
+      },
+      "min": 21,
+      "max": 100000,
+      "step": 1
+    },
+    {
+      "name": "seconds",
+      "type": "number",
+      "title": {
+        "en": "Observed duration (seconds)",
+        "de": "Beobachtete Dauer (Sekunden)",
+        "nl": "Waargenomen duur (seconden)"
+      },
+      "min": 1,
+      "max": 1800,
+      "step": 1
+    }
+  ]
+}

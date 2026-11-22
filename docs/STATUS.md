@@ -1,6 +1,7024 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 22 November 2026 - Store Test 1.11.30/build 92 published
+
+The public Test page and Store API confirmed build 92. Live remained 1.10.3/build 18. Published source 7125851 passed exact-commit CI. No household installation was performed.
+
+The combined candidate includes the member-only solar relay and pairing guidance, original STREAM startup and energy recovery, original meter host verification and projection retry, and isolated Dual CT Flow thresholds. Five new driver/Flow regression cases failed before the fixes. The candidate passed 1,853 local tests. Full release also requires model/role hardware evidence and a separately qualified three-phase profile. The public feature summary and open hardware checks are in [the Test release notes](TEST_1_11_30.md).
+
+## 22 November 2026 - Sprint 2 pairing guidance ready for review
+
+The six original STREAM and STREAM 5000 pairing paths describe Home Battery,
+Solar and Unit Monitor in English, German and Dutch. Returning original STREAM
+users see their role before choosing devices and skip the credential fields.
+The 5000 Home Battery still requires the existing Energy opt-in and installation
+confirmation. The generated manifest differs from diagnostic HEAD 156768c only
+in the two localized Unit Monitor display names. Device data, capabilities, Energy
+definitions and Flow cards retain their contracts. See [the pairing guide](../README.md#which-device-should-i-add).
+
+The isolated Sprint 1 + Sprint 2 source passed all 1,847 tests and Homey CLI
+4.5.3 verified validation. Browser tests cover all six roles in three languages,
+saved credentials, keyboard navigation and the Energy consent path. Lint
+reported four existing timer warnings. Release structure checks passed.
+Isolated runtime fingerprint: `7cf85daac8973ac1d5a956d5dbda369b9ca676740aa6d15a20a27c4a7c291fa5`. No commit, deployment,
+pairing or store publication. Hardware validation remains open.
+
+## 22 November 2026 - member-only STREAM 5000 Solar relay correction
+
+Local source based on diagnostic commit 156768c adds automatic relay subscription
+for a paired ES21 Solar member. Ownership, connection freshness and physical-unit
+attribution protect the generated-energy counter through reconnect and relinking.
+Five new regression cases passed. The isolated solar change passed all 1,846
+tests, Homey verified validation, lint (four existing warnings) and release
+structure checks. Its isolated runtime fingerprint is
+`dc2fb2bf413c1fc0f0ff464651c099792501534f7f16cf1a5fb6701c01a28ad5`.
+The existing 1.11.29 archive predates the fix. Daylight and other solar hardware
+gates remain open. [Source behaviour and validation](STREAM_5000_SOLAR_ENERGY.md).
+
+## 21 November 2026 - 1.11.29 STREAM 5000 Solar daylight candidate
+
+One Solar device per panel-equipped ES21 contributes direct PV watts and
+estimated generated kWh to Homey Energy. Linked duplicates are covered in
+replay. Pairing checks source ownership and rejects supplied counter state.
+The isolated solar source passed 1,841 tests. Its six hardware gates,
+including native daylight comparisons and the 48-hour soak, are open.
+See [the daylight procedure and runtime fingerprint](STREAM_5000_SOLAR_ENERGY.md).
+
+## 9 November 2026 - Combined Development 1.11.28 Flow candidate
+
+Adds a sustained below-threshold import/export trigger for Dual CT CT1
+and experimental CT2, plus per-unit battery threshold, charging and
+discharging triggers for original STREAM Ultra X and AC Pro devices.
+Review added socket ownership checks so a pending below-threshold
+Flow cannot run after either channel's MQTT source disconnects.
+Existing Energy accounting and saved Flow contracts are preserved.
+CT2 direction defaults to Off. See [Dual CT setup](DUAL_CT_CIRCUIT_PRESENTATION.md#sustained-below-threshold-flow-candidate).
+
+This is the Development candidate source checkpoint. Exact CI, installation
+preservation, Flow card registration and physical delivery have separate receipts.
+
+## 7 November2026 — 1.11.24 source push, conditional install and Office role approved
+
+Owner approved commit/push of the reviewed1.11.24, exact CI, then one non-clean
+Development update on Justin's Homey Pro if fresh preflight is safe. Also approved
+confirming original Office/shed meter's app-local property_meter_role=not_included,
+only after read-only verification of its existing Energy exclusion. Built-in Energy
+flags,Test/Live,battery settings and AI ownership remain unchanged; Homey reserve
+execution remains disabled. Reviewed export/archive still match source. At this
+checkpoint CI/preflight/delivery/role readback are pending,not claimed complete.
+See local final receipt for exact SHA/run/delivery/preservation and scope limits:
+../work/output/development-1.11.24-20261107/FINAL_RECEIPT.md.
+
+## 7 November2026 — source-only1.11.24 micro/role-review fixes ready
+
+[Combined candidate review](COMBINED_MICRO_DUAL_CT_1_11_24_REVIEW_2026-11-07.md):
+micro sparse frames retain only the previous complete total's original freshness
+budget; never refresh it or integrate missing intervals. Startup partial remains
+unknown; expiry/zero/ordering/counter guards retained. Dual CT SDK-unknown Energy
+flags now require explicit Homey Energy meter role review on OTHER EcoFlow meters,
+rather than inventing overlap. New native setting defaults unreviewed; actual
+visible conflicts still block. Selected source excluded exactly once; duplicate,
+source/firmware/consent/authority guards remain. Manual declarations are not SDK
+proof and must be reviewed after Energy/wiring changes; no automatic global flag
+monitoring is claimed. Original Office/shed meter would need separately approved
+property_meter_role=not_included after confirming its existing exclusion. No such
+setting or installation performed. Source-only1.11.24:1539 full tests pass,final17
+micro lifecycle tests pass,lint/release:check/verified4.5.3 package pass. No new
+commit/push/CI/model/hardware signoff. Hardware gates/full release remain NO-GO.
+Installed1.11.23,Test88,Live18,AI/battery settings unchanged. Prior dirty work kept.
+Local receipt: ../work/output/combined-micro-dualct-11124-20261107T1710Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — microinverter history checked read-only
+
+[Microinverter telemetry](MICROINVERTER_READONLY_TELEMETRY_2026-11-07.md): owner
+reports multi-day No response and confirms native offline now.16:45UTC vendor
+inventory also offline; Homey waits for fresh fields,total preserved. Existing
+history/direct readbacks show activity5/6/7November and counter advancement today;
+not a verified continuous multi-day outage. Fine/hourly histories disagree for
+parts of today,so no exact connection-duration claim. Daytime saved PV2/grid
+updates with null total match the deliberate partial-PV rule: same-packet complete
+PV required; partial update immediately clears total/availability. Existing offline
+regression reproduces this. Raw-packet attribution remains incomplete; current
+physical offline and sparse-update UI behavior are separate issues. Recommend a
+bounded source sprint preserving last complete total's original TTL while keeping
+partial-report accounting gaps,plus accessory diagnostics. No source/install/
+settings/control/Flow/Energy/Test/Live/AI changes. Mac locked,native history not
+inspected. Canonicale9fef96 and prior dirty work preserved; new docs only. Receipt:
+../work/output/microinverter-readonly-20261107T1450Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — Development1.11.23 installed; false-overlap cause confirmed
+
+[Delivery/diagnosis](DEVELOPMENT_1_11_23_DIAGNOSTIC_RESULT_2026-11-07.md): e9fef96
+committed/pushed,exact CI42381892040 passed. Approved archive installed once
+non-clean at14:33:07UTC on Justin's Homey Pro; running1.11.23/geolocation only.
+Fresh safety/external-role checks passed;102 startup samples,no numeric drops/read
+errors,five transient unknown samples,all ten totals recovered. Two full readbacks
+preserve15 devices/settings/definitions (except icon URLs),101 Flows,1217 Insights,
+Energy/global/native configuration and disabled Homey reserve execution.
+**Cause now confirmed:** SDK getSettings returns Energy flags unset while Web API
+shows Office meter excluded. Classifier treats missing flags as included,causing
+false grid_source_overlap at admission. Two schema20 reports and synthetic replay
+corroborate. Dual CT still reconnecting,totals intact; no corrective guard bypass,
+rollback or second install. Need reviewed unknown-role/inclusion handling without
+broad API or weakened overlap safety; current automatic-role guarantee needs
+correction. No new source fix/role setting applied after diagnosis. Test88/Live18
+verified unchanged,AI/battery settings unchanged,no physical gates/48hsoak passed.
+Post-delivery docs uncommitted. Private receipt:
+../work/output/development-1.11.23-20261107T1440Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — 1.11.23 source push and conditional Development update approved
+
+Owner approved commit/push of the reviewed diagnostic1.11.23, exact CI, then one
+non-clean Development installation on Justin's Homey Pro only if fresh preflight
+is safe, followed by preservation and targeted diagnostics. Test/Live/battery
+settings remain unchanged; EcoFlow AI stays in charge, Homey execution stays off.
+Reviewed source export matches canonical runtime; archive/fingerprint are in the
+[investigation review](DUAL_CT_1_11_22_RECONNECT_INVESTIGATION_2026-11-07.md).
+At checkpoint creation CI/preflight/delivery/readback are pending; see local final
+receipt for exact committed SHA, CI, delivery and diagnostic results. No claim the
+candidate fixes the outage until evidence proves it. Prior dirty reports preserved.
+Local receipt: ../work/output/development-1.11.23-20261107T1440Z/FINAL_RECEIPT.md.
+
+## 7 November2026 — source-only1.11.23 diagnostics; reconnect cause not yet established
+
+[Investigation/review](DUAL_CT_1_11_22_RECONNECT_INVESTIGATION_2026-11-07.md) records
+continued1.11.22 reconnecting at14:11UTC, two totals retained. Actual cause unresolved:
+current single-phase runtime hides/discards the failing startup check. Confirmed
+visibility defect fixed locally: source/inventory/getter/admission diagnostics
+survive recovery; schema20 anonymous owned-SDK scan and Dual CT summary/copy added.
+Also fixed reproduced array-settings acceptance (complete -> incomplete); NOT
+proven as household cause. No overlap/freshness bypass, reset or permission restore.
+Uncommitted1.11.23 diagnostic candidate:1529 tests/lint/release:check/CLI4.5.3 verified
+pass. No exact new CI/multi-model/hardware claim; release:full remains NO-GO. Review
+before commit/push/CI or any separately approved diagnostic installation. Installed
+1.11.22,Test88,Live18,battery/AI and disabled Homey execution unchanged; no external
+contact. Prior dirty reports preserved. Local receipt:
+../work/output/dualct-11122-recovery-investigation-20261107T1412Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — Development 1.11.22 installed; Dual CT validation blocked
+
+[Validation report](DEVELOPMENT_1_11_22_VALIDATION_2026-11-07.md): approved exact
+archive installed once non-clean at13:33:02UTC on Justin's Homey Pro. Source
+c1c7f68 / fingerprint96c4c830...f159f147 / CI42376675594. Running1.11.22 with
+geolocation only confirmed. Pending checkpoint settled naturally; safety and
+external-meter role review passed.103 startup samples: no numeric counter drop or
+read error; seven transient unknown samples, all ten totals recovered. Two full
+readbacks preserve15 identities/settings/definitions (except generated icon URLs),
+101 Flows,1217 Insights,Energy/global/native configuration and disabled Homey
+execution. **Runtime validation NOT passed:** Dual CT live before delivery, now
+reconnecting/unknown watts; two counters intact. Cause unestablished. Investigate
+owned SDK inventory/source admission; no re-pair/reset/permission weakening or
+unapproved deployment. Pre-existing micro offline and linked5000 scope unchanged.
+Test1.11.21/build88/Live1.10.3/build18 verified unchanged; EcoFlow AI stays in charge,
+battery settings unchanged. No automatic rollback/restart, hardware gate closure
+or48hsoak. Source unchanged; report/checkpoint uncommitted. Private receipt:
+../work/output/development-1.11.22-20261107T1331Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — 1.11.22 tradeoffs accepted; diagnostic source push authorised
+
+Owner explicitly accepted the [1.11.22 contract](NO_BROAD_API_CANDIDATE_1_11_22_2026-11-07.md)
+and authorised commit/push to the diagnostic branch and exact-commit CI checking.
+This does not approve installation, Test/Live publication or household changes.
+Reviewed runtime-source fingerprint remains
+`96c4c830907d7d3e8b3c72886d78da52b714e8f76c62590ef404f301f159f147`.
+Fresh fetch found base a77d22f and remote equal; reviewed exported runtime files
+match canonical files. Prior 1,520-test/lint/release:check/verified package receipts
+remain valid for this unchanged runtime. CI is pending at checkpoint creation;
+read the exact committed HEAD's workflow result and local final receipt below.
+Accepted tradeoffs: automatic owned-EcoFlow meter checks plus explicit manual
+external-meter review; disabled former advanced in-app reader/monitor, with
+retained identities/settings and a separate owner automation design only.
+Hardware/rollback/native/three-phase/exact-runtime48h gates remain open; full
+release NO-GO. Installed Development1.11.21, Test1.11.21/build88, Live1.10.3/build18
+remain the latest recorded versions; no Homey/store/configuration query or write
+is part of this source-push task. AI remains in charge; no reserve execution change.
+Local result/CI receipt: ../work/output/push-no-broad-api-1.11.22-20261107T1321Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — source-only 1.11.22 without broad API access
+
+Owner selected a no-broad-API candidate. [Candidate review](NO_BROAD_API_CANDIDATE_1_11_22_2026-11-07.md)
+records source/archive, 1,520 passing tests, lint/structural/verified CLI checks.
+Permission removed only in source; candidate is uncommitted/unpushed/uninstalled.
+Important correction: broad reader also served Dual CT overlap checks. New SDK
+inventory automatically checks EcoFlow-owned meters only; automatic external-meter
+detection is removed and existing explicit manual review remains. Review this
+reduced guarantee before deployment. Advanced in-app picker/monitor is unavailable;
+Flow IDs/settings retained does not mean unchanged advanced behavior. Separate
+external-owner automation is design only. No bindings/counters/accounting/phase
+mapping or driver/Flow/Energy definitions changed. No independent new CI/model
+review. Full release remains NO-GO; no physical gate closed or soak begun.
+Native 1.11.21 system Standby/100% contrasted with Homey unknown battery W/state;
+not an idle pass and not a proven defect. Installed 1.11.21, Test88 and Live18
+unchanged, AI/battery/Flow/Energy settings untouched. Prior dirty work preserved.
+Local receipt: ../work/output/candidate-no-broad-api-20261107T123216Z/FINAL_RECEIPT.md.
+
+## 7 November 2026 — public-release decision prepared; no submission
+
+[Release decision](PUBLIC_RELEASE_DECISION_2026-11-07.md) records fresh Test88/
+Live18 unchanged and full-readiness exit1. Actual Live18 has geolocation only;
+Test88 adds broad Homey API permission for optional coordination reader. This is
+new for public users and may prevent automatic updates; Athom eligibility is
+not established. Owner preference requested: prepare no-broad-API core candidate
+with reviewed advanced-feature path,or retain and seek Athom eligibility. No
+permission/feature/source change or reviewer message applied. Concrete source/
+Flow-impact checklist,unsent Athom draft and exact-runtime48h plan prepared.
+Overnight Homey reads show natural idle/AI/disabled Homey execution; Mac locked,
+so native comparison awaits manual unlock. No gates closed,soak started,
+installation/restart/control/settings/Energy/Flow/publication or external contact.
+Prior uncommitted installed/native reports preserved; sourcea77d22f unchanged.
+External receipt:../work/output/public-release-decision-20261107T010719Z/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 20:33 UTC — native EcoFlow comparison now accessible
+
+[Updated comparison](NATIVE_SCOPE_COMPARISON_1_11_21_2026-11-06.md): owner requested
+retry; actual running wrapper is accessible. Native Specifications confirms second
+unit is full STREAM5000. Its SOC/discharge direction agrees with Homey in a bounded
+window; system SOC agrees and Homey watts lie within bracketing native observations.
+Main unit native page has SOC but no explicit battery watts/state; do not infer
+idle/zero or borrow combined power. Earlier manual-read request is superseded.
+No settings/power/firmware/control or installation/restart; AI and disabled Homey
+execution retained; Test88/Live18 confirmed unchanged. No physical gate passed,
+no48hsoak begun. Remaining charge/idle/linked signed-unit scope needs its own
+evidence or explicit product-scope review. Detailed private receipt:
+../work/output/native-ui-comparison-1.11.21-20261106T202916Z/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 — native/system scope comparison; no soak started
+
+[Comparison report](NATIVE_SCOPE_COMPARISON_1_11_21_2026-11-06.md) records working
+Homey web and official read-only Developer API. Both paired ES21-family identities
+resolve to one main; system SOC/battery watts exactly agree across502ms Homey/API
+window. No physical measurement-time/energy-accuracy claim. Main physical power
+is deliberately unknown after peer evidence; other unit candidate is not physical
+signoff. Official11-field quota lacks per-unit signed-power contract. Native
+EcoFlow accessibility timed out; targeted owner unit-page comparison is pending.
+No source/installation/settings/control/Flow/Energy/Test/Live change or external
+contact. AI and disabled Homey execution preserved. Full release NO-GO; no gate
+closed or48hsoak started. Local private receipt:
+../work/output/native-comparison-1.11.21-20261106T192629Z/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 19:19 UTC — Development 1.11.21 installed; preservation passed
+
+[Installation result](DEVELOPMENT_1_11_21_VALIDATION_2026-11-06.md): owner explicitly
+approved local non-clean1.11.21 after disclosed cloud-backup limits. Exact Test88
+archive fa7fd6a9...f515 acknowledged19:15:13UTC; sourcea77d22f/fingerprint
+e8d74b27...0445,running/devkit_install in two full readbacks. Initial cloud upload
+HTTP400 was resolved as rejected/old runtime before fresh direct-local delivery;
+only one successful installation,no uncertain duplicate/restart/rollback.
+103 startup samples over2min spanning delivery: no counter decrease/read error;
+six transient unknowns retained,ten counters numeric after recovery.15 identities,
+101 Flows,1217 Insights,settings/titles/Energy/global config preserved; generated
+icon URLs alone differ. Native configuration values/AI,disabled Homey execution,
+lease/fault/state/gate unchanged. Test1.11.21/build88 and Live1.10.3/build18 unchanged.
+Owner confirms phone tiles,SOC and Energy look normal (appearance only).
+Microinverter now waits for fresh data (old tiles had >3h-old SDK updates); counters
+preserved. One physical5000 scope remains unverified. No phone/native/48hsoak
+acceptance claimed; full public NO-GO and ledgers untouched. Private receipt:
+../work/output/development-1.11.21-20261106T190906Z-local-delivery/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 — owner authorised cloud backup and scoped Test 1.11.21
+
+[Release scope](TEST_1_11_21_RELEASE_2026-11-06.md): owner chose cloud backup and
+Test publication without installing this candidate on Justin's Homey Pro.
+Version-only 1.11.21 wraps reviewed 2938c522 runtime; previous repairs retained.
+1510 local tests/lint/structural checks pass. Exact final CI, archive, backup and
+store receipts are recorded externally at
+../work/output/cloud-backup-test-2026-11-06/FINAL_RECEIPT.md.
+This is Test authority only; full public NO-GO and physical gates stay open.
+Live/Mainline and installed Development/battery/AI/disabled Homey execution
+remain unchanged. Cloud backup excludes developer-installed apps and does not
+close Development recovery/store gaps. No USB interruption or tester contact.
+
+
+## 6 November 2026 — recovery coverage reviewed; USB backup proposal only
+
+[Recovery plan](DEVELOPMENT_RECOVERY_PLAN_2026-11-06.md) checks official coverage:
+cloud backups exclude developer-installed apps; fresh cloud backup alone is not
+full Development recovery proof. Official full USB backup includes apps/system,
+but needs whole-hub power-off/Recovery Mode and owner-assisted physical access.
+No household query, backup, restart, install or publication performed here.
+Current read-only interfaces do not expose private device stores. Prior binary
+lacks ambiguity/history flags; no automatic downgrade. Next: owner approval for
+an attended full USB-backup window and read-only return-to-service checks;
+installation remains separately gated. Native AI and both disabled Homey
+execution switches remain untouched. External receipt:
+../work/output/release-recovery-review-2026-11-06/FINAL_RECEIPT.md.
+
+
+## 6 November 2026 18:42 UTC — read-only release preflight; installation held
+
+[Preflight report](RELEASE_PREFLIGHT_2026-11-06.md) records two fresh reads:
+15 EcoFlow identities, 101 Flows, 1,217 Insights and ten nondecreasing numeric
+counters; definitions/settings/Energy and disabled Homey execution unchanged.
+Native AI subscription evidence and bounded idle/runner checks passed.
+No install/restart/control/settings/Flow/Energy/publication or external contact.
+Automatic backups enabled, last successful 02:39 UTC predates current delivery;
+current recovery coverage and precise persisted-store baseline remain unproven.
+Old archive verified but lacks new ambiguity handling; no automatic downgrade.
+Installation NOT cleared/authorised. Exact candidate remains source 2938c522;
+resolve backup/recovery prerequisites before requesting installation approval.
+Private evidence/receipt: ../work/output/release-preflight-20261106T184130Z/.
+
+
+## 6 November 2026 — release-readiness programme; full public NO-GO
+
+[Programme report](RELEASE_READINESS_PROGRAMME_2026-11-06.md) and external
+`../work/output/release-programme-2026-11-06/FINAL_RECEIPT.md` identify the reviewed
+source, exact CI, offline archive and model/lease receipts. Conservative native
+counter ordering, 64-pending real Developer queue/loss diagnostics, legacy
+field expiry/failure recovery, original meter history/precision/custom titles
+and credential accessibility replace earlier U1/U2/U3 source status below.
+Initial candidate full suite 1504 passed; final counts/checks and any correction
+reviews are recorded externally. Actual configured reviewers: `gpt-6-sol`,
+`gpt-6-astra`, `mai-code-2`; upstream/Preview mapping unverified.
+
+No installation, live query, restart, settings/control/Flow/Energy, publication
+or external contact. Installed Development, Test/Live and physical evidence below
+remain dated observations. Native AI/reserve ownership and both disabled Homey
+execution switches preserved. Hardware scope/native intervals, ES22, independent
+three-phase, exact-runtime 48-hour soak and API-permission/UX decisions remain
+open; no ledger weakened. The prepared archive is not an installed update.
+
+## 6 November 2026 — full-release review: NO-GO, diagnostic source maintenance only
+
+[Full report](FULL_RELEASE_REVIEW_2026-11-06.md) separates engineering,
+product truth, packaging, installed validation, hardware and public-release
+verdicts. Baseline `211e022` fetched 0/0; inherited installation observations
+below preserved. Nine bounded source fix families and seventeen new regressions,
+including corrections for four independently reproduced final-review gaps:
+**1,488/1,488** tests, lint, structural release checks, zero-vulnerability audit
+and isolated pinned verified validation pass. Full/model hardware gates fail
+as expected; no ledger weakened. Raw-counter reset/order ambiguity, unbounded
+Developer queue and incomplete legacy field-expiry qualification remain.
+Store/API-permission eligibility and native rendering/translation review remain
+conditional. Actual configured Sol/Astra/MAI first passes were independent;
+exact upstream/MAI Preview mapping is unattested. Final same-diff findings and
+source-sync/CI identities: `../work/output/full-release-review-2026-11-06/FINAL_RECEIPT.md`.
+
+No new installation, live query/capture, observer, settings/control/Flow/Energy,
+restart/reconnect, publication or Mainline change. Installed Development is
+still the 14:31 archive/fingerprint below, not this source. Test/Live unchanged.
+Keep EcoFlow AI reserve ownership and both Homey execution switches off.
+Physical 5000 scope, native interval comparison, ES22/three-phase and 48-hour
+soak remain open; historical passes do not transfer to a changed runtime.
+
+## 6 November 2026 14:36 UTC — combined Development installed; sampled continuity passed
+
+[Delivery/preservation result](COMBINED_COUNTER_VALIDATION_RESULT_2026-11-06.md).
+One owner-approved non-clean install acknowledged 14:31:51.841 UTC; running
+Development 1.11.20. Exact archive SHA256 `5a8daa62475500e210991ea6428024b703a72b8f7529aa5ce8eca61da30955ff`,
+runtime source fingerprint `89ad4da2352e91baade7a0f5150688fe2d120faf832901abf62b6875c6e3f1af`.
+No decrease in ten cumulative meters across 100 startup samples and two full
+readbacks. Six transient unknowns retained; no errors/throttling. Earliest full
+numeric post-ack recovery observed 14:31:54.461 UTC. This cannot exclude unseen
+sub-sample dips or accept absolute physical interval accuracy.
+
+15 EcoFlow identities/settings/capability IDs, 101 Flows, 1217 Insights IDs,
+Energy definitions, global settings hashes and disabled execution preserved.
+Only icon URLs differ; packaged assets and other metadata match, and owner
+confirms phone icons/5000 battery indicator look correct. Native AI mode remains
+fresh in subscription receipts. Historical fault/lease/gate/runner left intact.
+Test 1.11.20/build 87 and Live 1.10.3/build 18 confirmed read-only; no publication.
+One 5000 physical power/state scope remains unverified. Independent native,
+ES22/three-phase and ordinary-use soak gates remain open; acceptance JSONs unchanged.
+No battery/settings/control/Flow/Energy action, extra restart, counter rewrite,
+rollback or soak; startup observer ended. Only local docs changed, no commit/push.
+Evidence and external receipt: `../work/output/combined-counter-installation-2026-11-06/`.
+
+## 6 November 2026 — source synced/CI green; combined archive awaits review
+
+Reviewed source `003f2c4aee9c58aeeda7ad907b4c06f1dc8c832d` normally pushed;
+[exact CI 42224824156](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42224824156)
+passed all steps. No production edits after the **1,471/1,471** local validation.
+Coordinator final review passed; no additional multi-model approval claimed.
+
+[Combined validation review](COMBINED_COUNTER_VALIDATION_REVIEW_2026-11-06.md):
+version 1.11.20, archive SHA256 `5a8daa62475500e210991ea6428024b703a72b8f7529aa5ce8eca61da30955ff`,
+source fingerprint `89ad4da2352e91baade7a0f5150688fe2d120faf832901abf62b6875c6e3f1af`.
+Clean committed export, lockfile build, pinned CLI verified and archive checks
+passed. Local artifacts/target review and final docs HEAD/CI/lease receipt:
+`../work/output/combined-counter-candidate-2026-11-06/`.
+No install/publication or Homey/EcoFlow read/write. Installed app, Test/Live,
+Mainline, native AI and disabled Homey reserve execution unchanged by this work.
+Candidate installation requires fresh exact approval and preservation/quiescence;
+the older recovery archive is not an automatically safe counter/store rollback.
+All acceptance ledgers and runtime-specific hardware gates remain unchanged/open.
+
+## 6 November 2026 — micro/battery startup continuity fixed locally, not deployed
+
+[Counter-path report](STARTUP_COUNTER_PATHS_2026-11-06.md). Baseline `1167ff4`
+was clean/fetched 0/0. Reproduced four failures: microinverter older-store rollback,
+original battery higher-projection rollback, rounded original display decrease,
+and 5000 fractional Wh inflation. Source repairs protect same-source totals,
+independent raw counter anchors/native-counter authority, coherent micro persistence,
+receipt timing/lifecycle and rounded-display precision. Added 15 tests; full
+**1,471/1,471**, lint/release/whitespace and pinned verified validation pass.
+An extra candidate raw-mode double-count regression failed before its correction;
+evidence is retained. Previous solar repair remains unchanged and tested.
+
+New source/tests/docs are uncommitted locally; no new CI or multi-model approval
+is claimed. No API/UI/hardware/control operation, installation, publication,
+version bump or push. Installed Development remains the recorded earlier archive;
+native AI and paused Homey execution are untouched. Both acceptance JSONs remain
+unchanged. Next is review/source sync/CI, then a separately approved exact-artifact
+validation update with fresh preservation/quiescence; no automatic install/soak.
+External receipts: `../work/output/startup-counter-audit-2026-11-06/`.
+
+## 6 November 2026 12:43 UTC - solar startup source repair independently approved
+
+[Repair/review report](SOLAR_STARTUP_CONTINUITY_2026-11-06.md): the synthetic
+123000 Wh / 123.004 kWh rollback failed before repair and passes afterward.
+Coherent source-bound restore, fractional precision, receipt/restart anchoring,
+queue-owned startup/maintenance and closed checkpoint ownership are covered by
+22 focused tests; full suite **1,456/1,456**, lint, release checks, whitespace and
+isolated pinned verified validation pass. Sol/Astra/MAI actual model IDs and
+candidate review findings/resolutions are recorded, not simulated. Exact Preview
+mapping is unattested. Local extra audit was infrastructure-blocked; the unchanged
+audit step passed in exact-source CI.
+
+Baseline HEAD `1694957`; reviewed source `8f1ba3360615ad56f2e7b86cd83e5f251ce2568f`
+was normally pushed. [Exact CI 42220029950](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42220029950)
+passed every step. Final docs SHA/CI and lease/index
+receipt remain outside Git. Existing owner-created installation/ownership docs
+are deliberately retained. This task made no live read/write, installation,
+restart, publication, version bump or Mainline/Test/Live change. Installed archive
+remains `73c6aa47...df4`; both execution switches stay off and native AI retains
+reserve ownership. Physical continuity, icon/native comparison and soak remain
+open; no historical gate is transferred to this new source fingerprint.
+
+## 6 November 2026 10:22 UTC — approved delivery done; solar continuity exception
+
+[Exact delivery and readback](SPRINT_5_AI_OWNER_INSTALLATION_RESULT.md).
+Owner-approved Flow/config pause completed; both stay disabled with native AI
+in charge. Historical fault/state, completed lease, app gate and resident runner
+were preserved. Exactly one non-clean Development install of the approved archive
+was acknowledged at 10:17:35.733 UTC; app runs 1.11.20, archive SHA256
+`73c6aa47496d745a2081af53ae19db442d5f8bc1fc4ca2a65503ac809b9d9df4`.
+
+Readbacks retain 15 EcoFlow identities/settings/capability IDs, 101 Flows, 1217
+Insights IDs, global settings hashes and Energy definitions. Only icon URL fields
+differ in compared definitions; rendering remains unverified. One of ten finite
+cumulative meters, STREAM Solar generation, dropped **4 Wh** at first startup
+readback. It later recovered through ordinary generation; **continuity is not
+accepted**. An isolated synthetic replay of packaged solar `onReady` reproduces
+the older-store/higher-projection overwrite. No physical storage race is claimed.
+Next: scoped source/test repair; no manual counter rewrite or automatic rollback.
+
+Fresh receipts still show `intelligent_plus`; no battery setting/task/reserve
+command occurred. Independent native UI comparison remains unaccepted. Store
+read-only listing confirms Test 1.11.20/build 87, Live 1.10.3/build 18; no channel
+or Mainline changes. No soak or further hardware experiment started. No source
+edits/commit/push; acceptance ledgers unchanged. Exact manifests/projections and
+restricted raw evidence remain in Sprint 5 `ai-owner-installation/`.
+
+## 6 November 2026 — revised AI-owner maintenance plan prepared, not executed
+
+Owner confirms native AI/reserve changes were intentional. [Revised review](SPRINT_5_AI_OWNER_MAINTENANCE_REVIEW.md)
+requests disabling only the dedicated execution Flow and config `enabled`, while
+preserving native AI/reserves/tasks and the latched historical fault. Leave both
+switches disabled afterward; no automatic restore. Approval is pending for these
+additional automation changes and revised maintenance preflight.
+
+Read-only 09:58 UTC check confirms pinned Flow/runner binding, enabled execution,
+completed fault-free lease, empty intent and no active lock/stopping. Fresh cached
+5000 mode receipts are `intelligent_plus`; native UI is not independently verified.
+Six legacy reserve cards are exact unconditional no-op delegates. Resident runner
+source has changed since 2 November and will be preserved, not overwritten.
+Original Flow name no longer matches; select only the recorded stable identity.
+No install, state/config/Flow/battery/settings/Energy change or publication; exact
+candidate, CI, source and both acceptance ledgers remain unchanged. Private review
+evidence is under Sprint 5 `ai-owner-maintenance-review/`.
+
+## 6 November 2026 09:05 UTC — approved update held by ownership fault
+
+Exact candidate installation was approved conditionally, but read-only preflight
+found the coordinator fault `Reserve ownership changed; manual change or watchdog restoration requires review: house`.
+The native lease is completed/fault-free, pending intent is empty, no active run
+lock exists and current expected reserve readbacks agree. Those facts do not
+resolve or authorise clearing the latched fault. Its record dates to 4 November;
+manual change versus watchdog restoration remains unresolved.
+
+No install attempt, restart, battery/settings/Flow/Energy change or publication
+occurred. Candidate/recovery hashes match; source/remote remain synchronized at
+`1694957` with these documentation changes only. App remains running Development
+1.11.20; exact installed-source provenance and all candidate hardware gates remain
+open. Full upgrade preservation baseline and candidate/native checks were not
+started after the safety failure. Private evidence and sanitised projections:
+`../work/output/copilot-bug-bash-2026-11-06/sprint-5/approved-install-2026-11-06/`.
+Next bounded work is read-only fault reconciliation; any state clear or operational
+recovery needs separate specific approval. The approved archive remains unchanged.
+
+## 6 November 2026 — Sprint 5 exact-artifact review, installation pending
+
+[Review and native comparison plan](SPRINT_5_INSTALLATION_REVIEW_2026-11-06.md).
+Fresh fetch: synchronized `1694957`, exact CI success independently confirmed.
+Single target-bound metadata read at 08:54:53 UTC confirms enabled/running
+1.11.20, `devkit_install`; no source hash is exposed. Exact installed provenance
+is still unknown. No support/device recapture or new acceptance claim.
+
+Clean-HEAD offline archive SHA256 `73c6aa47496d745a2081af53ae19db442d5f8bc1fc4ca2a65503ac809b9d9df4`
+was prepared using lockfile installation, compilation and pinned CLI verified
+validation. Recovery copy matches the last documented installed archive
+`33457061b26f8a28ae6e3b23d1ccc6b8ff7a36448ce435df5cdad0bca0414667`;
+it is not a store backup/current-source attestation. Local manifests and receipts
+remain outside Git. No engineering was redone or production source changed.
+Owner approval, fresh full preservation baseline and safe coordinator/ownership
+preflight remain required for one non-clean household Development update and
+bounded read-only readback. No install/restart, settings/Flow/Energy/control
+change, store publication, tester contact or soak; acceptance JSONs unchanged.
+Only documentation is modified locally; no commit/push performed. External
+continuation receipt records lease release and knowledge refresh.
+
+## 6 November 2026 - Sprint 5 passive hardware baseline
+
+[Baseline and gated continuation](SPRINT_5_BASELINE_2026-11-06.md).
+Existing Homey API authentication works. Fresh metadata reports **1.11.20,
+running**; installed source provenance remains unknown despite matching
+package versions. Two cached readbacks showed no captured device-definition/
+settings drift or projected meter decrease. Some stale fields recovered
+naturally; a unit's physical power remains scope-unverified. No new defect or
+hardware acceptance is claimed. Native EcoFlow UI/direct developer-API access
+has not been established.
+
+Production source is still reviewed `e8c48fea948ab3adc82c26bfd1a1db93215812aa`.
+This checkpoint is docs-only, based on clean synchronized `76db4ef3afb9`.
+No deployment/restart, control/settings/Energy/Flow change, publication or
+tester contact occurred. Acceptance ledgers remain open and unchanged.
+Local receipt/continuation:
+`../work/output/copilot-bug-bash-2026-11-06/sprint-5/HANDOVER.md`.
+Candidate deployment requires explicit target approval and a fresh complete
+preservation baseline. Final docs SHA/CI and lease/index outcomes are external.
+
+## 6 November 2026 - Sprints 1-4 offline engineering
+
+Reviewed source `e8c48fea948ab3adc82c26bfd1a1db93215812aa` was normally pushed.
+[Exact-commit CI run 383](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42144534823)
+passed every validation step at 01:34:03 UTC. Final documentation-only SHA/CI
+and lease/index outcomes are recorded externally, without a Git receipt loop.
+
+Source changes from diagnostic baseline
+`9425da2bb6bb3ae636af354a02f881d0e498b6da`:
+[sprint report](SPRINTS_1_4_2026-11-06.md). Bounded SDK pending work,
+receipt-preserving coalescing/no-backfill, original STREAM source/checkpoint
+recovery, same-instance lifecycle ownership and known-overlap aggregate pairing.
+Held SDK availability writes also belong to teardown, including trial/rollback
+startup and quarantine; retired continuations cannot emit a late online Flow.
+**1,437 tests pass**; lint, release boundaries, diff check, audit and pinned
+Homey verified validation pass. All three final independent reviews passed.
+The source CI result above is independently verified, not inferred from local
+results. Private-history and physical/native acceptance are still open.
+
+Three actual reviewers: GPT-6 Sol, GPT-6 Astra and `mai-code-2`; exact MAI preview
+version and trusted-local private-history coverage remain unattested/blocked.
+No native/hardware acceptance, installation, publication, Mainline merge or
+household settings/Flow/control change. A missing test stub caused one rejected
+synthetic authentication request; the report records the isolation error and
+corrected mock. Final source/CI/lease receipt is outside Git:
+`../work/output/copilot-bug-bash-2026-11-06/sprints-1-4/FINAL_RECEIPT.md`.
+
+## 6 November 2026 - offline source candidate, not deployment
+
+Reviewed source `bc184ab190d130c393d8012353d4b570a8449699` was normally pushed.
+[Exact-commit CI run 381](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/42138726870)
+passed all validation steps, including audit. Final documentation-only HEAD/CI
+and lease/knowledge-refresh outcomes belong to the external receipt below.
+
+[Bug-bash report](BUG_BASH_2026-11-06.md): fresh REST reconciliation, coherent
+original STREAM Energy checkpoint, system-only PV authority and STREAM 5000
+live-delivery/epoch fencing; **1,405 tests pass**, lint/release/diff checks and
+pinned Homey verified validation pass. Final audit retries encountered registry
+infrastructure failures. Exact source/CI synchronization belongs to the external
+`../work/output/copilot-bug-bash-2026-11-06/FINAL_RECEIPT.md`.
+
+Two actual independent models participated (`gpt-6.1-sol`, `gpt-6-astra`);
+Opus 5.5 and trusted-local private-history semantic coverage are missing.
+SDK backlog remains unfixed; hardware/native-upgrade/soak gates remain open.
+No installation, Test/Live publication, Mainline/master merge, settings, Flow,
+device identity/history change or hardware/control operation was performed.
+
+## GitHub CI follow-up — 2 November 2026 22:36 GMT
+
+Both initial source commits were pushed and branch tips verified: HomeyPro
+`997c52e` on `master`, STREAM `4b13c48` on its existing diagnostics branch.
+[HomeyPro CI run 44](https://github.com/zarbjustin/HomeyPro/actions/runs/41537797732)
+passed tests and security, then failed the preserved frozen-backup parity gate.
+Its dependency audit was skipped after that failure; no parity waiver was applied.
+
+[Initial STREAM CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41537800900)
+exposed a timing error in the synthetic house test fixture: its topology getter
+created a new receipt timestamp after the snapshot had sampled its clock, making
+that peer appear to be from the future. This also entered an unconfigured mock
+refresh path. The fixture now captures its receipt timestamp when constructed,
+and a monotonically advancing millisecond-clock regression covers the boundary.
+No production control/freshness check was weakened. Follow-up local validation
+passes **1,393 STREAM tests**, lint and release-boundary checks. Production app
+source and installed runtime hashes are unchanged by this test-only correction.
+The follow-up CI result belongs to the follow-up commit; inspect its Actions run
+rather than treating the initial run or local test pass as an exact-commit CI pass.
+
+The source-sync handover remains the entry point below. Paused tasks, private
+evidence and all Homey settings/Flows remain unchanged by this GitHub work.
+
+## 2 November 2026 — GitHub source sync and consolidated handover
+
+Start with [HANDOVER-2026-11-02.md](HANDOVER-2026-11-02.md). It records both active
+branches, the last observed deployed state (18:13 GMT), exact runtime hashes,
+source-only queue diagnostics, fresh offline validation, private continuity and
+the ordered next checks. This sync does not refresh live observations or authorise
+new controls, task resumption, releases or deployments. HomeyPro frozen-backup
+parity remains a known 12-card failure; its evidence and CI gate are unchanged.
+
+## 2 November 2026 18:13 GMT — final cheap/expensive cycle audit and attended two-member repair
+
+Current resident house execution is enabled, unbroken and fault-free at policy
+revision 12. At 18:13 fresh installation readings showed 4% SOC, reserve 0%,
+about -1.04 kW supplying local load and zero grid charging. The native lease was
+completed. One active Homey reserve writer remains: the coordinated execution
+runner; legacy Agile/Dump Load reserve cards are delegates and the observation
+Flow stays disabled. Codex watcher/archive/backup tasks remain paused. Office
+scheduled control remains disabled pending its separate supply confirmation.
+
+The readiness recursion correction described at 17:39 is installed. A second
+forecast correction explicitly uses whole-property house CT1 demand: office net
+imports are not subtracted while office planning is disabled. House-only forecast
+transport no longer depends on the office meter or office Insights. The prior
+separate provisional 0.50 + 0.15 kW missing-hour baselines were explicitly summed
+to 0.65 kW, not described as measured demand. Native settings, charging limits,
+95% house readiness and the office 10% policy were not changed by this migration.
+
+Attended validation exposed additional multi-member issues rather than proving
+the first source update sufficient. Native aggregate SOC can age between changes,
+and a first reserve ACK can precede a delayed older member status reply. Immediate
+watchdog handoff then sees disagreement and stops a valid charge. Controller-only
+restoration also failed to prove both physical members stopped. Earlier failure
+receipts, the restoration fault and intermediate archives are retained privately.
+Only the fault created by this session's attended test was reviewed for recovery;
+its original lease is preserved privately and recorded in maintenance history.
+No historical/manual/office/heating fault was cleared.
+
+The installed private bridge now checks and targets every explicitly enrolled
+physical member separately when a reserve change/restoration is needed, never
+unreviewed devices. It preserves a member's unexpected manual target. Group write
+verification requires sixteen consecutive half-second agreeing polls before
+releasing the command owner to the native watchdog; stale receipts are refreshed
+without replaying SET. The acknowledgement path remains wall-clock bounded at
+45 seconds at loop entry (one bounded read may finish after that deadline).
+Restoration also handles a controller already restored while the
+second member still needs its owned stop. A generic guard-loss stop records its
+reason rather than appearing as an unexplained completed lease.
+
+For private execution only, when aggregate SOC is stale, fresh (<=10 second)
+exact-member SOC readings supply their minimum as an explicitly labelled lower
+bound. This is neither an averaged system SOC nor a replacement Homey capability,
+physical watt tile or Energy reading. The original aggregate SOC age remains
+separate. Missing/stale member SOC, topology, power, native configuration or identity
+still blocks. Signed power/grid-charge receipts remain independently fresh and
+system-scoped, consumed once. This supports planning and charging from empty and
+between sparse nonzero aggregate updates without pretending the aggregate refreshed.
+
+Final attended cycle: sustained approximately 4.9–5.0 kW grid charging, around
+6.1 kW whole-Space import below the retained 7.2 kW ceiling; both fresh member SOCs
+increased. The first fresh pre-charge receipt was 3%/2%, later 4%/3%, and both were
+4% after stopping. Explicit stop restored both reserves to 0%, charging fell to
+zero, native expiry completed, and local-demand discharge resumed. No office
+control command or CT1/feed-in/output/grid-limit write was sent. The scratch
+commission script's original pass flag was false: it took persisted pre-refresh
+SOC as its baseline and missed the last SOC packet at its charging-loop deadline.
+A separate evidence review passed against the first fresh exact-member receipt
+before positive grid charging, sustained power, SOC rise and completed stop/expiry.
+Both the original result and the reviewed derivation remain preserved; do not
+silently relabel the original script as a pass.
+
+Final installed non-clean Development 1.11.20 archive SHA256:
+`33457061b26f8a28ae6e3b23d1ccc6b8ff7a36448ce435df5cdad0bca0414667`.
+Final resident execution source SHA256 (read back exactly):
+`4bcf7ceca1ff7959ab2890b381ee52e1a9f46abc8e81a2854628aaf2c8d48b6b`.
+Validation: 454 HomeyPro tests/security/whitespace, 1392 shared STREAM tests,
+1390 isolated installed-package tests, lint, release-boundary checks and verified
+Homey packaging passed. Public monitoring/CT1/soak acceptance gates remain open;
+this is acceptance of the scoped private control cycle, not blanket app acceptance.
+No Git commit/push, Store publication, clean install or device re-pair occurred.
+Unrelated working-tree changes were preserved and excluded from the runtime package.
+
+Fresh 18:13 conditional 19:00-rollover replay used 168 house-history points, no
+office-history reads, current rates through 3 November 23:00 and projected 0% at
+rollover. Proposed charging: a small 0.15 kWh top-up within 22:30–23:00, full rate
+23:00–00:30, then 13:00–14:00 on 3 November (about 32.04–33.75p/kWh). It forecasts
+12.45 kWh grid charging for GBP 4.08, morning higher-price supply around
+06:30–09:00, and 95% before the 16:00–19:00 peak. The horizon closes with about
+4.47 kWh still stored; its truncated net metric includes wear and does not credit
+that stock, so it is not a full-bill profit/loss result. This replay is conditional,
+not a prematurely committed overnight plan: the live provider rolls at 19:00 and
+replans against actual SOC, ownership and flags. Full overnight delivery and
+billing savings have not yet been observed.
+
+Preservation readback passed: all 15 EcoFlow device definitions, 10 monotonic
+counters, Insights identities, unrelated Flows and native boundaries. House has
+10 kWh installed planning capacity, conservative 4.9 kW charging, owner-confirmed
+7.2 kW shared Space ceiling and 2.5 kW output assumption; house floor 0%, office
+floor 3%, office legacy allowance 2.8 kW remain. Undelivered batteries stay planned.
+Frozen backup and Master cursor hashes remain unchanged; old parity evidence stays
+untouched. Native settings/manual changes continue to take precedence.
+
+## 2 November 2026 17:39 GMT — conflict audit and cheap-to-expensive cycle correction
+
+Read-only live audit found one active Homey reserve writer: the coordinated
+execution runner. The legacy Agile planner/watchdog and Dump Load reserve cards
+are delegates with no competing reserve write. Remaining office feed-in guard
+cards preserve the owner's choice, and the 07:30 daily report returns the
+coordinated-state report while execution is enabled. The observation-only Flow
+remains disabled. No additional referenced or unreferenced HomeyScript reserve
+writer was found. Both native member mode/task/limit receipts remain checked by
+the scoped bridge. This is Homey-visible ownership evidence, not a guarantee
+against future external/manual native-app changes; those still inhibit control.
+
+Physical expensive-period operation verified: after holding the shared reserve
+at 14%, the runner stepped it down to 6% at 17:00 and released to the retained
+0% floor at 17:30. At 17:17 fresh system power was about -2.47 kW (61.73p/kWh
+current tariff); at 17:35 it was about -2.21 kW with 4% system SOC, reserve 0%,
+zero grid charging and no execution/native fault. Homey's Octopus current price
+matched the configured direct Agile feed in the audit. Negative battery flow is
+local-demand supply, not forced grid export; CT1 anti-export remains unchanged.
+
+The offline 19:00-rollover replay exposed a planning defect: taking the maximum
+of readiness stock and later higher-priced demand did not reserve both when that
+demand occurred before the readiness deadline. Additional cheap replenishment
+could then free energy for a lower-priced interval, preventing a profitable
+pre-peak cycle. The house backward recursion now imposes readiness stock AT the
+service boundary, after processing that interval's demand/PV/charge, then carries
+that stock together with earlier higher-price demand through actual replenishment.
+It does not change the owner's 95% readiness target or the office dispatch policy.
+Two regression tests failed before the correction and passed afterward: direct
+stock accounting, and a chronological cheap-charge/expensive-discharge/refill
+cycle that retains 95% readiness and energy conservation. Quantized surplus may
+serve cheaper load only after the more valuable forecast demand is covered.
+
+451 HomeyPro tests, security and whitespace checks passed. Updated execution,
+observation and both existing preview sources were deployed/read back in place;
+execution policy revision is 11. The short source update sent no native reserve
+command and preserved fault/intent history. Current-peak behavior has no readiness
+stock deadline and is unchanged by the correction. No EcoFlow app installation
+was performed in this audit; installed Development 1.11.20 remains the prior
+`de667c56d0faaf3a299bb70525acc79ad9875adecd2c652ea6550e707ee76a16` archive.
+New execution source SHA256:
+`a016c0d2576f2bf0fcc711e743e34cef99ffffbb9632d84e06994c76b2e72dcd`.
+
+Conditional rollover replay, using published rates through 3 November 23:00,
+projected 0% SOC at 19:00 and only demand history completed before actual capture:
+a small 0.15 kWh top-up in 22:30–23:00, full-rate 23:00–00:30, then 13:00–14:00
+on 3 November; prices approximately 32.04–33.75p/kWh. It serves the higher-priced
+06:30–09:00 demand, refills and projects 95% before the 16:00–19:00 peak. About
+12.45 kWh / GBP 4.08 charging includes the extra morning cycle. This is NOT an
+already committed live overnight plan: the resident provider rolls from today's
+remaining peak to tomorrow after 19:00, then replans against actual SOC/ownership.
+The replay assumes no intervening manual/Free/Dump Load/Saving Session change.
+
+Reporting limitation: the 19:00 horizon ends with about 5.46 kWh stored. Its horizon
+net metric (including modeled wear) does NOT credit that retained energy, so neither its negative truncated
+horizon metric nor the charging cost alone is a full-bill profit/loss statement.
+Future-period value and physical billing reconciliation remain unproven. Do not
+present a preview, a target or an ACK as completed overnight delivery/savings.
+
+10 kWh installed house capacity, measured conservative 4.9 kW planning rate,
+owner-confirmed 7.2 kW shared House Space ceiling, 2.5 kW house output assumption,
+house 0% / office 3% minimums and all manual/office safeguards remain. Office
+scheduled control still requires its own supply confirmation. Codex watcher,
+archive and backup tasks remain paused. No new monitor, Store publication, Git
+commit/push, device/Insight/counter change or historical-fault clearance. Full
+night-through-next-peak physical acceptance remains pending. Frozen backup and
+Master watcher cursor hashes are unchanged; the 12 old source-parity gaps remain
+preserved. Latest preservation check passed for all 15 EcoFlow device definitions,
+10 monotonic counters, Insights identities, unrelated Flows and native boundaries.
+
+## 2 November 2026 16:36 GMT — two house units enrolled; shared 7.2 kW ceiling verified
+
+Owner confirmed the newly paired STREAM 5000 is a second physical battery in the
+same EcoFlow House Space, and explicitly confirmed setting Max Power from Grid
+to 7200 W for that whole Space. Both ES21 units are now explicitly enrolled;
+private Homey identities/serials remain outside Git. Planning capacity is 10 kWh
+(two installed 5 kWh units). Undelivered AC 5000/expansion entries stay planned
+and uncounted. Model family/capacity cross-check: https://www.ecoflow.com/uk/stream-series-solar-battery-storage
+
+Adding the unit invalidated the old unit-power scope and the runner's single-
+paired-driver assumption; the prior lease expired safely and released reserve.
+The repair now consumes the existing controller's system SOC and signed system
+flow once, from a private identity-bound installation receipt. It never adds
+unit tiles or averages their SOCs, uses array order as identity, or copies system
+watts into physical tiles/Energy. The existing aggregate and all device identities,
+Insights/counters remain. Public physical-monitoring sign/scope acceptance remains
+separate and open; linked unit watt tiles are not execution evidence.
+
+Enrollment binds both Homey IDs and serials, corroborates their exact live peer
+membership, and checks fresh native configuration on both. Additional/missing/
+changed members, divergent reserves, manual changes on either unit, stale SOC,
+system power or grid-limit fields inhibit control. Group requests and each lease
+carry the exact member list; stale callers and unleased direct group writes are
+rejected. Polling refreshes independently ageing member SOC and max-grid-input
+configuration, even while other packets remain fresh. Native expiry verifies
+both restored reserves and fresh post-stop grid-charge evidence. Solar charging
+alone is not mistaken for excessive grid charging.
+
+The reviewed House Space ceiling is applied ONCE: private gate
+houseSiteChargeKw=7.2 / houseSpaceGridLimitW=7200. The legacy office allowance
+siteChargeKw=2.8 is retained separately. No native grid/output/feed-in/CT1 setting
+was written. Both native input limits still report the owner's 7200 W; shared
+house output/discharge assumption remains the owner's existing 2500 W. The native
+watchdog stops/latches charging if the house battery-charge allowance or whole
+reported Space grid-import ceiling is exceeded. Member manual changes remain
+authoritative during restoration; no generic automatic fault clearing is added.
+
+Attended no-charge reserve probe confirmed one main-controller target reaches
+both units and native expiry restores both. Attended charge test 16:28–16:31
+then showed approximately 5.0 kW combined battery charging, approximately 6.0 kW
+reported total Space import, SOC increases on BOTH reported physical members,
+and verified stop/0% reserve restoration across both with no native fault.
+The conservative measured planning charge rate is 4.9 kW; 7.2 kW is a ceiling,
+not a claimed measured charging rate. Source receipts and every intermediate
+before-state remain ignored/private, including the earlier failed/inhibited starts.
+
+Execution policy revision 10 is enabled, with house grid charging enabled and
+house-only scope retained. House readiness 95% / floor 0%, office readiness 10%
+/ floor 3%, owner feed-in choices and CT1 anti-export are retained. At 16:33 the
+fresh plan held the shared reserve at 14%, scheduled no expensive current charge,
+and retained energy for later peak slots. At 16:40 the fresh installation receipt
+confirmed 14% system SOC, shared reserve 14%, 0 W system battery flow and 0 W
+grid charging, with healthy routine lease renewal and no execution/native fault.
+Preservation targets are capped by the
+lowest fresh member SOC so a hold cannot force the weaker unit to recharge at
+peak prices; the stronger unit may supply its excess above that common target.
+The old one-unit forecast is invalidated. A complete overnight charging/peak
+cycle with both units is still unobserved; do not claim long-term acceptance.
+
+Office scheduled control remains disabled pending its OWN supply-capacity
+confirmation; the house 7200 W confirmation does not approve office resumption.
+Native office minimum-reserve maintenance was observed independently of the
+paused office automation. Do not silently change its native floor or mode.
+Codex watcher/archive/backup tasks remain paused; no duplicate monitor was added.
+
+Installed isolated non-clean Development 1.11.20 archive SHA256:
+`de667c56d0faaf3a299bb70525acc79ad9875adecd2c652ea6550e707ee76a16`.
+Resident execution runner exact readback SHA256:
+`a4ef3da94d8ebf385417899275499264121e296899f9dbf2e2042066d1d651ed`.
+Observation and both existing preview scripts were updated in place to the same
+identity-bound telemetry contract; no new or re-enabled observer Flow was added.
+Unrelated shared diagnostic edits remain preserved and excluded from the archive.
+Validation: 449 HomeyPro tests, 1384 exact isolated-app tests and 1386 shared
+STREAM tests passed, along with lint, release-boundary checks, pinned CLI verified
+validation, HomeyPro security and whitespace checks. General hardware release gates
+and 12 frozen-backup source-parity mismatches remain open/untouched. Preservation
+readback at 16:36 passed for 15 device definitions, 10 monotonic counters, Insights,
+unrelated Flows and native settings outside the explicitly reviewed house gate.
+No Git commit/push, Store publication, re-pairing or counter reset was performed.
+
+## 2 November 2026 15:20 GMT — house-only control dependency repair deployed
+
+This checkpoint supersedes the earlier overnight restoration claims. Actual
+history proves the 03:30–04:00 house charge reached 24%, but an unconditional
+native office-stop check blocked the 04:30 higher target. The native watchdog
+restored house reserve to 0% at 04:36; a new attempt failed the same office check
+at 04:37 and latched execution. House SOC reached 0% around 06:05; later slots
+were missed. The 95% objective was NOT achieved. Planner-only office exclusion
+was insufficient: native command, restoration and freshness paths still depended
+on office. Tests had not covered that complete transition with office excluded.
+
+The repair adds explicit `controlScope: house-only` on the private scoped gate,
+on each native lease and on verified transport receipts. The resident runner
+requests `houseOnly: true` only when office execution is disabled. Scope must
+agree in the app and runner; stale/mismatched callers cannot re-enrol office.
+House-only reads require actual fresh house packets and report officeFresh=false
+/ officeRequired=false. They do not read office hardware or invent office data.
+House-only target changes, lease renewal and expiry do not call office stop/read
+or write office settings. The planner/observer/coordinator also exclude disabled
+office observations, commands and freshness requirements. Active coordinated
+leases cannot be adopted as house-only; transition requires reviewed quiescence.
+Coordinated mode retains existing stop-office-first, verified house no-discharge,
+physical stop, freshness, power-budget and manual-ownership safeguards.
+
+The known 04:37 fault and uncertain intent were archived before explicit review;
+the completed native restoration and current 0%/3% baseline were checked. The old
+intent was NOT replayed. Config is policy revision 7, house-only execution enabled,
+office execution and planner charging disabled. No allowance increase: office
+full-fleet 3.33 kW still exceeds declared 2.8 kW. Owner confirmation of supply
+capacity remains pending before office re-enablement. House native output 2500 W,
+CT1 anti-export, feed-in ownership, modes, limits and manual choices are retained.
+
+Installed isolated non-clean Development 1.11.20 archive SHA256:
+`e0db5e9ae3b4ce2b03f9c5c3d6a27524fcf94d9b589c7b811897c92212a76e17`.
+Resident runner exact readback SHA256:
+`01021823f0d8c46270296cc31cbe5efecf40026f190c10e2b1724d49aaffa138`.
+Unrelated shared diagnostic edits were excluded from the installed archive.
+No Git commit/push, Store publication, re-pairing, new Flow or counter reset.
+
+Attended physical test 15:16–15:19 passed: actual ~2.5 kW charge, SOC 0→1→2%,
+a higher house target accepted, charge power then 0 W at target, and a one-off
+30-second native lease expired restoring house reserve 0%. Office remained 3%
+and no office command was sent. Routine execution resumed at 15:19 with fresh
+forecast: remaining charging to 16:00 projects ~34.1% SOC, ~GBP 0.74 further cost,
+and explicitly reports readiness shortfall. This cannot recover the missed 95%
+target today. At 15:30 the unassisted scheduled target change from 11% to 34%
+was acknowledged and read back, with physical charging continuing at ~2.5 kW,
+SOC 11%, office reserve 3%, and no execution/native fault. This directly exercises
+the higher-target transition that failed overnight. A full scheduled day, future
+peak delivery and general release acceptance remain unproven. Do not turn this
+bounded commissioning and transition proof into a long-term stability claim.
+
+Validation: 441 HomeyPro tests; 1374 tests on the exact isolated installed STREAM
+source; the final shared STREAM tree also passed 1376 tests. Lint, release-boundary checks, Homey CLI 4.5.3 verified validation, HomeyPro
+security and whitespace checks passed. The 12 existing frozen-baseline embedded
+script parity failures remain evidence; none was replaced. Preservation readback
+found 14 device definitions, 10 monotonic counters, Insights and unrelated Flows
+unchanged outside reviewed scope. Private evidence remains ignored; frozen backup
+and Master cursor are preserved. Codex watcher/archive/backup tasks remain paused.
+
+## 2 November 2026 01:47 GMT — office fleet power mismatch; house-only scheduling restored
+
+This checkpoint supersedes the deployment/state claims in earlier entries below.
+The real 01:30 scheduled office start charged all six units and reached about
+3.33 kW, exceeding the configured 2.8 kW shared battery-charge allowance. The
+watchdog correctly requested office reserve 3%; the previous resident runner
+mistook its in-progress native stop for an ownership change and latched a fault.
+The smaller attended subset test did not establish full-fleet power requirements.
+Do not describe the complete house/office installation as stable or accepted yet.
+
+The native stop completed fault-free at approximately 01:34 GMT, with house
+reserve 0%, office reserve 3%, and explicit physical-member noncharging evidence.
+The known owned fault was explicitly reviewed against the exact completed lease
+and current reserves; its full before-state and historical fault were preserved.
+No generic or automatic fault clearing was introduced. The runner now recognises
+an exact owned watchdog stop in progress and sends no new commands until it ends.
+Unknown/manual changes and native stop failures still block execution.
+
+Installed isolated non-clean Development app archive SHA256:
+`7504649e51057f1950ceb4d08eabbbd34ef1d66234c7c5cf620f7f5063fde3e0`.
+Resident runner exact readback SHA256:
+`580be7500846064cd15442b7f3e11d3ce0fcd0cef99dc52de5c35f0fd07ea789`.
+The native maintenance-loss proof allows at most 150 W only with all six exact
+physical members reporting noncharging, net member power <=0, applied readings
+<=90 s old and received after the stop anchor. It also requires three independent
+fresh aggregate/balance receipts over >=6 s, reserve 3%, self-powered mode and no
+alarm. This distinguishes AC conversion/idle draw from active DC battery charge.
+Missing/stale/charging members cannot establish that proof. App-start unavailability
+only defers an already pending stop within its existing ten-minute bound.
+
+Office charging is explicitly disabled pending the owner's confirmation of supply
+capacity: execution `officeControlEnabled=false`, planner office
+`chargingEnabled=false`, policy revision 6. The office plan reports blocked with
+its reason; house planning/control remains independent. Repeated ticks reuse the
+current house plan instead of needlessly fetching forecasts because office was
+intentionally disabled. The 2.8 kW allowance has NOT been raised. The old 2.3 kW
+office native assumption must be corrected before office charging is re-enabled.
+The capacity question is pending; do not infer approval from elapsed time.
+
+House-only execution config and its existing resident Flow are enabled again;
+no new Flow was created. Fresh plan at 01:45 proposes 03:30–04:00,
+04:30–05:00, 10:00–11:30 and 12:30–13:00 charging, about GBP 2.18 estimated
+charging cost, aiming for 95% before peak. These are plans, not delivered energy.
+The earlier bounded house test proved actual charge power and SOC 0% to 1%; the
+next automatic house slot and full daily peak discharge remain unobserved here.
+House minimum 0%, office minimum 3%, office readiness 10%, provisional office
+100 W depletion/150 W demand inputs, no-house-discharge safeguard and native
+watchdog remain. Owner-confirmed house output 2500 W is retained; no native
+output, CT1 anti-export or feed-in setting was written by this repair.
+
+Validation: HomeyPro 437 tests; isolated installed STREAM source 1371 tests;
+shared STREAM tree including preserved unrelated diagnostics 1373 tests. Security
+and whitespace checks pass. Preservation readback at 01:46 found no differences
+outside the explicitly reviewed scope across 14 EcoFlow device definitions,
+10 monotonic counters, Insights identities and unrelated Flows. Private evidence,
+frozen backup and Master watcher cursor stay ignored and preserved. Codex
+watcher/archive/backup tasks stay paused. No commit, push or Store publication.
+General release and physical energy-delivery acceptance gates remain open.
+
+## 2 November 2026 — current deployed reliability build / owner-confirmed output
+
+This is the current checkpoint; preceding repair iterations below are historical.
+Owner confirmed the native house output change to 2500 W was intentional. That
+setting was retained, and planner-only house discharge power updated from 0.8 to
+2.5 kW (policy revision 5). No native grid/output-limit command was sent. House
+readiness remains 95% / minimum 0%, office readiness 10% / minimum 3%, with the
+0.1 kW provisional battery depletion allowance and 150 W office AC demand baseline.
+
+Installed local non-clean Development 1.11.20 archive SHA256:
+`99a15eb82762d0883ed9b774b6aefb72804fb7d8c8acf4ff1249e709b5a5e1de`.
+Resident runner SHA256:
+`440b9980febd738805437ba1b1726f4a155830908a86f08e5e2082ef10e65275`.
+Source remains uncommitted; no Store/Test/Live publication or Mainline merge.
+Unrelated shared diagnostic edits were excluded from the isolated installed app.
+
+Repairs cover verified native-watchdog restoration handoff; bounded delayed stop
+progress while preserving house hold; no new starts during stopping; and a
+no-write native busy response that cannot become a blind command replay or
+permanent transport fault. A physical stop timeout still faults after ten minutes;
+manual changes, unknown telemetry and unrelated faults remain authoritative.
+
+Stop evidence now explicitly scopes the six existing office physical units using
+IDs from the already reviewed office membership; the house/modern aggregate is
+excluded. This is an intentional read-only member binding on the scoped gate.
+All member power receipts must be applied, available and <=90 s old; each must
+show <=5 W charging and fleet net power <=0. Combined with three independent
+aggregate receipts spanning >=6 s, aggregate/grid/load receipts <=5 s old,
+self-powered mode, reserve 3%, SOC >=3%, and <=50 W battery-branch/grid-load
+residual, converter/maintenance draw can be distinguished from active bulk charge
+at high SOC too. Stale/missing/charging members do not establish this evidence.
+Existing direct noncharging/PV balance evidence remains. No historical power is
+relabelled fresh or injected into Energy/counters. The normal house power guard
+remains <=30 s and requires nonnegative flow while office charging is requested.
+
+Validation: 433 HomeyPro tests, 1371 tests against matching isolated deployed-app
+source, and 1373 shared-checkout app tests pass; lint, release boundary checks,
+pinned Homey CLI verified validation, security and whitespace checks pass. This
+includes high-SOC idle-loss regression, invalid/stale/missing/charging member
+rejection, pending/busy no-replay, bounded timeout, exact watchdog-proof handoff,
+and the owner-confirmed 2.5 kW planner input removing the old 800 W bottleneck.
+
+Attended physical evidence from this repair: house ~2.5 kW, SOC 0% to 1%,
++0.023 kWh observed, stop/restoration verified; office ~2.45–2.72 kW and at least
++0.020 kWh observed while house power stayed 0 W, then delayed bulk stop verified.
+A natural native lease expiry at 00:42:14 was recognised by the runner without
+latching a false ownership fault. The final scoped-member build resumed at 01:06,
+with normal automatic cycles subsequently verified. A foreground read-only soak
+is observing the 01:30–02:00 office charging window and its stop; it is not a
+new scheduled Codex task. Full-night and whole-bill savings remain unproven.
+
+Preservation readback: all 14 EcoFlow device identities/definitions/settings,
+Insights identities, 10 sampled monotonic counters and other Flows retained.
+The only scoped-gate addition is the six office read-only member IDs. The output
+limit discrepancy is resolved by the owner's confirmation; remaining native
+mode/tasks/input/SOC/socket boundaries matched. CT1 settings were not commanded.
+Frozen baseline and Master cursor hashes still match their preserved originals.
+Private evidence remains ignored. Codex monitoring tasks were not resumed.
+
+## 2 November 2026 — charging handoff/slow-stop repair installed and commissioned
+
+Owner authorised continued repair, local deployment and attended proof. Previous
+healthy-cycle checks were insufficient: a successful native watchdog restoration
+was mistaken for a manual ownership change, and a 15-second physical office-stop
+window did not cover the measured multi-minute ramp-down.
+
+Runner now accepts only a recent matching completed native lease with exact
+configured device identities, expected/restored reserves and fresh device fields.
+It records the event, never clears a pre-existing fault automatically, and still
+rejects manual/old/faulted mismatches. The app/runner support an explicit stopping
+phase: preserve house hold, reject new starts, wait for physical office stop,
+then restore house. A native busy response guarantees no command was attempted;
+the runner preserves prior ownership and waits without latching or replaying an
+uncertain command. Ten minutes is the bounded maximum before a genuine fault;
+this does not renew a charging lease. Unknown/stale power remains unknown.
+Native BMS maintenance is explicitly distinguished from bulk charge: at reserve
+3% and reported SOC <=4%, three independent fresh samples must show battery draw
+<=50 W and grid-minus-local-load <=50 W in self-powered mode without a reported
+alarm. This permits a small maintenance draw; it does not mean zero AC charging.
+
+Non-clean local Development 1.11.20 patch, archive SHA256
+`b68d9f6248988b7ce2e92298125e7f62057949a54b9a06f7875c7f55ee9aaa43`.
+Runner SHA256
+`440b9980febd738805437ba1b1726f4a155830908a86f08e5e2082ef10e65275`.
+No Store/Test/Live publication or Mainline merge. Built in an isolated copy of
+ce2aaf9 plus this app/test repair, excluding unrelated local diagnostic edits.
+Validation: 432 HomeyPro tests, 1369 isolated deployed-app tests, 1371 shared-app
+checkout tests, lint/release-boundary/pinned CLI verified checks, security and
+whitespace checks passed. General monitoring/energy release gates remain open.
+
+Attended house charge: SOC 0% to 1%, approximately 2.5 kW and +0.023 kWh observed;
+scoped stop/native restoration verified. Further house holding tests reached 2%.
+Office charge: approximately 2.45–2.72 kW, +0.020 kWh counter increment observed,
+with house battery power 0 W throughout office charging. Office reserve restoration
+3% acknowledged before physical ramp-down finished; the old stop check faulted,
+and that evidence was preserved/reviewed. Physical stop was subsequently verified,
+house restored to 0%, and histories retained. Source/state replay was not used as
+physical proof. Both charge and restoration paths were exercised.
+
+Live native-watchdog handoff test: paused only the execution Flow, left the owned
+lease to expire naturally at 00:42:05 GMT, and verified completion at 00:42:14.
+After resuming, the runner at 00:42:19 recognised the exact completion receipt,
+recorded watchdog history, dispatched normally and did not latch an ownership
+fault. The following natural 00:43 run verified healthy. Routine execution is
+active again. House 95%/0% and office 10%/3% policy remain; Codex monitoring tasks
+were not resumed. No claim of a full-night soak or whole-bill savings is made.
+
+Preservation comparison retained 14 EcoFlow device identities/definitions/settings,
+all Insights identities, 10 sampled monotonic counters, other Flows and native scope
+gate. One native telemetry discrepancy remains under investigation: reported house
+maxGridOutputW changed from 800 to 2500 W during tests, while the separate output
+ceiling was already 2500 W. No grid-limit command was sent: source envelope writes
+only reserve field 30. Owner was asked about a native-app change. Do not reset it
+or claim that native limit unchanged; retain planner discharge assumption 0.8 kW.
+Other observed native mode/tasks/input/SOC/socket boundaries matched. Raw before,
+commissioning, stop, native-expiry and post-deploy evidence remain ignored/private.
+
+
+Final no-write busy handling deployed at 00:50–00:52 GMT with the archive/source
+hashes above; first final-build run verified at 00:52:04. All targets/reserves,
+manual-change guards and native stop requirements retained. Current published-price
+plan: office 01:30–02:00, 09:30–10:00, 11:00–11:30, 13:00–13:30 (2.8 kWh,
+£0.947); house 03:30–04:00, 04:30–05:00, 10:00–11:00 (5.0 kWh, £1.673).
+Projected pre-16:00 SOC remains office 10%, house 95%, no readiness shortfall.
+These are forecasts. The native-expiry proof above preceded the final busy-only
+addition; final-build readback/automatic cycles are separate evidence.
+
+## Stefan updated; Ed confirms Live runtime — 1 November 2026
+
+Public post 87: Stefan installed the new version and will report back; sustained
+stability is not yet confirmed. Public post 88: Ed confirms installed 1.10.3 on
+Homey Pro 2023 and no intervening changes, resolving the diagnostic-version
+mismatch. Owner requested instructions; posted as JZ and reopened public post 89:
+https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/89 .
+Instructions: update same app/Homey in place from Test; confirm installed 1.11.20;
+retain legacy devices/history/Flows; use dedicated STREAM 5000 Series Unit with
+EcoFlow app-account pairing (do not duplicate an existing dedicated unit); leave
+battery/MQTT/Energy settings and aggregate Energy pairing unchanged. Old history
+and Flow identities do not transfer automatically to a new monitor. Request one
+private integration support report only if dedicated monitoring remains blank.
+Field telemetry pass remains pending. No app/source publication or local hardware
+change made for these community instructions.
+
+## Existing coordinator resumed and first scheduled run verified — 1 November 2026
+
+Owner explicitly approved re-enabling existing coordinator after the fresh replan
+review. Rechecked the deployed runner SHA256, paused Flow/config, no active
+fault/intent/run lock, completed lease, matching House 0 / Office 3 ownership,
+fresh native fields, self-powered/empty House tasks and manual-hold state.
+Preserved private baseline and enabled only existing execution config and Flow;
+readback confirms policy/app settings unchanged. No manual Flow/runner execution,
+code deployment or replay of the expired pre-16:00 plan. Test/Live unchanged.
+
+First natural scheduled run: plan evaluated 16:02:03 UTC, run 16:02:04,
+verified 16:02:07. At 16:02:19, status hold for higher-value periods, expected and
+actual House reserve 0 / Office 6, available batteries, House idle and Office
+discharging. No fault, outstanding intent or active run lock. Native routine
+lease is active as expected; execution is NO LONGER paused. This is a fresh
+routine preservation hold, not the old 7% intent. Office 10% readiness/depletion
+proposal remains undeployed. One-run readback is not a long soak or proof that
+watchdog unavailability cannot recur. Private receipts retained outside Git.
+
+## Fresh coordinator replan and Stefan update — 1 November 2026
+
+Read-only replan at 15:57 UTC used current installed policy and fresh app field
+receipts. No live Logic/device writes or script execution/deployment. Expected
+ownership House 0 / Office 3; no intent/fault; both execution switches still off.
+Office planned without charge slots; House reports readiness shortfall. The tiny
+pre-16:00 House opportunity cannot restore today's 95% target and must not be
+replayed. Resumption must calculate a new plan at its actual execution time.
+Live runner hash 7641cfcd446302109ad2222080df81f3b0c82171618ca3f4421068c1b2d406a4
+matches the HomeyPro recorded deployed runner; local Office-readiness proposal is
+not deployed. Proposed resumption is in outputs/coordinator-resumption-review-2026-11-01.txt
+outside Git. Existing 2.8 kW site allowance and native-rate/ownership/lease guards
+remain; no policy change proposed. Prior maintenance step 8 requires separate
+fresh replan/resumption review; execution remains paused pending approval.
+
+Owner authorised Stefan update; posted as JZ and reopened permanent public post:
+https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/86 .
+Requests normal-use feedback on Test 1.11.20, preserves devices/capacity/settings,
+and asks time/affected devices/native readings/self-recovery if freezing recurs.
+No new broad raw capture or re-pair request. No installation/publication here.
+
+## Test 1.11.20 / build 87 verified — 1 November 2026
+
+Owner authorised Test publication of the locally validated recovery-only archive.
+Build 87 activated and read back as Test 1.11.20; EN/DE/NL listing/changelog match.
+Source fb053dbf401d7d36d59f9423cd4714c39f1bfe24; exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41322550578 passed.
+Archive SHA256 5304493340c456e352b4f72f3776f304676bf582e4059839d68f6cd764bdc439.
+Post-publication readback at 15:53 UTC confirms installed Development 1.11.20,
+same devkit session, all device IDs/definitions, settings, Flows and Insights
+unchanged. Live remains 1.10.3/build 18. Coordinator remains paused under the
+approved maintenance procedure; no resumption or battery operation for publication.
+Separate consumer-queue diagnostics remain uncommitted/source-only, excluded from
+this archive. Do not confuse their 1,368-test local result with recovery archive
+validation (1,366 tests plus exact CI). No field resolution of Stefan/Ed/Robert
+is claimed. Next: review fresh coordinator replan/resumption; obtain Stefan's
+normal-use result on this recovery build, Ed's version/driver confirmation and
+Robert's bounded comparison. Review diagnostics before another candidate.
+
+## Development 1.11.20 installed; coordinator left paused — 1 November 2026
+
+Owner approved outputs/ecoflow-1.11.20-maintenance-review.txt. Fresh baseline
+confirmed the recorded ownership (House 0 / Office 7), self-powered mode and
+empty House tasks. Paused the owned execution Flow and configuration, checked
+no active run/command, then used the existing office-only stop path once. It
+verified Office reserve 3% and grid-charge stop; House reserve remained 0%.
+Preserved the old lease/fault and intent in private snapshots and maintenance
+history. Reconciled to House 0 / Office 3, emptied the obsolete intent and set
+old plan null without replay. Both execution switches remain disabled.
+
+Exact recovery-only archive SHA256
+5304493340c456e352b4f72f3776f304676bf582e4059839d68f6cd764bdc439 installed once,
+non-clean Development/debug false. Source fb053dbf401d7d36d59f9423cd4714c39f1bfe24,
+exact CI 41322550578 passed. Archive-provenance runtime fingerprint:
+70bdb73e630ead99f24349d902acb80f64231fd8964e7863124c098412c7a1eb.
+This is not an independent installed-filesystem rehash.
+
+Initial readback at 15:49 UTC: Development 1.11.20 running/devkit_install;
+14 EcoFlow definitions, all device identities, 101 Flows and Insights identities
+preserved. No app-setting drift from reconciled installation baseline. Ten
+reported cumulative capability counters known and nondecreasing within exposed
+precision. Original aggregate verified its main and receives natural MQTT/REST
+readings; batteries and CT1 available. House 0 / Office 3, fresh readings,
+completed nonfaulted lease, no intent and invalidated plan confirmed. Mobile UI,
+forced recovery and 48-hour soak not claimed. No forced disconnect or pairing.
+Test 1.11.19/build 86 and Live 1.10.3/build 18 remain unchanged. Separate uncommitted
+consumer-queue diagnostics remain source-only and are not installed.
+
+Second readback at 15:50:58 UTC passed the same preservation, fresh-reading,
+counter and paused-ownership checks. This is short continuity only, not a soak.
+
+Next: review local candidate before Test, and separately review a fresh
+coordinator replan/resumption. Never resume the
+old intent or elevated reserve automatically. Other tasks may read this status;
+no cross-task mutation authority is implied.
+
+## 1.11.20 recovery release held; queue diagnostics prepared — 1 November 2026
+
+Recovery fix committed/pushed as fb053dbf401d7d36d59f9423cd4714c39f1bfe24.
+Clean exact-source 1.11.20 archive validated with pinned CLI 4.5.3; manifest is
+outputs/ecoflow-recovery-1.11.20-build.json outside Git. Archive SHA256
+5304493340c456e352b4f72f3776f304676bf582e4059839d68f6cd764bdc439.
+Installation and then Test publication held: fresh private coordinator preflight
+found faulted/incomplete expired lease, an outstanding intent, Office reserve
+held above restoration and discharge in progress. No app restart, runner pause,
+lease/intent/fault edit or battery operation performed. Owner authorised a note
+asking the Homey automation task to investigate read-only and propose safe
+reconciliation for review; note delivered. No installation can proceed from a
+forecast alone. Test remains 1.11.19/build 86; Live and installed unchanged.
+
+Separate uncommitted engineering work instruments the existing original-driver
+consumer queue: bounded per-source queued/started/completed/failed/skipped counts,
+pending/running counts and relative receipt ages. Fixed metadata only; no raw
+payloads, identities, exception text, new subscribers or device requests. Export
+is allowlisted through reportingSnapshot; completion is not acceptance or valid
+telemetry. This distinguishes callback receipt awaiting processing from absence
+of consumer delivery; it does not distinguish broker silence from upstream
+routing loss. Queue draining/shutdown behavior remains unchanged. Diagnostics
+are NOT included in the already-built archive or its CI evidence.
+
+Exact recovery CI passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41322550578 .
+Separate queue-diagnostic work passes all 1,368 tests, lint, release:check, diff
+check and pinned verified validation locally; no remote CI for that work yet.
+
+## Original STREAM overlap recovery candidate — 1 November 2026
+
+Reproduced duplicate main verification across overlapping polls; base quota
+coalescing did not protect the aggregate prerequisite. Coalesce the entire poll
+per lifecycle and fence entry to the base poll. Regression verifies transient
+failure, retry recovery, availability and counters. Not proven as Stefan's cause.
+See [audit and diagnostic limitations](ORIGINAL_STREAM_FREEZE_INVESTIGATION.md).
+Source-only changes; no commit/push, Test/Live change, installation or message.
+Sprint 1 preservation regression and unrelated local AI edits retained.
+Ed's reviewed reply was posted and reopened at public post 85:
+https://community.homey.app/t/app-pro-ecoflow-stream-series-solar-battery-smart-meter-and-homey-energy-automation/157399/85 .
+Field confirmation of Ed's installed version/device type remains pending.
+
+Validation for this candidate: Node 22 committed-lockfile npm ci, all 1,366 tests,
+lint, release:check, git diff --check and pinned Homey CLI 4.5.3 verified validation
+passed. No new remote CI or physical acceptance claimed.
+
+## Sprint 1: ES22 legacy-runtime mismatch — 1 November 2026
+
+Reviewed the new AC 5000 blank-telemetry report against its diagnostic email:
+user states 1.11.19; diagnostic identifies 1.10.3/build 18 and original STREAM
+pairings. Current source already excludes/quarantines those pairings. No new
+1.11.19 telemetry defect confirmed. Added preservation regression for both real
+legacy drivers; field confirmation remains pending. See
+[review and unsent reply](STREAM_5000_LEGACY_PAIRING_REVIEW.md).
+Correction to the earlier publication checkpoint: Robert's approved 1.11.19
+instructions WERE posted and reopened in Chrome; permanent private post is
+https://community.homey.app/t/dual-ct-error-2/161570/30 . No new response was present
+at the 1 November review. Test/Live/installed unchanged by this sprint.
+
+Validation: Node 22 committed-lockfile npm ci, all 1,365 tests, lint, release:check,
+git diff --check and pinned Homey CLI 4.5.3 verified validation passed.
+Runtime fingerprint remains unchanged; no new field acceptance is claimed.
+
+## Test 1.11.19 / build 86 verified — 31 October 2026
+
+Diagnostic source `4aeb5c91187bc5c1654562d9caa108dbc2ce3351` pushed; exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41243570750 passed.
+All 1,364 tests, locked Node 22 install, lint, release:check, diff check and pinned
+Homey CLI 4.5.3 verified validation passed. Clean committed-source archive SHA256
+`f05f1f520bfafd53dab5c23adaac7c0ffeb6ebe8a381d026d65447095facd816`; runtime
+fingerprint `14cbea1797cd3591d7345e11b95b3c160ffd35717d18beb41e871053380fe866`.
+Build 86 metadata matched EN/DE/NL; Test activation confirmed through developer API.
+Live remains 1.10.3/build 18. Installed Development 1.11.16 remains running with
+the same devkit session. All device identities, EcoFlow device definitions, 101
+Flows and 1,204 Insights identities preserved; single-phase CT1 available.
+Concurrent unrelated device metadata and houseReserveLease hash changed during
+readback; no full-house settings equality is claimed. This release issued no
+installation, battery command, settings write or Flow execution. Hardware gates
+remain open. Robert's version-specific message is prepared locally but NOT SENT:
+browser access returned unavailable. Resume posting the approved draft and verify
+its permanent item when browser access is restored; no new release needed.
+
+## 1.11.19 diagnostic Test release preparation — 31 October 2026
+
+Owner approved committing/pushing the targeted comparison, publishing to Test and
+sending Robert the reviewed steps. Version 1.11.19 contains the bounded incoming
+metadata and three-stage comparison, plus the sparse-feed replay tests. Existing
+message admission, counters, source binding and freshness rules remain unchanged.
+Local Node 22 locked install, all 1,364 tests, lint and release:check pass.
+CI, archive and Test activation remain to be verified. Live and installed app
+are outside this release scope. Local AI workflow edits remain unstaged.
+
+## Targeted Dual CT comparison candidate — 31 October 2026
+
+Added bounded incoming message metadata to detailed-monitor and community-trial
+support evidence: command IDs including rejected 39, fixed topic class, CT1 field
+presence, outcome, receipt gaps and counts. No values, IDs, payloads or new network
+operations. 32 groups / 15 minutes; decoder admission and Energy rules unchanged.
+Added EN/DE/NL three-stage local-GET comparison workflow producing one copyable
+report. User-labelled phases do not prove native actions; outgoing commands remain
+unobserved. See [tester draft and interpretation](DUAL_CT_TARGETED_COMPARISON.md).
+
+Source remains local and unversioned relative to Test 1.11.18. No push/publication,
+installation or tester message. Preserve earlier sparse-feed tests and local AI
+workflow edits. New Test release and instructions require the next reviewed step.
+
+Local validation: committed-lockfile npm ci, all 1,364 tests, lint, release:check,
+git diff --check and pinned Homey CLI 4.5.3 verified validation passed. Hardware
+acceptance gates remain pending; no new remote CI or field result is claimed.
+
+
+## Dual CT native bridge trace and validation proposal — 31 October 2026
+
+Static trace now reaches EFSmartDeviceModule.sendMsg. Product-specific request is
+ConfigWrite 254/17, dst 2, ddst 1, V3, field 71 true only, needAck false, 6000 ms.
+Device-scoped session supplies same selected src/dest serial and actionId 0. Actual
+wire framing/topic/transport and firmware persistence remain inside native code or
+hardware; no MQTT encoder or command is qualified by this trace.
+
+Correction: Dual CT UI handles custom legacy 21 AND shared display 39. No field
+command-ID evidence yet shows that 39 caused a rejection; acceptance unchanged.
+Prepared [review protocol and vendor draft](DUAL_CT_TELEMETRY_REQUEST_REVIEW.md).
+Opening the native meter screen may send an upload command, so the proposed
+observation is approval-gated and not represented as purely read-only hardware work.
+No runtime/source behaviour change, hardware operation, install, publication or
+external message. Prior 1,358-test result remains applicable; this step changes docs
+only. Test/Live/installed state not freshly queried and unchanged by this work.
+
+
+## Sparse-feed replay and native telemetry lead — 31 October 2026
+
+Read-only research and offline tests following the latest 1.11.18 field summary.
+Two new regressions reproduce busy shared traffic versus sparse target delivery,
+recent detail versus expired Energy, checkpoint preservation and gap-safe recovery.
+All 1,358 tests, Node 22 locked install, lint and release:check pass. No new delivery
+bug confirmed; runtime and fingerprint unchanged. See
+[the investigation](DUAL_CT_SPARSE_FEED_INVESTIGATION.md) for evidence and next steps.
+
+Static native Dual CT code has a concrete on-demand upload lead: its online hook
+sends activeDisplayPropertyFullUpload through ConfigWrite (254/17, dst 2, field 71).
+This is NOT a qualified read-only GET. Outer envelope, persistent effects and
+snapshot-versus-stream behaviour must be resolved before proposing execution.
+No encoder/publish path or broadened message acceptance was added. Official 5000
+API and upstream HA research do not establish a Dual CT live-reporting contract.
+No hardware request, settings change, installation, publication or message sent.
+Sprint 1 complete; Sprint 2 qualification remains open. Test 1.11.18/build 85,
+Live and installed Development remain as previously recorded, not freshly queried.
+
+
+## Test 1.11.18 / build 85 verified — 31 October 2026
+
+Source `5c453f709a14725e73a87560038de086554fe884` committed/pushed; exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41239562446 passed.
+Locked Node 22 install, all 1,356 tests, lint, release:check, diff check and pinned
+CLI 4.5.3 verified validation passed. Clean-source archive SHA256
+`c269c67e9775973afd64557ac73116b779d58944a71b6cf0e6c060c451cfb30c`; runtime fingerprint
+`b7ae978883245330dd89d1562c053b3be829f68f8450af7f4a2ce2638ab8baca`. EN/DE/NL metadata matched; build 85 activated
+and read back as Test. Live remains 1.10.3/build 18. Installed Development 1.11.16
+and devkit session unchanged; EcoFlow definitions/settings, all device IDs, Flows
+and Insights IDs matched. CT1 remained available. Whole-house metadata changed and
+the running coordinator's houseReserveLease changed; no settings/lease write ran here.
+
+Focused tester reply sent, signed JZ, and permanent item reopened/verified. Requested
+one existing small support summary after about ten minutes or after recurrence,
+without re-pairing, Repair, settings/Energy changes or separate raw capture. Explicitly
+explained shared socket vs target device counts and that this is a diagnostic correction,
+not a proven delivery fix. Next sprint depends on field summary; no hardware changes.
+
+
+## 1.11.18 Test candidate — 31 October 2026
+
+Owner approved release of the prepared socket/routing diagnostic correction to Test
+and focused tester instructions. Live and installed Development remain unchanged.
+No telemetry requests, stream activation, new subscriptions or accounting changes.
+
+
+## Dual CT 1.11.17 zero-delivery investigation — 31 October 2026
+
+Reviewed and locally decoded the newest private tester support summary. Both roles
+show connected/listening, two active topics, zero pending/rejected/timed-out topics,
+zero routed frames, zero decoder rejections, no retry scheduled. Detailed monitor
+waited about 382 seconds. Whole-property Energy remains unconfirmed/inactive per
+tester correction; a paired community-trial role is not proof of Energy selection.
+
+Confirmed diagnostic defect: receivedFrames is incremented only after topic/serial
+routing, so zero cannot distinguish socket silence from discarded routing traffic.
+Added bounded current-connection socket message, route-rejection and PINGRESP counts,
+relative ages and explicit shared_current_connection scope. These are shared socket
+observations, not Dual CT-specific receipts; other devices may contribute. Existing
+per-device delivery counters remain separate. Old socket callbacks cannot update
+new evidence, and replacement connections reset socket counts. No new subscription,
+publish, reconnect, timer, control, decoder permission or accounting change is added.
+Red regression reproduced the missing evidence; all 1,356 tests, locked Node 22
+install, lint, release:check, diff check and pinned CLI verified validation pass.
+Changes remain local for candidate review, without version bump or publication.
+Test 1.11.17/build 84, Live and installed Development were not changed by this task.
+
+Delivery failure remains unexplained. Upstream HA cloud_mqtt.py uses the same two
+app topic families, plus an open quota topic; non-listen-only paths send explicit
+get-all/latestQuotas and optional stream activation. Its comments about stale feeds
+include other products, not validation for this Dual CT/firmware. Do not copy its
+SET/stream switch or treat reply payloads as fresh Energy intervals. Reference:
+https://github.com/shuette42/ecoflow-energy-ha/blob/main/custom_components/ecoflow_energy/ecoflow/cloud_mqtt.py
+
+Bounded sprints:
+1. Evidence/routing audit COMPLETE: decoded report; reproduced diagnostic ambiguity;
+   regression-tested socket-vs-route-vs-consumer separation and privacy.
+2. Field delivery qualification PREPARED: review/release the diagnostic correction;
+   collect one current summary under ordinary use. Shared socket zero + recent
+   PINGRESP means broker responsive but no PUBLISH reached this socket. Socket
+   messages with route rejects require route investigation; socket messages without
+   rejects but no target frames mean traffic belongs elsewhere, not target recovery.
+   Do not re-pair, reset counters or assume native EcoFlow readings prove MQTT delivery.
+3. Demand-driven telemetry/recovery PENDING: if genuine target silence is established,
+   first qualify a product-specific read request and its response envelope using
+   authoritative/vendor evidence or existing authorised captures. Prepare exact
+   one-shot request, no SET/stream activation, cooldown/deadline and echo/reply fences
+   for review before hardware execution. A cache reply cannot become live accounting
+   evidence. Stable normal-use/48-hour acceptance follows a confirmed correction,
+   not merely green tests or an acknowledged subscription.
+
+No extra tester request or external message was sent. Preserve private report locally;
+do not upload the original report or household evidence into Git.
+
+
+## Test 1.11.17 / build 84 verified — 31 October 2026
+
+Source `085969ad0a11a1cd57e63144655e2b4a6c08daa9` committed and pushed on diagnostic branch.
+Exact CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41230122689
+passed. Clean source packaged with pinned CLI; archive SHA256
+`465ba8fe006fb687d9c1d4f0320f70346d9a38843d1149f8eba6422afaed6c11`; runtime fingerprint
+`b17bdae75c722665941b963b0f212487e1cc9cfbe3e2b783ea4c882e1f5436ee`. EN/DE/NL metadata matched; build 84 activated
+and read back as Test. Live remains 1.10.3/build 18. Installed Development 1.11.16
+charging-reliability archive and devkit session were unchanged. All EcoFlow device
+definitions/settings, app settings, device IDs, Flows and Insights identities matched
+the private baseline. CT1 remained available; unrelated whole-house device metadata
+changed during observation, so no claim of whole-house metadata equality is made.
+
+Focused tester instructions sent, signed JZ, and reopened at permanent item for
+verification. Acknowledged that whole-property Energy is not configured on the
+tester installation. Requested one small Dual CT support summary after recurrence
+(or after ten minutes without recovery), without re-pair, Repair, settings change,
+forced reconnect or raw capture. Await that evidence; root cause and stable physical
+recovery remain unconfirmed. No installation or hardware change ran in this task.
+
+
+## Dual CT targeted diagnostics / 1.11.17 candidate — 31 October 2026
+
+Owner authorised a targeted app diagnostic, Test release and tester instructions;
+Live and installed Development remain unchanged. Preserves newer committed charging
+reliability changes (e512d61); these are included in this candidate, not reverted.
+Current installed Development is the separate 1.11.16 charging-reliability archive.
+
+Latest private tester evidence: 1.11.16 received three rejected frames classified
+scope_or_receipt_rejected, later briefly displayed detailed CT1 readings, then became
+unavailable again. Tester explicitly says whole-property Energy selection is not
+active. This proves intermittent accepted readings, not a broken saved pairing or
+stable Energy operation. No re-pairing is justified by this evidence.
+
+Split the broad monitor rejection into topic category, buffer/size, clock/receipt
+validity, future receipt and expiry classifications. The checks and acceptance
+boundaries are unchanged. Reply-topic traffic is labelled separately and remains
+ineligible for live readings. Added up to 32 coalesced recent classified events
+with relative ages, plus retry scheduling state. Preview availability transitions
+and three-phase startup/delivery/recovery events are included. Events are local,
+volatile, bounded and contain no topic strings, IDs, errors, packets or readings.
+Repeated adjacent reasons coalesce; the age is of their latest occurrence. Event
+history survives local recovery but resets when the device/app instance restarts.
+
+App settings now offer Show Dual CT support summary (EN/DE/NL). It uses the existing
+read-only local support endpoint and extracts only app/Homey versions and sanitised
+Dual CT sections. Existing Copy integration support report copies this small result;
+no discovery, forced reconnect, settings change or automatic upload is performed.
+
+Regression coverage separates rejection gates, acceptance then natural expiry,
+bounded/coalesced history, clock reversal, event sanitisation and summary copy/privacy.
+Node 22 locked install, all 1,354 tests, lint, release:check, diff check and
+pinned CLI 4.5.3 verified validation pass.
+Counter/accounting and freshness policy are unchanged. Hardware root cause is still
+unconfirmed; this release supplies discriminating evidence rather than claiming a fix.
+
+
+## 31 October 2026 — charging reliability source review
+
+Owner authorised review, commit and push of the charging reliability changes.
+Review covers independent configuration freshness, fail-closed restoration and
+manual ownership, bounded failure history/notifications, and regression coverage.
+HomeyPro also includes the previously deployed 95% pre-peak readiness policy and
+its tests. No further installation, Homey control, settings/Flow change or Codex
+monitoring-task resumption is authorised by this source-publication step.
+Private evidence and unrelated local-AI workflow edits remain outside the commits.
+Earlier uncommitted-source statements below describe their dated checkpoints.
+
+## 31 October 2026 — owner house charging reliability repair installed locally
+
+Owner authorised missed-house-charge diagnosis, repair and bounded physical proof.
+Preserved private evidence identifies the 02:33 coordinator ownership latch after
+an office-first watchdog restoration, with stale house configuration. That latch
+blocked both roles until separate owner-reviewed reconciliation at 16:20. The
+initial missing configuration field/transport cause is not established.
+
+Fixed watchdog refresh selection: old reserve/mode/task configuration now triggers
+a bounded read even with fresh power; refresh begins at 600 seconds while the
+1200-second validity horizon remains. Expiry can reread stale configuration only
+after office stop, and cannot adopt a manually changed reserve. New regressions
+cover recovery with fresh power, unrecoverable stale configuration, office-first
+stop and manual ownership. All 1351 tests, lint, release checks, diff check and
+pinned CLI verified validation pass.
+
+Installed a non-clean local Development 1.11.16 patch, same version but distinct
+uncommitted archive SHA256
+`dec5aa02c3c63fa7eca31f0b5c5eece5e5c98d8674e2e4401822db76239ac384`.
+No Store channel/publication, identity, pairing, device-definition or Energy change.
+The coordinated runner was paused safely with house 0%, office 3% and completed
+lease, then restored. A one-off 1% house reserve test with native 180-second lease
+showed approximately 2.5 kW actual charging, +0.030 kWh charged and SOC 0% to 1%.
+Scoped stop/native expiry restored house reserve 0%, office 3%, completed/no-fault
+lease; subsequent house discharge approximately 795 W observed. This is bounded
+charge-path evidence for this archive, not full monitoring/release acceptance or
+a future tariff schedule/bill-saving result. General acceptance ledgers unchanged.
+
+Private preservation readback retained all device IDs, 14 EcoFlow definitions,
+Flows, Insights identities, 10 sampled cumulative counters, house/CT1 limits/mode/
+settings and office owner-controlled feed-in. Current property meter is the Dual CT
+Energy device (Single phase / CT1); older smart meter is office only. All six office
+unit powers are now reported; synchronized fleet energy balance remains unqualified.
+HomeyPro source retains forecast demand baselines and new bounded failure history.
+No source commit/push or Codex monitoring-task resumption in this change.
+
+## Test 1.11.16 / build 83 published — 31 October 2026
+
+Source `a177dfa44a6871503d8a637e70ff0545c388a386` pushed to diagnostic branch.
+Exact CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41221140493
+passed; locked Node 22 install, 1,348 tests, lint, release:check, diff check and
+Homey CLI 4.5.3 verified validation passed. Clean committed-source archive SHA256
+`5e45fca3dd246f8236c941d6174c5d8ed6eb7b9538a592c37d0e854bb24fdf17`;
+runtime fingerprint `71209ae5f6de8ecde1e75446827390a8da7dad21fccbd0e38dc4a1a17b640ca6`.
+Build 83 processed with matching EN/DE/NL listing/changelog, activated and read back
+as Test. Live remains 1.10.3/build 18. Installed Development 1.11.14, devkit session,
+all EcoFlow device definitions/settings, all device IDs, Flows and Insights IDs
+were preserved. Single-phase CT1 remained available. Whole-house metadata comparison
+was not identical: two non-EcoFlow devices changed, and the running coordinator's
+houseReserveLease changed. No installation, hardware commands or settings edits ran.
+
+Tester update sent and permanent item reopened/verified, signed JZ. Requested ordinary
+observation after update, keeping existing devices/settings/counters, and only the
+current bounded Dual CT report sections if unavailable. No re-pairing or raw capture.
+The exhausted shared-topic retry defect is reproduced and fixed; it is not proven
+to explain the tester's current outage. Full-release hardware gates remain open.
+
+
+## Dual CT reliability review / 1.11.16 candidate — 31 October 2026
+
+Owner authorises focused review followed by commit/push, CI, Test publication and
+a tester update. Includes the previously reproduced exhausted shared-topic retry
+fix. New churn regression proves repeated attach/detach does not multiply a
+scheduled retry or resubscribe the healthy topic. Reviewed sparse/mixed/partial
+packets, delayed/duplicate/retained frames, source qualification, startup recovery,
+shutdown and checkpoint preservation against existing driver/protocol regressions.
+No additional accounting defect was confirmed; freshness and source gates remain.
+
+Added allowlisted startup failure counts to three-phase support feedback: source,
+contract, binding, admission (including checkpoint/overlap), subscription and later
+identity refresh. Stale asynchronous generations cannot record current failures.
+No raw exception text, account, serial, power or counter values are added. New
+real-driver regressions cover source/contract/binding/subscription failures,
+single retry scheduling, cleanup and unchanged counters/store. These counts are
+historical since app startup, not a claim that the latest failure remains active.
+Current tester Dual CT outage is still unproven; no re-pairing is requested.
+
+Candidate validation: Node 22 npm ci, 1,348 tests, lint, release:check, diff check
+and pinned Homey CLI 4.5.3 verified validation pass. Hardware acceptance gates
+remain open; this is a Test candidate, not full-release hardware signoff.
+
+## Dual CT three-path investigation — 31 October 2026
+
+Reviewed existing private 1.11.12 support extract, 1.11.13 failure report and the
+previously read 1.11.14/1.11.15 community updates. The latest updates show both
+Dual CT roles unavailable while other devices recovered, but contain no current
+subscription counters or binding diagnostic. No new capture was requested.
+
+1. Subscription: 1.11.12 reported two accepted topics, zero denied/timed-out topics,
+   three frames and approximately 250 seconds since the last frame. This proves
+   earlier delivery, not current broker health. Found a separate reproducible
+   exhausted-retry defect: an existing listener kept a failed topic attached, and
+   a newly attached recovering consumer never restarted its exhausted retry.
+   Local fix retries only rejected/timed-out topics with no scheduled timer when
+   a new handler joins. Active/pending topics and existing retry timers are kept;
+   each new attempt retains the three-attempt bound. No forced socket reconnect,
+   meter status request, fabricated frame or accounting write is added.
+2. Rejections: earlier evidence records one admitted CT1 anchor plus an unrelated
+   message and delivery gap; two preview packets were accepted. Existing synthetic
+   sparse-feed replay continues to match the classifications and zero coverage.
+   This is consistent with missing subsequent delivery; it does not identify why
+   delivery stopped. No decoder/freshness relaxation is justified by the evidence.
+3. Bindings: an admitted anchor required the saved account/source/grid binding to
+   pass at that earlier time. Latest messages do not establish a binding mismatch.
+   Existing three-phase binding/checkpoint and single-phase preservation tests pass.
+   Re-pairing would replace identity/counter continuity and is not justified yet.
+
+New regression failed before the fix (no retry on new consumer) and passes for
+both denial and timeout exhaustion. It also verifies no healthy-topic resubscribe,
+no fabricated telemetry, duplicate-listener idempotence and both consumers receiving
+later frames. Node 22 locked install, all 1,346 tests, lint, release:check, diff check
+and Homey CLI 4.5.3 verified validation pass. This fix is not established as the
+cause of the tester's current outage. Next evidence, if needed after review, is a
+small current-version subscription/rejection/binding classification, not another
+raw household report. No commit/push, publication, install or hardware changes.
+
+## Test 1.11.15 / build 82 published — 31 October 2026
+
+Cleanup source committed/pushed as `69c3356b049fba0330f9cc3d30fca59fbd64cf9b`.
+Exact CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41219610862
+passed. Clean-source archive SHA256 `4741bb499ef3f08750ce51e3b439e11fcf77860939158adc9f5637e214566659`;
+packaged-source fingerprint `a4fdc5caac49b28eaeb9421d37dc8ddd81465a0e9331f7e4b2dabd7ab114d4ea`.
+Build 82 processed, EN/DE/NL metadata matched, Test activated and read back.
+Live remains 1.10.3/build 18. Installed Development 1.11.14 and devkit session
+are unchanged. All EcoFlow device definitions/settings, all device IDs, Flow
+contracts and Insights IDs match publication baseline. House reserve lease changed
+while the resumed coordinator operated; app-wide settings equality is not claimed.
+Other-app device metadata also differed; whole-house equality is not claimed.
+
+Authorised tester update posted and reopened. It acknowledges broader recovery
+on 1.11.14 while both Dual CT roles remain unavailable, explains this release's
+setup/display scope, and does not request repeated captures, re-pairing or claim
+the remaining feed failure is fixed. Private receipts/correspondence stay outside
+Git. Next investigation: remaining shared Dual CT feed; hardware gates remain open.
+
+## Test 1.11.15 preparation — 31 October 2026
+
+Owner authorises diagnostic-branch commit/push, exact CI, Test publication and a
+community tester update. Cleanup changes validated with locked Node 22 install,
+1,345 passing tests, lint, release checks and Homey 4.5.3 verified validation.
+New version 1.11.15 distinguishes the release from installed Development 1.11.14
+cleanup. Publication must preserve Live and the installed Development session.
+Fresh tester feedback confirms broader devices recovered on 1.11.14 but both
+Dual CT roles remain unavailable. This presentation cleanup does not claim to fix
+that remaining field problem. Private correspondence is retained outside Git.
+
+## Owner Development cleanup installed — 31 October 2026
+
+Owner approved fault reconciliation, temporary coordinator pause/resumption and
+non-clean local installation. Fresh preflight found App Store 1.11.14 installed,
+superseding the earlier Development 1.11.10 observation. The Office watchdog had
+restored reserve from 13% to 3%; House configuration freshness then faulted and
+the coordinator retained its earlier 13% expectation. With execution paused,
+read-only refresh confirmed House reserve 0%, Self-powered, no tasks, and Office
+reserve 3%. The owner-approved reconciliation preserved faults in maintenance
+history, marked the restored lease complete and aligned the Office expectation.
+No direct battery-setting command was issued.
+
+The uncommitted cleanup candidate was installed non-clean as Development 1.11.14
+(same version number as store Test, distinct archive). Archive SHA256:
+`1af89d7435fe34376e672883ebb4f151cbfa7d8f63e80763a2b1b681b1c7638a`;
+packaged-source fingerprint:
+`e3df8b0ab90257604871fe02a9e7a426462d10fb895ef1253bd768c036e1440f`.
+Homey delivery acknowledged and running devkit_install readback verified. This
+fingerprint identifies the packaged source; no separate runtime hash API claim.
+All 14 EcoFlow devices became available, including both Dual CT roles. Energy
+settings show Single phase — CT1. Existing identities/names/zones/capabilities,
+settings (apart from the new presentation label), Flows, Insights IDs, app settings
+and nondecreasing cumulative counters passed offline baseline/readback comparison.
+Store channels were unchanged. Original coordinator config and execution Flow
+were restored after fresh readings and preservation checks. No Test/Live publication,
+Mainline change or new hardware acceptance claim. Private receipts stay outside Git.
+
+## Pre-Test setup and compatibility cleanup — 31 October 2026
+
+Validation: Node 22 committed-lockfile install; all 1,345 tests, lint,
+release:check, git diff --check and pinned Homey CLI 4.5.3 verified validation
+pass. The label uses paired_mode_summary to avoid Homey reserved setting prefixes.
+
+Local candidate updates the README and EN/DE/NL research guidance for one Dual CT
+pairing entry and STREAM 5000 Home Battery naming. CT2 is optional circuit detail,
+not a separate solar/load Energy contributor. Cloud response time is not promised
+from native product marketing; CT1 totals remain observed-power estimates excluding
+gaps. Research candidates are distinct from qualified CT1 accounting.
+
+The Energy device now shows a read-only Paired Energy mode label in Advanced
+Settings, sourced from saved pairing consent/mode. Display choices cannot change
+that authority. Label failures do not block optional details. No source migration,
+capability removal or counter rewrite is introduced. Existing user names remain.
+
+Offline regression coverage compares both legacy-monitor and Energy capability,
+repair and Energy contracts against the published 1.11.14 source baseline; the
+fixture is public manifest data, independent of Git history availability in CI.
+Driver tests cover single/three-phase labels, display changes, unchanged bindings
+and counters, and label write failure. This is software upgrade coverage, not an
+installed Homey upgrade or field acceptance. Three-phase feedback and hardware
+release gates remain open. No publication, install, restart, battery or Energy
+activation is authorised or performed by this cleanup.
+
+## Dual CT picker consolidation — 31 October 2026
+
+Local candidate supersedes the two-entry naming proposal below. New pairing has
+one Smart Meter Dual CT entry: the existing property Energy driver with single-
+phase or explicitly consented three-phase community-trial source selection,
+per-phase details and optional CT2 display. CT2 is not included in property
+Energy totals; qualification, overlap and freshness safeguards are unchanged.
+
+The older detailed-monitor driver is deprecated in the manifest, hiding it from
+new pairing while retaining its implementation, repair, capabilities and existing
+paired devices. No automatic conversion, deletion or re-pairing is performed.
+Raw diagnostic counters are not promoted to Energy totals. STREAM 5000 Home
+Battery naming is retained for the driver and newly paired default names; existing
+custom device names remain unchanged.
+
+Validation: committed-lockfile npm ci on Node 22; all 1,343 tests, lint,
+release:check and pinned Homey CLI 4.5.3 verified validation pass. The added
+regression protects the single visible entry, legacy compatibility and phase/CT2
+capability contracts. Hardware acceptance gates remain open. This is local source
+only: no commit/push, publication, installation, Energy or battery changes.
+
+## Driver naming clarification — 31 October 2026
+
+Local presentation update distinguishes Dual CT detailed readings from Homey Energy;
+these are roles, not separate phase-count drivers. Renamed the 5000 system driver
+and new-device default to STREAM 5000 Home Battery. Existing device names/IDs,
+counters, settings and Flows are not migrated. Test/Live/installed app unchanged.
+
+## Test 1.11.14 / build 81 published — 31 October 2026
+
+Combined candidate committed/pushed as `98110f7567e2a6300074d862991435bd2beece66`. Exact CI
+https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41216647134 passed.
+Node 22 locked install, all 1,342 tests, lint, release checks and pinned Homey
+4.5.3 verified validation pass. Browser fixture clock setup was corrected after
+the release run exposed a pause-in-the-past race. Archive SHA256:
+`2ec5a0e1ffbc0d5d79420194d6739ba62ce24d591f8b86b8a30c83cde8021ca5`; runtime fingerprint:
+`769e37db6b5a4929adb38a6c9b72c5014c254b3747ff69fb33f7810c3eb76ec1`. All 2,034 archive files match the clean committed
+source build; unrelated local-AI workflow edits were excluded and preserved.
+
+Test activation of build 81 and en/de/nl metadata are verified. Live stays
+1.10.3/build 18. Read-only baseline/readback confirms installed Development
+1.11.10 running with unchanged devkit session; 14 EcoFlow definitions/settings,
+app settings, all device IDs, 101 Flow contracts and 1,204 Insights IDs preserved.
+Whole-house device metadata differs outside EcoFlow; whole-house equality is not
+claimed. No installation, restart, pairing, battery/Flow/Energy change occurred.
+Mainline unchanged. No new hardware acceptance or 48-hour soak pass is claimed.
+
+Authorised community reply sent and reopened: requests five-minute availability,
+15–30-minute normal-use freshness/recovery, retained Dual CT totals and Energy
+visibility on existing devices. No re-pair/reset, setting change or large capture.
+Correspondence, screenshot proof and private receipts remain outside Git.
+Field cause/recovery remains unconfirmed. Next: review feedback before more changes.
+
+## Test 1.11.14 preparation authorised — 31 October 2026
+
+Owner authorises committing/pushing the combined account/lifecycle candidate,
+checking exact CI and publishing Test, then updating the community tester with
+bounded existing-device tests. Live, Mainline and installed Development must stay
+unchanged. Version 1.11.14 includes the prior fixes and fixed-label error logging.
+Release checks also exposed a browser fixture clock race; setup now installs the
+clock before its pause target. Hardware recovery and final-candidate soak remain
+open. Publication awaits exact CI and archive/channel verification.
+
+## Focused reliability bug bash — 31 October 2026
+
+Completed the bounded offline review of authentication, mixed-device startup,
+connection lifecycle, durable counter recovery and repeated recovery cycles.
+Added four regressions: twenty concurrent failed sign-ins share at most one
+attempt per allowed region and subsequently recover with one login; auth failure
+logs exclude arbitrary upstream text; thirty failed-handshake/recovery cycles
+retain both meter/battery consumers without accumulating managed timers or replaying
+late frames; an applied checkpoint write whose acknowledgement fails restores the
+durable total and starts a new anchor without double-counting or filling the gap.
+
+Confirmed additional defect: auth/MQTT error logs forwarded arbitrary upstream
+exception text. Those paths now use fixed failure labels, including app-owned
+MQTT connect/reconnect/teardown logging. The new privacy assertions failed before
+this fix and pass afterward. No claim of an actual credential disclosure is made.
+The behavioral assertions in the new recovery/durability tests already passed;
+no speculative accounting or connection-policy change was made for those cases.
+
+Existing full-suite checks also cover original/ES21/ES22/Dual CT coexistence,
+50 research-listener detach cycles, actual locked MQTT.js SUBACK rejection/retry,
+bounded missing acknowledgements, stale callback isolation, single/three-phase
+accounting, storage conflicts/readback failure and a synthetic 72-hour ledger
+replay. These are simulated/offline checks, not field telemetry or heap profiling.
+
+Combined candidate: Node 22 committed-lockfile installation (zero audit findings),
+all 1,342 tests, lint, release checks and pinned Homey CLI 4.5.3 verified validation
+pass. No new field recovery conclusion: sparse delivery and the reported original
+aggregate outage remain unresolved in the field; final-candidate 48-hour hardware
+soak remains outstanding. Keep them distinct from passing regression tests.
+
+All changes remain local, uncommitted and unversioned on the diagnostic branch.
+Previous fixes and unrelated local-AI workflow edits are preserved. Test, Live,
+Mainline and installed Development remain unchanged. No hardware command, restart,
+re-pair, setting/Flow operation or external message/capture request was performed.
+Next: review/version the combined candidate for a separately authorised Test build,
+then verify recovery with existing devices rather than adding speculative fixes.
+
+## Connection lifecycle review candidate — 31 October 2026
+
+Continued the shared-account candidate with an offline connection/recovery review.
+The shared MQTT handshake now rejects pending consumers when its owned socket is
+destroyed or shutdown begins, instead of waiting for a broker acknowledgement.
+A regression failed before this change and passes afterward. STREAM 5000 subscription
+retries now share one in-flight attempt, preventing overlapping timer callbacks
+from racing subscription state. Generic connection failures no longer tell users
+to change account credentials; missing data remains explicitly unknown.
+
+Additional tests cover shutdown with concurrent consumers, repeated 5000 retry
+calls, and a silent serial alongside another actively reporting serial. Original
+STREAM source diagnostics now distinguish startup_unverified from an interruption
+after successful verification and identity_changed. Existing source-binding gates
+remain intact: no silent adoption of a new main, counter reset or re-pair shortcut.
+The earlier same-source recovery and credential-order regressions still pass.
+
+Review outcome by issue:
+- Shared connection: authentication races and the above lifecycle defects fixed
+  locally; no claim that screenshots identify the field broker failure.
+- Sparse Dual CT: replay still expires honestly and recovers without backfill;
+  silent-device isolation passes. The upstream reason for stopped publishing is
+  unresolved. No stream-switch request or quiet-feed reconnect loop was added.
+- Original aggregate: verified-source recovery passes; startup/identity blocks
+  now distinguishable. The reported aggregate outage is not field-resolved.
+- Error wording: generic transport failure no longer blames account settings.
+
+The combined candidate passes Node 22 locked installation, 1,338 tests, lint,
+release boundary checks and pinned Homey CLI 4.5.3 verified validation. Counter,
+freshness and single-phase/three-phase regression suites remain green. Final
+candidate hardware recovery and the 48-hour soak are NOT completed by these tests.
+Changes remain local/uncommitted/unversioned. Test, Live, Mainline and installed
+Development are unchanged. No hardware operations, external messages or new
+capture requests. Existing local-AI workflow changes are preserved separately.
+
+Next bounded step: review the combined source candidate before authorising a
+versioned Test build. Field validation should retain existing devices/settings and
+check sustained delivery, spontaneous recovery and counter continuity. If it still
+fails, distinguish startup_unverified/identity_changed from transport failure using
+the existing support report, rather than requesting another broad capture.
+
+## Shared app-account recovery candidate — 31 October 2026
+
+New community feedback on Test 1.11.13 reports both Dual CT devices and a physical
+STREAM 5000 unavailable, plus the original aggregate. Other original devices
+still display values, but their freshness is not established. This broadens the
+investigation beyond CT1 interval admission. Screenshots establish unavailable
+states, not a broker reason, credential rejection, or confirmed release regression.
+
+Source-only fixes now share one saved-account authentication client per Homey and
+exact credential set, bind broker-certificate decryption to the token used by the
+successful request, and prevent a late old-token rejection from discarding a
+newer session. Explicit pairing clients remain separate; removing/changing saved
+credentials invalidates the cache. No account session is persisted or logged.
+
+Two regressions failed on the prior implementation (independent saved-account
+clients and certificate decryption during token rotation). Three new tests cover
+shared concurrent/later login, credential removal/change and Homey isolation,
+certificate response races, and late old-token rejection. Node 22 locked install
+(audit clean), all 1,334 tests, lint, release checks and pinned Homey CLI 4.5.3
+verified validation pass. No decoding, counter, freshness, overlap or hardware
+control rules changed. This is not proof of the field cause or recovery.
+
+Changes are local, uncommitted and unversioned on the diagnostic branch. Existing
+AGENTS/local-AI workflow changes belong to other work and are preserved. Test,
+Live, Mainline and installed Development are unchanged by this task. No repair,
+re-pair, restart, setting, hardware request, new tester capture or message was sent.
+Next: review this bounded authentication candidate before authorising a Test build;
+confirm recovery on existing devices without counter resets. The original aggregate
+failure and sparse delivery still require field confirmation; do not declare them
+resolved from unit tests. Private report/screenshots remain outside Git.
+
+## Test 1.11.13 / build 80 published — 31 October 2026
+
+Owner authorised publishing the combined original STREAM recovery and Dual CT
+connection-boundary fixes to Test. Runtime source
+`8adf1908e0837c7531accdb98fc88161978d740f` is committed/pushed on the diagnostic
+branch. Exact [CI 41200109882](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41200109882)
+passed all checks. Local Node 22 locked install (audit clean), all 1,331 tests,
+lint, release checks and pinned Homey 4.5.3 verified validation also pass.
+
+Frozen archive SHA-256:
+`3dd9fa290a430628d7a05d176f1afacd8c5e51ce3aa19193949abafda69f137c`.
+Runtime fingerprint:
+`f9d74cc3e15e99b8298488fc61e7769496d75f0c3b6fcea28f199825d21a85f5`.
+All 2,034 packed files match the validated build; private/env/work/output paths
+are excluded. Build 80 is confirmed active on Test as 1.11.13, with matching
+en/de/nl listing and changelog. No certification/Live submission was performed.
+
+Read-only baseline/readback confirms installed Development 1.11.10 running with
+the same devkit session. All 14 EcoFlow device definitions/settings, app settings,
+101 Flow contracts, 1,204 Insights identities and all device IDs are preserved.
+Eight comparable cumulative capabilities are numeric and nondecreasing. Other
+apps refreshed device metadata, so whole-house metadata equality is not claimed.
+Existing owner CT1 is available on the unchanged installed runtime; this is not
+an installed 1.11.13 hardware pass. Live remains 1.10.3/build 18; Mainline remains
+`66b1cb5f828a53333739798281fce86125f61c28`.
+
+[Sparse-feed investigation](DUAL_CT_SPARSE_FEED_INVESTIGATION.md) and
+[original STREAM findings](ORIGINAL_STREAM_FREEZE_INVESTIGATION.md) retain their
+limits: the field cause of sparse delivery remains unproven and full-release
+hardware gates remain open. No install, restart, setting/Flow/battery command,
+Energy change, repair or re-pair occurred. The community reply is a private draft
+for owner review and has not been sent. Publication receipts, preservation data
+and the draft remain outside Git.
+
+## Test 1.11.13 preparation authorised — 31 October 2026
+
+Owner authorises committing/pushing the combined original STREAM recovery and
+Dual CT connection-boundary fixes, checking exact CI and publishing Test only.
+This supersedes the prior Test publication hold; full-release/hardware gates
+remain open. Live, Mainline and installed Development must remain unchanged.
+A reply to the community tester must be drafted for owner review, not posted.
+
+Candidate 1.11.13 preserves the evidence limits recorded below: sparse delivery
+is reproducible but its field cause is unproven. No automatic meter requests,
+forced reconnects, counter resets, re-pairing or Energy/settings changes are added.
+Publication awaits final checks, exact-commit CI and frozen archive verification.
+
+## Sparse Dual CT feed reproduced; release remains on hold — 31 October 2026
+
+The latest private, manually transcribed support extract establishes accepted
+subscriptions and an admitted CT1 anchor followed by genuinely stale delivery.
+It does not establish why publishing stopped. A generated three-frame replay
+matches the reported acceptance/rejection classifications and zero eligible
+coverage; it is a possible sequence, not the actual packet chronology. Missing
+power remains unknown, counters stay unchanged and sustained fresh delivery
+recovers on the existing subscription without backfill.
+
+A separate confirmed defect allowed a fast socket replacement with increasing
+sequences to integrate across the interruption. Local connection epochs now
+invalidate the crossing interval and use the existing in-place anchor reset.
+Single-phase and three-phase import/export regressions protect checkpoints,
+freshness and normal recovery. This is not claimed to solve the field feed stall.
+
+[Investigation and evidence limits](DUAL_CT_SPARSE_FEED_INVESTIGATION.md) records
+the findings. Node 22 locked install, all 1,331 tests, lint, release checks and
+pinned Homey 4.5.3 verified validation pass locally. Published-guard comparison
+confirms the new accounting regression fails before the fix. Changes remain
+local/uncommitted/unversioned; prior original STREAM fixes are preserved. Release
+is on hold; Test, Live, Mainline and installed Development remain unchanged.
+No restart, hardware request, settings change, new tester capture or message.
+
+## Original STREAM freeze recovery candidate prepared — 31 October 2026
+
+Latest original STREAM feedback confirms freezing persists on 1.11.12. The new
+manual diagnostic matches that version but contains startup logs only, so it does
+not establish the event's root cause or a process crash. No new reply/capture,
+remote operation or hardware action was performed for this investigation.
+
+Confirmed source defects: a transient aggregate-main lookup failure permanently
+latched telemetry off, even after fresh same-source verification; rotated API
+credentials were refreshed only after that prerequisite lookup; MQTT availability
+could claim online while the binding gate suppressed quota application. Candidate
+allows telemetry polling to recover only the previously session-verified same
+source, refreshes credentials first, and keeps changed/unverified identities and
+controls blocked. Totals/raw baselines are retained and power gaps are not filled.
+Fixed log classifications and whitelisted recovery counts make future evidence
+useful without publishing household data. Late old-session lookup results cannot
+invalidate a newer initialized session.
+
+[Investigation and regression evidence](ORIGINAL_STREAM_FREEZE_INVESTIGATION.md)
+records the limits. Local Node 22 locked install, all 1,327 tests, lint, release
+checks and pinned Homey 4.5.3 verified validation pass. Six new regression cases
+cover recovery, changed identity, credential ordering, accounting, privacy and
+lifecycle safety. Changes are local, uncommitted and unversioned. Test 1.11.12,
+installed Development 1.11.10, Live 1.10.3 and Mainline remain unchanged; no new
+field pass or exact-commit CI is claimed.
+
+## Test 1.11.12 / build 79 published — 31 October 2026
+
+Owner authorised publishing the reviewed shared-delivery fixes to Test for the
+community tester. Runtime source `2014544ebada21aee14bdbe6658370ea7c59bf18`
+was committed/pushed on the diagnostic branch. Exact
+[CI 41192102541](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41192102541)
+passed all 1,321 tests, lint, release checks, dependency audit and pinned Homey
+4.5.3 verified validation. Local Node 22 committed-lockfile checks also passed.
+
+Frozen archive SHA-256:
+`f2268ac273f63e53c9a8b0cb8bac2ae8ea4218cf662000e7bdf2e2a5d883dec2`.
+Runtime fingerprint:
+`4e6de1f92449e39ce46fa8631d3eb83772e280523b7a5c5d381e4754c80765e3`.
+All 2,032 archive files match the validated build; private/env/work/output paths
+are excluded. Build 79 is confirmed active on Test as 1.11.12, with matching
+en/de/nl listing and changelog. No certification/Live submission was performed.
+
+Read-only publication baseline/readback confirms installed Development 1.11.10
+running with unchanged devkit session; all 14 EcoFlow device definitions/settings,
+app settings, 101 Flow contracts, 1,204 Insights identities and all device IDs
+are preserved. Unrelated devices refreshed their own diagnostic metadata, so the
+whole-house metadata hash differs; EcoFlow definitions match exactly. No install,
+restart, battery command/setting, Energy-source change, Flow action, repair or
+re-pair was performed. Live remains 1.10.3/build 18; Mainline remains
+`66b1cb5f828a53333739798281fce86125f61c28`.
+
+[Shared-delivery bug-bash findings](DUAL_CT_SHARED_DELIVERY_BUG_BASH.md) describe
+what changed and what remains unproven. The prior 1.11.11 field recovery failure
+is retained; this publication is not a new field pass. Community validation still
+needs to establish actual delivery/rejection status and sustained three-phase
+recovery/accounting. No new capture or external reply was requested/sent in this
+publication task. Private upload/activation receipts and preservation evidence
+remain outside Git. Existing paired devices and counters should be retained.
+
+## Test 1.11.12 preparation authorised — 31 October 2026
+
+Owner authorises publishing the reviewed shared-delivery bug-bash fixes to Test
+for community validation. Candidate 1.11.12 retains the findings below and awaits
+exact-commit CI, frozen-archive checks and channel verification. Installed
+Development 1.11.10, Live 1.10.3 and Mainline must remain unchanged. No hardware
+acceptance, new tester capture or external message is implied by publication.
+
+## Shared Dual CT delivery bug bash prepared — 31 October 2026
+
+The tester reports 1.11.11 did not restore either the older detailed monitor or
+three-phase Energy meter, although native readings update. This is negative field
+recovery evidence; the previous software fixes are not claimed to have solved it.
+
+A source-only candidate fixes premature readiness for concurrent MQTT consumers
+and failed/unanswered subscription handling: 10-second SUBACK deadlines, at most
+three per-topic attempts with 5/10-second retry delays, no shared-socket reset,
+and cancellation/identity fences for stale acknowledgements and teardown. Exact
+receive-topic scoping and listener-error privacy are hardened. Whitelisted local
+support evidence distinguishes topic acceptance, no incoming delivery and monitor
+encoding/header/decode rejections without raw data or automatic upload.
+
+Two regressions fail on published source and pass here; an actual locked MQTT.js
+v5 in-memory broker test confirms a denied subscription is retried on the wire and
+both listeners recover. Local Node 22 locked installation, all 1,321 tests, lint,
+release checks and pinned Homey 4.5.3 verified validation pass. Existing single-
+and three-phase accounting/counter/staleness tests remain intact.
+
+[Bug-bash findings and upstream review](DUAL_CT_SHARED_DELIVERY_BUG_BASH.md) explain
+the remaining field gate. The Home Assistant BK21 parser is useful protocol
+research, not a Dual CT hardware contract. No alternate decoding, GET/SET request,
+Energy-accounting change, new capture or community reply was performed. Candidate
+is uncommitted/unversioned; Test 1.11.11, installed Development 1.11.10, Live and
+Mainline were not changed. Separate review is needed before another Test release.
+
+## Test 1.11.11 / build 78 published — 31 October 2026
+
+Owner authorised immediate Test publication for community recovery testing and
+replies. Runtime source `5e326c910be50194a937747e9c7c53cb097c4268` was committed
+and pushed on the diagnostic branch. Exact [CI 41189319263](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41189319263)
+passed all 1,311 tests, lint, release checks, full audit and pinned Homey 4.5.3
+verified validation. The frozen archive contains 2,028 files matching the validated
+build and excludes private/env/work/output paths. SHA-256:
+`8992d8fef6250a23dddcfaddceb6bd57b594aec32b22d8bd97adeeb5f9a213f0`.
+Runtime fingerprint: `fdd7e89a2d6d3310968e4773c7aefa20b3f00bdf9bfe983ab2294baa116be225`.
+
+Build 78 is confirmed active as Test 1.11.11; en/de/nl listing and changelog match
+the source. Live remains 1.10.3/build 18. Installed Development remains running
+1.11.10 with the same devkit session. Read-only before/after checks preserve all
+14 EcoFlow device definitions/settings, app settings, 101 Flows, 1,204 Insights
+identities and all device IDs. One unrelated device refreshed its own debug sync
+timestamp; that is not an EcoFlow preservation failure. No installation, restart,
+battery/Energy setting, Flow action, repair or re-pair was performed here.
+Mainline remains `66b1cb5f828a53333739798281fce86125f61c28`.
+
+Authorised private tester and public freeze-report replies were posted, signed JZ,
+and reopened to verify. They distinguish confirmed source defects from unproven
+field causes, request an in-place update/normal-use observations and preserve
+existing devices/counters/settings. No additional diagnostic capture requested.
+Private receipts and preservation evidence remain outside Git. Current recovery,
+three-phase complete-frame coverage and import/export reference acceptance still
+await community evidence; this Test publication is not a full-release signoff.
+
+## Test 1.11.11 preparation authorised — 31 October 2026
+
+Owner requests immediate Test publication for the community tester and a reply to
+the public freezing report. Version 1.11.11 contains the source recovery fixes
+below. Installed Development 1.11.10, Live 1.10.3 and Mainline must remain unchanged.
+Publication is pending exact-commit CI and archive/channel verification. No hardware
+acceptance is inferred from software validation; no new tester capture requested.
+
+## Community recovery fixes prepared in source — 31 October 2026
+
+Uncommitted diagnostic-branch candidate only; installed Development and store
+Test remain 1.11.10, Live remains 1.10.3. No install, restart, settings/Flow change,
+community reply or new tester capture was performed for this investigation.
+
+The earlier three-phase detailed monitor did produce readings. That evidence is
+not a completed three-phase Homey Energy acceptance pass. The newer Energy path
+requires coherent CT1 phases plus total in the same payload and qualified live
+intervals; the detailed monitor can retain separately received display fields.
+The latest field screenshots show both the detailed monitor and Energy device
+unavailable, so a phase-only decoding regression is not established.
+
+Confirmed source defect: a five-second delivery gap, sequence reset or clock
+discontinuity unnecessarily tore down the Energy subscription and entered its
+30-second-or-longer reconnect backoff. Recovery now clears only the delivery and
+accounting anchors in place. The crossing packet is discarded; the next qualified
+frame anchors, and only a following valid interval advances counters. Persisted
+precise checkpoints and writer ownership remain intact. Five-second freshness,
+complete-phase checks, retained/duplicate rejection and missing-data handling are
+unchanged. Three-phase local feedback now records bounded delivery rejection
+reasons without raw payloads, measurements, identifiers or automatic uploads.
+
+The original STREAM public MQTT client also lacked replacement-socket fencing
+and listener isolation already present on the app transport. The candidate fences
+old messages/disconnects, shares subscriptions, isolates throwing listeners and
+resubscribes surviving status-only consumers. These are confirmed implementation
+defects; the sparse field report does not establish them as the freeze's cause.
+The latest edited public freeze report names 1.11.10, but its diagnostic metadata
+identifies 1.11.6. Preserve that chronology distinction when following up.
+
+Node 22 locked `npm ci` (zero audit findings), all 1,311 tests, lint, release
+boundary/ledger checks and pinned Homey 4.5.3 verified validation pass locally.
+Regression coverage includes both phase modes across gaps, exact and rounded
+counter continuity, restart restoration, duplicate rejection, shared listeners,
+old-socket callbacks and status-only resubscription. Hardware gates remain open:
+current community delivery cadence/payload completeness, sustained recovery and
+three-phase import/export reference accounting. No field pass or exact new CI is
+claimed. Review this source candidate before versioning/publication/installation.
+
+## Development and Test 1.11.10 deployed — 31 October 2026
+
+Owner explicitly instructed deployment despite the explained coordinator hold.
+The frozen archive from source `9217c3e38bb4088ff7cbd2654037fd42703b55e6`
+was installed non-clean as Development 1.11.10. Readback confirms running,
+aggregate SOC 0% through the official cloud-report fallback, 14 device identities
+and existing settings/capabilities preserved (additive Dual CT display capabilities),
+101 Flow contracts, 1,204 Insights identities and ten nondecreasing counters.
+Native phone favourite-tile rendering remains to be confirmed by the owner.
+
+The restart was followed by Office reserve restoration to its watchdog baseline
+and a coordinator ownership fault. This is the risk explained before the owner's
+explicit override; no separate battery command or fault clear was performed.
+Do not claim battery settings or coordinator state were preserved. Recovery
+requires separate owner review; do not silently restore reserves or clear faults.
+
+After local app validation, the same archive was uploaded and activated as
+Test 1.11.10/build 77. Store metadata matches committed en/de/nl listing/changelog.
+Live remains 1.10.3/build 18; Mainline is unchanged. Source CI 41160015772 passed
+all 1,308 tests, lint, release checks, full audit and pinned verified validation.
+Private installation/store receipts, baseline/readbacks and fault evidence remain
+outside Git. The previous held-deployment checkpoints below are historical.
+
+
+## 1.11.10 exact CI/archive ready; local-first deployment held — 31 October 2026
+
+Runtime source `9217c3e38bb4088ff7cbd2654037fd42703b55e6` is committed/pushed on
+the diagnostic branch. Exact [CI 41160015772](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41160015772)
+passed all 1,308 tests, lint, release checks, full dependency audit (zero findings)
+and pinned Homey 4.5.3 verified validation. Local locked-tooling checks also pass.
+The development matcher compatibility bridge has regression coverage for actual
+legacy import-rule allow/deny behaviour as well as callable/named matcher APIs;
+audit was not weakened and prior lint file coverage is retained.
+
+Frozen 1.11.10 archive SHA-256:
+`6b06405b7a1ff8c0755377f671c9aeb3285f01f5015a5097f205641cd539adab`.
+Runtime fingerprint: `50b89f04742d0ba4829a5a27a024571b517819e38a545ba05966671fbd19d370`.
+All 2,027 packed files match the validated build; private/env/work/output paths
+were excluded. The private manifest/archive and preservation baseline are outside
+Git. Do not rebuild/substitute this archive silently during maintenance.
+
+Fresh preflight confirms installed Development 1.11.5 running, Test 1.11.9/build
+76, Live 1.10.3/build 18, 14 EcoFlow devices, 101 Flows and 1,204 Insights identities.
+The coordinator is actively renewing a reserve hold above restoration level.
+Battery power is idle, but the control lease is not: a restart may lose guard
+freshness and initiate restoration. Installation was not attempted. A request
+for permission to contact the automation task is pending; no message, runner
+pause, reserve release or battery-setting change has been performed here.
+
+The forecast first suggests 17:00–17:30 GMT for natural release, subject to
+replanning and fresh validation. Preserve the owner-requested order: non-clean
+Development update with preservation/SOC readback first, then publish the same
+candidate to Test only after local validation passes. No Test upload/activation
+has been attempted. Mainline remains `66b1cb5f828a53333739798281fce86125f61c28`.
+This is a ready software candidate and a held deployment, not installed UI or
+hardware acceptance. SOC still needs native favourite-tile verification after
+an approved safe installation window.
+
+
+## Development 1.11.10 then Test preparation authorised — 31 October 2026
+
+Versioned local checks completed: all 1,308 tests, lint, release checks, full
+dependency audit (zero findings) and pinned Homey verified validation pass.
+Native deployment is still blocked by the active coordinator hold. No hardware
+acceptance or local UI restoration is claimed by these software results.
+
+Owner authorised non-clean local Development deployment of the SOC candidate,
+validation and subsequent Test publication; Live/Mainline remain unchanged.
+The archive will include the already reviewed 1.11.6–1.11.9 changes that have
+not yet been installed on this Homey. Do not delete/re-pair or reset counters.
+
+Read-only preflight found an active Office reserve hold above its restoration
+level. Restarting EcoFlow could trigger a reserve restoration, so installation
+is blocked while that lease remains active. The forecast's first candidate
+natural-release interval is 17:00–17:30 GMT; this is not an idle guarantee.
+A coordination-message approval is pending. No runner pause, lease release,
+battery change, installation or Test publication has occurred in this checkpoint.
+
+The new development-tooling advisory was remediated without disabling audit:
+all development minimatch resolutions use patched 11.0.1. A development-only
+lint wrapper adapts its namespace export to the callable API expected by legacy
+ESLint plugins; the patched implementation and named/static APIs are retained.
+All 145 previously linted files remain covered. Production dependencies and
+runtime use are unchanged. Full and production audit now report zero findings.
+The earlier 20-finding checkpoint below is historical. Exact versioned tests,
+CI, archive, final preservation baseline, idle checks and readback remain required.
+
+
+## Official 5000 SOC comparison and local recovery candidate — 31 October 2026
+
+Two read-only public quota reads returned explicit system SOC 0%, matching the
+physical ES21 monitor. Main resolution returned the paired ES21; the app-protocol
+aggregate SOC was expired/null. Public reads have no hardware measurement time.
+A source-only fallback now reads the main reporter's documented SOC when aggregate
+SOC is unusable, rechecks reporter identity, protects newer app readings and
+applies SOC alone. Physical units, power, availability and cumulative accounting
+are unchanged. Existing Developer credentials are required; none were altered.
+Diagnostics distinguish latest-cloud-report evidence from hardware freshness.
+
+All 1,306 tests, lint, release checks and pinned Homey 4.5.3 verified validation
+pass after locked Node 22 tooling. Production audit has zero findings; full audit
+reports 20 moderate findings in existing development tooling. No dependency/lock
+changes were made. See `docs/STREAM_5000_API_REVIEW.md` for the candidate contract,
+regression coverage, audit limitation and remaining installed/hardware gates.
+
+Changes remain local/uncommitted and unversioned after 1.11.9; earlier official
+reference documentation edits are preserved. No archive, source push/CI,
+publication, installation, restart, re-pairing, Energy/source switch, battery
+command/setting or Flow execution occurred. Installed Development 1.11.5 was
+read-only checked. Last verified Test 1.11.9/build 76 and Live 1.10.3/build 18
+remain unchanged by this work. No raw household evidence or correspondence is
+included in Git. Review the source candidate before any Development deployment.
+
+
+## Official 5000 API reference retained — 31 October 2026
+
+Owner requested preserving the official [STREAM 5000 API path](https://developer-eu.ecoflow.com/us/document/PP3?id=2115695633708867585).
+Re-read the full page and updated `docs/STREAM_5000_API_REVIEW.md` and model
+coverage references. Public HTTP/Open-MQTT support is now documented for the
+5000 family; earlier absence-of-documentation conclusions are historical.
+Existing app-account decoding has not been converted to this API, and no live
+quota request or hardware validation was run in this documentation task.
+The page still does not establish a product-421 Dual CT contract. A focused
+reply about supported interfaces, firmware, phase/netting semantics, freshness
+and native counters is proposed for owner review, not sent or saved in Outlook.
+Private correspondence stays outside Git. These documentation edits remain
+local/uncommitted; no runtime, Test, Live, Mainline or installed-app change.
+
+
+## Test 1.11.9 / build 76 active; Development unchanged — 30 October 2026
+
+Owner-authorised combined named-overlap and shared-subscription fixes were
+committed/pushed as `7cb0412f4dbb165548c3f40042ff005fddb6a3ee` on the diagnostic
+branch. Exact [CI 41144306551](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41144306551)
+passed all 1,295 tests, lint, release checks, dependency audit (zero known
+vulnerabilities) and pinned Homey 4.5.3 verified validation. The same checks passed
+locally using the committed lockfile and Node 22.23.4. Hardware gates remain open.
+
+**Test 1.11.9/build 76** was uploaded and activated, then confirmed by Apps API and
+portal. English/German/Dutch listing and changelog match the committed text.
+[Test installation link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+No certification or Live publication was submitted.
+
+- Runtime fingerprint: `8f26c96ba03ea8e7b57e91a9b6f8e45cae550fad2b8dd37d8fb064625f2693b4`.
+- Uploaded archive SHA-256: `9a7a68c53e82e4839fc239a72244bb9b7680667a7509ad5a504e3466fa2f715d`.
+- Processed download SHA-256: `9346e56d4d2116c318054308b534b0bd9c4dcc54e3899255a497dee160e38c02`.
+- All 2,023 packed files matched the validated build; 2,022 processed files remain
+  byte-identical. The only difference is Homey's removal of author email from
+  `app.json`; parsed manifests otherwise match. Private evidence stays outside Git.
+
+Fresh before/after readbacks confirm **Live 1.10.3/build 18**, installed
+**Development 1.11.5** running from the same devkit session, 14 unchanged EcoFlow
+device definitions/settings/capabilities/Energy metadata, 101 unchanged Flow
+contracts, 1,204 unchanged Insights identities and ten nondecreasing cumulative
+counters. Mainline remains `66b1cb5f828a53333739798281fce86125f61c28`.
+App settings match except the background `houseReserveLease` hash, which changed
+during observation; this release performed no Homey setting writes. Unrelated
+apps refreshed diagnostic settings. Do not describe all household settings as
+byte-identical or infer a battery setting change from that hash alone.
+
+No local installation/restart, re-pairing, Energy/source switch, counter rewrite,
+battery command or Flow execution was performed. The maintenance installation
+remains held pending fresh approval. These are software fixes, not proof of the
+community report's root cause or a three-phase hardware pass. Next field check:
+observe the existing detailed monitor and property Energy meter after the Test
+update, without deleting/re-pairing or weakening freshness/accounting guards.
+No tester message or request for further captures was sent in this release task.
+
+
+## Test 1.11.9 preparation authorised — 30 October 2026
+
+Owner authorised deploying the combined named-overlap and shared-subscription
+fixes to Test. Version 1.11.9 and English/German/Dutch release notes are prepared.
+The diagnostic branch was fetched and was in sync before this release work;
+existing local fixes are preserved. Exact final checks, source commit/push, CI,
+archive and Test activation must each be verified before declaring publication.
+Do not promote hardware acceptance based on software checks. Live, Mainline and
+the installed Development app remain outside this publication approval. No
+installation, restart, device/account/Energy/Flow/battery change is authorised.
+
+
+## Shared Dual CT subscription/freshness fixes prepared — 30 October 2026
+
+Source-only investigation reproduced three defects: explicit same-account pairing
+rewrote credential settings and stopped listeners; adding another same-serial
+consumer repeated broker subscriptions; callbacks from replaced sockets could
+reach current listeners with a new receipt time or tear down the new connection.
+The fixes make credential commit idempotent, subscribe once per active serial,
+and fence old connection callbacks. Actual credential changes still stop
+consumers. Independent listener removal and reconnect restoration are preserved.
+
+All 1,295 tests pass after locked `npm ci` on Node 22.23.4, including the pending
+named-overlap work and an actual detailed-monitor driver/settings-event test.
+Lint, release checks, pinned Homey 4.5.3 verified validation and whitespace checks
+pass. Five-second Energy freshness, retained/duplicate rejection, phase/source
+qualification, no-gap-backfill accounting and persisted counters are unchanged.
+See `docs/DUAL_CT_SHARED_SUBSCRIPTION_REVIEW.md` for reproduced defects and scope.
+
+The community's latest report shows both monitor and Energy unavailable; its
+native phase sum is consistent, but fresh delivery into Homey is unproven. These
+software fixes are not a confirmed field root cause or hardware acceptance.
+The earlier overlap blocker was subsequently identified by the tester as another
+included Energy meter; the named-overlap source work remains intact.
+
+All pending changes remain local/uncommitted and unversioned after Test 1.11.8.
+No archive, source push/CI, publication, install/restart, re-pairing, counter
+rewrite, Energy/battery/Flow change or tester request was performed. Test, Live,
+Mainline and the installed app were not changed or freshly polled in this task;
+last verified states remain Test 1.11.8/build 75, Live 1.10.3/build 18 and installed
+Development 1.11.5. The maintenance installation remains held.
+
+
+## Named Dual CT overlap feedback prepared for review — 30 October 2026
+
+Owner requested identifying the blocking meter by name, regression coverage and
+source preparation only. The local pairing page now lists bounded device names
+from the same fresh overlap decision, with translated missing-name/additional-count
+handling. No exclusion, migration, re-pairing, qualification bypass or accounting
+change is made. Names are local UI feedback, rendered as text and excluded from
+source binding/inventory authority hashes. No device IDs/raw errors or automatic
+uploads are added. The detailed beta monitor remains non-contributing.
+
+All 1,291 tests, lint, release checks, pinned Homey 4.5.3 verified validation and
+whitespace checks pass. See `docs/DUAL_CT_OVERLAP_DEVICE_REVIEW.md` for the exact
+scope, synthetic mobile preview and remaining native evidence gap. The current
+field screenshot does not identify the actual blocker; do not invent it or ask
+for deletion based on the participant's earlier beta status alone.
+
+Changes remain local/uncommitted and unversioned after published Test 1.11.8.
+No archive rebuild, commit/push, CI run, publication, installation, Homey/Flow/
+battery/Energy mutation or tester message was performed. Last verified channel/
+installed states remain Test 1.11.8/build 75, Live 1.10.3/build 18, Development
+1.11.5; these are prior readbacks, not fresh live polling in this source-only work.
+The maintenance installation remains held under the owner's unchanged-app limit.
+
+
+## Corrective Test 1.11.8 / build 75 active; local installation held — 30 October 2026
+
+Owner-authorised runtime source `752e3acebc7c5d30f455336a825deb1dfa7688ae` was committed/pushed on
+`codex/mixed-generation-reporting-diagnostics`. Exact CI
+[41132995305](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41132995305)
+passed locked Node 22 tooling, all 1,284 tests, lint, release checks, dependency
+audit (zero known vulnerabilities) and pinned Homey 4.5.3 verified validation.
+The same checks passed locally. No hardware acceptance ledger was promoted.
+
+Archive SHA-256: `dd762a2c8bd64b48aeab293e7f843e53d682bb3fe06aaf1938da1fea7a8ed257`.
+Source runtime fingerprint: `d2bf83eda994f01f713b0e88f013f5128681fd18171d3ed00c8e0d078150ac33`.
+The archive was content/version/privacy checked, uploaded and activated only as
+**Test 1.11.8/build 75**, verified through API and portal. Build readme/changelog
+match the committed English/German/Dutch text. Published download SHA-256:
+`a1117352b68f06a18991bdf56038dc3da96dfd921794fd0e4f9c2cd90a9def85`. All 2,020 file paths match the upload; 2,019 file bytes are identical.
+Only `app.json` differs, with Homey's author-email removal and no other field
+change. Keep server repack provenance distinct from the source fingerprint.
+
+Fresh before/after readbacks confirm installed **Development 1.11.5**, the same
+devkit session, 14 EcoFlow device definitions/settings, 101 Flows and 1,204 Insights
+identities. All 10 comparable cumulative counters remain numeric/nondecreasing.
+App-setting difference is the concurrently renewed coordinator lease; unrelated
+integration device settings also changed during observation. No application-wide
+byte-equality claim. **Live 1.10.3/build 18 and Mainline unchanged.** No local
+installation/restart, battery command, Flow execution, pairing or Energy change.
+
+The authorised private reply was sent and reopened, signed JZ, with the new Test
+link and one targeted request for the newly visible message if setup still fails.
+No raw diagnostics or private correspondence is committed. The underlying field
+verification blocker remains unconfirmed; software feedback/wording fixes are not
+proof that the three-phase field pairing succeeds. Native/recovery/accuracy/soak
+gates remain open.
+
+The maintenance heartbeat retains its date/time but now explicitly defers under
+the latest owner instruction to keep installed Development unchanged. It must not
+install superseded 1.11.7 or substitute 1.11.8, pause the coordinator or release
+reserves without fresh exact-candidate installation approval. Test publication
+is not that approval. Earlier expedited-maintenance consent does not override
+this later boundary.
+
+
+## Corrective Test 1.11.8 prepared for authorised delivery — 30 October 2026
+
+The owner authorised preparing, committing/pushing and publishing the pairing-review
+correction to Test, then replying in the existing private tester conversation.
+Live and installed Development must remain unchanged. No installation, runner
+pause, reserve release, re-pairing or Energy change is included in this delivery.
+
+Version 1.11.8 adds visible/bounded review feedback, fixed translated failure-stage
+messages and mode-correct three-phase scope consent. Existing firmware/source/
+overlap checks and single-phase/counter behaviour remain unchanged. Packaged
+English/German/Dutch Dual CT store text now matches the reviewed build-74 listing;
+this corrects the older packaged three-phase exclusion without changing the trial
+scope. It does not complete hardware acceptance or identify the field backend
+blocker. Exact CI/archive/publication and preservation results will be recorded
+separately after delivery. The old 1.11.7 maintenance installation remains held;
+publication approval is not permission to install 1.11.8 locally.
+
+
+## Dual CT pairing review correction prepared; local installation held — 30 October 2026
+
+The owner interrupted expedited maintenance to review new pairing feedback.
+No runner pause, reserve release or installation had yet occurred. Test remains
+1.11.7/build 74, Live 1.10.3/build 18 and installed Development 1.11.5.
+
+Confirmed mobile review feedback/timeout defects and single-phase wording on the
+three-phase confirmation. Added visible progress and a 30-second fail-closed
+review deadline, bounded translated failure classifications and mode-correct
+scope consent. Three new regressions fail before the change; all 1,284 tests,
+lint, release checks and pinned Homey verified validation pass afterward. The exact field backend blocker is still
+unidentified; do not claim a firmware/wiring fault or a completed field fix.
+See `docs/DUAL_CT_PAIRING_REVIEW_FEEDBACK.md` for scope and evidence boundaries.
+
+Changes are local, unversioned and not committed/published/installed. The old
+approved archive is unchanged; do not substitute this tree or install 1.11.7
+while the corrective review is pending. The scheduled maintenance must defer
+until the candidate/issue is reviewed. No battery, Flow, Energy or portal setting
+changed and no reply or further capture request was sent during investigation.
+
+
+## Test 1.11.7 / build 74 published; Development unchanged — 30 October 2026
+
+The owner explicitly authorised publishing the combined candidate to Test before
+the pending Development maintenance validation, then replying to the tester.
+Exact runtime source `5a59e97aefb9aae2445809028a0b4c4dff2569ea` was freshly checked
+against successful CI 41123399129. The approved archive SHA-256
+`f41f5d4b35a476e8440d7327936333338ac7ef814023921cb5657a024a8414e1` was uploaded,
+and **Test 1.11.7/build 74** was activated and verified through API and portal.
+Live remains **1.10.3/build 18**; no Mainline change, certification or local install.
+The native display/widget, recovery, independent accounting and soak gates remain
+open. Publication is opt-in Test delivery, not full-release hardware acceptance.
+
+The build-specific store metadata now includes the reviewed English/German/Dutch
+Dual CT community-trial wording and 1.11.7 changelog. Other listing paragraphs were
+retained. Packaged README files and the approved maintenance archive are unchanged.
+Homey's downloadable repack has SHA-256
+`4c361ba7b15f9f0004d6e22a5b6add81187ee01bf12d786dc25f5107b5d9099d`.
+All 2,018 file paths were compared: 2,017 file bytes match, with only Homey's removal
+of the author email from `app.json`. No other manifest field differs. Keep this
+server packaging distinction separate from the source runtime fingerprint.
+
+Before/after readbacks confirm running Development **1.11.5**, unchanged devkit
+session, all 14 EcoFlow device definitions/settings, 101 Flows and 1,204 Insights
+identities; all 10 comparable cumulative counters are nondecreasing and remain
+numeric. App settings differ only in the concurrently renewed reserve lease;
+one unrelated integration's device settings changed during observation. Do not
+claim an all-app/all-device byte-equal snapshot. No Homey setting/Flow/control was
+written by this publication operation. Private evidence remains outside Git.
+
+The authorised reply was posted and reopened in the existing private tester
+conversation, signed JZ, with the Test link, separate new-device three-phase
+accounting choice, optional display layout, CT2 exclusion and bounded first
+feedback request. No private message content or household data is copied here.
+
+The conditional 31 October 17:05–17:25 GMT maintenance window remains unchanged.
+Its existing heartbeat's expected Test baseline was updated to 1.11.7/build 74;
+archive/source/CI, natural-release checks, approved runner pause/resumption and
+no-battery-changes conditions are unchanged. Use fresh baselines at execution;
+do not treat the pre-publication Test 73 snapshot as the current channel guard.
+
+
+## 1.11.7 release preparation reconciled — 30 October 2026
+
+Added `docs/RELEASE_1_11_7_READINESS.md` as the current Test/native/production
+checklist; the October 25 checklist is explicitly historical. Fresh dependency
+audit reports zero known vulnerabilities and release-boundary checks pass.
+The approved archive hash and runtime fingerprint remain unchanged. Full hardware
+readiness still deliberately fails; no acceptance ledger or gate was weakened.
+No runtime change or repeat of the already-passing 1,279-test suite is claimed.
+
+Prepared Test changelog, conditional delivery checklist and a not-started soak
+plan. The packaged store description predates the opt-in three-phase trial;
+replacement English/German/Dutch text is prepared privately for review, not applied.
+Changing packaged copy requires a separately reviewed archive; the approved
+maintenance archive is frozen. Robert's approved invitation was sent and reopened
+in the existing private thread; correspondence remains outside Git.
+
+No Homey/portal mutation, installation, restart, re-pairing, Energy/battery setting,
+Flow execution, publication or new automation. Existing conditional maintenance
+approval/window below remains unchanged. Last verified channel/install states
+are historical readbacks, not newly polled by this documentation preparation.
+
+
+## Development 1.11.7 installation deferred to approved conditional window — 30 October 2026
+
+The owner approved one non-clean installation of the exact combined candidate and
+widget/display/counter validation, with Test/Live unchanged and no re-pairing or
+battery changes. Fresh preflight verified the archive/CI and captured 14 EcoFlow
+devices, 101 Flows and 1,204 Insights identities. Installation has **not occurred**:
+the live reserve coordinator is renewing an active preservation lease, and startup
+could invoke the unchanged watchdog's guard-loss/restoration branch.
+
+The owner authorised a coordination request to the HomeyPro task. Its read-only
+review confirmed no safe current window under the no-battery-changes restriction.
+The owner then approved one conditional maintenance window on **31 October 2026,
+17:05–17:25 Europe/London (GMT)**. A single current-thread heartbeat is active:
+`ecoflow-1-11-7-conditional-maintenance`. The forecasted slot is not a guarantee.
+
+Proceed only after fresh natural-release, completed/nonfaulted lease, empty-intent,
+clear-run-lock, native ownership and whole-window policy checks. Approval additionally
+covers temporarily disabling only the dedicated execution Flow/configuration after
+natural release, then restoring its previous enablement only after successful native
+validation. Preserve gate, lease/fault history and expected ownership. Do not force
+release, edit/renew leases, command batteries or clear faults to create a window.
+If unsafe or drifted, defer without changes and report; no automatic retry window.
+
+Use only source `5a59e97aefb9aae2445809028a0b4c4dff2569ea`, exact successful CI
+41123399129 and archive SHA-256
+`f41f5d4b35a476e8440d7327936333338ac7ef814023921cb5657a024a8414e1`.
+Do not rebuild/substitute a later working tree or repeat an uncertain install.
+Private review/validation instructions and baseline remain outside Git. Installed
+Development remains 1.11.5; Test 1.11.6/build 73 and Live 1.10.3/build 18 were unchanged
+at preflight. No runner/Flow/settings/lease/battery mutation has been performed here.
+
+
+## Combined 1.11.7 display and availability candidate — 30 October 2026
+
+Owner authorised adding the availability fix with regression tests while keeping
+Test, Live and installed Development unchanged. Normal projections no longer mark
+a healthy meter unavailable. Newer committed checkpoints trigger bounded immediate
+catch-up instead of blanking fresh power until the next tick. Source/consent/runtime
+checks remain after asynchronous SDK work. The last projected power retains its
+own receipt deadline; an independent coalesced expiry clear can run while an SDK
+counter write is stalled. Late callbacks and failed clears cannot silently revive
+stale power. No checkpoint format, counter arithmetic/rounding, binding, delivery
+threshold, reconnect policy or capability identity is changed.
+
+Locked Node 22 install, all 1,279 tests, lint, release checks and pinned Homey CLI
+4.5.3 verified validation pass. Regression coverage includes display settings, both
+wiring paths, precise counter
+continuity, overlapping SDK updates, five-second expiry, stalled writes/late callbacks
+and clear retries. See `docs/DUAL_CT_AVAILABILITY_CANDIDATE.md` and the display review
+for implementation, limits and native acceptance needs. The combined archive replaces
+the earlier display-only 1.11.7 review artifact; neither has been installed/published.
+Widget/client behaviour remains hardware-unverified until an approved installation.
+No battery/settings/Flow/paired-device operation or forced gap/reconnect occurred.
+
+
+## Dual CT display candidate 1.11.7 prepared — 30 October 2026
+
+Owner requested source implementation for review, keeping installed Development,
+Test and Live unchanged. Added independent CT1 single/three-phase display, optional
+CT2 display and detailed-monitor diagnostics settings. Legacy monitor defaults
+retain its existing layout. Energy defaults follow the paired accounting mode
+with CT2 hidden; core power/import/export stay present and new auxiliary readings
+use the existing subscription. Display selections never change accounting mode,
+consent, source binding, counter checkpoints or the qualified firmware registries.
+
+Cards are hidden/shown through capability options; no existing capability IDs,
+history or Flow references are removed. Hidden cards keep receiving normal values;
+custom titles/options are retained. New details remain display-only with existing
+privacy fences. Independent receipt ages expire details within 90 seconds; core
+Energy delivery stays on its existing five-second rules. No V×A inference or
+voltage/current phase summation. Optional SDK/display failures are isolated from
+core Energy. The separate reconnect/status-flicker proposal is not implemented.
+
+See `docs/DUAL_CT_DISPLAY_CANDIDATE.md` for household layouts, preservation design
+and native UI/preservation checks requiring a later approved installation. Locked Node 22 install, all 1,271 tests, lint, release checks and pinned Homey
+CLI 4.5.3 verified validation pass. Full hardware readiness remains blocked.
+This candidate is not installed or published; native show/hide remains unverified.
+
+
+## Three-phase community Test 1.11.6 / build 73 active — 30 October 2026
+
+The owner authorised implementing and publishing the opt-in community Test trial.
+Exact source `4b1218cd2e5819557d6f76ea84eb369c9e9b46a9` passed CI
+[41110353477](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41110353477),
+all 1,261 tests, lint, release checks and pinned Homey CLI 4.5.3 verified validation.
+The verified archive was uploaded and build 73 was explicitly activated on Test;
+channel readback confirms **Test 1.11.6/build 73**, **Live 1.10.3/build 18**.
+Mainline is unchanged. No installation or restart was performed.
+
+Archive SHA-256: `99c565726d8fc5c84f428ac83bcccace65b7cea9eed2286e6ace8354a2f5598b`.
+Source runtime fingerprint: `f69f7a286e79627a75c0ee701c07704a26a2e3ec9b28caae416239301448620a`.
+Archive contents include the isolated trial runtime/profile; the hardware-qualified
+three-phase registry remains empty and the single-phase profile is unchanged.
+
+Before/after private readbacks confirm installed Development 1.11.5, app/devkit
+session, all 14 EcoFlow device definitions/settings, app settings, 101 Flows and
+1,204 Insights identities preserved. Across all Homey devices, two unrelated
+integrations changed diagnostic settings during observation; those are separate
+from EcoFlow preservation. The existing owner CT1 source was already unavailable
+in automatic recovery before upload and remained so afterward. Publication is not
+claimed to fix or newly validate that installed runtime; no local operation was
+performed to force recovery. Investigate that separately read-only if required.
+
+New pairing defaults to single phase. Three phase requires separate community
+consent, current owned model 421/firmware 1.0.0.41 readback and source-overlap review.
+It uses signed CT1 phase netting, excludes CT2, rejects incomplete/stale frames and
+uses a separate counter binding without migration. Local classification-only
+feedback is available through the integration support report, with no automatic
+upload. Hardware, independent reference accuracy, native three-phase recovery and
+48-hour gates remain open; there is no full-release signoff. No community message
+or repeated capture request was sent. See `docs/DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md`.
+
+
+## Opt-in three-phase community Test candidate — 30 October 2026
+
+Owner authorised implementing and publishing a community Test trial because the
+remaining physical three-phase validation must come from community installations.
+Candidate 1.11.6 adds explicit new-device mode/consent, owned current firmware
+readback, separate source-bound trial accounting and local feedback classifications.
+Model 421/firmware 1.0.0.41 only; CT1 signed phase sum, CT2 excluded, complete-frame
+and five-second packet expiry guards. Qualified three-phase registry remains empty;
+community declaration is not hardware verification or a release acceptance pass.
+
+Existing single-phase registry/default resolver/V1 binding and exact-Wh checkpoint
+path remain unchanged. No mode migration or existing counter rewrite. Native Add
+rechecks source/inventory/mode; trial authority renews with current owned readback.
+The existing integration support report gains a bounded classification-only trial
+section with no automatic upload. No new controls/public route/battery changes.
+
+See `docs/DUAL_CT_THREE_PHASE_COMMUNITY_TRIAL.md` for scope, feedback and remaining
+full-release gates. All 1,261 tests, lint, release checks and pinned Homey CLI 4.5.3 verified
+validation pass with locked Node 22 tooling. Full hardware readiness remains
+blocked. Publication is pending exact CI/archive verification;
+Live/Mainline and installed Development must remain unchanged. No installation,
+community message, tester capture request or hardware operation is authorised here.
+
+
+## Retained three-phase evidence assessed offline — 30 October 2026
+
+Reopened the historical complete snapshot, pruned indexed export and concluding
+assignment replies. Privately assessed exact power-field excerpts without
+reconstructing missing values or generating wire packets. Complete older CT1
+arithmetic is consistent but lacks packet provenance; the later CT1 is incomplete,
+while CT2 retains a complete consistent reported packet. Neither supplies current
+firmware qualification, reference intervals or eligible-time coverage.
+
+Added an offline expanded-report assessor with classification-only output and
+five synthetic regressions. It cannot issue source authority or enable Energy.
+All 1,251 tests, project lint, release checks and pinned Homey CLI 4.5.3
+verified validation pass; the working single-phase binding/checkpoint regressions
+remain green. No runtime driver/profile/binding
+change in this follow-up. Planning gates remain eight partial / six open.
+
+See `docs/DUAL_CT_THREE_PHASE_VALIDATION_PROGRESS.md` for completed work and the
+ordered current-identity, interval, native-recovery and soak requirements. No
+capture request or tester message. Test, Live and installed Development unchanged.
+The preceding source-qualification commit's GitHub CI remains queued at review;
+local checks are not presented as remote CI completion.
+
+
+## Three-phase qualification and binding prepared — 30 October 2026
+
+Added an internal trusted-source qualification seam and a separate V2 binding
+namespace for explicitly qualified three-phase CT1 signed-net contracts. The new
+production registry is empty and release-boundary checks enforce that state.
+No driver/settings/pairing path invokes the seam; no hardware gate is promoted.
+The future runtime reader/renewal lifecycle remains to be integrated after source
+qualification and hardware evidence are reviewed.
+
+The existing single-phase registry, default resolver and binding serialization
+remain unchanged. Regression tests pin its pre-change binding and restore a real
+production-profile exact-Wh checkpoint through session restart without migration
+or downtime backfill. Three-phase tests cover ownership/scope, opaque authority,
+expiry/cancellation/late reads, complete CT1 totals, CT2 exclusion and overlap guards.
+All 1,246 tests, lint, release checks and pinned Homey CLI 4.5.3 verified
+validation pass with locked Node 22 tooling. Full-release hardware readiness
+remains blocked as expected. Read-only channel/app checks confirm Test 1.11.5
+build 72, Live 1.10.3 build 18 and running Development 1.11.5, unchanged.
+
+See `docs/DUAL_CT_SOURCE_QUALIFICATION.md`. No installation, restart, publication,
+Energy/settings/battery/Flow change or tester contact. Test/Live/installed app stay
+unchanged; three-phase evidence remains eight partial and six open gates.
+
+
+## Existing three-phase evidence reconciled — 30 October 2026
+
+Primary historical posts were reopened in fourteen relevant private topics,
+with four original native screenshots inspected, alongside indexed history and
+repository records. Earlier summaries alone were not used as current proof.
+Private raw data/images/measurements/correspondence remain outside Git; the
+public evidence review is sanitized. No community message/request was sent.
+
+Existing field evidence establishes a three-phase participant, CT1 property-grid
+scope, separate hybrid-inverter CT2, signed native phase summation and historical
+W/V/A comparisons. Owner description supports utility-equivalent netting for that
+site. The planning ledger now records eight partial and six open gates, with
+provisional signed-phase-sum policy. No passed gate, runtime/profile admission,
+firmware exception or binding migration results from historical observations.
+
+Still missing: current firmware/qualified source and phase association; complete
+time/provenance-qualified CT1 observations; independent reference intervals and
+coverage; current three-phase Homey Energy overlap/native recovery/upgrade checks;
+and final exact-runtime soak. Native cumulative arithmetic is not interval
+accuracy; unknown vendor 773 semantics are optional to the power-derived path.
+Current export retention has already improved; historical trimming is not treated
+as a fresh defect or grounds for another generic capture request.
+
+See `docs/DUAL_CT_THREE_PHASE_EVIDENCE_REVIEW.md`. No runtime code, installed app,
+Test/Live/Mainline, settings, Energy, battery/Flow operations or restarts changed.
+Individual mapping crops and all unrelated inbox attachments were not exhaustively
+re-read; the detailed private report identifies reviewed sources and limits.
+
+
+## Three-phase Dual CT source preparation — 30 October 2026
+
+Owner requested investigation/preparation while keeping installed Development,
+Test and Live unchanged. Manufacturer specification confirms two three-phase
+circuits/six CTs, but current live admission remains single-phase CT1 only.
+The existing generic wire/session path already sums three phases in lab tests;
+no firmware profile, binding, pairing setting or runtime guard was broadened.
+
+New offline one-payload review compares signed-net and per-phase import/export
+hypotheses, always Energy-ineligible. It requires all CT1 powers and a matching
+total, rejects partial/duplicate/nonfinite input, never fills missing phases with
+zero and excludes CT2. Added regression cases cover opposing phases/zero net and
+show that the real profile still rejects nonzero phase 2/3 even when lab netting
+can be integrated. Native phase order/sign/netting/timing remain unverified.
+
+See `docs/DUAL_CT_THREE_PHASE_PREPARATION.md` and its all-open planning ledger:
+a real three-phase installation/reference is needed, particularly simultaneous
+opposing phase flows. Justin's single-phase site cannot qualify those gates.
+Historical three-phase community comparisons already exist in the recorded
+October exchanges. Reconcile those screenshots/packet reports with the matrix
+first; do not assume a new volunteer or another generic capture is necessary.
+They are historical candidate evidence, not current-runtime acceptance passes.
+No request was sent to any community tester. Proposed quantitative criteria and
+candidate selection/binding migration are for review, not hardware acceptance.
+No installation, pairing, Energy/settings/Flow/battery action, restart/reconnect,
+publication or soak was performed. No three-phase pairing claim/version bump.
+
+Locked Node 22 install, all 1,233 tests, lint, release checks and pinned Homey
+CLI 4.5.3 verified validation pass. These are preparation/software checks,
+not three-phase hardware acceptance.
+
+
+## Corrective Test 1.11.5 build 72 published — 30 October 2026
+
+Owner explicitly approved publishing the reviewed corrective Test archive while
+preserving Live, Mainline and installed Development. Test **1.11.5 / build 72**
+is active, independently verified through the build/channel API after activation.
+The published manifest declares the Dual CT cumulative Energy driver. Test build
+71 / 1.11.0 was superseded; Live remains **1.10.3 / build 18**. No certification
+submission or Live publication ran. Remote Mainline reference is unchanged.
+
+The exact archive already installed locally was uploaded without rebuilding:
+SHA-256 `63498f527eed6272207739ae3f3b3fce29908c12e7fe1dc1a1ba043f6e796307`,
+runtime `14642252c61416221a632f402ec2a9e5308e50ffa5017bf71dd4d03524e353d3`,
+source `e76725844ff0d21145872a4330ce8823f9e0d949`.
+[Exact source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41028099564),
+with 1,221 tests and the reviewed local lint/release/pinned validation evidence.
+Only the approved corrective changelog was supplied; the store description was
+reused unchanged and env is empty. No private household evidence was uploaded.
+
+Before/after readback confirms installed **Development 1.11.5**, origin
+`devkit_install`, still running with CT1 available. All 14 EcoFlow definitions,
+app-setting hashes, 101 Flows, 1,204 Insights identities and all property Energy
+flags match. Two diagnostic fields in unrelated apps refreshed naturally; they
+are not EcoFlow definition changes and were not written here. No local install,
+restart, pairing/Repair, settings or battery operation, Flow execution, source
+reset or forced reconnect was performed for publication.
+
+The supported Test scope remains single-phase CT1 / firmware 1.0.0.41 with
+estimated power-derived totals; CT2 and three-phase Energy remain excluded.
+Production acceptance, coverage/availability flicker, the original STREAM one-Wh
+startup finding, native mobile/accuracy/backup checks and final soak remain
+open/partial. Test activation is not a hardware gate pass or a soak start.
+
+Test: https://homey.app/a/uk.co.zarb.ecoflow/test/
+Build: https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/72
+
+
+## 1.11.5 approved Development correction and native recovery — 30 October 2026
+
+Owner approved the reviewed non-clean 1.11.5 archive after exact CI and idle
+preflight. Reviewed source matched the canonical snapshot with no drift; the
+already-installed 1.11.4 bridge/read-refresh/delta fixes were preserved and
+committed with the CT1 correction on the diagnostic branch, source
+`e76725844ff0d21145872a4330ce8823f9e0d949`.
+[Exact CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/41028099564),
+with all 1,221 tests, lint, release checks and pinned Homey validation green.
+Delivered archive SHA-256:
+`63498f527eed6272207739ae3f3b3fce29908c12e7fe1dc1a1ba043f6e796307`.
+Runtime fingerprint:
+`14642252c61416221a632f402ec2a9e5308e50ffa5017bf71dd4d03524e353d3`.
+
+Fresh preflight found the coordinator outside charging windows with empty intent,
+a completed reserve lease and expired legacy lease. No coordinator/gate/fault was
+changed to make the preflight pass. One non-clean installation ran; readback
+confirmed running Development 1.11.5 and the existing CT1 Energy meter restored
+without Repair/re-pair or counter rewrite. Its live power matches Homey's property
+Energy report; import resumed increasing and export retained its prior value.
+
+An 82-sample bounded read-only window (08:44:33–08:47:32 UTC) observed a natural
+interruption at 08:46:25 and automatic recovery by 08:46:56. The first recovered
+sample retained the same totals, then counting resumed: no gap backfill or CT1
+counter decrease. One other unavailable sample was 'Updating CT1 readings' during
+projection. No forced silence/reconnect or new MQTT observer was used. Receipt
+coverage and the availability flicker remain longer-validation concerns, not
+utility-accuracy or full freshness signoff. The observer ended; no automation
+or final soak was started.
+
+All 14 EcoFlow definitions/identities/settings, 101 Flow definitions, 1,204 Insights
+identities, global app settings and all Energy inclusion flags match the baseline.
+All ten sampled counters are at/above baseline in the final readback. An original
+STREAM charged-energy counter transiently dipped by one Wh at startup, then rose
+above baseline on fresh vendor counters. Its pre-install checkpoint was pending;
+exact teardown persistence is unobserved. Record this separate startup-continuity
+finding; do not describe the entire interval as ten perfectly monotonic counters.
+No manual correction, additional installation or battery operation was performed.
+
+Test remains 1.11.0 / build 71 and Live 1.10.3 / build 18; Mainline unchanged.
+The corrective Test package/release notes can now be reviewed separately. Native
+mobile readback, calibrated accuracy/export/zero, backup recovery, longer coverage
+and the exact-runtime 48-hour soak remain open/partial. Hardware gates are not
+passed merely by this local restore/recovery observation. Private receipts and
+raw snapshots remain outside Git.
+
+
+## CT1 unavailable recovery investigation — 30 October 2026
+
+Owner's mobile screenshot showed the adopted CT1 Energy meter unavailable with
+an incorrect unsupported-meter message. Current read-only Homey check confirms
+Development 1.11.4, null power, retained imported/exported counters and a healthy
+detailed monitor. Fresh owned-source discovery/current-firmware GET still returns
+model 421 / firmware 1.0.0.41; normal contract qualifies, inventory is complete,
+and no other active property contributor is present. No Repair or re-pair ran.
+
+Confirmed software defect: native meter_power values have three decimal kWh,
+while the restore rollback check compared them with unrounded checkpoint Wh.
+An internal 1.6 Wh projects to 0.002 kWh and was wrongly rejected on a local
+reporting-gap retry or process restart. Synthetic native-rounding reproduction
+fails before the correction and passes after it, for both import and export.
+The correction quantises only native projection/restore comparison to one Wh;
+precise checkpoint Wh are unchanged. Older checkpoints remain blocked and no
+counter is rewritten/reset or downtime backfilled. The generic unsupported
+pairing message is replaced with an automatic-recovery message for adopted meters.
+
+The installed checkpoint is not exposed by the existing support API, so the
+exact live internal exception remains unobserved. This is a reproduced defect
+consistent with the field failure, not a claim that a generic message proves its
+cause. Initial installation/import readback was valid but did not prove sustained
+recovery. Mobile Energy still needs readback after an approved corrective update.
+Today’s historical balance is partial; missing grid hours are not reconstructed.
+
+Correction is local source only. All 1,221 tests, lint and release checks pass.
+Preserve the independently deployed 1.11.4 bridge and its uncommitted changes.
+Test build 71 / 1.11.0 and Live build 18 / 1.10.3 are unchanged by this investigation.
+No app restart/install, battery operation, Flow execution or Energy setting write
+was performed. Fresh approval is required for a corrective installation/publication.
+
+
+## Owner-authorized coordinated reserve execution — Development 1.11.4, 30 October
+
+The HomeyPro chat deployed the reserve-only bridge and coordinated house/office
+minute runner on the exact 1.11.0/8db8944 source baseline. Development 1.11.4 is
+installed; Test 1.11.0 build 71 / Live 1.10.3 build 18 remain separate. Preserve
+this bridge, watchdog, read-refresh API and configuration-delta correction in
+subsequent app builds. Do not reinstall 1.10.x or remove the adopted CT1 device.
+
+Owner explicitly authorized interrupting manual house 100% and handing over to
+the new schedule. House baseline enabled/18%, office 3%, feed-in OFF; house/CT1
+anti-export and native input/output limits unchanged. Office charged at 335 W
+under a verified house hold; independent watchdog confirmed office stopped
+(fresh -313 W) before house restoration. Automatic 04:43/04:44 UTC decisions
+are healthy Outside charging windows. Future tariff-window delivery remains
+unobserved. No Codex task resumed; private evidence and historical faults kept.
+
+The read-only header-only ES21 get-all uses the existing MQTT connection and no
+new subscription. A new applied battery-power field receipt is required; cloud
+cached quota, temperature-only updates and failed writes cannot renew power
+freshness. Concurrent reads coalesce; watchdog rechecks unchanged lease identity
+after awaiting reads. Preserve manual ownership and independently leased stop.
+Native Homey/cloud disconnection still limits physical stopping; this is not a
+native one-off task expiry. Full hardware/48h/accuracy qualification remains pending.
+
+Validation: 1,219 tests, lint, release boundary checks and Homey CLI 4.5.3 verified
+build passed. Fourteen EcoFlow device IDs/settings/capabilities, all existing
+Insights, ten sampled counters and the adopted CT1 Energy settings were retained.
+Delivered archive SHA-256:
+`d6117a4caad9869cccd7df37d79eb487f1400ea9a60afe1b211cc7fddf72040e`.
+Source changes are local and not yet committed/pushed in this deployment phase.
+Full private receipts remain in HomeyPro backups/review/house-reserve-control/.
+
+## 1.11.0 Test build 71 published — 30 October 2026
+
+Owner-approved Test build **71 / 1.11.0** is active; portal and API both confirm
+Test. Live remains **build 18 / 1.10.3**; no certification submission or Live
+publication was performed. Mainline was not changed. Test archive source is
+`9a367a8274112777e83fa5459ad3c13980fd9c75`, exact
+[CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40992143771).
+Archive SHA-256: `e9c7695a70a54032ee80907e9907781bcee5e010c773356e4de94636e7ffc8db`.
+It differs from the approved Development archive only in documentation/listing
+metadata: runtime fingerprint remains
+`6fe3db750e6492e21a7028e3666df1105e2a39e0c58b128a5a59a90b52e44b94`.
+
+Local Development 1.11.0 and the one CT1 property Energy meter remain running.
+Final read-only Energy report includes the new device and its cumulative property
+power matches the meter; import estimate continued to 0.037 kWh. All original
+13 EcoFlow definitions, 101 Flows, 1,201 Insights identities and eight cumulative
+counters remain preserved/nondecreasing. Added device/logs are intentional; later
+reserve-gate changes belong to concurrent commissioning and were not overwritten.
+The existing detailed monitor's persistent warning is cleared.
+
+Test supports single-phase CT1 / model 421 / firmware 1.0.0.41 only. Pair one
+separate property Energy device and review overlapping property meters; the
+existing detailed monitor is not automatically converted. Totals are estimates
+from observed power, not migrated vendor counters. CT2 and three-phase Energy
+remain excluded. Local import/adoption observations do not close calibrated
+accuracy, export/zero, native persistence/recovery/mobile or 48-hour-soak gates.
+No battery settings/tasks/commands or Flow execution were performed by this task.
+No final soak automation is running.
+
+Test link: https://homey.app/a/uk.co.zarb.ecoflow/test/
+
+
+## 1.11.0 approved Development and CT1 Energy adoption — 30 October 2026
+
+Owner approved the non-clean combined candidate and one CT1 property Energy
+adoption, then explicitly authorised a new Test build. Source runtime aa4ee07,
+fingerprint 6fe3db750e6492e21a7028e3666df1105e2a39e0c58b128a5a59a90b52e44b94,
+passed exact CI and all 1,206 tests. The preflight found independently installed
+1.10.64: its compiled app/API/reserve bridge/configuration decoder match the
+combined candidate. Its execution Flow was disabled and a faulted lease prevented
+watchdog actions. No fault, gate, lease, battery setting or Flow was changed here.
+
+Non-clean 1.11.0 delivery and immediate readback passed: all 13 existing EcoFlow
+identities, definitions/settings, 101 Flows, app-setting hashes, all property Energy
+flags, 1,201 Insights IDs and eight nondecreasing counters were preserved.
+One separate owned CT1 Energy device was then added through real pairing,
+firmware readback and explicit overlap consent. It is cumulative and included;
+all pre-existing Energy flags and devices remain unchanged. The detailed monitor
+warning is cleared. The new meter is available; Homey's live Energy report includes
+it and totalCumulative.W matches its power. Estimated import increased from
+0.003 to 0.016 kWh; export remained zero. Three new Insights logs were added,
+with every prior Insights ID retained. These are adoption/import observations,
+not calibrated accuracy, physical export/zero, recovery or soak acceptance.
+
+The independent reserve task continues commissioning. A later readback found its
+houseReserveControl setting changed after the initially equal preservation check;
+this task did not write that setting or restore its old value. Preserve concurrent
+work and coordinate again before any future installation. No further battery
+operation, Flow execution, forced reconnect or app restart was performed here.
+
+The Test listing/changelog is being aligned with the supported single-phase CT1 /
+firmware 1.0.0.41 scope. Its runtime fingerprint is unchanged from local 1.11.0;
+metadata-only packaging does not require another local installation. Test publication
+must be verified separately in the portal. Live and Mainline remain unchanged.
+Full production and final 48-hour soak remain gated by the native acceptance ledger.
+Raw captures, settings, pairing receipts and household readings remain private.
+
+
+## 1.11.0 combined CT1 Energy review candidate — 30 October 2026
+
+Normal CT1 Energy candidate admission is prepared for model 421 / firmware
+1.0.0.41 / single-phase CT1 only, using guarded receipt-time estimates, a 5 s
+logical power TTL and explicit new-device adoption. Unknown firmware, absent
+phase values, nonzero phases 2/3, retained/duplicate/old sequence/late deliveries
+cannot qualify. The existing monitor retains identity/capabilities and gains no
+Energy. No device is paired automatically. See
+[the candidate qualification and limits](CT1_ENERGY_CANDIDATE_VALIDATION.md).
+
+Confirmed accounting fix: unrelated CT2/voltage packets no longer erase CT1's
+power anchor or renew freshness. Partial CT1 still clears the anchor. The bounded
+01:20–01:35 UTC passive stream revealed a roughly 14 s gap and out-of-order burst;
+no MQTT/hardware command was sent. Offline replay uses the real candidate resolver
+and private lab storage only. Import estimates are corroborated, not calibrated;
+physical export/zero, native Energy adoption/recovery and final soak remain open.
+No hardware ledger gate is marked passed. Source admission does not replace full
+release acceptance; hardware-required commands must still return nonzero.
+
+Another active owner task installed Development 1.10.63 during this investigation,
+adding reserve control in a separate checkout. This task did not install it or
+change battery settings. The combined review snapshot preserves that bridge and
+newer source edits. Coordinate a fresh idle/lease checkpoint and verify latest
+bridge provenance before any later approved installation. Do not overwrite it
+with a meter-only archive or silently pause its coordinator.
+
+This is local source preparation, not an installation, activation, Test or Live
+publication. Keep raw captures/identities/settings and private review evidence out
+of Git. Preserve older ES21/ES22 evidence with its original runtime; no transfer
+to this candidate. Readiness, exact CI, delivery and physical acceptance stay separate.
+
+## Dual CT firmware lookup found and validated read-only — 30 October 2026
+
+The native app's GET /iot-service/device/latestPackInfo, with native lang/version
+headers, returns same-source model-421 cpackInfo.version=1.0.0.41. Current-package
+metadata is distinct from latestPackInfo (an offered update). Two new guarded GETs
+and the default DualCtHomeyEnergyContext lookup succeeded with real owned discovery
+and complete inventory; no injected firmware or Energy session. See
+[firmware readback review](DUAL_CT_FIRMWARE_READBACK.md).
+
+Local source now includes a strict current-package reader and wires normal context
+discovery to it. Wrong identity/model, offline, malformed, offered-only, upgrading,
+loader and unknown status fail closed. Native version-report PUT and upgrade writes
+were explicitly excluded. This resolves the missing-reader engineering dependency;
+old assertions below that no firmware reader exists are superseded.
+
+The cloud metadata has no device-report timestamp: hardwareReportedAt stays null.
+API receipt time cannot prove live hardware or CT1 measurement freshness. No
+firmware-change/recovery, sign/timing or accounting gate is passed by this finding.
+Resolver remains empty, Energy runtime hidden/off. Finish measurement qualification,
+then review a concrete installation/adoption candidate before any native write.
+
+Final readback retains 13 EcoFlow definitions/settings, Energy configuration,
+1201 Insights and eight nondecreasing counters. Existing 99 Flow definitions are
+unchanged, with one additional Advanced Flow now present (100 total); its author
+is not established, and it was not modified or executed here.
+
+All 1185 tests, locked Node 22 install, lint/release/diff checks and pinned Homey
+4.5.3 verified validation pass. Prior local UI cleanup/docs are preserved. Installed
+Development 1.10.62, Mainline/Test/Live and all Energy settings remain untouched;
+no install, restart/reconnect, hardware command, pairing, battery/Flow operation,
+version bump, push/publication, new CI or soak. Raw evidence stays private.
+
+## Dual CT completion review and UI cleanup — 30 October 2026
+
+Owner prioritized normal CT1 property Energy with preview/banner cleanup; any
+installation or Energy change remains subject to review. Current source clears
+the persistent research warning and uses normal EN/DE/NL product/monitoring wording.
+Existing IDs, consent, custom names, expiry and Energy/Flow/Insights boundaries
+are retained; no automatic paired-device rename or Energy conversion.
+
+Fresh native firmware remains V1.0.0.41. Owned app discovery exposes model 421 but
+no firmware; Developer quota GET returns 1006. Runtime source qualification is
+therefore still blocked. A bounded read-only 25-pair comparison with an owner-
+confirmed property meter supports import corroboration only; do not mark physical
+accuracy/export/zero/timing or final-candidate gates passed. See
+[the concrete completion review](DUAL_CT_COMPLETION_REVIEW.md) for the finite route.
+
+Fresh readback: 13 EcoFlow IDs, 99 Flows, 1201 Insights, eight nondecreasing counters,
+no new broken Flow. Energy/settings are unchanged during this review. Office meter
+exclusion and CT1 grid-description changes predate the first readback this turn;
+compared with the prior restart baseline these are differences, not a clean equal
+preservation claim. Do not restore them or attribute them to this agent.
+
+All 1178 tests, locked Node 22 install, lint/release/diff checks and pinned Homey
+4.5.3 verified validation pass. Cleanup remains local/uninstalled, no version bump,
+commit/push/new CI. Installed Development 1.10.62 unchanged; Test/Live/Mainline
+unchanged. Energy driver hidden/off, resolver empty, no soak started. No hardware
+command, restart/reconnect, installation, pairing, battery setting or Energy write.
+
+## 1.10.62 approved idle restart passed — 30 October 2026
+
+Owner's single graceful restart ran **00:31:39.146–00:31:40.788 UTC** after two
+passing idle/checkpoint preflights. Running observed by **00:31:42**, fresh 0 W/idle
+by **00:31:44**, and real 0% SOC in both roles by **00:33:29**. Initial readings
+were unknown; zero SOC was not inferred. Precise pre-restart charged/discharged
+totals and projected meters remain exactly unchanged throughout observed startup.
+One restart only; no battery/task/settings write, install or forced reconnect.
+
+Fresh native idle comparison **00:36:19** agrees. Final **00:36:32** full readback
+preserves 13 EcoFlow identities/settings/capabilities, 99 complete Flows, 1201
+Insights IDs, app-setting hashes, all 276 Energy configurations and eight comparable
+nondecreasing counters. No new broken Flow/definition change. Original reporter
+matched/original_stream; independent native GET/main/SOC matches and power differs
+under 0.003 W. Self-powered, no tasks, clean checkpoint and zero new-session
+reconnects. Observer stopped; raw evidence private outside Git.
+
+ES21 idle is refreshed to runtime 31c31c48…1545; current charge/discharge passes
+remain. Full freshness/recovery and Energy continuity remain partial: nonzero
+outage, precise expiry/hint horizon and absolute energy accuracy were not proved
+by an idle restart. Older identity/ES22 passes are not transferred. See monitoring
+RC owner-development-11062-idle-restart. Test/Live/Mainline and runtime unchanged.
+No 48-hour soak or automation started; review the separate start/scope next.
+
+
+## 1.10.62 startup investigation/recovery proposal — 30 October 2026
+
+No confirmed runtime defect found for the 575 W startup snapshot. Both decoded
+paths reported it; source scaling, role separation and accounting checks pass.
+Missing original MQTT bytes/simultaneous native peak leave the physical cause
+unresolved. No clamp, runtime patch or repeat charging task is recommended.
+See [the investigation and recovery review](STREAM_5000_11062_STARTUP_RECOVERY_REVIEW.md).
+
+Existing natural-gap evidence is partial: ignoredGaps=1, no reconnect/reset,
+discharged counter flat 77 Wh at 00:06:55–00:10:45 then increasing. Insights power
+is carried/interpolated and cannot prove tile expiry. A six-minute cached-read
+observation ended at 00:23:16: 343 fresh-zero/live samples, age at most 3 seconds,
+no expiry event. Fresh 00:24:36 readback preserves 13 devices/99 Flows/1201 Insights,
+all Energy configuration/settings and counters. Observer stopped normally.
+
+Recovery proposal is **one graceful app restart after fresh idle/checkpoint
+preflight**, followed by startup/counter/preservation checks, with no battery
+setting changes. No restart, task, install, re-pair, forced silence/reconnect,
+new capture flag, Flow execution, control/Energy activation, publication or soak
+ran. Test/Live/Mainline and fingerprint 31c31c48…1545 unchanged. Freshness/recovery
+and Energy continuity remain partial; no new gate passes. Owner review precedes
+any restart or battery change and the later qualifying soak start.
+
+All 1177 tests, lint, release/diff checks and private synthetic examples pass;
+no runtime change. Review records remain local and private evidence stays outside Git.
+
+
+## 1.10.62 attended charge/discharge completed — 29–30 October 2026
+
+Owner amended the approved 500 W test to start immediately and finish midnight,
+then saved/started the native one-off task. Persisted Never/date/time/power were
+verified. Observed charge **23:33:37–00:00:08 UTC**, approximately 26.5 minutes,
+SOC **0→4%**, about **219.4 Wh** internally integrated. Steady **493–502 W** agrees
+with near-time native comparisons; retain one unresolved **575 W startup** sample.
+No power-limit, calibrated energy, capacity or efficiency signoff is implied.
+
+Discharge appeared **00:00:13 UTC** before deletion confirmation **00:00:22**;
+task list empty by **00:00:28**, Self-powered restored **00:01:03**. Native discharge
+690 W / 4% agrees with Homey -671 W / discharging / 4% about two seconds later.
+Fresh **00:03:37 UTC** readback passes preservation versus the actual pre-test
+baseline: 13 devices, 99 complete Flows, 1201 Insights identities, app-setting
+hashes, all Energy configuration and eight nondecreasing comparable counters.
+No unexpected changes/newly broken Flows; zero reconnects. Collector stopped.
+
+Only ES21 charge/discharge reporting gates are refreshed to fingerprint
+31c31c48…1545; see the new monitoring RC section and ledger. Historical identity/
+idle fingerprints, system/energy-accuracy, startup transient, freshness/recovery,
+rollback, temperature, ES22/accessories, Dual CT Energy and final-candidate soak
+remain separate/open. No 48-hour soak, publish, install, re-pair, extra restart,
+forced reconnect/silence, Flow execution, new controls or Energy migration.
+Test/Live/Mainline unchanged. Raw household evidence remains private outside Git.
+
+All 1177 tests, lint, release-boundary/ledger checks and diff check pass. Runtime
+fingerprint remains unchanged. Documentation/ledger updates remain local for review.
+
+
+## 1.10.62 preflight and approved editor inspection — 29 October 2026
+
+Read-only preflight confirmed running 1.10.62 and preservation against the prior
+post-install baseline: 13 EcoFlow identities/settings, 99 complete Flows, 1201
+Insights identities, global app-setting hashes and all Energy configuration match;
+no sampled counter decrease or newly broken Flow. Native House battery and
+Homey agree on fresh 0%/0 W/standby. Firmware remains V1.1.6.18. This is idle
+comparison, not nonzero Energy, physical capacity or final hardware signoff.
+
+Owner then explicitly approved a temporary Custom-mode editor inspection and
+restoration only. Current editor confirms half-hour timing and a Never/date
+option, but defaults to 2500 W/Daily. The task-power slider did not accept tool
+input; no 500 W selection or saved charge is claimed. The unsaved card was removed,
+all edits discarded through Don't save, and Self-powered restored. Fresh
+23:25:38 UTC readback confirms empty tasks, original configuration, zero power
+and unchanged zero charged/discharged counters; preservation still matches.
+
+The private dated charge/stop proposal remains outside Git for owner review.
+No charging test, saved task, additional restart/reconnect, Energy migration,
+re-pair, Flow execution, acceptance promotion, soak or publication. Test/Live/
+Mainline unchanged. Executing a charge still needs explicit approval, owner
+attendance/local stop and verified 500 W, one-off date/time and removal route.
+A 10-minute manual stop inside a 30-minute task window is not a hard cutoff.
+
+
+## 1.10.62 charge/recovery/48-hour plan prepared — 29 October 2026
+
+Owner requested a plan with battery setting changes reviewed before execution.
+See [the review plan](STREAM_5000_11062_VALIDATION_PLAN.md). It covers an attended
+500 W charge, conditional native-editor cutoff, natural discharge, independent
+energy-reference requirements, natural recovery, separately approved restart
+and a 48-hour soak after restoration. The historical half-hour task-editor limit
+is explicit: a ten-minute manual stop is not a ten-minute hardware cutoff.
+
+Planning only: no task/setting, restart, reconnect, pairing, Energy/source or
+Flow operation; no soak/monitor started, acceptance gate promoted or Test/Live/
+Mainline publication. Installed 1.10.62 attribution and prior hardware limits
+below remain unchanged. Fresh execution baseline and exact dated native task/
+stop parameters must be reviewed before any battery write. A later runtime or
+Energy change requires final-candidate requalification; ES21 cannot qualify ES22
+or Dual CT by itself.
+
+Plan validation: locked dependencies on Node 22, all 1177 tests, lint,
+release-boundary/ledger checks and diff check pass. Runtime fingerprint unchanged;
+hardware readiness remains pending. Documentation remains local for owner review.
+
+
+## Owner-approved Development 1.10.62 installed — 29 October 2026
+
+Non-clean delivery completed **23:01:53.660 UTC**, clean=false/debug=false.
+Independent SDK and Homey UI confirm running/enabled Development **1.10.62**.
+Reviewed implementation b31eacb, exact CI 40969235537 green; archive-provenance
+runtime fingerprint `31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545`.
+SHA256 `ac83f47fbdd8093965a4c43699c07a774c7d16804062f8eb7e51813a1cf2e99f`.
+No independent installed-filesystem rehash is claimed.
+
+Fresh baseline/final readback preserves all **13 EcoFlow device identities/data,
+settings, capability identities/custom metadata**, all **99 full Flow definitions**
+(55 standard, 44 advanced), all **1201 Insights log IDs** and global app-setting
+hashes. Energy declarations/settings across **276 Homey devices** match; no grid
+source or house/CT1 setting changed. Eight comparable cumulative counters show no
+decrease; zero newly broken Flows and zero unexpected definition changes. The
+historical 1.10.60 1 Wh decrease remains recorded, not rewritten.
+
+Original aggregate reporter diagnostics are **matched / original_stream**. An
+independent fresh EcoFlow GET resolves a paired original unit with the main role;
+SOC matches Homey, signed-power readings differ by less than 0.01 W in that sample.
+The paired former-main identity remains intact, so the old saved-address comparison
+is still false as expected. This is read-only target/reporting evidence, not a
+physical control-command or electrical-delivery test. No control command was sent.
+
+Five passive samples from **23:02:49 to 23:04:50 UTC** show fresh battery **0 W /
+idle** throughout and unchanged zero charged/discharged counters. Aggregate SOC
+initially remains unknown, then a real **0%** receipt appears by the third sample
+(about 23:03:20 from its age), with no extra restart or reconnect. The final
+snapshot has 88 accepted power samples, one subscription attempt and zero
+reconnects. Missing SOC was not inferred from zero watts or temperature. This
+observes startup receipt timing/zero handling, not independent native 5000
+comparison, nonzero accounting or a final-candidate soak.
+
+Test/Live/Mainline unchanged. No re-pairing, native linking, battery setting/task,
+Energy permission/source change, Flow execution, account Repair, manual counter
+rewrite, forced silence/reconnect, rollback or additional restart. Native upgrade,
+pairing and recovery ledgers remain partial; exact peer-triggered SOC clearing is
+covered synthetically without deliberately linking hardware. Nonzero sign/interval
+accuracy, capacity/role coverage, recovery/rollback, Dual CT qualification and the
+48-hour final-candidate soak remain open. Full-release readiness is not claimed.
+
+
+## Current candidate 1.10.62 and reconciled installed 1.10.61
+
+29 October: the original aggregate relinking fix a1391f0 was separately approved
+and installed by the coordinating HomeyPro task at 22:37:59.909 UTC. Its reviewed
+archive hash f09d1655…fea2e3a was rechecked; installed source fingerprint is
+`82f0120b20fcea1033117aee3f81b51308a4631b731e615ef32610634b1521e6`.
+This supersedes the earlier 224ad5f/0b32aa19 archive despite the same 1.10.61 version.
+Preserve the concurrent deployment record below; do not install that fix again
+merely because an earlier handover called it source-only. Test/Live unchanged.
+
+Fresh read-only evidence at 22:41 shows the 5000 aggregate now receiving **0% SOC,
+0 W and idle**, with accepted power samples and unchanged zero counters. This
+followed the separately approved restart, so recovery must not be described as
+spontaneous or as proof of native-app triggering. Owner is unsure about opening
+the native overview. Singleton-record SOC and derived battery flow remain distinct
+from independently verified installation scope. See
+ORIGINAL_RELINKING_AND_5000_STARTUP_REVIEW.md for the evidence and limits.
+
+Prepared source **1.10.62**, NOT installed, carries the relinking correction and
+a confirmed SOC scope guard: peer discovery explicitly clears a prior singleton
+SOC fallback, while explicit system SOC (including zero) remains authoritative.
+Two added tests cover that transition and late-listener zero recovery without
+inventing readings or energy. **1177 tests**, locked Node 22 tooling, lint,
+release/diff/audit and pinned Homey verified validation pass. Candidate fingerprint:
+`31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545`; archive SHA256 `ac83f47fbdd8093965a4c43699c07a774c7d16804062f8eb7e51813a1cf2e99f`.
+No install, reconnect, Homey setting/Flow/device action or publication ran in this
+investigation. Current installation is a1391f0, not this candidate. Hardware gates
+are unchanged; review a new exact archive before any further Development update.
+
+
+## Reviewed aggregate fix deployed — 29 October 2026, 22:38 UTC
+
+Owner approved non-clean Development deployment of source a1391f0. Built from an
+isolated Git export with locked dependencies and pinned CLI 4.5.3 verified-level
+validation; source CI 40966605948 passed. Archive SHA256:
+`f09d165586e6e8f93d579cd019ee3e252dec21f175add9128625dbc49fea2e3a`.
+Homey accepted clean=false/debug=false; running Development remains version
+1.10.61, now with this aggregate fix. Runtime attribution is exact archive/upload
+provenance plus corrected readback, not an installed-filesystem rehash.
+
+Read-only verification at 22:39:41: current original main is Ultra X Left; a fresh EcoFlow Developer API read
+and Homey agree at 38% and approximately -162 W (reported discharging). Runtime
+reporter resolution is matched/original_stream. Paired device data and saved old
+main identity stay preserved; the false saved-address comparison is expected.
+Control target verified from deployed code, runtime resolution and native GETs;
+no battery write, outlet command, forced mode/limit, native relink or extra restart.
+
+All 13 EcoFlow IDs/data/settings/capability metadata and semantic icon IDs, all
+99 complete Flows, all 1201 Insights log IDs and global app settings preserved.
+Eight sampled cumulative readings across six devices did not decrease. House
+5000 physical/aggregate and Dual CT settings preserved; native-reported limits,
+reserve and mode returned to the same values after startup unknowns. Signed icon
+transport URLs changed on reinstall; this is not an Insights/capability migration.
+Private before/after/archive/target evidence is retained in the coordinating
+HomeyPro chat's ignored .private-transfer/ecoflow-aggregate-a1391f0 directory.
+Original private transfer and watcher cursor hash remain exact. Codex tasks were
+not resumed. No store/Test/Live publication or Energy/source/pairing change.
+This is aggregate reporting and preservation verification, not physical
+office-to-house delivery, anti-export enforcement or a new 5000 hardware gate.
+
+## Historical alignment before the separate 22:38 installation
+
+29 October reconciliation: a separate source-only correction a1391f0 was added at
+22:32 UTC after the approved archive was prepared and installed. It fixes the
+original aggregate's post-relinking reporter binding; exact CI 40966605948 passes.
+Current source runtime fingerprint is
+`82f0120b20fcea1033117aee3f81b51308a4631b731e615ef32610634b1521e6`.
+This newer work was preserved and is NOT installed. Version metadata still reads
+1.10.61, so do not infer package identity from the version alone.
+
+The installed Development 1.10.61 is the approved 224ad5f archive delivered at
+22:20:18 UTC, fingerprint
+`0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+It includes the physical-unit main-role and Smart Meter floor fixes, but not
+that later original-aggregate correction. No re-add is recommended: retain both
+Home Battery identities/Flows/history, review a separately versioned candidate
+for the original reporter binding, and investigate missing initial battery data
+for the new 5000 aggregate. No further install or publication is authorised by
+this alignment record. Mainline/Test/Live remain unchanged.
+
+
+## Aggregate relinking correction — 29 October 2026, SOURCE ONLY / NOT INSTALLED
+
+Owner requested a source-only fix after read-only evidence showed an original
+aggregate still reading its paired former main while fresh system-main resolution
+selected another original unit. The candidate keeps the Homey data identity,
+capability/Insights identities, custom titles, Flows and accumulated totals intact.
+It resolves an original-family main before the first poll/MQTT subscription and
+uses that address for aggregate telemetry, history and control readback/writes.
+Controls revalidate the main before reads and before each command. Lookup failure,
+unsupported families and an in-session main change block controls and clear live
+system readings; no old-address or 5000 fallback. Reinitialization is required to
+bind again after such a block. No automatic cross-generation merging or migration.
+
+Reporter changes retain accumulated charged/discharged energy, invalidate the old
+raw baselines, and re-anchor to the new reporter without importing lifetime totals
+or integrating downtime. Raw-baseline nulls and their source identity persist so
+restart before the first new counter sample remains safe. Existing counters are
+not rewritten to correct past reporting. A small default-no-op base startup hook
+binds the source before REST/MQTT starts; other drivers retain existing behaviour.
+Daily history starts only after a successful original binding. Late lookup results
+cannot overwrite a newer initialized session. Diagnostic checks remain read-only.
+
+Validation: locked npm ci; 1175 tests pass (seven new relinking/source/command/restart
+regressions); lint passes; release:check passes with hardware gates still pending;
+npm audit reports zero vulnerabilities; pinned Homey CLI 4.5.3 verified-level local
+validation passes. No installation, restart, pairing, Homey setting/Flow/device
+command or store publication. Codex tasks remain paused. This is
+source on the diagnostic branch and was not deployed by that source-only work.
+The separate approved 224ad5f installation is recorded above; a1391f0 remains uninstalled.
+Physical acceptance and controlled power-flow tests remain separate approval gates.
+
+
 > Living status doc. Read this first when resuming work on `uk.co.zarb.ecoflow`.
+
+For a fresh Codex instance/machine, read [CODEX_HANDOVER.md](CODEX_HANDOVER.md)
+and the repository-root AGENTS.md before the dated history below. They identify
+the active branch, installed fingerprint, open gates and private transfer limits.
+The latest handover-only commit does not alter the installed runtime or channels.
+
+## Development 1.10.61 installed and one Energy battery paired — 29 October 2026
+
+Owner-approved exact archive delivered non-clean at **22:20:18 UTC**; SDK/UI show
+running/enabled Development 1.10.61. Source 224ad5f, exact CI 40964207952 green;
+runtime fingerprint `0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+All 12 existing IDs, 99 complete Flows and six checked counter sequences survived
+without a decrease. Original-unit main/member role and nine added system tiles
+match the reviewed fresh-identity correction; no existing capability removed.
+
+The approved pairing gate was enabled and exactly one installation Home Battery
+5000 added; full serial matches the existing house ES21. Homey Energy battery
+metadata enabled/not excluded, physical monitor has no second contribution, and
+original reporter trial stays off. There are now **13 EcoFlow devices**. Pre-pair
+versus post-pair comparison preserves all original device definitions/settings/
+capability metadata, complete Flows and global setting hashes with no decreases.
+Across the operation the only global change is the approved pairing gate.
+
+Seven samples over three minutes show the new aggregate receiving grid/temperature/
+health but no battery SOC/power/state; counters stay zero with zero accepted power
+samples. This is **waiting for battery data**, not an idle-accounting pass. Desktop
+pairing/device panel render; owner confirms the mobile Energy → Batteries listing; fresh native comparison
+and mobile reading accuracy remain pending. Native EcoFlow access timed out. Owner's 0%-explains-state suggestion is
+not treated as observation or permission to invent missing zero/standby readings.
+Natural physical expiry is observed coarsely: battery numeric fields clear despite
+fresh temperature, with last-reported standby at battery age 212 s. Five-second
+expiry latency, hint horizon and recovery are not accepted from this sampling.
+
+No Mainline/Test/Live publication, grid-source change, Dual CT Energy activation,
+native relink, battery command/task, Flow execution, Repair, further restart or
+rollback. Historical 1.10.60 1 Wh decrease remains recorded, not manually rewritten.
+Owner asked whether re-adding a Home Battery would fix missing data; keep both
+paired devices and histories. New 5000 identity is verified; missing reports need
+source investigation, not a second pairing. Native upgrade/pairing/freshness remain partial. See RC owner development 11061
+pairing readback for exact archive/evidence and remaining accounting/soak gates.
+
+## Development 1.10.60 installed; Energy pairing held — 29 October 2026
+
+Owner-approved archive delivered at 22:00:49 UTC; SDK/UI confirm running/enabled
+Development **1.10.60**, fingerprint a4e8e24c…028a42fc. Preservation found a
+relinked original-unit role change and an approximately 1 Wh original Smart Meter
+imported-counter decrease. All 12 identities and 99 full Flows remain, with no
+newly broken Flows; app-setting hashes match. This is NOT a full preservation
+pass. Owner reports recent relinking, consistent with a fresh API result naming
+a different original BK61 as main. No native topology/control change was sent.
+Expected 5000 monitoring status wording also updated. See monitoring RC owner
+development 11060 preservation findings for the full sanitised record.
+
+Pairing stopped before enabling the gate: no aggregate was added. Mainline,
+Test/Live, grid-meter settings, hardware tasks and Flows remain unchanged. Source
+**1.10.61**, NOT installed, now restores original Smart Meter counters from the
+higher valid checkpoint/projected floor and persists recovery without downtime
+fill. A regression reproduces a 1 Wh rollback before the fix and passes afterward.
+**1168 tests**, lint/release/diff and pinned Homey verified validation pass;
+locked dependencies retained. Fingerprint `0b32aa19c02e36b14249c070009547ca039e114bfdfeae89ff1959181d31f02b`.
+Archive SHA256 `9d4555a171b56e4bd3dc3dcc8a01555d634b55c39fcf540b5c1da4d48abfdf91`. This prevents subsequent startup rollback; it does not
+rewrite the already-recorded 1 Wh decrease or restore removed capabilities.
+Relinking investigation also found zero original Homey units labelled main even
+though the API-selected new main is paired. A cached `mainSn` bypassed role
+refresh for former members. Source 1.10.61 now resolves each unit at startup,
+without changing polling cadence, retains existing system capability IDs and
+clears their values when the lookup fails, and blocks unverified system controls.
+Two additional failing regressions now pass (1168 total tests). Existing control
+writers/Flow identities are unchanged; current main/member tile layout is an
+expected readback item for the next reviewed installation, not a native relink.
+A fresh exact-candidate installation approval is needed before continuing the
+previously reviewed one-aggregate validation. No hardware gate is promoted.
+
+## Home Battery 5000 Energy qualification started — 29 October 2026
+
+Diagnostic **1.10.60** fixes confirmed aggregate accounting defects before native
+Energy pairing: rejected or unapplied power cannot advance/re-anchor counters,
+unknown/expired power cannot be bridged, higher valid Homey totals survive older
+checkpoints, and failed counter projections retry even at zero power. Nine new
+lifecycle regressions; **1165 tests**, locked Node 22 tooling, lint/release/diff,
+audit zero and pinned Homey verified validation pass. Clearer EN/DE/NL wording
+separates monitoring, Energy contribution and managing settings in EcoFlow.
+Runtime fingerprint `a4e8e24c39d77037971706359e8848680e4fed92a3aa01e4c985ba6e028a42fc`.
+Archive SHA256 `6a4ccf09037faf4e8c43e11cfdf2600dc290f29412894f2154b58028aed20e50`.
+
+Installed Development remains **1.10.59**. Fresh native/SDK comparison agrees at
+0% and zero battery watts; private exact serial matches the house ES21. Native
+membership remains ES21 plus Dual CT with originals separate. Owner confirms no
+direct PV connected. This is an older-runtime unit idle/identity observation,
+not 1.10.60 system Energy acceptance. Checkbox stays gated pending validation.
+No new pairing, installation, Energy setting, hardware task or store action.
+Mainline/Test/Live unchanged. See HOME_BATTERY_5000_ENERGY_VALIDATION.md for the
+bounded Development-plus-one-aggregate step and subsequent physical, grouping,
+recovery and final-candidate soak gates. Prior dotted-heading ledger reference
+is repaired; no hardware gate is promoted.
+
+## Owner-approved Development 1.10.59 installation — 29 October 2026
+
+Owner explicitly approved the reviewed non-clean update and read-only preservation/UI
+checks. The exact archive was delivered at **21:19:16 UTC**, with clean=false and
+debug=false; independent SDK and Homey UI readback confirm **1.10.59 Development,
+enabled/running**. Implementation c745ee63a536abe303bf6d2718e88c4f6ca46e05 and
+pre-install documentation tip 9e6afb3f3f6ffc2cd4e1ee19f55663f3cd92b233 had green
+exact CI (40934944955 and 40935985448). Runtime fingerprint:
+`e0216df13cb1fc67ab11f1ccdef7ac94dc7b9e10b258bf4b3dc1ad7706bc2d7b`.
+Reviewed archive SHA256:
+`5b36d4895dc8e140e04e68a57f51f9762232a73b3a00128c61f780800c3beaee`.
+Fingerprint attribution follows the verified archive/delivery provenance; the
+installed filesystem was not independently rehashed.
+
+All 12 paired identities, capability semantics/metadata, settings, fixed Energy
+configuration, 55 standard and 44 advanced complete Flows and global app-setting
+hashes were preserved. Six comparable cumulative counters did not decrease; no
+newly broken Flows were observed. Immediate readback matched; later original
+Smart Meter note and zone differences were confirmed by the owner as their edits
+and retained. Latest comparison has zero unexpected differences. Live watts and
+session-specific icon transport URLs are excluded from fixed-configuration
+comparison; semantic icon IDs remain checked. Private evidence stays outside Git.
+
+Installed settings and the blank account Repair entry rendered successfully;
+aggregate Energy pairing remains unchecked. Repair sign-in was not submitted.
+Seven passive cached observations from 21:32:21 to 21:35:22 UTC showed recent
+Dual CT traffic and live STREAM 5000 battery readings. Fresh battery reports
+prevented the three-minute expiry condition: fast expiry is still unverified.
+This short window is not native EcoFlow comparison, counter qualification or a
+48-hour soak. Rejected preview frames were observed; transport activity alone
+is not firmware/sign/replay or accounting acceptance.
+
+No store publication, Mainline change, Energy adoption/exclusion, new pairing,
+account credential change, battery setting/task, Flow execution, forced silence
+or reconnect was performed. Mainline/Test/Live remain unchanged by this work;
+store channel state was not freshly reverified. Existing hardware passes retain
+their recorded older fingerprints. Native Repair, charge/discharge/accessories,
+expiry/recovery, qualified Dual CT contract/accounting, 5000 solar scope and final
+candidate soak remain open. Next bounded release step is a separately reviewed
+limited Test publication; full Energy production readiness is not claimed.
+
+## Dual CT driver and account Repair — 29 October 2026
+
+Prepared diagnostic **1.10.59** on the active branch. New `smartmeter_dual_ct_energy`
+driver wires source-bound review/confirmation, owned/model identity and a firmware-provider interface,
+conservative Homey electricity contributor inventory, real persistent session and
+shared subscription lifecycle. Gas/water, excluded meters and downstream meter
+roles are distinguished; malformed/unknown inventory blocks adoption. Confirmation
+and final Add recheck source, inventory, expiry and activation before credentials
+are committed. No preview conversion or edits to other sources. The driver stays
+hidden from Add Device and runtime-off; the registry remains empty. Normal discovery
+still has no demonstrated firmware readback; tests inject a synthetic code-owned
+reader, never customer verification flags.
+
+Counter restoration rejects a missing/older checkpoint when Homey already holds
+higher projected totals. Restart establishes a fresh anchor without downtime fill.
+Process-wide authority, stale-power clearing, identity/credential invalidation,
+late callbacks, owned subscription teardown and bounded retry are covered. This
+cannot detect every whole-app backup rollback when both stores and capabilities
+roll back together; native recovery policy/acceptance stays open.
+
+Source-preserving account Repair is registered for app-connected device roles.
+It validates ownership of all existing consumers and protected account bindings,
+expires review after 90 seconds, requires confirmation and verifies persisted
+credential revision. Failed/partial writes attempt restoration without printing
+credentials. Only prior monitoring consent can resume; no paired definition,
+Energy permission, Flow or battery control is changed. Native Repair is unverified.
+Shared auth now fences disposed/superseded asynchronous logins and retains shared
+credentials when another consumer still needs them.
+
+**1156 tests**, locked Node 22 dependencies, lint/release/diff checks, zero audit
+findings and Homey CLI 4.5.3 verified validation pass. EN/DE/NL desktop/mobile tests
+cover blocked Energy pairing, review consent/expiry and account Repair without
+creating a device. Full readiness also rejects a disabled/unadmitted source even
+if hardware ledgers are marked passed. Current source fingerprint:
+`e0216df13cb1fc67ab11f1ccdef7ac94dc7b9e10b258bf4b3dc1ad7706bc2d7b`.
+
+Fresh read-only owner verification remains running Development **1.10.58**;
+all 12 full device definitions/settings and 99 complete Flow definitions match
+the private baseline, app-setting hashes match, six cumulative sequences are
+nondecreasing. Source 1.10.59 is **not installed or published**. No account Repair,
+new pairing, Energy inclusion, battery operation, Flow execution or forced reconnect
+was performed. Mainline/Test/Live remain unchanged. Firmware/sign/timing contract,
+5000 solar scope, native UI/accounting/Repair/recovery and final-candidate 48-hour
+soak remain open. A verified full archive readback contains production MQTT dependencies, the new
+driver and all six Repair views; root app/package/lock metadata match source.
+Archive `ecoflow-stream-1.10.59-e0216df1-diagnostic.tgz`, 1978 files,
+10446748 bytes; SHA256
+`5b36d4895dc8e140e04e68a57f51f9762232a73b3a00128c61f780800c3beaee`.
+The archived runtime flag is false and the driver hidden. Read-only SDK inventory
+classification is complete and identifies one included electricity property meter;
+this is not native adoption/HTTP-provider acceptance. Implementation
+`c745ee63a536abe303bf6d2718e88c4f6ca46e05` is pushed to the diagnostic branch and
+exact CI [40934944955](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40934944955)
+passed. This delivery record changes no runtime files or hardware acceptance.
+The documentation tip's CI remains a separate check when resuming.
+
+## Production settings and Energy completion audit — 29 October 2026
+
+Diagnostic source now separates account connections, Homey Energy setup and
+collapsed optional Support tools. New guidance is localised in EN/DE/NL; obsolete
+Beta/history wording removed from settings and the store description. Native
+preview/validation limitations remain explicit. Existing consent settings, device
+IDs and runtime Energy gates are unchanged. Fixed raw exception disclosure in
+settings failures and removed the instruction to re-pair after account removal.
+
+Locked Node 22 dependencies, **1128 tests**, lint, release/diff checks, zero audit
+findings and Homey CLI 4.5.3 verified validation pass. Browser workflows include
+all three languages on desktop/mobile, no capture/settings writes from opening
+sections, existing consent and private-error regressions. New source fingerprint:
+`10f6af684f6e76fa4c4b6dc6bb9beefa9f7a448c7611811a740d8f02d50431bf`.
+This source is NOT installed. Existing Development 1.10.58 / da1da009…5baee1
+remains running, and its hardware evidence is not transferred to the new source.
+
+Fresh read-only Energy inspection confirms the original meter still contributes
+as a property source despite its downstream role; Home/Emporia and Octopus
+electricity remain excluded. Gas is separate. Dual CT preview remains non-Energy.
+No owner setting, account, device, Flow, Energy source or channel was changed.
+
+See [Energy completion audit](ENERGY_RELEASE_COMPLETION.md) for the Homey SDK role
+review and actual remaining work. Dual CT source qualification and real driver/UI/
+subscription integration remain incomplete; normal discovery has no demonstrated
+firmware readback. 5000 solar Energy scope and account re-authentication need
+completion decisions too. Native meter/battery intervals, expiry/recovery,
+persistence/rollback and final-candidate soak remain open. `release:full` remains
+nonzero; cosmetic cleanup and software checks cannot complete sprints 4–6.
+Mainline, Test, Live and the installed app remain unchanged. CI/source push outcome
+must be verified separately; no deployment or publication follows from this record.
+
+## Native ES21 identity and idle point — 29 October 2026
+
+Fresh native access confirms the complete ES21 identity matches the paired unit,
+with Dual CT as current main-breaker meter and original units offered separately
+for linking. Native Standby/zero battery flow/system SOC and individual unit SOC
+agree with fresh Homey zero/idle/SOC on installed 1.10.58. Only ES21 identity and
+this single-unit idle point are accepted for exact runtime da1da009…5baee1;
+transitions, physical pack calibration and aggregate scope are not accepted.
+Native firmware V1.1.6.18 was read without updating. Nominal capacity display is
+not a usable-capacity test. A native/Homey temperature display difference remains
+unresolved; no field/offset fix or temperature acceptance. No settings, tasks,
+controls, Energy, Flows, forced reconnect, installation or channels changed.
+See [native idle comparison](STREAM_5000_MONITORING_RC.md#owner-native-idle-comparison).
+
+## Owner-approved 1.10.58 diagnostic installation — 29 October 2026
+
+After the owner completed normal CLI consent, authenticated private readback
+captured all 12 EcoFlow device definitions and all 99 complete Flow definitions.
+Owner then specifically approved the reviewed non-clean Development 1.10.58
+update and read-only preservation checks. Exact source `85c5cad`, CI `40913604866`
+green, delivered at 16:50:07 UTC; running 1.10.58 read back independently.
+All paired IDs/data/settings/capability metadata, 99 Flow definitions and app
+setting hashes match; all six cumulative counters are comparable/nondecreasing.
+Archive SHA256:
+`11112d1a8d583a47990e3c4e2eebef4dceb1846499782130b694494ecf7f8315`.
+Runtime fingerprint remains `da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+
+Fresh Dual CT transport/accepted diagnostics and a live ES21 reading are present.
+Scope/native comparison, actual sparse expiry, charging/discharging, aggregate
+Energy, persistence/rollback and 48-hour soak are not passed by this short window.
+No battery setting/task, Flow execution, pairing/activation, forced reconnect or
+Mainline/Test/Live publication. Adoption/driver qualification remains incomplete.
+See [owner diagnostic installation](STREAM_5000_MONITORING_RC.md#owner-diagnostic-installation).
+Private evidence stays outside Git; recovered historical source is not a native
+store backup or accepted rollback. Earlier unauthenticated/not-installed statements
+below describe preparation, not current delivery.
+
+## Sprint 4 adoption and combined battery readiness — 29 October 2026, HISTORICAL PREPARATION
+
+Prepared diagnostic version 1.10.58. Added a source-bound, one-shot adoption
+review/confirmation workflow with 90-second expiry, fresh owned identity/firmware,
+fresh account-matched contributor inventory, overlap rejection and explicit
+external review. Confirmation rechecks the source/inventory and fences cancellation,
+account/firmware changes, duplicate Add and late activation withdrawal. External
+discovery errors are scrubbed. Client-supplied device/store objects are ignored.
+The workflow is unwired, not a registered Energy driver or adoption UI; production
+contract resolver remains empty and runtime false. Source/firmware/timing provider
+qualification and actual driver/subscription integration remain incomplete.
+
+Added release:full to assess Dual CT plus both STREAM 5000 model/role ledgers for
+one fingerprint. Open/old-runtime gates remain nonzero. Fresh locked-dependency
+Node 22 checks pass: **1126 tests**, lint, release/diff checks, audit with zero
+findings and Homey CLI 4.5.3 verified validation. Full CLI build and archive
+readback include production MQTT dependencies and compiled new modules; app,
+package and lock metadata match source. Version preparation is not publication.
+Runtime fingerprint:
+`da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1`.
+
+Read-only installed Homey remains Development 1.10.56. The 5000 subscription is
+active with recent configuration/empty task reports, but linked physical scope
+and battery power/state remain unverified. Another Dual CT stale interval was
+observed. Native computer-control timed out; no fresh native comparison, restart
+or forced silence was performed. No hardware gate passed. CLI authentication is
+absent; full private preservation baseline requires authenticated SDK readback.
+
+See [Sprint 4–6 execution and battery matrix](SPRINT_4_6_ACCEPTANCE_PLAN.md).
+No install, pairing, settings/Flow/hardware operation, Energy activation,
+Mainline/Test/Live change or publication. A diagnostic update and any later
+controlled hardware/adoption trial require separate bounded approval/readback.
+
+## Dual CT CT1 release sprints — 29 October 2026, DIAGNOSTIC SOURCE / NOT INSTALLED
+
+Owner authorizes diagnostic-branch release engineering with CT1 as the future
+property Energy meter. Current source base e469c37 matches fetched origin; its
+exact CI 40781605070 passed. Fresh portal readback still shows Test 1.10.56 /
+Build 70 and Live 1.10.3; owner is running Development 1.10.56. Earlier Test
+preparation below did not complete publication. Mainline/installed/channels stay
+unchanged in this continuation.
+
+Added independent received/rejected frame counts and transport age to the preview
+and numeric-free support projection; rejected traffic cannot renew accepted data.
+A separate Dual CT hardware ledger/checker is now part of release:check, while
+release:dual-ct intentionally fails pending hardware gates. Added an unwired,
+production-default-off Homey write adapter around the existing persistent session.
+It rechecks consent/qualification around async SDK writes, keeps failed/partial
+projections unavailable, clears stale power without resetting committed totals,
+serializes teardown and coalesces refresh ticks. No new driver, permission,
+capability or Energy activation is introduced. Full scope/dependencies are in
+[the sprint record](DUAL_CT_RELEASE_SPRINTS.md).
+
+Read-only native Dual CT firmware V1.0.0.41 and approximate Phase A/import-point
+agreement support partial evidence only. Existing direct-meter/preview data
+recovered naturally after a stale interval, and sampled existing counters are
+nondecreasing. Original meter remains configured as a property Energy meter
+despite reported downstream relocation; no settings corrected without a reviewed
+source transition. Firmware readback/timing contract, export/zero/energy intervals,
+native storage/upgrade/rollback and 48-hour soak remain open. Validation: 1114
+tests, lint, release/diff checks and Homey CLI 4.5.3 verified validation pass.
+Runtime fingerprint: `ae5f67bfc05c1bbf1e91b88badfd232de594fe7c1875233271d53e70bb540e37`.
+Private UI evidence
+and household numbers stay outside Git; no tester capture requested.
+
+## Consolidated 1.10.57 Test preparation — 28 October 2026
+
+Owner authorized diagnostic commit/push and one new Test release, keeping Mainline,
+Live and the owner Development installation unchanged. Final review checked raw
+mapping aliases/derived groups; disabling reconciliation reproduces three queue
+regression failures, and the previous widget pages fail all ten new lifecycle
+tests. Version 1.10.57 includes the reconciliation/widget fixes, capacity wording
+and previously owner-installed history/physical-expiry changes from this branch.
+No claim is made that Stefan's exact setup has passed or that 5000 hardware gates
+have closed. The Energy screenshot shows today's charged energy, not capacity.
+
+Fresh npm ci on Node 22: 1101 tests, lint, release checks, zero audit findings,
+verified Homey CLI 4.5.3 validation and diff checks pass. Runtime fingerprint:
+`f790f04fd12985cf0cdf28dce191397195388eea2f7c7b446acb179309a64ec5`.
+Source CI and Test upload/activation must be recorded independently after success.
+At preparation, CLI authentication is pending and local browser access is disabled.
+No store upload/activation or owner installation has happened in this checkpoint.
+
+## Original STREAM field-aware reconciliation — 28 October 2026, LOCAL ONLY / NOT INSTALLED
+
+Stefan's follow-up (public thread posts 77–78) distinguishes an aggregate device
+freeze from a widget-only failure: Homey device values stop while EcoFlow keeps
+updating, and an app restart restores them. Version is 1.10.56. The displayed
+1.9 kWh screenshot is today's charged energy, not installed capacity; the separate
+setting screenshot shows 3.84 kWh already configured. This does not establish a
+missing battery or prove this race caused the user's freeze.
+
+Reproduced a software starvation path: temperature-only MQTT during each REST
+poll caused the whole REST SOC/power/counter response to be discarded. Original
+STREAM aggregate now filters only conflicting REST fields. A request-local set
+tracks MQTT fields from request start until queued application; filtering happens
+when the serialized work runs, including same-millisecond/slow-write races.
+No MQTT payload is replayed, cached reply mutated or receipt timestamp renewed.
+Other drivers retain the conservative whole-response guard.
+
+Aliases are withheld together (temperature, health, heating, mode); all PV
+fallback/string dependencies form one group. Battery power/state derivation,
+charge/discharge counters and system remaining times are withheld together so
+an old REST snapshot cannot overwrite newer counters or enter power accounting
+around a newer battery receipt. Unrelated REST SOC/grid/configuration can still
+update. This is conservative omission, not merging old and new packet fields.
+
+Five new tests cover repeated starvation, queued conflicts, real-driver counter
+continuity, derived groups/aliases, zero and invalid newer fields. Existing queue
+teardown/default-driver guards and all earlier widget regressions remain green.
+Validation: **1101 tests**, lint, release checks, diff checks and pinned Homey
+4.5.3 verified validation pass on Node 22 with existing locked dependencies.
+Local source fingerprint:
+`8dc2d532deca2dc995b664f7745d757668983659791b46e4bed365632be53d9a`.
+This is not native acceptance of Stefan's setup or any 5000 model/role. The owner
+installation remains the recorded f1234365…9ba2 candidate; all hardware gates for
+this new local source remain pending. Previous local widget work is preserved.
+No commit/push, installation, Mainline/Test/Live change, publication, settings/task
+change, Flow execution, forced reconnect or control/Energy activation.
+
+## Original STREAM freeze/capacity investigation — 28 October 2026, LOCAL ONLY / NOT INSTALLED
+
+Community reports distinguish frozen Homey dashboard Sensors readings from an
+Energy capacity display concern on an original two-AC-Pro setup. Exact installed
+version, affected screen/device role and whether EcoFlow/device pages keep
+updating are still requested; no customer cause or native fix is claimed.
+No additional Robert capture is requested.
+
+Local execution of all five widget page scripts reproduced two refresh defects:
+a never-settling Homey bridge request permanently held the busy lock, and
+`pagehide` cleared polling without a `pageshow` restart. Widgets now expire the
+local wait after 15 seconds, retry on the existing cadence, ignore obsolete
+success/rejection/finalization, and restore exactly one polling interval after
+page restoration. This deadline does not cancel the underlying Homey bridge
+request or change EcoFlow subscription/polling behaviour. These widgets are
+separate from Homey's built-in Sensors dashboard; the customer's report remains
+unreproduced. Ten deterministic regressions execute the actual page scripts and
+cover timeout, overlap protection, late completion, restoration and cleanup.
+
+Capacity investigation found `installed_capacity_kwh` used by widget estimates,
+not a Homey Energy capacity declaration. Clarified that scope in EN/DE/NL hints
+and the composed manifest. A regression verifies selected-installation capacity,
+unknown capacity and isolation from physical-unit count/other spaces. No nominal
+capacity is guessed and no Energy declaration, counters, settings IDs, paired
+identity, Flow contract or backend telemetry mapping is changed.
+
+The existing REST/MQTT revision guard deliberately discards REST replies overtaken
+by MQTT, including counters. No speculative merging change was made: retaining
+newer counter/field evidence matters, and the report does not yet identify a
+transport failure. Widget reproduction is software evidence only.
+
+Validation: all **1096 tests**, lint, release boundary/acceptance-schema checks,
+verified Homey validation with CLI 4.5.3 and diff whitespace checks pass using
+Node 22 and the existing committed-lockfile dependencies.
+Local candidate fingerprint:
+`5ca108a2fd945dfbe83ed37c14da9a3deffe7584a5da1dcdf0bea681d65812c9`.
+Hardware readiness remains PENDING for this changed fingerprint; prior installed
+signoffs are not promoted. Installed owner app remains Development 1.10.56 with
+recorded fingerprint `f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+No commit/push, installation, version bump, Mainline/Test/Live change, publication,
+physical setting/task/Flow execution, reconnect or control/Energy activation.
+
+## History retention delivery — 28 October 2026, PUSHED / CI GREEN / OWNER-INSTALLED
+
+Implementation `e270578568718afd2fd3450694dc8226a2a897a2` is pushed to the
+diagnostic branch. [Exact-commit CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40614977219)
+passed tests, lint, release checks, audit and verified Homey validation.
+Runtime fingerprint remains
+`f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+The validated package was directly installed non-clean at 01:27:41 UTC;
+independent readback confirms running Development 1.10.56. No store command.
+
+All 11 device identities/settings, all existing capabilities, 99 Flow definitions
+and six cumulative meter sequences are preserved. The six previously removed
+daily-history tiles were re-added by fresh numeric history responses, not by
+inventing values or forcibly migrating capabilities. No blank daily tiles were
+present immediately before installation, so native preservation of a null-valued
+tile is not claimed; the regression tests cover that specific input.
+
+Native EcoFlow at 01:28:42 explicitly displayed Standby/0 W/1%, matching Homey's
+fresh zero/idle/SOC. This accepts the standalone idle point for this fingerprint,
+not other earlier candidate gates. EcoFlow was then quit normally and confirmed
+not running. Battery and temperature receipt ages remain independent, with one
+active subscription attempt and no reconnect. Through 01:30:57, new battery
+receipts continued before the three-minute threshold; actual fast-expiry timing
+on this installed candidate remains unexercised, not passed by software replay.
+
+Git access initially blocked because a six-byte worktree metadata file was
+offloaded by macOS. Finder's Keep Downloaded restored access without editing Git
+metadata or changing refs; iCloud quota exhaustion was visible and merits a
+separate repository-storage review. Remote branch equality was independently
+verified before the normal non-forced push. Mainline refs are unchanged;
+store Test/Live, hardware configuration, Energy gates and controls are untouched.
+Private baselines, measurements and native screenshots remain outside Git.
+See [owner history-retention installation](STREAM_5000_MONITORING_RC.md#owner-history-retention-installation).
+
+## Legacy daily-history capability retention — 28 October 2026, HISTORICAL LOCAL PREPARATION
+
+Removed the original STREAM startup routine that deleted existing daily-history
+capabilities merely because their values were null. Paired capability identities
+and custom titles now survive blank readings, restart/reinitialization and
+unavailable history. Day rollover still clears yesterday's values to unknown;
+fresh data (including true zero) updates existing tiles in place. Missing tiles
+are still added only when their own history metric is returned, not as empty
+defaults. No history/counter source, Flow contract or settings change.
+
+Three regression tests cover startup with history enabled/disabled, repeated
+initialization, null/zero/populated values, custom titles, rejected/empty history,
+rollover, recovery and on-demand addition. All 1085 tests, lint and release checks
+pass. Local source fingerprint:
+`f1234365433db279bc9418a29beaaf863ef593d291864e6018de8388c4cf9ba2`.
+This fix has NOT been installed; owner Homey remains on the fba275ff expiry
+candidate below. It does not automatically restore tiles already removed by that
+older runtime; absent tiles return on fresh history under the existing behavior.
+Native upgrade/preservation must be rechecked after a separately requested install.
+No commit/push, Mainline change, store publication or hardware setting change.
+
+## Physical reading expiry hardening — 28 October 2026, OWNER-INSTALLED / EXPIRY TIMING PENDING
+
+Local diagnostic source separates physical-monitor reading expiry from the
+60-second connection watchdog. A five-second local timer clears stale readings
+through the existing serialized write chain; pending checks coalesce so slow
+SDK writes cannot accumulate an unbounded queue. No EcoFlow requests, faster
+reconnects, aggregate accounting, controls or Energy activation are introduced.
+Timers stop on teardown; failed clears remain diagnostic failures and retry.
+
+1082 tests (including two new lifecycle regressions), lint, release checks and
+verified Homey validation passed. Runtime fingerprint:
+`fba275ff6c225d77d1e377675a28612df9aaa8c3827625103211cafc36ed6093`.
+The official package was installed non-clean on the owner Homey at 01:07:32 UTC;
+independent readback shows running Development 1.10.56, with fresh zero/idle
+battery telemetry. The uploaded compiled device file matches the local build.
+Native EcoFlow remains closed. Earlier ac38129 hardware signoffs remain
+historical; this new runtime does not inherit them.
+
+Read-only app-closed observation 01:07:37–01:14:12 UTC found fresh zero/idle,
+independent temperature ages and zero reconnects. Battery receipts renewed
+approximately every two minutes, so the installed fast-expiry callback was not
+physically exercised in this bounded window. Do not substitute the previous
+candidate's expiry event or software tests for new-candidate timing acceptance.
+Natural silence/expiry, recovery and the hint horizon remain hardware-pending.
+
+All 11 identities/settings and 99 Flow definitions are preserved; six cumulative
+meters are nondecreasing. Capability sets are NOT fully identical: one original
+STREAM's six daily-history tiles, all null in the baseline, were removed by its
+existing `cleanupBlankHistoryCapabilities` startup routine. That code was not
+changed; a working history feed can re-add the tiles. No measurement value is
+claimed lost, but this is recorded as an upgrade-preservation exception, not
+silently passed. Review legacy blank-tile retention before production release.
+
+No commit/push, Mainline change, version bump or store upload/publication.
+
+## Owner app-closed sparse standby — 28 October 2026, READ-ONLY VALIDATION
+
+After quitting EcoFlow on the Mac, battery receipts became sparse while
+temperature stayed fresh. Battery diagnostics were stale at 199 seconds;
+numeric watts/state cleared by the next observed watchdog readback, leaving
+only the explicitly non-live `last_reported_standby` tile. They stayed null
+at battery age 318 seconds, with an active subscription and no reconnect.
+
+Record the timing limitation: freshness expires after three minutes, but
+capability clearing is on a 60-second watchdog and is not instantaneous.
+Recovery/hint horizon/reconnect remain untested; the combined hardware gate
+stays partial. All 11 device definitions and 99 Flows are unchanged; 56 targeted
+software tests passed. Local records only, no runtime changes or publication.
+See [app-closed sparse standby](STREAM_5000_MONITORING_RC.md#owner-app-closed-sparse-standby).
+
+## Owner natural standby — 28 October 2026, READ-ONLY VALIDATION
+
+Native EcoFlow explicitly shows Standby/0 W/1%, matching fresh Homey zero/idle/SOC
+on installed runtime `ac38129`. The standalone ES21 idle gate is accepted for
+that fingerprint. History places settled zero at approximately 23:58 UTC,
+after discharge and a short positive-flow interval; the exact transition and
+reason were not witnessed. No explanation is inferred from the low SOC alone.
+
+Battery receipt ages advance separately from temperature updates. Fresh battery
+receipts continue, so actual silence expiry/retained-standby/recovery remains an
+open hardware gate, despite 13 passing software freshness/presentation tests.
+All 11 device definitions and 99 Flows are preserved; no reconnect or setting
+change. These are local validation-record changes only: no runtime change,
+installation, commit/push or publication; Main and Live remain unchanged.
+See [natural standby observation](STREAM_5000_MONITORING_RC.md#owner-natural-standby-observation).
+
+## Owner manual-stop charging test — 27 October 2026, COMPLETED / RESTORED / VALIDATION RECORD
+
+Owner approved the revised 500 W one-time 23:30–00:00 native task, with manual
+stop at 23:40, confirmed physical attendance/local stop and an independent alarm.
+Saved non-recurrence/date/time/power were verified in EcoFlow and the existing
+read-only app-connected subscription before start. No undocumented controls were used.
+
+Native/Homey charging direction, near-time power and SOC increase agreed on the
+installed ac38129 candidate. Sampled temperature stayed unchanged; per-field
+receipts remained fresh and the subscription did not reconnect. Cancellation
+was initiated at 23:39:47.973 and confirmed at **23:40:01.737 UTC**, followed by
+fresh empty-task/discharge readback. This is manual timing, not a claim of an
+exact ten-minute physical interval. Existing normal discharge resumed as expected.
+
+At 23:42:19, the two-minute recovery check passed: reported configuration matches
+baseline, all 11 device identities/settings/capability sets and 99 Flow definitions
+are preserved, and six cumulative meter readings are nondecreasing. No remaining
+test task or persistent setting change. This diagnostic record update changes
+no Energy gate, runtime, installation, Mainline or store state. Detailed private
+evidence stays outside Git.
+
+ES21 charge and current-candidate natural discharge gates are recorded for this
+standalone operating point only. ES22/accessories/linked packs, controlled
+recovery, rollback, soak and Energy remain unaccepted. Overall readiness stays
+PENDING. See [owner bounded charge test](STREAM_5000_MONITORING_RC.md#owner-bounded-charge-test).
+
+## Charging precheck — 27 October 2026, HISTORICAL INITIAL ATTEMPT NOT STARTED
+
+The owner-approved 500 W / ten-minute test was gated on a native one-time end
+time and physical supervision. Native timing controls expose 00/30-minute
+choices only, so the ten-minute scheduling prerequisite failed. The unsaved
+default draft was discarded (Don't save); native No tasks and the support
+empty-task readback were verified, with battery still idle and device settings/
+Flow definitions unchanged. No native task was saved or activated at this initial
+checkpoint. Physical attendance/local stop was confirmed later, and a separately
+approved revised test was completed as recorded above. No replacement duration
+or undocumented command was used in this initial attempt.
+See [bounded charge precheck](STREAM_5000_MONITORING_RC.md#bounded-charge-precheck).
+This is a local evidence update only, not a runtime/source delivery or publication.
+
+## Firmware/history check — 27 October 2026, READ-ONLY VALIDATION RECORD
+
+Native firmware listing for the owner ES21 reports **1.1.6.18**, with no update
+available in that view. No update was started. Last-hour/five-second and
+last-day/five-minute Homey histories were reviewed alongside fresh support
+receipt ages. Current installed candidate remains ac38129/Development 1.10.56.
+
+Recent battery/SOC/temperature graphs contain no gaps, but Insights masks the
+brief independently observed startup-unknown interval with numeric values; it
+is not a packet freshness log. The independent grid-meter channel stays unknown
+as expected. A leading flow-derived import/consumption null run, at least eleven
+minutes within the retrieved window, predates the current installation; its
+full duration/cause is not established. Prior-day activity does not sign off
+this candidate. Current battery receipts renewed independently of temperature/
+health, with one active subscription attempt and no reconnect in this session.
+
+All 11 devices/99 Flow definitions remain preserved. No runtime, hardware
+setting, restart, observer, Energy, store or Mainline change. Evidence remains
+private; this diagnostic records-only update leaves hardware gates unchanged.
+See [firmware and history review](STREAM_5000_MONITORING_RC.md#firmware-and-history-review)
+for the limits on interpreting gaps, resampling and firmware status.
+
+## Read-only native comparison — 27 October 2026, VALIDATION RECORD
+
+Installed ac38129 was compared with the native EcoFlow application at
+approximately 22:22–22:25 UTC. Exact device identity matches the paired ES21;
+only that identity gate is newly accepted for the current fingerprint. Standby
+SOC/zero battery flow, Custom mode, grid limits, SOC limits and disabled reserve
+agree at this operating point. Stored reserve target is not an enabled floor.
+Native diagram versus unit GRID-port scopes remain distinct; no independent
+whole-house meter is inferred. The native multi-day timer during empty standby
+remains semantically unresolved and is not exposed in Homey.
+
+Native membership lists the new unit; legacy units are unlinked suggestions.
+Nothing was linked or configured. All 11 devices remain available, identity/
+settings/capability sets and all 99 Flow definitions match the install baseline.
+Subscription stays active with fresh per-field battery receipts; this window
+does not exercise sparse expiry, controlled reconnect or the longer soak.
+Charge/discharge, accessory loads, rollback and aggregate Energy remain open.
+
+This record-only diagnostic update changes no runtime source, installation,
+settings or store channel. Acceptance tests (13) and release
+boundary/schema checks pass; overall readiness stays PENDING. Private screenshots
+and selected timestamped observations remain outside Git. See
+[owner read-only comparison](STREAM_5000_MONITORING_RC.md#owner-read-only-comparison).
+
+## Monitoring recovery delivery — 27 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
+
+Implementation `935547d455413357c2d4c034e065dce32733d252` is pushed on the
+diagnostic branch. [Exact implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40593150462)
+passed 1080 tests, lint, release checks, online audit and Homey verified validation.
+Runtime fingerprint is
+`ac38129ed5d61435f0092f96180718708ee594a767e352fc3fd84609d600f2c9`.
+Earlier local-preparation statements below are historical, not current delivery.
+
+Owner explicitly authorized non-clean installation. The initial CLI attempt
+looked for a nested build directory and failed local validation before contacting
+Homey. A programmatic packing attempt in the desktop runtime could not load a
+native CLI dependency and also never contacted Homey. The normal shell runtime
+then used the official CLI packer and Homey SDK devkit route with the explicit
+validated staging directory, `clean:false`, and no debug session. Installation
+returned the expected app ID at **22:17:10 UTC**. Production dependencies came
+from the identical lockfile with scripts disabled; the official SDK shim was
+restored. No dependency version, candidate source or store channel changed.
+
+Independent readback at **22:17:26 UTC**: running Development 1.10.56, schema 19,
+all 11 EcoFlow devices available; IDs, driver/data identities, settings and
+capability sets match the private baseline. All 99 standard/Advanced Flow
+definitions match. Six existing cumulative meter readings are comparable and
+nondecreasing. Zero 5000 aggregates are paired, unit monitoring needs no opt-in,
+and aggregate Energy pairing stays off. No Flows or battery commands were run.
+
+The physical unit cleared its persisted power/state/configuration at startup;
+its reading status is waiting. The subscription is active, with fresh applied
+temperature/health receipts and fresh SOC-limit configuration. This demonstrates
+initial reconnection and safe unknowns, not recovery of all battery/config fields,
+natural charge/discharge/idle acceptance or a completed soak. Mode/reserve values
+must not be restored from the old session merely to populate the display.
+
+Previous source and the private pre-install preservation baseline are retained
+outside Git. Rollback was prepared, not exercised. Mainline, store Test/Live,
+hardware settings and existing Energy contracts remain unchanged. The next
+physical step is continued read-only comparison on this exact runtime; hardware
+acceptance gates remain open and require their own evidence.
+
+## Monitoring validation — 27 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
+
+Prepared on `codex/mixed-generation-reporting-diagnostics` after verifying local
+and remote diagnostic HEAD `43669cc` agree. No commit/push or CI dispatch in this
+wave; Mainline and Test/Live remain unchanged. Installed owner Development
+1.10.56/schema 19 remains the older 4834191 runtime.
+
+Reconnect now clears the previous session's configuration tracker and tiles;
+failed tile clears no longer prevent unrelated clears, and watchdog retry is
+preserved. Flow conditions remain unknown until fresh configuration evidence.
+Report projection also requires explicit freshness rather than promoting an
+omitted flag. Added regression tests cover these cases plus physical-monitor
+charge/discharge/idle expiry, unchanged identity/store, no Energy/timers and
+strict per-model/per-role release-readiness selection. No capability, control,
+setting, permission, Flow identity or aggregate Energy contract was added.
+
+The monitoring-only readiness command separates physical-unit acceptance from
+system Energy. It does not waive model/hardware gates. See
+[current validation wave](STREAM_5000_MONITORING_RC.md#current-validation-wave)
+for scope, read-only owner baseline and the next acceptance steps. Hardware
+acceptance remains open for the new candidate; previous fingerprint signoffs
+are not inherited. Raw evidence and support email remain outside Git.
+
+Local results: **1080/1080 tests**, lint, release-boundary/acceptance-schema
+checks, offline dependency audit (zero reported vulnerabilities), diff whitespace
+checks and Homey CLI 4.5.3 verified validation passed. Full tests include existing
+desktop/mobile workflow checks. Candidate runtime fingerprint:
+`ac38129ed5d61435f0092f96180718708ee594a767e352fc3fd84609d600f2c9`.
+No new native mobile-host acceptance or EcoFlow-screen comparison was performed.
+Readiness remains PENDING, independently of these green software checks.
+
+## Sparse-idle delivery — 26 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
+
+Implementation `a6e4e316cc25aae49be9cabb609df550c9bfa1c1` is pushed to the
+diagnostic branch. [Exact-commit CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40358890530)
+passed all 1074 tests, lint, release checks, audit (zero vulnerabilities) and
+verified Homey validation. Source/runtime fingerprint remains
+`4834191f7d05103da42b500c17dedd6587aaafa754d3ac6210d65a9db0c5a7b0`.
+
+Direct non-clean installation succeeded using Homey's normal direct discovery
+route. The initial cloud-routed upload was rejected (400); readback confirmed the
+previous schema-18 candidate still running before retrying. CLI exit zero alone
+is not success evidence. The normal direct retry explicitly reported successful
+installation; subsequent readback confirmed running Development 1.10.56,
+schema 19, no crash, ungated unit monitoring and aggregate pairing consent off.
+No version bump, store upload/publication, Mainline merge or battery command.
+
+Owner readback at **16:28:51 UTC**: all 11 EcoFlow devices available, identities,
+settings and existing capabilities preserved; exactly the expected new status
+capability was added to the physical unit. All 99 saved standard/Advanced Flow
+definitions match the immediate pre-install baseline, and cumulative counters
+show no reset. Zero 5000 aggregates are paired. These are preservation checks,
+not physical execution of every Flow or aggregate accounting acceptance.
+
+Installed desktop Homey shows the read-only `Battery reading status` tile and a
+fresh zero/idle pair. At **16:32:43 UTC**, report and tile both remained `live`
+with a recent coherent standby receipt; unrelated connection receipts had their
+own ages. Active EcoFlow app use was noticed and native navigation was stopped.
+Fresh receipts continued during this short window, so native sparse expiry,
+20-minute retention, reconnect and recovery are NOT signed off by the replay
+tests or this installation. A native long soak and charge/idle/model/accessory
+and rollback gates remain open. No extra Robert capture is requested.
+
+The install package used the identical production lockfile, staged SDK shim and
+verified validation without the CLI's dependency-fixture copy path. The previous
+owner source is privately retained as a recovery archive; rollback was not
+exercised. Raw reports, household values, IDs and credentials remain outside Git.
+Earlier local/pre-install checkpoints below are historical; the installed
+runtime is now 4834191, not 9d9881d.
+
+The documentation-only follow-up CI caught a literal-heading/anchor mismatch in
+the acceptance link check. The heading was corrected without changing its
+GitHub anchor or the runtime; this is not a candidate runtime test failure.
+
+### Delivery authorization and baseline (historical pre-install checkpoint)
+
+The owner authorizes committing/pushing the prepared diagnostic increment,
+checking exact-commit CI, and directly installing it non-clean for read-only
+validation. Store Test/Live and Mainline must stay unchanged. No charging test,
+battery-setting write, aggregate pairing, Energy activation or observer start.
+Remote diagnostic HEAD was independently checked against local `91b0093` with
+no intervening work. Fresh owner readback: running Development 1.10.56, schema 18,
+all 11 EcoFlow devices available, 99 Flow definitions, aggregate pairing opt-in
+off. Detailed identity/settings/counter baseline is private. The prepared runtime
+is 4834191 (full fingerprint below); installed runtime was still 9d9881d at this
+checkpoint. Completed delivery/readback above supersedes this state.
+
+## Sparse-idle presentation — 26 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
+
+Read-only owner validation of the installed 9d9881d candidate found natural
+discharge-to-standby history and a healthy subscription, but sparse battery-flow
+receipts during standby. Temperature/health receipts continued while the live
+power/state tiles expired. EcoFlow's expanded battery view reported Standby;
+the unit page's remaining-time estimate is still unmapped. Its settings panel
+did not populate reliable power-limit values, so configuration parity was not
+signed off. Legacy units briefly reported offline and recovered; this does not
+establish a 5000 regression. Cloud Homey reads recovered access after a cached
+local SDK route timed out; no app crash or deliberate restart was observed.
+Private comparisons found device identities/settings/capabilities, saved Flow
+definitions and cumulative-counter continuity preserved. Raw evidence remains
+private. No hardware acceptance gate was promoted on this basis.
+
+Prepared on the diagnostic branch:
+
+- Physical monitors gain a read-only `Battery reading status` enum tile, including
+  `Last report: Standby (not live)`. It requires zero flow and idle state together
+  in a successfully applied delta, and is never a replacement current-state value.
+- Last-standby evidence is memory-only, bounded to the shorter of the connection
+  limit and 20 minutes, and discarded on reconnect, teardown, clock rollback,
+  failed application, conflicting/missing direction or linked-pack uncertainty.
+  Unrelated updates cannot renew it. Status writes share the telemetry queue;
+  optional tile failures clear best-effort without preventing unit subscriptions.
+- The 180-second live-power/state expiry, standard numeric capabilities,
+  accounting, controls and Flow identities/contracts are unchanged. No extra
+  polling, requests, timers, observer activation or aggregate Energy admission.
+  The new tile has no automatic Flow tag or Insights history and is not added to
+  aggregate drivers. Existing devices receive it in place only on a future update.
+- Support schema 19 adds a fixed anonymous status/age projection, not last-known
+  watt numbers or private identities. Desktop/mobile report UI explains why a
+  connected device can have expired live battery readings.
+
+Local checks: **1074/1074 tests**, lint, release-boundary/acceptance-schema checks,
+zero audit vulnerabilities and verified Homey validation pass. Browser tests cover
+desktop/mobile report wording, layout and no writes. Runtime fingerprint:
+`4834191f7d05103da42b500c17dedd6587aaafa754d3ac6210d65a9db0c5a7b0`.
+Source version remains 1.10.56. This work is uncommitted and has no exact-commit CI
+or installed-host acceptance. Main/Live, store Test, installed candidate and
+battery configuration remain unchanged. Do not carry old hardware signoffs over.
+
+Next: with approval, commit/push/check CI and directly install this increment;
+then compare live-to-expired standby status and fresh recovery on the owner unit.
+Separate bounded approval is required for deliberate charging, silence/reconnect
+or aggregate pairing. Continue a native 48-hour soak and per-model/accessory
+acceptance; neither a healthy endpoint nor averaged Insights proves fresh power.
+No additional Robert capture is required.
+
+## Diagnostic delivery — 25 October 2026, PUSHED / CI GREEN / DIRECTLY INSTALLED
+
+Implementation commit `21191228ed90a4fb171b18363a7cdcbad8e63c69` is on the
+diagnostic branch. [Exact-commit CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40239765856)
+passed: 1064 tests, lint, release checks, dependency audit (zero vulnerabilities)
+and verified-level Homey validation. Version remains 1.10.56.
+
+The updated candidate was directly installed non-clean on the owner Homey.
+Readback at **22:30:13 UTC** confirms running Development 1.10.56, no crash,
+support schema 18, unit monitoring requiring no opt-in and aggregate Energy
+pairing disabled. All **11** EcoFlow devices are available with unchanged
+identities/settings; no capability was lost or counter reset on the update.
+All **99** saved standard/Advanced Flow definitions match the private baseline.
+Preservation is not an execution test of those Flows.
+
+Installed desktop inspection confirms the retired Beta checkbox is absent, the
+separate Energy switch/help is present, unit pairing opens the monitoring
+disclosure without an opt-in and aggregate pairing stops at the disabled-consent
+screen without Continue. Both sessions were cancelled before credentials or
+device addition; no setting was saved. Zero 5000 aggregates remain paired.
+Inventory/add completion and mobile-host acceptance are still untested.
+
+Runtime fingerprint is
+`9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Earlier a15ae0d physical signoffs remain historical, not silently carried over.
+Charging/idle, accessory/model coverage, recovery/rollback, aggregate Energy and
+48-hour native soak remain open. Passive timer observation and new controls stay
+disabled. No additional Robert capture is requested for this delivery.
+
+Mainline refs, store Test/Live, physical configuration and Energy participation
+are unchanged. No store command or version bump was performed. The staged
+installation first needed a local validation-path correction before contacting
+Homey; the subsequent validated package installed successfully. Deployment notes
+and acceptance evidence below retain their historical checkpoint dates.
+
+### Delivery authorization and baseline (historical pre-install checkpoint)
+
+Owner now authorizes committing and pushing the prepared diagnostic work,
+checking exact-commit CI, and directly installing the updated candidate on their
+Homey after CI succeeds. Mainline and store Test/Live must stay unchanged; no
+store publication, version bump, aggregate pairing, Energy activation, battery
+configuration change or manual Flow execution is authorized by this delivery.
+The source remains monitoring-only with new aggregate pairing default-off and
+the passive timer observer disabled.
+
+Before delivery, remote diagnostic HEAD matched local `1b5f7ef`; no competing
+diagnostic commits were found. Fresh owner baseline: running Development 1.10.56,
+support schema 17, 11 EcoFlow devices, 99 Flow definitions and no 5000 aggregate.
+Identity/settings/Flow/counter baselines remain private. Candidate runtime
+fingerprint is `9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Source commit, CI and updated installation were pending at this checkpoint;
+the completed delivery above supersedes it.
+Earlier local-only restrictions below describe their historical checkpoints.
+
+## Pairing cleanup — 25 October 2026, LOCAL / NOT INSTALLED / NOT PUBLISHED
+
+Current authority: separate unit monitoring from aggregate Energy pairing on
+the diagnostic branch, add regression tests, keep Main/Live unchanged and do not
+publish or reinstall. The owner Homey remains on the earlier directly installed
+Development 1.10.56 fingerprint recorded below, with its older pairing UI.
+No live setting, device, Flow, account or Energy participation changed this wave.
+No commit/push or version bump was performed.
+
+- Unit/legacy physical-monitor discovery no longer needs a Beta setting. Exact
+  ES21/ES22 model/adapter admission and same-role duplicate checks remain intact.
+- Home Battery (5000) new pairing has its own default-off key:
+  `stream5000AggregatePairingEnabled`. Only boolean true permits it. Actual driver
+  ID determines the role; browser-supplied data cannot choose the unit exemption.
+  Consent is checked before inventory, after asynchronous inventory and before
+  credential commitment on device addition. Generic app-auth users keep their
+  prior behaviour when no admission hook is supplied.
+- The retired `stream5000BetaEnabled` value is neither read, overwritten nor
+  removed. It cannot silently grant new Energy consent. Existing paired units
+  and aggregates keep their data/settings/identity/accounting independently of
+  pairing consent; no repair/delete/re-pair or credential migration is performed.
+- Unit pairing starts with a connection disclosure; aggregate pairing has a
+  separate Energy-access screen. Settings, credential headings, EN/DE/NL store
+  summaries and wrong-path guidance no longer direct users to a shared Beta gate.
+  Unknown models, mixed-generation trials, Dual CT previews/energy and controls
+  keep their existing restrictions.
+- Support schema 18 adds anonymous role-specific pairing access. The old
+  `betaPairingEnabled` field remains false as a retired compatibility field.
+  The report reads only the new non-secret setting, not the old flag or credentials.
+- Source/runtime fingerprint changes deliberately invalidate prior candidate
+  signoffs for the new source. Earlier owner observations/passes remain attached
+  to the installed a15ae0d candidate; do not relabel them as cleanup acceptance.
+
+Local checks: **1064/1064 tests** (9 new regressions), lint, release boundaries
+and ledger checks pass. Desktop/mobile Chromium pairing pages check normal unit
+entry, strict aggregate consent/recheck and layout without JavaScript errors.
+The settings tests cover old-flag isolation, cancellation, save failure and a late
+initial read; real lifecycle regression keeps existing aggregate accounting and
+unit monitoring running with pairing opt-ins off. Dependency audit reports zero
+vulnerabilities. Verified-level Homey validation passes with the existing broad
+API review warning; it does not install. Build-folder regeneration conflicted
+with one overlapping check run; the final full suite was rerun sequentially and
+passed. Native pairing acceptance of this cleanup remains open.
+
+New source fingerprint:
+`9d9881df03aba7c5dd2c21f8dd006877a42bbff6b59314b6cc7f7ea09ebd3924`.
+Hardware readiness correctly remains pending, including previously observed
+checks whose saved fingerprint belongs to the older installed candidate. No new
+remote CI or hardware acceptance is claimed. No further Robert capture requested.
+
+## Owner monitoring candidate — 25 October 2026, DIRECTLY INSTALLED / STORE UNCHANGED
+
+Owner authorized installation on their Homey and continued STREAM 5000 validation.
+The candidate was non-clean installed directly; readback at 21:44:47 UTC confirms
+version **1.10.56**, origin **devkit_install** (Development), running, not crashed.
+This supersedes the earlier uninstalled/local-only checkpoint below for installed
+state only. Mainline, store Test/Live and physical battery configuration are
+unchanged by this work. No commit/push, version bump, store upload/publication,
+new pairing, manual Flow execution or battery-setting command was performed.
+
+Exact source runtime fingerprint remains
+`a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3`.
+The source is still local/uncommitted. No new remote CI is claimed. The disabled
+passive observer remains disabled, as do new 5000 controls and Dual CT Energy.
+
+Installation preparation recovered from a CLI dependency-fixture copy stall
+before contacting Homey: production dependencies were reconstructed offline in
+the generated build from the identical lockfile, TypeScript rebuilt, the official
+SDK shim restored and the staged package verified-level validated. The validated
+package then installed successfully without a further copy/build pass. Runtime
+source/manifest/dependency versions did not change. No clean install was used.
+
+Native acceptance through 21:49:48 UTC:
+
+- All **11** EcoFlow devices returned available with unchanged IDs, driver/data
+  identities and settings; no existing capability was removed. Only the expected
+  5000 reserve-state tile was added. Known default labels migrated in place.
+- All **99** standard/Advanced Flow definitions matched their pre-install hashes.
+  This is preservation, not a physical execution test of every Flow. Original
+  Home Battery and meter counters did not reset; unit SOC/power Insights contain
+  samples before and after installation. Direct SDK history reads work with null
+  gaps; the connected reader's numeric-only schema is a separate limitation.
+- ES21 identity and observed standalone natural-discharge SOC/sign/power comparison
+  pass for this exact fingerprint. No full-range calibration, ES22, linked-pack
+  direction, charging/idle or aggregate Energy acceptance follows from this.
+- New read-only reserve state and stored target remain separate and agree with
+  EcoFlow. Configuration cleared at restart and only repopulated on fresh receipt;
+  mode/grid/reserve data arrived after native settings navigation. Immediate
+  autonomous configuration refresh is not established. Configuration/recovery
+  acceptance remains partial rather than displaying old settings as current.
+- Installed desktop Configure/support report works and correctly distinguishes
+  available unit readings from unverified physical-pack scope and Energy. The
+  5000 aggregate remains unpaired; independent grid-meter reading remains unknown.
+- A pre-existing same-day Homey backup and retained previous Test source provide
+  recovery options, but rollback was not exercised. No raw reports, household
+  numbers, private IDs or credentials enter the repository.
+
+See [candidate plan and native findings](STREAM_5000_MONITORING_RC.md#owner-candidate-installation)
+and the sanitized model/role ledger. Overall readiness intentionally remains
+pending. Next physical steps require a bounded charge/idle test and separate
+approval to pair one new-space Home Battery (5000); do not replace the original
+battery, install the Dual CT or alter wiring/schedules as an implicit test.
+Longer native soak, mobile settings, controlled silence/reconnect and rollback
+remain open. No additional Robert capture is requested.
+
+Post-install local checks: **1055/1055 tests**, lint and software/acceptance-ledger
+checks pass; the staged package passed Homey CLI 4.5.3 verified validation before
+installation. The expected broad-API review warning remains. Hardware readiness
+is still pending. End readback at **21:52:43 UTC**: running Development app,
+no crash reported, all 11 EcoFlow devices available and no 5000 aggregate paired.
+
+## Monitoring release candidate — 25 October 2026, LOCAL / VALIDATION STARTED / UNPUBLISHED
+
+Current authority: read-only owner validation and local monitoring-candidate
+preparation on the diagnostic branch. Mainline, Live, Test, installed app,
+battery configuration and existing Flows remain unchanged. No commit/push,
+version bump, installation, restart, re-pairing or publication is performed.
+The preceding disabled observer preparation remains intact and inactive.
+Source version remains 1.10.56; installed Test 1.10.56 does not contain this work.
+
+- Fresh near-time native EcoFlow/Homey comparisons corroborate ES21 discharge
+  SOC/direction/power and configuration, with independent successful receipt ages.
+  Fresh Developer-key inventory/main-address reads corroborate identity/routing;
+  full quota still returns 1006. The app-connected feed remains the working path.
+- The owner's new device is the optional physical monitor; no 5000 aggregate is
+  paired. The original Home Battery remains separate. Grid flow is not an
+  independent whole-house meter. Night-time zero PV and unavailable socket output
+  do not validate those accessories. No settings or physical commands changed.
+- Native battery-management display confirms reserve is disabled while a stored
+  target is reported. New reserve-state tile/label migrations remain uninstalled.
+  The connected Insights history reader rejects null entries at its schema
+  boundary; no history-based acceptance or device fault is inferred from that.
+- Added a [bounded monitoring release plan](STREAM_5000_MONITORING_RC.md), sanitized
+  per-model/per-role acceptance ledger and exact-runtime fingerprint checker.
+  Partial installed/community evidence cannot sign off unpublished source, another
+  model or aggregate Energy. Unknown/raw evidence fields are rejected.
+- Normal software `release:check` reports pending hardware gates; separate
+  `release:acceptance` deliberately refuses readiness until the declared model/
+  role gates pass. This tool cannot activate, install or publish anything.
+  Current pairing gates remain in place until their scope is accepted.
+- Added regression coverage for ledger/schema/privacy, evidence provenance,
+  fingerprint mismatch, model/role separation, readiness exit status and unchanged
+  monitoring/control/pairing boundaries. Updated model/architecture pointers so
+  historical version/build statements are not read as today's release status.
+
+Final local checks: **1055/1055 tests** (11 new acceptance regressions), lint,
+release boundaries/ledger validation, zero reported dependency-audit
+vulnerabilities and Homey CLI 4.5.3 verified validation pass. The existing broad
+Homey API permission review warning remains. Runtime fingerprint:
+`a15ae0d7888477c0835f26594799087e8cdccef69d1e6b48fea4829637f5d5f3`.
+The explicit hardware-readiness command returns exit 1, as intended: gates are
+still open, not failed software tests. Source stays local/uncommitted; no new
+remote CI or hardware charging/idle/recovery/upgrade/Energy pass is claimed.
+Next: explicitly approved candidate installation and acceptance on owner Homey,
+then bounded state/recovery/aggregate comparisons and normal-use observation.
+No further Robert capture is requested by this wave.
+
+## Passive remaining-time observer — 25 October 2026, LOCAL / DISABLED / UNPUBLISHED
+
+Current authority: prepare the bounded observer and regressions on the diagnostic
+branch only. Keep it disabled. No commit/push, publication, installed-host update,
+physical command, mainline/Live/Test change or activation is authorised this turn.
+The preceding source checkpoint `1b5f7efe2d20ed3e45d27d1199ba07c37feb3348`
+passed exact [CI 40230853803](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/40230853803);
+the work below is local only and has no new remote CI. Version remains 1.10.56.
+
+- Added an inert existing-subscription tap. Runtime default is false and there
+  is no start call, setting, API/Flow activation, new connection or polling.
+- Explicit-start test instances collect only bounded numeric structural
+  candidates/receipt times. No raw payload, text, serial/peer record, credential,
+  schedule window, guessed duration, scalar scaling or production reading write.
+- Caps: 2-minute capture, 10-minute evidence-access deadline, 16 KiB/frame,
+  2 MiB input, 512 inspected frames, 64 samples, 2,048 rows, bounded headers and
+  scalar parsing. Read/receipt/watchdog expiry does not refresh evidence; explicit
+  driver resubscription and teardown purge it. No extra timer, persistence,
+  logging or general export. Transparent broker/account-session epoch binding
+  remains an activation gate; no reconnect continuity is inferred.
+- Status getter is numeric-evidence-free. Private candidate retrieval is not
+  wired to support reports, UI, Insights, Flows or Energy. Existing support
+  schema/capabilities, pairing, version and control/accounting contracts unchanged.
+- Release-boundary checks reject accidental gate activation or runtime start.
+  See [timer audit](STREAM_5000_REMAINING_TIME_AUDIT.md) for limits, privacy,
+  lazy cleanup semantics and the future explicitly authorised activation gate.
+
+Local tests: **1044/1044** (19 added), lint, release-boundary checks, zero
+reported dependency-audit vulnerabilities and Homey CLI 4.5.3 verified validation
+pass. The existing broad-API review warning remains. These are offline checks,
+not capture/activation/native-upgrade acceptance or a new remote CI result.
+No new owner or Robert capture was requested or started.
+
+## Configuration labels / reserve status / timer audit — 25 October 2026, PUBLICATION HELD
+
+Current authority: commit/push the diagnostic branch and verify its exact CI.
+Publication, version bump, installed-host update and physical commands are not
+authorised. Mainline, Live and Test remain unchanged. Source remains 1.10.56.
+This includes the earlier local owner-validation wave below; Build 70 does not
+contain these changes. CI is pending at this source checkpoint; read the exact
+commit's validation result independently of the local checks below.
+
+- Configuration titles now match EcoFlow terminology, translated EN/DE/NL.
+  Known defaults migrate in place while custom titles/options, capability IDs,
+  mode IDs and Flow arguments survive. No control listeners were added.
+- New read-only `stream_5000_backup_reserve_state` distinguishes enabled/disabled
+  from the existing numeric stored target. Unknown/stale status stays null;
+  state and target expire independently and restart clears both until receipt.
+  An optional capability-add failure cannot prevent telemetry subscription.
+- The report explains subscription-source versus independently verified system
+  scope, grid draw versus total charging/task power, and electrical-capacity limits.
+- Native EcoFlow display comparison corroborates observed configuration and
+  natural-discharge readings, not electrical calibration or setting enforcement.
+  No raw private reports, screenshots or household measurements are committed.
+- Remaining time is still unmapped, not zero. Fresh primary upstream review and
+  offline public-capture replay do not identify a verified duration contract.
+  Tests reject accidental BK-field borrowing and SOC/capacity/power estimates.
+  See [remaining-time audit](STREAM_5000_REMAINING_TIME_AUDIT.md) for evidence
+  boundaries and owner-hardware next steps; no further Robert capture requested.
+
+Checks: **1025/1025 tests** (6 added this wave), lint, release-boundary check,
+zero reported dependency-audit vulnerabilities, and Homey CLI 4.5.3 verified
+validation. Existing broad-API review warning remains. Desktop/mobile synthetic
+settings workflow passes without writes/discovery; mobile report inspected.
+A pre-existing browser-test zero-age race appeared under full-suite load;
+its clock is now explicitly paused and expiry remains explicitly advanced.
+Local checks are not new remote CI or native upgrade acceptance.
+
+## Owner ES21 read-only validation — 25 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorises available STREAM 5000 validation and diagnostic-branch
+improvements only. Mainline, Live and Test remain unchanged. Source version is
+still 1.10.56; Build 70 does not contain this local work. No commit/push, version
+bump, pairing, installed app update/restart, Flow execution or battery-setting
+write was performed. The owner confirms the Dual CT is not installed.
+
+Live, read-only Homey/settings evidence identifies the new device as ES21 and
+the physical-monitor role, not a 5000 Energy aggregate. Repeated snapshots show
+fresh discharge/SOC/temperature and reported configuration. The app flow matrix
+is internally consistent in those discharge snapshots, but is not an independent
+EcoFlow-screen, electrical or whole-house-meter comparison. The Developer API
+lists the unit and resolves its main address to itself; quota access returns
+1006. That is routing evidence, not verified space membership. Raw reports,
+credentials, serials, device names and household measurements are not in Git.
+
+Local improvements:
+
+- Physical diagnostics now distinguish a fresh successfully applied Unit watt
+  reading (including zero) from waiting/stale/write-failed values. Existing
+  linked-scope warnings take precedence. `physicalScopeVerified` stays false;
+  neither diagnostics nor optional unit tiles acquire Energy authority.
+- EN/DE/NL report UI separates reserve enablement from the independently fresh
+  stored percentage. A disabled reserve's target is not presented as active
+  protection. No setting/capability/control contract is changed.
+- Unit-only setup guidance explains that a separate Home Battery (5000) is
+  needed for installation accounting, without replacing a legacy battery in
+  another space or pairing one aggregate per unit. It does not infer topology.
+- Updated the indirect MQTT `ip-address` lock entry from 10.7.2 to 10.7.4 for
+  [GHSA-rxp7-6hxx-x8q5](https://github.com/advisories/GHSA-rxp7-6hxx-x8q5).
+  No direct dependency/API changed. An isolated, deadline-bounded regression
+  checks valid addresses and oversized multiline-zone rejection. The lock URL
+  remains the public npm registry, not the local registry mirror.
+
+Local checks: **1019/1019 tests** (7 added), lint, release-boundary checks, zero
+reported audit vulnerabilities and sequential Homey CLI 4.5.3 verified validation.
+The existing broad-API review warning remains. Desktop/mobile report workflows
+passed with synthetic inputs, no settings writes or automatic discovery. These
+are local checks, not a new CI, Test or native-upgrade acceptance claim.
+
+Still open: charging/idle transitions, independent power/sign/scale comparison,
+PV, backup socket, reconnect/restore behaviour, 5000 aggregate energy continuity,
+meter installation and two-space membership/overlap validation. ES22 and mixed
+generation acceptance do not follow from this ES21 observation. No new controls,
+Dual CT Energy, automatic grouping or legacy accounting changes. No further
+Robert captures requested. See RELEASE_CANDIDATE_CHECKLIST.md.
+
+## Test v1.10.56 / Build 70 — published 17 October 2026
+
+Supersedes the authorised/local checkpoints below. Diagnostic source commit
+`a3ab79186bbffa086903bbf82b2c1914d424251c`; version/tag commit
+`62838e235748b5ebdc986b529dc2ffd620b5f566`. Source CI
+[39074643490](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39074643490),
+version workflow [39074789623](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39074789623),
+exact-tag CI [39074866974](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39074866974)
+and upload [39075018472](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39075018472)
+all passed. Both validation runs passed **1012/1012 tests**, lint, release-boundary
+checks, zero-vulnerability dependency audit and Homey CLI 4.5.3 verified validation.
+Fresh local checks and versioned package validation also passed. The existing
+broader-API extended-review warning remains; no permission was added this wave.
+
+Build 70 archive readback matched **24 exact runtime/settings/locale/store-copy
+files**. The complete packaged manifest matches except Homey's author-email
+privacy filtering. Dual CT remains a custom-only read-only preview, without an
+Energy declaration; no new controls or public API routes were added. Archive
+SHA256: `a7fc8142e68908fecc066603c5321c07ca9d01f76116277d547cc85969adff5f`.
+
+Portal permanent-record reload and public listing confirm **Test v1.10.56 /
+Build 70**, observed by **2026-10-17 22:28 UTC**:
+[portal](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/70),
+[Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live remains **v1.10.3 / Build 18**. Local `master` remains
+`8bb4e468e9bcc510c28049ec4e89736ac2733879`; remote `master` remains
+`66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge or certification
+submission was made. No manual installed-host update, Flow activation, physical
+command or owner-hardware acceptance is claimed. No new Robert capture requested.
+
+The recovery fix, clearer source/access UX, endurance regressions and scope/API
+audits are included in this Test archive. Native upgrade/recovery and per-model
+hardware acceptance remain open; see RELEASE_CANDIDATE_CHECKLIST.md. New charging
+controls and Dual CT Energy activation remain disabled. Existing Flow identities
+and argument contracts, driver identities and energy accounting are preserved.
+
+## Four release-hardening sprints — 17 October 2026, Test release AUTHORISED
+
+Owner now authorises committing/pushing this diagnostic wave, checking exact
+source and version/tag CI, and publishing a new Test build only after checks
+pass. Mainline and Live remain unchanged. Publication is pending; the local
+implementation checkpoint below records the earlier restricted scope, not the
+current release authority. No installed-host update or physical command is
+authorised, and controls / Dual CT Energy activation remain gated.
+
+Owner authorises diagnostic-only implementation, regression tests and local
+release checks. No commit/push, version bump, Test upload, mainline merge,
+certification, installed-host update or physical command. Source version remains
+1.10.55. The published Build 69 below does not contain these local changes.
+
+1. Recovery: timed-out/cancelled workspace requests release their operation slot
+   immediately, including uncooperative SDK promises. Generation/operation-owned
+   cleanup prevents late success/rejection or an old timer from affecting a retry.
+   Revocation settles callers, cancels owned timers/HTTP and discards late readers.
+   Account changes also revoke the page reader. No guessed platform-token revoke.
+2. Regression/endurance: 100 page read/revoke cycles, 96 explicitly started
+   observation leases over 48 simulated UTC hours spanning UK DST, resource/dwell
+   checks and original/ES21/ES22/preview transport coexistence. Existing actual
+   driver restore/checkpoint/Flow-compatibility regressions also pass. Synthetic
+   transport subscribers are not model decoding or native Homey acceptance.
+3. Source/access UX: shared display-only candidate classification; explicit source
+   versus reported units and capability-timestamp ages; no invented heartbeat,
+   timing exemption, vendor admission or upstream-zero guarantee. Failed sessions
+   disable further reads until explicit picker retry. SDK permission/token and
+   application-reader lifetimes are distinguished in EN/DE/NL. Public Fronius
+   source and Solis reference evidence reviewed; installed vendor contracts remain
+   unverified. See COORDINATION_SOURCE_AUDIT.md.
+4. Release scope: `npm run release:check` adds manifest/legacy-contract/permission /
+   no-new-actions/no-Energy/no-preview-autostart fences, including negative tests,
+   and is added to the local CI definition. Model matrix and EN/DE/NL store copy
+   now distinguish monitoring/previews from controls/Insights. The rendered
+   official STREAM API and pinned upstream 5000 command source were reviewed;
+   task charge-power readback is not physical enforcement. Original 95% guidance
+   versus legacy 100% helpers remains an explicit control-release review item.
+   See STREAM_CONTROL_CONTRACT_AUDIT.md and RELEASE_CANDIDATE_CHECKLIST.md.
+
+Final local checks: **1012/1012 tests** (19 added), lint clean, release-boundary
+check passed, dependency audit **0 vulnerabilities**, diff checks clean, and
+Homey CLI 4.5.3 verified validation passed sequentially after tests. Expected
+broader-API extended-review warning remains; no additional permission/dependency
+was added. Desktop/mobile browser workflows passed with synthetic Homey bridge.
+Version/manifests, driver capabilities/Energy and existing command/accounting
+modules are unchanged. Core Flow identities/argument contracts are preserved.
+
+Mainline refs remain local `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote
+`66b1cb5f828a53333739798281fce86125f61c28`; diagnostic HEAD remains `894f058`
+with local changes only. No new remote CI or portal/hardware state is claimed.
+No new Robert capture/export is requested. Dual CT Energy and new charging
+controls remain disabled; native settings, backup/upgrade/rollback and per-model
+physical commissioning remain open and need separate approval/equipment.
+
+## Test v1.10.55 / Build 69 — published 17 October 2026
+
+Supersedes the authorised/local checkpoints below. Diagnostic source commit
+`4d0ba6e05782fab6f56027f3acab78ccf6be93cd`; version/tag commit
+`c3690b8d9b3fbef4541e5f02288c84dcf21c8a3d`. Source CI
+[39072576820](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072576820),
+version workflow [39072671453](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072671453),
+exact-tag CI [39072728019](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072728019)
+and upload [39072853123](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39072853123)
+all passed. Both CI validation runs passed **993/993 tests**, lint, zero-vulnerability
+dependency audit and Homey CLI 4.5.3 verified validation. Local versioned validation
+also passed. The broader API permission produces the expected extended-review warning.
+
+Build 69 archive readback matched **19 exact compiled/runtime/settings/locale
+files**. Manifest matches the local packaged manifest except Homey's author-email
+privacy filtering; it confirms two new WHEN cards, four AND cards, no new THEN
+card and a custom-only Dual CT preview with no Energy declaration. Archive SHA256:
+`3724bf9c03de4b6e80c2609ae1dcf3154def762356f2a758f459e3c8c11348b1`.
+
+Portal and public listing confirm **Test v1.10.55 / Build 69** at
+`2026-10-17T21:55:41.845Z`:
+[portal](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/69),
+[Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live remains **Build 18 / v1.10.3**, unchanged July release. Local `master`
+remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`; remote `master` remains
+`66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge or certification
+submission was made. No manual installed-host update, Flow activation, physical
+command or owner-hardware acceptance is claimed.
+
+The selected-source workspace and separate temporary Flow monitor stay opt-in.
+The platform API permission is broad, although these implementations use fixed
+GET-only routes; consent does not narrow the platform permission itself. Known
+Dual CT preview candidates remain excluded from the new Flow monitor. Existing
+Flow identities/argument contracts are preserved, but unknown or expired readings
+now deliberately reject condition evaluation. New charging controls and Dual CT
+Energy remain disabled. No further Robert capture/export is requested.
+
+## Consolidated coordination / legacy reliability — 17 October 2026, Test release AUTHORISED
+
+Owner authorises committing and pushing the accumulated diagnostic changes,
+checking exact CI, and publishing a consolidated Test build. Mainline and Live
+must remain unchanged. The four local checkpoints below describe implementation
+history, not the final publication state. All 993 local tests, lint, dependency
+audit (zero vulnerabilities), diff checks and sequential Homey CLI 4.5.3 verified
+validation passed. Current source still requires remote CI and portal readback.
+
+This adds explicit circuit scopes, an opt-in selected-source advisory workspace,
+six observation-only WHEN/AND cards with separate temporary monitoring consent,
+and original-STREAM/forecast Flow reliability and wording fixes. Existing Flow
+identities and argument contracts are preserved. The prepared broader Homey API
+permission requires additional store review; implementation reads are fenced and
+default-off. No new THEN actions, control activation, Dual CT Energy adoption,
+installed-host update or hardware acceptance is authorised or claimed. Known
+Dual CT candidate-preview capabilities cannot feed the new observation monitor.
+No further Robert captures are requested.
+
+## Legacy card reliability / wording — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised diagnostic-only implementation, preserving the earlier local
+coordination changes below. Existing original-STREAM Flow listeners now reject
+unknown/stale/mismatched inputs, including inversions, using per-field applied
+receipt checks. Solar/load inference requires all three coherent observations;
+missing load is no longer zero and its wording no longer promises solar origin.
+Reported mode/feed-in and percentage-limit/export-permission wording is clearer.
+Existing card IDs, argument contracts, dropdown values, tokens and driver targets
+are preserved; no user Flow was changed. Invalid inputs now stop deliberately.
+
+Forecast cards require the correct provider-labelled Homey-local date/timezone,
+matching location/calibration, successful application and receipt age under six
+hours. Midnight/DST, restart, changed settings, malformed/missing data, failed
+writes and late responses cannot qualify a cached forecast. Pending requests
+coalesce; settings changes wait for actual SDK commit before weather refetch.
+Original receipt and reconnect baselines reset without changing energy accounting
+or broadening control commands. See LEGACY_FLOW_RELIABILITY.md for limits.
+
+No new cards/commands/permissions/Energy paths in these sprints. No installed
+device access, Robert capture request, commit/push, CI, version bump or Test
+publication. Mainline/Live remain untouched; earlier local work is retained.
+Final local checks: **993/993 tests** (17 new legacy/forecast regressions), lint
+clean, dependency audit 0 vulnerabilities and clean diff checks. Homey CLI 4.5.3
+verified validation passes with the pre-existing broader-API review warning;
+validation is run sequentially after the final tests. A pinned, public-metadata
+v1.10.54 Flow-contract fixture avoids reliance on mutable HEAD or Git history
+in CI. Existing arguments and identities are exact, not merely resolvable.
+No installed Flow/hardware acceptance, CI run or publication is claimed.
+
+## Coordination Flow observation sprints 1/2 — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised local implementation on the diagnostic branch, preserving the
+uncommitted source-workspace/advisory changes below. Six new app-level WHEN/AND
+cards cover advisory state/availability transitions, current coherent readings,
+external-battery priority, sustained grid export and explicit-role branch power.
+No THEN action, charging control, new device/capability or Energy adoption.
+
+The separate opt-in settings controls start a RAM-only 30-minute observation
+lease. Polls read only selected devices, about every 15 seconds, with ten-second
+deadlines. No automatic start/restore/renewal; closing the page does not stop
+this explicitly separate session. Stop, saved-source/account changes, restart
+or expiry revoke it. Server revisions prevent delayed Starts undoing Stop.
+Timestamp/contract/coherence checks, bounded advancing-observation histories,
+internal advisory state, stale expiry and reconnect resets prevent cached or
+caller-forged dwell. Unknown conditions reject even when inverted. Known Dual CT
+candidate-preview sources remain blocked; selecting them does not enable their
+Flow automation. Hardware freshness/solar origin are never claimed verified.
+
+See COORDINATION_FLOW_OBSERVATIONS.md for card IDs, consent warnings (events may
+run existing user THEN actions), exact limits and acceptance gates. No captures
+requested, no installed Homey/API activation, CI, commit/push, version bump or
+publication. Mainline/Live and published Test v1.10.54 / Build 68 are unchanged
+by this work. Final local verification: **976/976 tests** (17 new Flow/lifecycle
+and settings regressions), lint clean, dependency audit 0 vulnerabilities and
+diff checks clean. Homey CLI 4.5.3 verified validation passes with the expected
+broad-API-permission review warning; checks run sequentially after tests.
+Semantic manifest comparison confirms exactly six new WHEN/AND cards and the
+private monitor route, alongside the earlier workspace route/permission only.
+Version, existing actions/Flow cards, drivers, capabilities and Energy declarations
+are unchanged. Browser tests cover desktop/mobile with synthetic sources; no
+installed-host, real Flow scheduling or vendor hardware acceptance is claimed.
+
+## Coordination sprints 1/2 — 17 October 2026, LOCAL / UNPUBLISHED
+
+Supersedes the local advisory-only checkpoint below. On the diagnostic branch,
+the visible EN/DE/NL settings workspace and explicit selected-source bindings
+are implemented locally. Cross-app `homey:manager:api` permission preparation
+was explicitly approved, but nothing was installed or activated. Permission is
+broad; the implementation uses only fixed local GET routes, no new dependency,
+no automatic polling and no controls/Flow actions/Energy activation.
+
+Owner consent and individual reads are explicit. The local picker projects
+metadata; saved configuration contains bindings only. Selected capabilities are
+checked for numeric type, W/kW/% units, signs, source identity and availability.
+Capability `lastUpdated`, not read time, determines conservative 60-second
+expiry; it is not a verified hardware heartbeat. Source edits reset all review
+confirmations, data gaps/source/session changes reset advice, and opt-out/hidden
+page/shutdown/session expiry revoke access and discard late results. See
+COORDINATION_SOURCE_WORKSPACE.md for the precise permission, scope and timing
+limits. Synthetic browser/HTTP tests are not multivendor hardware acceptance.
+
+No commit/push, CI, version bump, Test upload or publication was undertaken.
+Mainline and Live remain unchanged; published Test baseline remains the recorded
+v1.10.54 / Build 68. Existing driver capabilities, Flow and Energy declarations
+are unchanged. Final local verification: **959/959 tests** (14 new workspace
+regressions in addition to the 20 advisory cases below), lint clean, dependency
+audit 0 vulnerabilities and diff checks clean. Homey CLI 4.5.3 verified validation
+passed after the tests, sequentially. Manifest comparison confirms only the
+approved permission and private workspace route changed; package dependencies,
+version, drivers, capabilities, Flow and Energy declarations are unchanged.
+Desktop/mobile and local HTTP checks use synthetic fixtures, not installed-host
+or owner-hardware acceptance. Refreshed remote diagnostic/mainline refs are
+unchanged from the starting checkpoint.
+
+## Circuit roles / external-battery advisory — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised local diagnostic-branch implementation and regression tests.
+Mainline/Live remain unchanged. No commit/push/version/publication or hardware
+control; the published Test baseline remains v1.10.54 / Build 68 below.
+
+Shared circuit-role semantics now distinguish whole-installation grid exchange,
+solar-only branch, hybrid solar+battery exchange and load branch. Existing Dual
+CT settings/IDs/labels remain compatible and display-only. No role auto-verifies
+telemetry, adopts an Energy source, or infers external-battery SOC/power.
+
+The stateless authenticated `/coordination-preview` adds a v2 caller-input path
+for generic external batteries (including Fronius/BYD or Solis), explicit grid
+scope/direction and optional secondary circuit. P1-only grid observation remains
+supported. Separate battery power/SOC is mandatory; branch/battery power is never
+added to grid export to manufacture surplus. External-battery priority, flow
+conflicts, individually fresh/coherent readings, source/site/session bindings,
+advancing power observations, sustained export, hysteresis and cooldown are
+evaluated for advice only. Role/source/policy changes and data gaps reset advice.
+Legacy SOC-only callers explicitly remain `surplusAssessed: false`.
+
+All command/Energy/solar-origin flags stay false. Existing driver does not call
+the new advisory. Caller assertions/state are not independently trusted command
+authority. No device data is fetched, persisted, exported or sent; no Robert
+message or new capture request. See STREAM_COORDINATION_PREVIEW.md for schema
+and conservative limitations; STREAM_EXTERNAL_BATTERY_ROADMAP.md defines the
+visible rehearsal, source-binding, control-contract research, owner-hardware
+commissioning and separately approved Flow/parallel Energy sprints.
+
+Final local test/lint/audit checks: **945/945 tests** (20 new regression cases),
+lint clean, dependency audit 0 vulnerabilities and diff checks clean. Version,
+all driver/capability/Flow/permission manifests and Energy declarations unchanged.
+Homey CLI 4.5.3 verified validation passed after the final tests, run sequentially.
+No CI run, commit/push, publication, installed-host or physical validation claim.
+
+## Test v1.10.54 / Build 68 — published 17 October 2026
+
+Supersedes the authorised/local checkpoints below. Diagnostic-only source
+`89c5729230895ae8c9c1eb4568bee1fcdd03451c`, version/tag
+`3c39087355f7f2c5e2cce6ec93c7343f5752fcd1`. Source CI
+[39064070729](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064070729),
+version [39064152571](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064152571),
+exact-tag CI [39064226030](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064226030)
+and upload [39064352983](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39064352983)
+passed. Local and exact-tag CI: **925 tests**, lint, dependency audit (0
+vulnerabilities), Homey CLI 4.5.3 verified validation. Checks ran sequentially.
+
+Build 68 archive readback matched 14 targeted compiled/runtime/locale files,
+including the preview's required `driver.compose.json`. Manifest is semantically
+identical apart from Homey's author-email privacy filtering. Archive SHA256:
+`28e35466df418bce9b96298000d9bd3c27360a1c66b80e4901fb1221cafa1777`.
+The archive confirms 34 custom-only preview capabilities, class `other`, no
+Energy declaration, runtime activation false and empty grid-contract resolver.
+
+Reopened portal and public listing confirm **Test v1.10.54 / Build 68** at
+`2026-10-17T19:57:13.873Z`:
+[portal](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/68),
+[Test](https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/).
+Live remains **Build 18 / v1.10.3**, timestamp `2026-07-26T22:49:51.597Z`.
+Local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote
+`master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+
+Visible phase/circuit improvements are available in Test; grid Energy modules
+are preparatory only and remain unwired. Existing devices gain no Dual CT Energy
+participation; other driver Energy/Flow/permission definitions stay unchanged.
+No certification, manual installed-host update, controls or physical/native
+acceptance claim. No new Robert capture/export requested; reply is draft-only.
+
+## Consolidated phase/Grid Energy preparation — 17 October 2026, Test release AUTHORISED
+
+Owner now authorises committing/pushing the diagnostic branch, checking source
+and exact-version CI, and publishing one consolidated Test build. This supersedes
+the publication holds in the local checkpoints below. Mainline and Live must stay
+unchanged; existing devices must NOT gain Energy participation. Robert's updated
+reply remains DRAFT ONLY for review, not authorised for sending.
+
+Release includes the visible individual-phase cards, per-circuit candidate sums,
+circuit descriptions and guarded upgrade path, plus UNWIRED grid-source,
+checkpointed accounting and adoption plumbing. Contract resolver stays empty,
+runtime activation stays false, preview has no Energy declaration and no app /
+driver imports the preparatory Energy session. No new capture, hardware command,
+certification, installed-host update or physical-acceptance claim is authorised.
+Fresh source/CI/upload/channel results will be recorded after each gate passes.
+
+## Grid Energy preparation sprints 1–3 — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised the three preparatory sprints after the circuit-display work
+below. Changes stay on `codex/mixed-generation-reporting-diagnostics`. No
+commit/push, publication, mainline merge or Energy activation for existing devices.
+The last published Test remains v1.10.53 / Build 67, not this local code.
+
+- Strict same-packet CT1 grid adapter, developer-owned firmware/sign/encoding /
+  timing contract, source-specific consent and fresh firmware readback. No
+  contract registered; runtime switch remains false.
+- Persistent serialised power-accounting session, single-key scoped checkpoint,
+  readback-before-projection, no downtime fill and explicit recovery after an
+  ambiguous write. Strict measurement time and separately gated receipt-timed
+  estimates remain distinct; no fabricated timestamps or receipt-only fallback.
+- Explicit NEW-device adoption plan and per-grid single-writer authority; fresh
+  overlap inventory and external-meter review, no existing-preview conversion,
+  source takeover or counter/power mixing. Pending saves retain authority until
+  settled, including close/revocation/overload. No app/driver wires this session.
+- Proposed Homey cumulative grid configuration/kWh projection only, not applied.
+  Preview metadata/accounting and all existing devices stay unchanged by these
+  Energy modules. No Homey/physical command, capture or message sent.
+
+Details, technical limits and remaining native/physical activation work:
+[DUAL_CT_GRID_ENERGY_PREPARATION.md](DUAL_CT_GRID_ENERGY_PREPARATION.md).
+Robert's updated reply remains draft-only. Final local checks passed:
+**925/925 tests** (30 new Energy regressions), lint, dependency audit (0
+vulnerabilities), diff checks and Homey CLI 4.5.3 verified validation. Tests and
+CLI validation ran sequentially. Other nine drivers, Flow declarations,
+permissions and version remain unchanged; preview still has no Energy config.
+No native Homey storage/upgrade or physical acceptance is claimed. Work remains
+uncommitted/unpushed, no new CI run or release performed.
+
+## Circuit-aware phase preview — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised implementation and regression tests only on
+`codex/mixed-generation-reporting-diagnostics`. No commit/push, version bump,
+publication, mainline merge, device command or Robert message in this continuation.
+The published Test baseline below remains v1.10.53 / Build 67, not this code.
+
+18 native per-phase V/A/W cards and two per-circuit signed phase sums/statuses
+are additive to the existing preview IDs. Sums require one decoded payload with
+all three power fields, reject conflicting reported totals, clear on partial
+power updates and expire independently at 90 seconds. Native values keep raw
+numeric precision; technical string groups retain individual wire IDs/ages and
+now identify each candidate phase on its own line. User-selected circuit labels
+default to unspecified and cannot adopt an Energy source or alter signs/mapping.
+Hybrid inverter means solar plus possible battery exchange, not pure generation.
+Existing paired previews migrate additively before subscribing; old consent,
+identity and lifecycle/privacy fences remain. All Energy/accounting/Flow/control
+gates, other drivers and mainline/Live stay unchanged. No further captures asked.
+
+See [DUAL_CT_CIRCUIT_PRESENTATION.md](DUAL_CT_CIRCUIT_PRESENTATION.md) for official
+manual/product findings, packet/receipt versus measurement-time limitations,
+counter hypotheses, source-overlap gates and outstanding native acceptance.
+Final local checks passed: **895/895 tests** (13 new regressions), lint,
+dependency audit (0 vulnerabilities), diff checks and Homey CLI 4.5.3 verified
+validation. Tests and CLI validation ran sequentially after an initial parallel
+run exposed their shared compiled-folder interference; the final run is clean.
+Manifest readback confirms all other nine drivers, previous capability definitions,
+permissions, app Flow declarations and app version unchanged. Native Homey tile
+layout and physical/installed-device behaviour are not established by these tests.
+
+## Test v1.10.53 / Build 67 — published 17 October 2026
+
+Supersedes the preparation/local checkpoints below. CT1/CT2 presentation and raw
+counter clarity changes are committed/pushed on the diagnostic branch and now
+available on **Test only**. Robert's updated reply remains DRAFT ONLY for owner
+review. No new capture/export requests, Community message or device command sent.
+
+- Source `2d4c94315805dec5d06ac27983c99a10a05498c6`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055239853 passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055356626 passed;
+  tag `v1.10.53` / `c248eee567e110a755e9cc8367351a17b86b40aa`.
+- Exact-tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055424697 passed:
+  **882 tests**, lint, audit (0 vulnerabilities), Homey CLI 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39055590336 passed,
+  producing Build 67 / v1.10.53. Portal showed Draft before publication. Read-back
+  archive manifest/drivers match source; compiled formatter/monitor/gates/device,
+  EN/DE/NL, consent HTML and settings were SHA256/byte-compared to local output.
+- Test publication **2026-10-17T17:53:40.044Z**, verified after reopening Developer
+  Tools. Public Test listing independently shows v1.10.53 and exact new changelog:
+  https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/.
+- Live remains Build 18 / v1.10.3 at unchanged `2026-07-26T22:49:51.597Z`, checked
+  beside the new Test row. Main refs unchanged: local master `8bb4e468` and remote
+  master `66b1cb5`. No mainline merge, certification submission or manual install.
+  Installed-host and physical acceptance remain unverified, not inferred from CI.
+
+Visible changes: CT1/CT2 phase-group labels, EN/DE/NL decimal formatting, V/W at one
+decimal and A at three, with signed tiny nonzero values preserved. Same driver /
+capability IDs, no re-pairing path. Counter card warns that units, period and circuit
+are unconfirmed; each raw field/trend has its own age since receipt. Partial packets
+cannot refresh older counters; expiry stays independent of scalar traffic. Totals
+remain raw/unscaled and no sign flip or mixed-age aggregate is introduced.
+
+Official contract, physical phase order, source roles, direction, counter scale /
+period and runtime Energy adoption remain unverified/gated. No standard power /
+meter capabilities, controls, app Flow cards, tags or Insights added to the preview.
+Other driver definitions, permissions, Energy mappings and Flow cards are identical
+to v1.10.52 (manifest comparison verified). The question for Robert is a plain
+description of his CT circuits, existing Homey grid meter and expected Energy
+roles, not another diagnostic bundle. No raw customer data added to Git.
+
+## CT labels and counter clarity — 17 October 2026, release authorised
+
+Owner now authorises consolidating the local CT1/CT2 display work below with a
+counter caveat and individual receipt ages, running checks, committing/pushing
+the diagnostic branch, checking exact CI and publishing Test only. Mainline,
+Live, Energy activation and hardware controls remain unchanged. Robert reply
+must remain draft-only for owner review. This supersedes prior publication hold.
+
+Private `.52 assignments` post 8 adds a counter screenshot and tentative circuit
+interpretation. Its fields satisfy `1+2+3=7` and `4-6=7`, already hypotheses in the
+single-record arithmetic checker. This does not establish CT2 production, Wh/kWh
+scale, daily/lifetime period, counter origin or a grid source. No private readings
+or screenshots are stored in Git; tests use generated, unrelated values.
+
+Counter card now explicitly warns in EN/DE/NL that units, period and circuit are
+unconfirmed. Each raw field and trend shows its own age since receipt. Partial
+counter/scalar packets cannot refresh older fields, and exact expiry still removes
+their numbers. No inferred totals, converted units, role relabels, packet-coherence
+claim, source adoption, new collection or numeric support export is introduced.
+Native Homey/hardware acceptance remains pending; verify each release gate before
+claiming the consolidated continuation is available to testers.
+
+Local consolidated checks passed: **882/882 tests**, lint, audit (0 vulnerabilities),
+diff checks and Homey CLI 4.5.3 verified validation. Display/preview targeted suite:
+23/23. Exact source CI, version-tag CI, upload and actual Test channel still need
+independent verification; local success is not a publication or hardware claim.
+
+## CT1/CT2 display refinement — 17 October 2026, LOCAL / UNPUBLISHED
+
+Owner authorised presentation improvements and regression tests on the diagnostic
+branch only. No commit/push, version bump or new Test publication is authorised.
+Mainline, Live and Energy adoption remain unchanged. Robert reply is draft-only.
+
+Reviewed all seven posts/images in private `.52 assignments` (topic 161001).
+Community comparisons support A as CT1 and B as CT2 for the displayed voltage,
+current and power groups on that installation. These are observed mappings, not
+an official model/firmware contract or universal phase/grid/direction verification.
+The newer CT2 power screenshot is a second observed operating point, not evidence
+that negative always means export. No new JSON/support attachment in these posts.
+Private screenshots and actual readings are not added to Git or test fixtures.
+
+- Existing six `dual_ct_preview_fields.*` cards now use CT1/CT2 names (EN/DE/NL),
+  with unchanged device/capability IDs; no re-pairing/migration path is introduced.
+- Presentation-only formatter: V/W at one decimal, A at three decimals, localized
+  decimal separators, field IDs and independent receipt ages retained. Very small
+  nonzero values use signed scientific notation rather than becoming apparent
+  zero. Raw decoder/cache precision and signs remain unchanged.
+- No speculative phase labels or combined totals are created from asynchronous
+  fields. Missing/stale stays explicit and exact <90-second expiry is unchanged.
+  Totals 515/998 and counter candidates retain raw/unscaled displays without units.
+- Pairing, persistent warning and settings hint explain community evidence versus
+  verified contract, receipt-only time, uncertain circuit roles/direction/phase
+  order, and no Energy/control/Flow/tag/Insights activation. No new data collection.
+- Pure contract/decoder, default bank-role assumptions, source selection, standard
+  meter/accounting, power/counter trials and numeric-free support schema untouched.
+
+Tester follow-up asks only for a plain description of the CT1/CT2 circuits, existing
+Homey grid meter and desired Homey Energy roles. No new captures, screenshots,
+exports, rewiring or mode changes are requested. Native Homey display/upgrade and
+hardware acceptance remain pending; this local change is not available in Test.
+
+Local checks passed: **880/880 tests** (six new display regressions), lint, audit
+(0 vulnerabilities), diff checks and Homey CLI 4.5.3 verified validation. Targeted
+display/preview suite: 21/21. EN/DE/NL formatting, all 18 phase fields, zero/tiny
+signed values, missing/stale per-field ages, unchanged raw precision, identifiers
+and Energy/Flow fences covered. Desktop/mobile consent regression passed and the
+mobile screenshot was inspected outside Git. These are synthetic/local checks,
+not native Homey display or hardware acceptance. Changes uncommitted/unpushed.
+
+## Test v1.10.52 / Build 66 — published 17 October 2026
+
+Supersedes the local/preparation checkpoints below. The optional raw Dual CT
+preview driver, guided export workflow and unwired power-based Energy preparation
+are committed/pushed on `codex/mixed-generation-reporting-diagnostics` and now
+available on **Test only**. Robert's active capture requests remain paused; no new
+Community message has been sent. No automatic device addition or Energy adoption.
+
+- Source `1666605918510144867333a894525690780603f4`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39025906166 passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39026010717 passed;
+  tag `v1.10.52` / `0f76b240913f75e3b761536aaebf42d70c4a5618`.
+- Exact-tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39026090521 passed:
+  **874 tests**, lint, audit (0 vulnerabilities), Homey CLI 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/39026183594 passed,
+  producing Build 66 / v1.10.52. Developer Tools independently showed Draft before
+  publication. Uploaded manifest, compiled preview/monitor/pairing/shared-auth and
+  power trial modules, EN/DE/NL, settings, consent screen and product photo were
+  read back and SHA256/byte-compared against the tested source/build output.
+- Test publication timestamp **2026-10-17T10:48:51.944Z**, verified on reopened
+  Developer Tools. Public Test listing independently shows v1.10.52, matching
+  changelog and the new Smart Meter Dual CT (read-only preview) with product photo:
+  https://homey.app/en-gb/app/uk.co.zarb.ecoflow/EcoFlow-STREAM-Series/test/.
+  Build 65 / v1.10.51 is Superseded.
+- Live remains **Build 18 / v1.10.3**, unchanged timestamp
+  `2026-07-26T22:49:51.597Z`, checked alongside the new Test row after publication.
+  Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and origin/master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No mainline merge,
+  certification submission, manual installation or hardware command was performed.
+  Installed version and native Homey/hardware acceptance were not checked here.
+
+The preview requires explicit pairing/continuous-monitoring consent and owned
+productType 421 admission. It displays unverified raw A/B readings, receipt ages
+and counter candidates. No W/V/A/kWh contract, physical CT-port/phase/direction
+verification, standard meter/Energy capabilities, app Flow cards, tags, Insights
+or controls are enabled for that driver. Existing meter/battery Energy paths are
+unchanged. Ordinary support reports include only fixed numeric-free preview
+health, not telemetry/account IDs or raw payloads.
+
+Power-based Energy accounting is **prepared and tested, NOT activated**. It is a
+pure unwired alternative to the counter trial; native counters are not required
+for that future route. Verified grid source/unit/sign/freshness, overlap adoption,
+persistence/migration/rollback and physical acceptance still gate runtime wiring.
+Use owner hardware for those remaining gates; no more Robert captures requested.
+
+## Consolidated preview and power-path release preparation — 17 October 2026
+
+Owner authorised completing the gated Energy preparation and publishing one
+consolidated Test build after checks and CI. This supersedes the unpublished-only
+restriction in the local checkpoints below. Mainline and Live remain out of scope;
+no installation, certification, hardware commands or new tester capture request.
+
+Adds `dualCtPowerEnergyTrial.ts`, an unwired alternative to native counters:
+confirmed normalized grid W only, single scoped source, separate import/export
+integration including zero crossings, strict freshness/gap handling, retained
+totals on restart but no downtime baseline. Receipt-only/raw bank candidates are
+not eligible. Separate readiness gates explicitly state native counters are NOT
+required for a future validated power route. Runtime Energy adoption stays closed.
+See `DUAL_CT_POWER_ENERGY_PATH.md` for the contract and remaining activation work.
+
+Release includes the local preview driver and guided workflow below. Source,
+validation, exact CI, version, upload and actual Test availability must each be
+verified before describing this preparation as published.
+
+Local checks passed: **874/874 tests**, lint, audit (0 vulnerabilities), diff
+checks and Homey CLI 4.5.3 verified validation. Desktop/mobile pairing and export
+workflow regressions are synthetic; native Homey/hardware acceptance remains open.
+
+## Opt-in Dual CT preview driver — 17 October 2026, local only, NOT published
+
+Owner explicitly authorised a separate read-only preview driver on the diagnostic
+branch, superseding the older blanket no-Dual-CT-pairing fence for this experimental
+display role only. Verified meter contracts, Energy adoption, controls and existing
+driver identities remain unchanged. Tester capture requests remain paused while
+the owner awaits hardware later in October; this work requests no further evidence.
+
+- New `smartmeter_dual_ct_preview` driver: per-pairing consent to continuous
+  monitoring, distinct from two-minute diagnostic collection/sharing consent.
+  Owned app productType 421 plus corroborating metadata only; no name/prefix
+  guessing, shared devices, generic meter conversion or duplicate preview pairing.
+  Account binding is a local digest of EcoFlow session identity/host, never a
+  normal report field. Pending/declined/cancelled pairing does not save credentials.
+- Latest-value candidate displays: raw bank A/B totals, power/voltage/current field
+  hypotheses with receipt ages, 773 unscaled candidates and raw change labels.
+  997 stays structure-only. No W/V/A/kWh assignment, CT1/CT2 or Grid/Solar claim,
+  phase-order verification, counters integration or automatic source selection.
+- Reuses existing listen-only app MQTT. Exact live device topic/header/encoding
+  checks, per-field <90-second freshness, precise expiry timer, local age ticker,
+  coalesced bounded display work, bounded connection retry, generation guards and
+  clearing on stop/account change/restart/deletion. No raw packets or numeric
+  readings are written to app stores/logs. Homey itself can retain last capability
+  values; pairing explains this and initialization clears those values before use.
+- No standard meter/power capabilities, Energy definition, control listeners or
+  app Flow cards. Custom displays are get-only, preventTag/preventInsights enabled
+  and Insights disabled. Administrator scripts are not a security boundary; the
+  persistent warning says not to use candidates for decisions/automation.
+- Shared app credentials are retained while ANY battery/preview consumer remains
+  (including original physical STREAM monitors using app telemetry for PV3/4),
+  including conservative retention for unreadable existing driver/device state.
+- Integration report schema 17 adds numeric-free preview health only (status,
+  accepted packet count, receipt age). No candidate values, account binding,
+  names, serials, credentials or raw payloads are projected.
+- Reuses the stored Dual CT contour icon and exact product-photo derivatives.
+  Original Smart Meter assets/identity/accounting are untouched.
+
+Local checks: full suite **867/867 pass**, lint, diff checks and Homey CLI 4.5.3
+verified validation. Desktop/mobile consent screenshots inspected outside Git;
+native Homey pairing/hosting, live hardware roles/scales/direction and physical
+acceptance remain pending. New code and the preceding workflow improvements are
+UNCOMMITTED/UNPUSHED. No version bump, CI dispatch, upload, Test publication,
+certification, installed-device change, mainline change or Live change occurred.
+
+## Guided Dual CT capture/export — 17 October 2026, local only, not published
+
+Supersedes the local qualification checkpoint below. Robert's `.51 Report`
+contains three posts: a `dual_ct_compact` metadata report, a description of a
+combined export, then understandable confusion about the flags. No attachment
+or numeric comparison JSON was present. It confirms numeric and counter opt-ins,
+59 accepted MQTT packets, no rejected frames/cleanup failures, consistent bank
+arithmetic, and record 773 arithmetic checks. Compact `valuesIncluded: false`
+is intentional; the posted text does not establish whether a separate numeric
+download succeeded or failed. Do not blame the tester or request another capture.
+The prior one-capture instructions were posted and reopened at
+https://community.homey.app/t/51-check/160974/2. The new reply is DRAFT ONLY.
+
+Settings now present capture choices before Start, a numeric-specific Start label,
+one local completion refresh while this page stays open, a default combined
+format without automatic sharing consent, clear export type/filename, and the
+primary numeric download before long JSON/raw fields. Compact exports and their
+summary live under collapsed technical diagnostics explicitly marked no readings.
+EN/DE/NL explain `valuesCaptured` versus `valuesIncluded` and the encoding safeguard.
+
+The one-shot refresh only follows an explicit numeric Start with valid effective
+mode, capture ID and bounded age. It is a GET of the local view, not cloud
+discovery/polling; no auto retry, capture restart, counter adoption or retention
+renewal. Stop, account removal/change, page teardown, errors and superseded/mismatched
+captures invalidate it. An active response after the one-shot read asks for manual
+refresh rather than looping. Collection/sharing consent, fixed retention, units,
+mapping and all pairing/Energy/Flow/control gates remain unchanged.
+
+Regression coverage includes the actual UI→API→app→research→export path on desktop
+and mobile with synthetic inventory/transport/clock, the wrong technical export,
+explicit numeric consent, combined file contents/name, identity/lifecycle failure
+guards and the one-shot bounds. Local full suite: **852/852 pass**, lint and diff
+checks pass. Synthetic screenshots inspected outside Git. No native Homey/mobile
+host or physical validation claimed. Changes remain uncommitted/unpushed; no new
+version, CI, upload or publication. Mainline and Live are unchanged.
+
+## Capture-to-export qualification — 17 October 2026, local only
+
+Robert's private `.51 check` reports v1.10.51, a local refresh, and both export
+choices disabled with the numeric-preview-off explanation. He did not recapture,
+as requested. This verifies the explanation on his installation, not the export
+download or meter field mappings. The `.49?` reply below was subsequently posted
+and reopened at https://community.homey.app/t/topic/160970/2; it is no longer draft-only.
+
+Added `test/dualCtCaptureToExport.test.js`: desktop/mobile settings exercise the
+production API, app capture lifecycle, research decoder and combined exporter
+together with synthetic inventory, transport and clock only. It reproduces a
+structure-only capture; Stop before changing modes; both numeric/counter opt-ins
+before Start; effective-mode confirmation; automatic completion; local-only
+refresh; retained historical export after live expiry; explicit format/sharing
+consent; and a downloaded `ecoflow-dual-ct-comparison.json` identical to the reviewed
+JSON. It checks bounded/private output, no discovery or recapture from local
+refresh, and no API request from download. No Stop is used after the numeric capture, because
+manual Stop clears retained evidence. Automatic completion preserves it within
+the existing 15-minute window; refresh does not extend retention.
+
+Local checks: **846/846 tests**, lint and diff checks pass. Desktop/mobile synthetic
+screenshots inspected outside Git. No runtime changes were needed. This test and
+handover are uncommitted/unpushed; no new CI, version, upload or publication was
+requested. Mainline and Live remain unchanged. Native Homey/mobile hosting and
+physical readings remain separate acceptance gates. A short reply with one
+deliberate numeric capture (both opt-ins) and one combined export is draft-only
+for owner review; no new customer message sent.
+
+## Test v1.10.51 / Build 65 — published 16 October 2026
+
+Supersedes the preparation/local-only checkpoints below. The four release sprints
+and export-availability fixes are now committed/pushed on the diagnostic branch,
+uploaded and published to **Test only**. Robert's `.49?` reply is DRAFT ONLY for
+owner review; no new customer message was sent.
+
+- Consolidated source: `842eb66931630e868e73a443a67ee1f552fb94f9`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38956863056 passed.
+- Later-refresh expiry edge fix: `8b07f8dd7e86c52537ad1ab1012c554c610107d9`;
+  CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38957406110 passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38957619745 passed;
+  tag `v1.10.51` / `6a8d93a2050f6d2c2b6cca0b29016a6a183b5b4c`.
+- Exact-tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38957741069 passed:
+  **845 tests**, lint, full audit (0 vulnerabilities), Homey 4.5.3 verified validation.
+  Counts and individual successful steps were read from the actual run/logs.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38958031638 passed,
+  producing Build 65 / v1.10.51. Developer Tools showed Draft before publication.
+- Test publication and reopened-page readback confirmed at
+  **2026-10-16T19:53:51.011Z**. The public Test listing independently displays
+  v1.10.51 and the exact new changelog. Build 64 / v1.10.49 is Superseded.
+- Build 18 / v1.10.3 remains Live, with unchanged timestamp
+  `2026-07-26T22:49:51.597Z`, checked alongside Build 65 after publication.
+  Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain untouched. No certification,
+  installation, hardware command, physical acceptance or mainline merge occurred.
+- Read the uploaded archive without running the app. App ID/version verified;
+  SHA256 matches for settings HTML/status/comparison/shared-contract assets,
+  EN/DE/NL translations and compiled contract/decoder/preview modules. Verified
+  the package contains no active paired Dual CT driver. New shared browser/backend
+  profile is present in the package, not merely the checkout. Publication screenshot
+  inspected outside Git; no credentials, raw reports or private screenshots added.
+
+Visible changes: both export choices reflect validated retained data and explain
+disabled states. Missing samples, numeric capture off, stale/cleared historical
+data, missing identity, invalid snapshot, blocked decoding, pending refresh and
+request failures are distinct. Later refresh after server-side retention expiry
+now says expired; live-only 90-second expiry does not block still-retained history.
+Numeric consent stays explicit. No new capture, polling or sharing is automatic.
+
+The v1.10.50 tag was created and validated but NEVER uploaded to Homey: release
+review found the later-refresh expiry explanation first. Do not rewrite that tag
+or ask testers to install it. The consolidated available version is v1.10.51.
+Native Homey hosting/upgrade/rollback and hardware role/sign/unit/counter acceptance
+remain open. Dormant adapter, pairing, Energy adoption and controls remain gated.
+
+## Consolidated diagnostic Test preparation — 16 October 2026
+
+Release review addendum: source CI `38956863056` passed and the first patch-version
+workflow `38957065913` created v1.10.50 (`68e1818`). It has NOT been uploaded to
+Homey. A later-refresh expiry-message edge case was found before upload: the server
+removes the historical object entirely at its deadline, so `reason: expired` with
+no snapshot must not be described as a generic missing snapshot. A real-backend
+regression and desktop/mobile case cover it. Release will use a further patch
+version after this fix passes exact CI; never rewrite the v1.10.50 tag.
+
+Owner explicitly approved committing/pushing this diagnostic continuation, checking
+CI and publishing one consolidated Test build. Mainline, Live and installed devices
+must stay unchanged; Robert's reply is draft-only. This supersedes the earlier
+local-only publication restriction below. No new release exists until upload and
+Test readback are verified; version/tag workflow follows successful source CI.
+
+Includes all four release-preparation sprints below plus the export availability
+fix prompted by Robert's private `.49?` message. Both export choices now follow
+validated retained data, rather than leaving the combined-format option available
+when numeric sharing is blocked. A dedicated accessible EN/DE/NL status explains
+numeric capture off, no accepted samples, missing capture identity/snapshot,
+validation failure, blocked decoding, expiry, pending request and transport/lifecycle
+failures. It never includes raw exception details or identifiers and never starts
+a capture or opts into sharing. Same-capture refresh retains consent only after
+validating the returned identity; failure/expiry/account change clears it.
+
+Fresh checks before the addendum: 844 tests pass (21 above released v1.10.49), lint, full dependency
+audit (0 vulnerabilities), diff checks and Homey 4.5.3 verified validation. Desktop
+and mobile browser cases cover disabled states, valid recovery, slow request,
+timeout/late response, exact retention expiry, copy/download and no automatic
+capture/transmission. Screenshots inspected outside Git; native Homey hosting and
+physical mapping acceptance remain separate. Portal before release: Build 64 /
+v1.10.49 Test; Build 18 / v1.10.3 Live, last updated 2026-07-26T22:49:51.597Z.
+Source CI, new version/tag CI, upload and Test readback are pending here.
+
+## Four release-preparation sprints — 16 October 2026, LOCAL / UNPUBLISHED
+
+Owner requested implementation, regression tests and local release checks on
+`codex/mixed-generation-reporting-diagnostics`. Based on synced `dd97437197e02d5de50ac1240aa83c68bda03d12`.
+No commit, push, version bump, CI dispatch, Test upload/publication, certification,
+mainline/Live/installed-device change or new customer message in this wave.
+The published v1.10.49 / Build 64 checkpoint below remains historical evidence,
+not a fresh portal check or a release of these working-tree changes.
+
+1. **Reading contract:** one frozen browser/backend field and bank profile in
+   `settings/dual-ct-contract.js`, typed through `lib/dualCtContract.ts`. Exact
+   90-second receipt/measurement expiry is stale throughout the relevant paths.
+   Unknown measurement timestamps stay null/receipt-only; cached snapshots need
+   a genuine measurement timestamp. Invalid clocks clear dormant state. Equal-time
+   scalar updates retain the first existing value rather than inventing order.
+   Complementary fields in separate packets still cannot form packet coherence.
+2. **Pipeline replay:** generated two-meter wire sequences exercise decoding,
+   independent fields, raw sign changes and zeros, sparse counter receipts,
+   continuity/source/gap boundaries, comparison schema sharing, numeric-free
+   reports and the dormant adapter. Stop, account replacement, restart, fixed
+   retention and backward-clock cases erase runtime evidence. Synthetic inputs
+   only; no customer captures or identifying fixtures.
+3. **Disabled adapter:** `lib/dualCtDevicePreview.ts` rehearses independent A/B
+   totals and three candidate phases per bank. Account/device/session scope is
+   private runtime state, not an anonymous capture index. It preserves raw signs
+   and missing/stale/recent-receipt states. It is not imported by app/API/drivers,
+   applies no Homey capabilities, creates no paired device, combines no grid
+   totals and has no Energy/control/activation path. A/B are NOT physical CT ports.
+4. **Upgrade qualification:** public contract fixture pinned to actual Live tag
+   v1.10.3 / `74a3f024c21b4179e0f137303414c541f84cb3fe`, not today's master.
+   Six existing driver identities, capability/settings/Energy contracts and 36
+   Flow card argument/target contracts remain resolvable. Real driver methods in
+   mocked Homey lifecycle tests retain synthetic original-meter/STREAM stores,
+   identity, settings and totals across upgrade/restart without downtime backfill,
+   candidate-counter adoption or concurrent power accounting. Existing 5000 role,
+   mixed-generation rollback, source-selection and 72-hour deterministic-soak
+   regressions also run. This does NOT qualify a native Homey upgrade or downgrade.
+
+Validation: **840 tests pass (17 added)**, including desktop/mobile browser
+settings workflows; lint passes, full dependency audit reports zero vulnerabilities,
+diff checks pass and Homey 4.5.3 verified validation passes. Shared browser asset
+loads before its projectors; compiled backend resolves the same field definitions.
+Desktop/mobile screenshots inspected outside Git. Native Homey hosting and the
+future uploaded archive remain separate checks, not implied by local browser/tsc.
+
+Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+`66b1cb5f828a53333739798281fce86125f61c28` remain unchanged; remote diagnostic
+still points at `dd97437197e02d5de50ac1240aa83c68bda03d12`. Remote CI has not run
+for these uncommitted changes. No new export request to Robert is needed for this
+engineering work. Direction/phase/units, counter period/reset/origin, native
+upgrade/rollback and original/mixed-hardware acceptance remain release gates.
+
+## Test v1.10.49 / Build 64 — published 16 October 2026
+
+Supersedes the preparation/local-only checkpoints below. Source commit
+`f11c690ac42447cda447022ed12c16f205c95af3` is pushed on
+`codex/mixed-generation-reporting-diagnostics`; the version/tag commit is
+`e3113a741a9287c31bf2c4622486faa530385dd9` (`v1.10.49`).
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38949012595 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38949189198 — passed; diagnostic branch patch only.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38949303098 — passed: 823 tests, lint, audit (0 vulnerabilities), Homey 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38950559602 — passed; created Build 64 / v1.10.49.
+- Official authenticated Homey Apps API confirmed Draft at 18:52:25 UTC, then
+  Test-only publication and readback at 18:53:34 UTC on 16 October 2026.
+  Build 18 / v1.10.3 remains Live with its original state-change timestamp.
+  Developer Tools independently says Build 64 (v1.10.49) is available for testing;
+  the public Test listing displays version 1.10.49 and the exact new changelog.
+  Publication screenshot was inspected outside Git.
+- Read the uploaded archive without executing it: app ID/version verified and
+  SHA256 matches for `settings/index.html`, `settings/dual-ct-comparison.js`,
+  `settings/dual-ct-status.js`, `settings/reporter-status.js` and the compiled
+  `lib/dualCtContinuity.js`. These are the packaged visible/export/freshness changes,
+  not merely source files that were absent from the archive.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and origin/master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No mainline merge,
+  certification, Live, installed-device, physical command or customer-message action.
+
+Visible changes: working Grid and Solar/inverter labels, possible battery-discharge
+scope, raw-sign-preserving candidate kWh alongside unscaled counters, per-counter
+receipt age versus latest packet age, explicit conflicting observations and more
+complete schema-2 comparison sharing. All assumptions remain provisional/read-only.
+There is no new paired Dual CT driver, Energy adoption, Flow or control change.
+997 remains structure-only. Native Homey and physical acceptance remain open.
+
+The owner-approved reply was posted and verified in the private Tests Dual CT
+conversation: https://community.homey.app/t/tests-dual-ct/160963/4, signed JZ.
+It explains the preview improvements and Test version without requesting another
+export/report bundle. Optional normal two-minute preview uses the existing numeric
+and counter opt-ins; no rushed/timed capture, reset or mode change. No new message
+was sent during the subsequent local-only four-sprint work above.
+
+## Test-only release preparation — 16 October 2026
+
+Owner authorised committing/pushing the evidence-to-preview changes on
+`codex/mixed-generation-reporting-diagnostics`, checking exact CI, and publishing
+a new Test build, then preparing a short Robert reply for review only. No mainline,
+Live, certification, installed-device change or message publication is authorised.
+This supersedes the no-release-authority statement in the implementation checkpoint
+below; the source scope and provisional/read-only gates remain unchanged.
+
+Fresh pre-commit checks: 823 tests and lint pass; diff checks pass. Source CI,
+version/tag CI, upload and Test channel readback are pending at this checkpoint.
+Baseline source is `247a7fcb6538e1d5ea7cf2c1a397ce9ca13f93e9`, package v1.10.48.
+Use the repository patch-version workflow after source CI passes; confirm its
+actual output rather than treating an expected version as already published.
+
+## Local Dual CT evidence-to-preview improvements — 16 October 2026
+
+Diagnostic branch only, based on `247a7fcb6538e1d5ea7cf2c1a397ce9ca13f93e9`.
+Owner requested implementation and regression tests, not publication. Mainline,
+Live, installed devices and the published Test build are unchanged. No version
+bump, commit/push, remote CI dispatch or customer message in this wave.
+
+- Combined comparison sharing uses schema 2 with shared scalar receipt tables
+  (age, encoding basis, float representation and packet index) and references
+  to identical latest/last-complete checks. The canonical local view and older
+  schema-1 imports remain supported. Check arithmetic is revalidated on readback.
+  The actual copy/download/manual text uses compact JSON within 7500 characters;
+  ordinary reports and scalar-only export schemas are unchanged. Power groups,
+  bank checks and counter candidates take priority over secondary voltage/current
+  detail. All omissions remain explicit. A one-meter synthetic comparison retains
+  all 20 scalars, both bank checks, both nested record structures and six numeric
+  counter candidates; two-meter and sparse-receipt pressure have regression tests.
+- Missing counter records in scalar packets are now `not_updated`, not a missing
+  measurement/reset. Last counter receipt age and latest packet age are separate;
+  scalar traffic cannot freshen a counter. Whole-record baselines survive absent
+  packets only; actual partial/invalid/equal-time ambiguity, source changes and
+  >=90-second counter gaps remain conservative. No merging partial child records,
+  inferred resets, persistent baselines, extra capture or background collection.
+- Settings comparison cards now show explicitly provisional assumptions: A is
+  Grid, B is EcoFlow Solar / inverter circuit, which can include battery discharge.
+  Raw signs remain unchanged; bank letters are not physical CT-port identifiers.
+  Under the existing separate counter consent, 773 fields 1/2/3/4/6/7 also show
+  candidate phase-net/import/export/net values divided by 1000 (Wh-to-kWh
+  hypothesis). Raw numbers remain alongside them. Scale, roles, direction, period
+  and reset origin are NOT verified; there is no daily-total or lifetime claim.
+  A conflicting user observation is visibly flagged, not used to activate a map.
+  EN/DE/NL wording and desktop/mobile workflows are covered by regression tests.
+
+No new pairing driver, Homey capabilities, Energy accounting, Flow, control or
+original-meter changes. Record 997 remains structure-only. Work from the existing
+evidence first; do not ask the tester for repeat compact/full/crash bundles.
+The next physical check should validate useful visible behaviour, especially
+inverter direction under meaningful output, not repeat decoder discovery.
+See [DUAL_CT_RELEASE_GATES.md](DUAL_CT_RELEASE_GATES.md) for current assumptions
+and remaining promotion gates.
+
+Local acceptance: 823 tests pass (11 added), lint passes, current dependency audit
+reports zero vulnerabilities, diff checks pass and Homey 4.5.3 verified validation
+passes. Desktop 1280px / mobile 390px workflows cover provisional labels and
+conflicts, candidate energy, sparse receipt ages, schema-2 copy/manual/download
+equivalence, expiry and Stop without cloud polling/device writes. Synthetic
+screenshots were visually inspected; no horizontal overflow. These are local
+browser/automated checks, NOT native Homey, physical or electrical acceptance.
+Mainline refs remain local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`
+and origin/master `66b1cb5f828a53333739798281fce86125f61c28`; diagnostic HEAD and
+origin remain `247a7fcb6538e1d5ea7cf2c1a397ce9ca13f93e9`. Changes are uncommitted,
+unpushed and unpublished. No Live/installed app or customer-message action.
+
+## Test v1.10.48 / Build 63 — published 15 October 2026
+
+Diagnostic source `f4338f73715a315ca2d2ba49d5dcda5655424fc2`; exact release/tag
+`v1.10.48` is `7542d4b30bc953419a3a8f5cf3b9e8f2c00d2b5d`. Later handover commits
+are not the uploaded source. Supersedes the preparation/unpublished checkpoints below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38815499264 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38815662598 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38815830126 — passed: 812 tests, lint, audit (0 vulnerabilities), Homey 4.5.3 verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38816065220 — passed; created Build 63 / v1.10.48.
+- Official authenticated Homey Apps API confirmed Draft at 2026-10-15 22:18:25 UTC,
+  then Test-only publication/readback at 22:18:27 UTC: Build 63 / v1.10.48 `test`.
+  Build 18 / v1.10.3 remains `live`. Developer Tools independently says Build 63
+  (v1.10.48) is available for testing. The public Test listing returned HTTP 200
+  and showed the exact v1.10.48 changelog/version; its screenshot was inspected
+  outside Git. No certification/Live action.
+- Read back the published archive without executing it: app ID/version match,
+  all four settings HTML/JS files and four new continuity/counter/readiness/trial
+  JS modules are present and SHA256-match the locally validated assets (8 files).
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. A read-only installed
+  app check found the owner's EcoFlow app enabled on v1.10.3, not this Test;
+  no install/update, capture, setting or control action was performed there.
+  Native Homey Test-host and physical Dual CT acceptance remain open.
+
+This consolidates the numeric-free bank summary and sprints 1–5 foundations:
+neutral Bank A/B comparison cards, optional local user observations, separate
+unscaled 773 candidate opt-in, fixed receipt-continuity metadata and one reviewed
+7500-character combined JSON with honest omissions. Both numeric consent flags
+are immutable during capture; the two-minute capture, 15-minute retention,
+freshness/Stop/account/restart/rollback clearing and privacy boundaries remain.
+997 stays structure-only. Normal support/compact reports remain numeric-free.
+There is no new paired Dual CT driver, verified role/unit/direction/period,
+Homey Energy adoption, Flow/control change or counter-accounting migration.
+The energy-adoption trial is unwired and always refuses migration/accounting.
+
+Robert's .47 private conversation (160897) was re-read: four posts, including
+daylight Grid/Solar screenshots and a question about cumulative versus daily
+totals. No newer numeric candidate export was present in that topic. A reply is
+DRAFT ONLY for owner review: acknowledge the supplied evidence, explain v1.10.48
+and the unresolved counter origin, ask for one convenient daylight comparison
+and one optional combined JSON plus corresponding app views, not repeated
+compact/full/crash bundles or rushed/midnight captures. No message was posted.
+
+## Test release preparation — 15 October 2026
+
+Owner approved committing/pushing the diagnostic wave, exact-release CI and
+Test-only publication, followed by a Robert reply DRAFT for review. No message,
+mainline merge, installation, certification or Live action is authorised.
+
+Preparing the local sprints 1–5 foundations below for the next patch version
+(expected 1.10.48; confirm the version workflow output). Local acceptance is
+812 tests, lint, zero-vulnerability audit and Homey verified validation. Exact
+source CI, version/tag CI, upload and Test readback are pending at this checkpoint.
+Portal baseline observed 15 October: Test 1.10.47 / Build 62; Live 1.10.3 / Build 18.
+Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`, remote master
+`66b1cb5f828a53333739798281fce86125f61c28`; diagnostic origin/HEAD
+`effb8deae72f6ece3cef2708aee0c8507cc04235` before this source commit.
+
+Release scope is read-only comparison, separate unscaled-counter opt-in,
+numeric-free bank/continuity outcomes, bounded historical sharing and lifecycle
+regressions. No new paired Dual CT driver, verified bank-role/unit/direction
+contract, Homey Energy adoption, Flow/control path or accounting migration.
+997 remains structure-only. Native Homey and physical acceptance remain open.
+Supersedes the unpublished-state notes below once the release is verified.
+
+## Unpublished Dual CT sprints 3–5 foundations — 15 October 2026
+
+Diagnostic branch only, based on `effb8deae72f6ece3cef2708aee0c8507cc04235`,
+including the preceding uncommitted sprints 1–2. No commit/push, version bump,
+CI dispatch, publication, installed-device change or tester message. Mainline
+and Live untouched. Full release/driver/Energy activation is NOT complete.
+
+- Capture-local counter continuity under existing explicit counter consent:
+  signed increase/decrease/unchanged/missing, invalid records, out-of-order and
+  equal-receipt ambiguity, admission-source changes and >=90s gaps. Whole-record
+  baselines only; two-meter isolation, no inferred resets or zeros. Same fixed
+  two-minute capture / 15-minute retention and Stop/account/restart/rollback
+  cleanup, no extra background collection or persistent baseline.
+- Comparison UI shows numeric-free continuity statuses and release blockers in
+  EN/DE/NL, with daily unavailable and cumulative origin unknown. Optional
+  consented comparison sharing retains the 7500-character budget and honest
+  continuity/counter-record omission counts. Normal compact/support and scalar
+  candidate exports are unchanged. Calendar helper covers local midnight and
+  23/25-hour DST days but computes no daily totals.
+- Developer-owned readiness remains blocked: no registered verified contract,
+  no new paired driver/phase capabilities or Energy contributor. User bank
+  observations cannot unlock it. 997 is still structure-only.
+- Pure unwired Wh-counter adoption trial tests anchoring existing totals,
+  single-source/no-power-fallback, conservative decrease/gap/source/restart
+  handling, versioned restore/rollback rejection and monotonic totals. It always
+  returns migration/energy false, is not imported by production drivers/app,
+  and is not a live Dual CT counter mapping or migration.
+- Release fences preserve original-meter identity/pairing/accounting paths.
+  Physical/native-client, bank-role/unit/direction/counter-period and real
+  upgrade/rollback gates remain open. See
+  [DUAL_CT_RELEASE_GATES.md](DUAL_CT_RELEASE_GATES.md) for the acceptance matrix
+  and one-session validation plan. Do not ask for repeated exports meanwhile.
+
+Local acceptance: 812 tests pass (20 added after sprints 1–2), lint, audit
+(0 vulnerabilities), diff checks and Homey 4.5.3 verified validation pass.
+Chromium desktop/mobile workflows cover continuity, explicit unavailable/blocked
+states, freshness, sharing/expiry and the 7500-character budget. Synthetic
+390px/1280px screenshots were inspected; no horizontal overflow. No native
+Homey/physical acceptance claimed. Changes remain local and uncommitted.
+
+## Unpublished Dual CT sprints 1–2 — comparison and counter research, 15 October 2026
+
+Diagnostic branch only, still based on `effb8deae72f6ece3cef2708aee0c8507cc04235`.
+Includes the prior uncommitted numeric-free bank-summary wave. No version bump,
+commit/push, CI, upload, publication or tester message. Mainline and Live unchanged.
+
+- New local Bank A/B cards group the bounded scalar candidates by phase with
+  W/V/A hypothesis headings, genuine zero, missing-not-zero, receipt ages and
+  stale indicators. No physical measurement-time or simultaneous-sampling claim.
+- Optional fixed Grid/Solar/no-match observations are ephemeral user assertions,
+  never global mappings. They clear on capture/account/navigation/expiry changes;
+  changing an observation or export mode revokes sharing consent until reviewed.
+- One optional `dual_ct_comparison` schema-1 JSON includes the historical scalar
+  projection, fixed observations and counter research. The local view retains
+  all 2 x 20 allowed scalar fields; sharing reapplies a 7500-character budget,
+  per-device evidence and honest omission counts. Distinct comparison filename,
+  copy/download/manual-text fallback; no automatic sending. Existing scalar-only
+  historical export remains schema 4 and compact remains numeric-free schema 6.
+- Counter numbers require BOTH explicit numeric-preview and separate counter
+  opt-ins before capture; active capture reuse cannot change either mode. Strict
+  owned-model/live-topic/message/header/encoding/scalar-signature gates remain.
+- Counter inspector walks exactly one level of 773/997, bounded to 2048 bytes
+  and 32 children per parent. Only 773 children 1/2/3/4/6/7, wire 5, can become
+  finite unscaled candidates with null units; 5 and deeper/unknown children do not.
+  997 stays structure-only: no independent numeric contract was found. No Wh/kWh,
+  direction, phase, daily/lifetime or commissioning-origin assumptions.
+- Counter checks are hypothetical `4-6=7` and `1+2+3=7` arithmetic within ONE
+  complete 773 record, never cached-child completion. Whole records replace
+  partials, with independent device isolation/provenance/ages. Existing fixed
+  15-minute retention/Stop/account/restart/rollback/timer cleanup also clears
+  counter data. Normal reports contain only bounded structure/status metadata.
+- Regression exposed and fixed a binary classification edge: protobuf field-1
+  newline plus length byte 123 looked like JSON after trimming whitespace. A
+  failed JSON parse now falls through only for the protobuf field-1 prefix to
+  the existing strict header/encoding path; genuine whitespace JSON still works.
+
+No Energy accounting, driver, capability, pairing, Flow or control changes.
+Local acceptance: 792 tests, lint, audit (0 vulnerabilities), diff checks and
+Homey 4.5.3 verified validation pass. Eighteen regression tests were added since
+the prior 774-test unpublished wave, including real Chromium desktop/mobile
+comparison/export workflows. The inspected synthetic mobile view has no
+horizontal overflow. Native Homey webviews and hardware acceptance are not claimed.
+Regression, desktop/mobile and privacy/export checks are recorded in
+[DUAL_CT_COUNTER_AUDIT.md](DUAL_CT_COUNTER_AUDIT.md). Native Homey/physical
+mapping, counter units/period and hardware acceptance remain open. No new request
+to Robert has been sent; next release/validation remains owner-authorized only.
+
+## Unpublished numeric-free bank outcomes and counter audit — 15 October 2026
+
+Diagnostic branch only, based on `effb8deae72f6ece3cef2708aee0c8507cc04235`.
+Local changes only: no commit/push, CI dispatch, version bump, upload, publication
+or message sent. Mainline refs unchanged; no Live or installed-device actions.
+The last publication remains Test .47 / Build 62, not this implementation.
+
+- `previewDiagnostics.bankCheckSummary` projects only bounded anonymous Bank A/B
+  outcomes and receipt ages into support/compact reports. Latest partial/invalid
+  and independently aged last-complete consistent/mismatch remain separate.
+  At 90 seconds evidence is marked stale; fixed historical retention and all
+  existing Stop/account/new-capture/restart/rollback cleanup apply unchanged.
+- Backend and browser fixed allowlists strip values, operands, residuals,
+  tolerances, payload indices and identities. Older evidence is not reported,
+  never inferred successful. Compact schema 6 stays within 7500 characters;
+  optional numeric historical export stays schema 4 with separate consent.
+- Settings show the numeric-free summary in EN/DE/NL, with receipt ages explicitly
+  at last refresh and no Grid/Solar/CT role or unit/direction verification claim.
+- Nested 773/997 remain opaque. Counter investigation and the five next sprints
+  are in [DUAL_CT_COUNTER_AUDIT.md](DUAL_CT_COUNTER_AUDIT.md). The live official
+  STREAM page documents separate historical buckets, not a Dual CT nested-record
+  contract. Upstream BK21 lifetime-counter semantics cannot be promoted to 421.
+- No Energy accounting, capability, driver, pairing, Flow or control change.
+  New tests protect the nested-record boundary as well as summary freshness,
+  isolation, privacy, projection compatibility and workflow behaviour.
+
+Local acceptance: 774 tests, lint, audit (0 vulnerabilities), diff checks and
+Homey 4.5.3 verified validation pass. Chromium desktop/mobile-sized tests pass;
+both synthetic summary screenshots were visually inspected. Native Homey and
+physical acceptance remain open. No private customer values/frames in Git.
+
+Robert's .46 approved reply was posted and reopened at 160876/post 3. The .47
+topic 160897 has four messages: compact structure, explanation, two daylight
+screenshots and a cumulative-kWh question. No new numeric candidate export or
+crash/support identifier in those posts. Do not ask for another compact report
+to infer numeric bank checks absent from schema 5; do not request repeats now.
+
+## Test v1.10.47 / Build 62 — published 14 October 2026
+
+Diagnostic source `57f962f1b0647f80460607d3f3b3d65d429c6797`; exact release/tag
+`v1.10.47` is `29ceba7b3475d9ec6791be550d54d0fcfaeeb9c4`. Later handover commits
+are not the uploaded source. Supersedes the unpublished implementation checkpoint below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38647762422 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38647903265 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38647991635 — passed: 762 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38648234169 — passed; created Build 62 / v1.10.47.
+- Official authenticated Homey Apps API confirmed Draft at 2026-10-14 22:32:55 UTC,
+  then Test-only publication/readback at 22:33:00 UTC: Build 62 / v1.10.47 `test`.
+  Build 18 / v1.10.3 remains `live`.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No certification,
+  Live, installation, control or physical-acceptance action. Native Homey webview
+  and physical Dual CT acceptance remain open.
+
+Release adds read-only neutral candidate bank labels, capture-local decoded-payload
+indices and same-payload signed power-sum diagnostics with independently aged
+latest/last-complete evidence. Historical candidate export is schema 4; normal
+support/compact remains numeric-free. No CT port/grid/Solar role assignment,
+verified units/direction, Energy accounting, driver, pairing, Flow or control changes.
+
+Robert's .46 reply remains a draft for owner review, not sent. It acknowledges
+the successful 20-field export and earlier screenshots without claiming a matched
+measurement. It explains the Test build and that late-night conditions are not a
+useful sunlight-generation comparison; no further captures are requested tonight.
+Do not ask him to repeat the exports already supplied.
+
+## Dual CT candidate banks/coherent-payload checks — implementation checkpoint, 14 October 2026
+
+Diagnostic branch only, based on `a2b8c6e99d6da9430f85c73b120c7f0603dfcc2f`.
+Robert's .46 private topic 160876 contains a successful schema 3 historical
+export with 20/20 fields and no trimming. Candidate phase sums match both totals,
+but that export has no payload indices: equal receipt ages do NOT establish
+same-payload provenance retrospectively. No customer values/raw packets were
+added to fixtures or source. The .45 approved reply was posted and reopened at
+160872/post 4; this turn's .46 response remains draft-only.
+
+Implemented locally:
+
+- Neutral Bank A/B hypotheses for the 20 candidate fields. No CT1/CT2, grid,
+  solar/load or import/export assignment. Existing secondary `candidateUnit`
+  remains null; possible W/V/A and phase ordering are explicit hypotheses only.
+- Strict decoding performs separate signed power-sum checks only when a total
+  and all three phase candidates occur in ONE decoded pdata. Missing is not zero;
+  no cross-bank sum, V*A, absolute-value conversion or cached-field completion.
+  Float32 tolerance checks arithmetic only. Mismatches are retained as evidence,
+  not used to discard otherwise valid readings or change controls/accounting.
+- Every accepted payload observation receives a bounded capture-local index,
+  including distinct headers delivered together at the same receipt time.
+  Latest payload status and independently aged last-complete evidence remain
+  separate per device/bank; partial deltas cannot refresh old complete evidence.
+- Consented historical schema 4 export includes fixed hypotheses, provenance,
+  bounded same-payload check evidence and honest reading/check trimming counts.
+  Historical/not-live/non-simultaneous and all verification gates remain false.
+  Support/compact reports stay numeric-free. The existing 90-second per-field
+  preview and fixed 15-minute historical retention/Stop/account cleanup remain.
+
+Screenshot comparison: re-opened all three images in .43 topic 160827/post 1.
+The grid-style page displays net import/export and phase A/B/C; the Solar page
+has separate L1/L2/L3 power/voltage/current. Screenshot clocks show 22:23 and
+22:24; the later .46 export is not a matching-time sample. Earlier Solar phase
+values are nonzero/signed, unlike some later zero candidates: do not label those
+phases unused/disconnected or infer a universal sign rule. This corroborates a
+two-view arrangement, not bank-to-port/role/phase/direction verification.
+The upstream BK21 parser was rechecked at `1471a74a117d78ce5120e30a9f1826b51e1c23a6`;
+it supports original-meter overlap, not a Dual CT second-bank contract.
+
+Local acceptance: 762 automated tests, lint, audit (0 vulnerabilities), diff
+checks and Homey 4.5.3 verified validation pass. Chromium desktop/mobile-sized
+checks cover the neutral labels, latest-partial/last-complete distinction,
+delayed export, age advancement and retention expiry. Native/physical acceptance
+remains open. Uncommitted, no new CI/version/upload/publication, no message sent.
+Mainline refs and Live remain unchanged; last published Test is .46 / Build 61.
+
+## Test v1.10.46 / Build 61 — published 14 October 2026
+
+Diagnostic source `81e34ace714e6097ab4d7ab27d6b6d15843e47c0`; exact release/tag
+`v1.10.46` is `a76cb5d90fc7db159c1b7f40580250b84acc44ba`. Later handover commits
+are not the uploaded source. Supersedes the implementation checkpoint below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38636434166 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38636640942 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38636848877 — passed: 749 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38637133817 — passed; created Build 61 / v1.10.46.
+- Authenticated official Homey Apps API first confirmed the exact build as Draft.
+  Test-only publication succeeded; readback at 2026-10-14 21:04:24 UTC confirms
+  Build 61 / v1.10.46 `test`. Build 18 / v1.10.3 remains `live`.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No certification,
+  Live, installation or physical-acceptance action. Native Homey webview and
+  physical Dual CT acceptance remain open.
+
+Release scope: live fields expire individually at 90 seconds; separate historical
+candidate evidence is retained in memory for a fixed 15 minutes from the first
+accepted packet and exported only after separate consent/review. Schema 3 labels
+historical/not-live/non-simultaneous and retains ages/provenance, unverified units
+and bounded coverage. Stop/new capture/account change/restart/rollback clear
+evidence. No Energy accounting, driver, pairing, Flows or control changes.
+
+Robert's private .45 conversation was refreshed: still three posts, including
+41/41 candidate acceptance and the disabled export after expiry; no separate
+candidate JSON. Updated reply remains draft-only for owner review. It requests
+one fresh .46 capture for ONE optional candidate export, not another compact/full
+report or timed screenshots. Export before Stop/new capture; those erase evidence.
+Expired .45 values cannot be recovered. If unavailable, exact wording suffices;
+no repeated attempts. No message sent this release turn.
+
+## Dual CT export/expiry fix — implementation checkpoint, 14 October 2026
+
+Diagnostic branch only, based on `67ca6bab12f34cd30f49cb08738753efc3eadb56`.
+Robert's .45 compact report confirms 41/41 accepted numeric candidate payloads;
+his following message reports that expiry disabled sharing before export. No
+candidate JSON was supplied in those three messages. The approved .44 follow-up
+was previously posted and reopened at topic 160837/post 3. This turn's .45 reply
+is draft-only; no new tester request was sent.
+
+- Live preview fields still expire individually at 90 seconds, now consistently
+  at the exact boundary. A local timer prunes each expired field and re-renders
+  remaining fields rather than clearing the whole preview at its oldest age.
+- Separate opt-in historical diagnostic retention: latest accepted candidate per
+  field, at most two meters/20 fields each, in memory only. A fixed deadline of
+  15 minutes from the first accepted packet is not renewed by packets, reads or
+  exports. An actual cleanup timer clears numeric memory even without a refresh.
+- Automatic completion/sample limit retains this historical evidence; Stop,
+  new capture, account change, app restart and clock rollback clear it. Leaving
+  settings clears the displayed copy/consent, not the still-bounded server cache.
+- Separate consented schema 3 `dual_ct_candidate_snapshot` export explicitly
+  states historical/not-live/non-simultaneous, preserves per-field receipt ages,
+  encoding provenance and unverified units, and remains capped at 7500 characters
+  with honest trimming counts. No raw frames, device/account identities or
+  automatic sharing. Normal compact/support reports remain numeric-free.
+- Pending/failed/late reads and capture identity changes cannot restore prior
+  sharing consent. Historical evidence is never admitted to live readings,
+  capabilities, Energy, Flows or controls.
+
+Local acceptance: 749 automated tests, lint, zero-vulnerability audit, diff checks
+and Homey 4.5.3 verified validation pass, including Chromium desktop/mobile-sized
+workflow tests. Native Homey webviews/physical acceptance remain unverified.
+Changes are uncommitted; no new CI, version, upload or publication. Mainline refs
+remain unchanged; the last published Test remains .45 / Build 60, not these fixes.
+
+## Test v1.10.45 / Build 60 — published 14 October 2026
+
+Diagnostic source `ce747ee9b176b6f732c750b63ab4de8727c1f3e5`; exact release/tag
+`v1.10.45` is `a82055ca1737451dfeb9691500a16e69f07cb5a2`. Later documentation
+commits are not the uploaded source. This supersedes the preparation checkpoint
+below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38630258029 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38630527288 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38630688421 — passed: 739 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38631012286 — passed; created Build 60 / v1.10.45.
+- Official Homey Apps API, using the existing CLI authentication, first confirmed
+  Build 60 as Draft. Test-only channel publication succeeded; authenticated
+  readback at 2026-10-14 20:20:24 UTC confirms Build 60 / v1.10.45 state `test`.
+  Build 18 / v1.10.3 remains `live`. No certification or Live action.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No installation,
+  native Homey webview or physical Dual CT acceptance is claimed.
+
+Release scope: narrowly gated absent-marker unchanged-byte candidate decoding,
+per-field encoding provenance, unitless additional scalar candidates, compact
+schema 5 structural coverage and separate consented candidate schema 2 export.
+These remain unverified candidates, not a supported Dual CT measurement contract.
+No driver pairing, Energy source, Flows, controls or energy-accounting changes.
+No customer raw telemetry or credentials committed.
+
+Robert's reply is draft-only for owner review. Optional next request: ONE compact
+report from .45; only if values appear and he wants to share them, ONE separate
+reviewed candidate export. If blocked/rejected/expired, the compact report and
+exact preview wording suffice; no repeated capture, full report, crash log or
+rushed screenshots requested. No message sent this release turn.
+
+## Dual CT encoding wave — preparation checkpoint, 14 October 2026
+
+Diagnostic branch `codex/mixed-generation-reporting-diagnostics` only. Sprints
+1–3 and local/software release checks are complete; physical acceptance remains
+pending. Commit/push, exact-release CI and Test-only publication are now approved.
+The release is not published at this preparation checkpoint; record the exact
+source, CI and channel readback below when verified. Robert's reply remains a
+draft for review. Main and Live must remain unchanged.
+
+The .44 evidence isolates the numeric blocker: preview enabled, 68 app packets,
+all absent encoding markers, no decoder attempts. Refreshed primary sources
+support a narrow unchanged-byte candidate trial, not verified plaintext. The
+new model-421/live-254/21 policy preserves marker presence, blocks masked/unknown
+encodings and requires two known correctly wired legacy fields for the absent
+marker path. No global header defaulting, XOR fallback or cached-packet renewal.
+Per-field provenance and omitted-marker attempt/accept metadata remain separate
+from units, roles, direction and hardware validation. Critical-header overflow
+and payload-length ambiguity are rejected for research only.
+
+Additional 985–993/998 float32 candidates are unitless and unassigned; nested
+energy/counters remain untouched. Normal compact schema 5 includes no numeric
+values. Separate consented candidate schema 2 retains provenance and honest
+size-coverage metadata. Existing consent, per-field freshness and clear-on-Stop/
+account-change behaviour remain enforced.
+
+Own-account read-only Developer inventory/original-meter quota checks did not
+provide a binary Dual CT envelope; no hardware claim follows. The official
+STREAM page and pinned third-party sources were refreshed. Details and remaining
+field gates are in SMART_METER_DUAL_CT_PLAN.md.
+
+Local checks: 739 tests, lint, zero-vulnerability audit, diff checks and Homey
+4.5.3 verified validation pass, including desktop/mobile-sized Chromium preview/
+sharing checks. Mainline refs remain unchanged. No controls, driver pairing,
+Flows or energy accounting changed; native/hardware validation stays open.
+
+## Test v1.10.44 / Build 59 — published 13 October 2026
+
+Diagnostic source `a3ff20aa45c84150e0a994d1a7c6b7c1230b2591`; exact release/tag
+`v1.10.44` is `7d020a62547869030afda98c9b02525b9f0389b2`. Later handover commits
+are not the uploaded source. Supersedes the unpublished follow-up notes below.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38467980503 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38468217057 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38468410290 — passed: 730 tests, lint, audit (0 vulnerabilities), Homey verified validation.
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38468663549 — passed; created Build 59 and uploaded v1.10.44.
+- Build 59 was observed Draft with the correct version/changelog, then Publish
+  to Test was clicked. Browser control timed out during readback. Recovery used
+  the official Homey Apps API via the existing CLI login, without exposing tokens:
+  `getBuild` confirms build 59, version 1.10.44, state `test`; build 18 remains
+  version 1.10.3, state `live`. No duplicate publication or certification action.
+- No new portal screenshot/public store readback is available because browser
+  control became unavailable; the authenticated API is the channel proof.
+- Local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged. No installation,
+  native Homey webview acceptance or physical Dual CT validation this turn.
+
+Release scope: per-route receipt evidence, compact schema 4 preview/encoding
+metadata, effective-mode feedback, locked active-capture option, coherent local
+summary/preview refresh and capture-correlated explicit candidate-sharing consent.
+Normal reports remain structural. Missing encoding remains a numeric blocker;
+second-bank units/roles/direction stay unverified. No new Dual CT driver, pairing,
+Energy source, Flows or controls. No raw customer telemetry committed.
+
+Robert's .43 Report conversation was refreshed: still two messages, with the
+49 app-packet observation and previously reviewed screenshots. Updated reply is
+draft-only. Optional next request is ONE compact report from .44; only if numeric
+candidates appear and he chooses to share them, one separate candidate export.
+If blocked/expired, exact preview wording suffices; no repeated capture, full
+report, new crash log or rushed screenshots. Nothing sent to Robert this turn.
+
+## Test v1.10.43 / Build 58 — published 13 October 2026
+
+Unpublished diagnostic follow-up: per-transport receipt counts/ages and legacy
+history-backed UI correction; compact schema 4 includes preview consent/reason,
+header encoding buckets and decode attempt/accept counts, without numeric values.
+Unknown additional scalar IDs are structural evidence only. Encoding review
+supports absent flags on other EcoFlow paths but not an established Dual CT live
+contract, so explicit plaintext gating remains unchanged. Second-bank roles,
+units/signs and energy counters remain unverified. Tests and draft reply are local;
+no new commit/push/version/upload, certification or Live change. See
+SMART_METER_DUAL_CT_PLAN.md for pinned research and acceptance boundaries.
+Two additional unpublished workflow sprints now expose the effective capture
+mode and reused-Start mismatch without silently restarting or changing consent.
+The option is locked while an active capture is displayed. A dedicated local
+GET view refreshes structure and the separate preview together; no numeric values
+enter normal reports. Start also opens that preview after its explicit action.
+Sharing consent survives a successful refresh only for the same random local
+capture ID; new/unknown capture, account removal, Stop, failure and expiry clear
+prepared exports. Pending values cannot be copied. Copy/download fallback points
+to the candidate JSON itself. No automatic polling, upload or EcoFlow controls.
+
+Local acceptance: 730 tests, lint, diff checks, npm audit (0 vulnerabilities), and
+Homey 4.5.3 verified validation pass. Chromium desktop/mobile-sized workflow checks
+include receipt messaging, mode lock, same-capture refresh, separate consent,
+copy/download fallback and expiry. Native mobile/hardware acceptance remains
+open. Changes are uncommitted; remote CI for these changes has NOT run. Fetched
+diagnostic HEAD remains `0db15e6cd474a19ef09d55024aae07c76412da97`; its existing
+CI passed, which is baseline evidence only. No commit/push/version/publication
+was performed. Robert reply is draft-only and asks no new capture at this stage.
+
+Diagnostic implementation `41601e1e3a5521501dbdce4cb8e0f2c2bae81ece`;
+exact uploaded release/tag `v1.10.43` is
+`d030937aed34973b691e0ccd00efec21a92e77c6`. Later handover commits are not the
+uploaded source.
+
+- Source CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38458787492 — passed.
+- Version workflow https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38458982295 — passed.
+- Exact tag CI https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38459130914 — passed (714 tests, lint, audit, Homey verified validation).
+- Upload https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38459375546 — passed.
+- Developer Tools Build 58 explicitly published to Test; readback confirms
+  v1.10.43 available for testing. Screenshot retained outside Git.
+- Public store readback was not verified: browser policy blocked accessing the
+  existing failed store tab. No workaround attempted; portal Test state is the
+  publication evidence. No installation or native mobile/hardware acceptance.
+- No certification submission; Live remains v1.10.3 / Build 18. Local master
+  `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote master
+  `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged.
+
+Release scope: optional local read-only numeric candidate preview, explicit
+plaintext/model gates, per-field expiry, clear unavailable reasons and separate
+reviewed/consented candidate JSON. Normal support reports stay structure-only.
+No Dual CT driver/pairing, Energy source, Flows, controls or verified units/signs.
+
+Robert's .42 report was reread live: 105 app-MQTT samples, two message groups and
+41 retained field/wire entries; no numeric measurement values. Reply is draft
+only. Next optional evidence is ONE candidate export from .43, plus an EcoFlow
+Dual CT view/channel-role description for comparison. If preview is unavailable,
+the exact reason/screenshot suffices instead: no repeated captures, full report
+or crash-log request. No need to change operating mode or clamp configuration.
+
+## Dual CT candidate preview — implementation notes (now in Test .43)
+
+Preview-state/shareability follow-up: reason-specific unavailable messages,
+separate unchecked candidate-export consent, visible reviewable bounded numeric
+JSON with manual Copy/Download/fallback and dedicated filename. Normal reports
+stay structure-only. Expiry/navigation/account changes and consent removal clear
+the prepared export. EN/DE/NL wording now reflects both opt-ins. Receipt age is
+labelled separately from capture-window age. Desktop and mobile-sized Chromium
+workflow regression added; native Homey mobile webview and hardware acceptance
+remain unverified. No publication, mainline or Live changes.
+
+Audit of v1.10.42 structural fields against official STREAM guidance and pinned
+third-party meter implementations supports ten legacy-overlap scalar candidates,
+not a verified Dual CT contract. See SMART_METER_DUAL_CT_PLAN.md for field map,
+provenance and the intentionally unmapped second-channel/energy fields.
+
+Pure decoder added for explicitly plain 421/app-MQTT/254-21 pdata only, with
+strict protobuf/size/duplicate/context/receipt-age checks. Output is unverified
+numeric candidates with candidate units, never Energy/capability values. The
+decoder is connected only to an explicit opt-in, bounded local research preview.
+Default discovery remains structure-only. Numeric candidates are never included
+in support exports; capture consent and export exclusion are distinguished.
+No automatic measured value export, driver, pairing, commands or accounting changes. No masked-frame
+guessing, phase summing, V*A inference, counters or zero substitution.
+
+Mainline/Live unchanged; no commit/push/version bump/Test publication. Test stays
+v1.10.42 / Build 57. The mappings are software-tested with synthetic fixtures,
+not physically validated. No new tester request made this turn.
+Preview requires explicit plaintext marker and app productType 421, shows field
+numbers with unverified candidate units and receipt age, and never assigns CT,
+phase, import/export or Energy roles. Per-field expiry is 90 seconds; stop/account
+change/clock rollback clear private candidates. Missing encoding metadata leaves
+the preview unavailable. Tests cover decoder gates, per-field expiry, UI consent,
+late callbacks, export exclusion and API separation. No raw customer telemetry
+added to Git. Local acceptance: 714 tests pass, including desktop/mobile-sized
+Chromium workflow and sharing/privacy regressions; lint, diff checks and Homey
+4.5.3 verified-level validation pass. These are software checks, not Dual CT
+hardware acceptance. Source work remains uncommitted on the diagnostic branch.
+
+## Test v1.10.42 / Build 57 — published 13 October 2026
+
+Diagnostic source `8029a019f35453487b11ce49887da1766776d0ea`; exact uploaded
+release/tag `v1.10.42` is `557a5787671ba42f323a88463a1579dcc3c8cb9e`.
+Later documentation-only commits are not the uploaded release source.
+
+- Source CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450103020 — passed.
+- Version: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450330827 — passed.
+- Exact tag CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450467205 — passed (tests/lint/audit/verified Homey validation).
+- Upload: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38450707887 — passed.
+- Build 57 explicitly published to Test. Developer Tools readback confirms
+  v1.10.42 available for testing; screenshot retained privately outside Git.
+  Public-store browser readback timed out; do not claim it was verified this turn.
+- 696 local tests and lint pass. No real Dual CT mapping, installed-host/mobile
+  acceptance, installation or physical validation claimed.
+- Mainline/Live untouched: local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`,
+  remote master `66b1cb5f828a53333739798281fce86125f61c28` unchanged. Portal Live
+  remained v1.10.3 / Build 18 before Test action. No certification submission.
+
+Compact schema 3 preserves representative structure/coverage/provenance, not
+measurement values. Next optional evidence: install v1.10.42, Homey app settings
+> Dual CT research > Start two-minute discovery and let finish; Refresh local
+summary, then Copy compact Dual CT report and send one private report. No full
+integration JSON/new screenshots/manual splitting requested. Update restarts the
+app, so old in-memory captures cannot be assumed retained. Dual CT pairing,
+measurements, Energy, Flows and controls remain disabled. Robert reply is draft-only.
+
+## Dual CT structure-retaining exporter — unpublished diagnostic work
+
+Field feedback from v1.10.41 confirms provisional 421 admission, 58 accepted
+samples and recognised structure, but schema 2 dropped all structures at the
+size threshold. No retained field numbers/paths or measurement values were
+received from that report. Do not interpret its empty arrays as absent telemetry.
+
+### Sprint 1: representative export — implemented locally
+
+Compact schema 3 unions unique fields by JSON device/source and protobuf
+device/command. Duplicate packets no longer consume the budget. Optional
+inventory candidates are trimmed first to reserve structure space, headers
+are admitted across both formats, then fields are allocated round-robin with
+scalar JSON leaves ahead of containers. Selected identity and route results
+remain. A 7,400-character allocation ceiling reserves flag space within the
+7,500-character pretty-JSON limit. No all-or-nothing structural deletion.
+Coverage records included/available unique groups and fields; omission flags
+now indicate partial coverage. Counts concern sanitised bounded inputs only,
+not every packet or unknown field the vendor might send. Stored capture is not
+mutated, and refreshing/exporting remains local-only.
+
+### Sprint 2: reception provenance — implemented locally
+
+Protobuf structure explicitly belongs to app MQTT. Export retains up to eight
+anonymous recognised-source/format history summaries with relative receipt age
+and retained-history sample counts. A listening subscription is not counted as
+observed telemetry. Counts are bounded historical observations, not guaranteed
+total capture counts or confirmed measurement freshness. No raw values/identities.
+
+### Sprint 3: decoding evidence — gated pending retained structure
+
+Next inspect representative field paths/numbers and transport provenance, match
+them against audited vendor/upstream contracts, then build synthetic/redacted
+fixtures for genuinely evidenced fields. Establish grid versus solar roles,
+per-phase versus total values, units, sign and field-level freshness. The current
+58-sample summary does not permit those mappings. No guessed decoder or driver.
+
+### Sprint 4: read-only driver acceptance — later gate
+
+Only after mappings are supported by real evidence, enable dedicated read-only
+pairing and compare with EcoFlow. Keep Energy and controls independently gated.
+Existing STREAM/5000 production acceptance can progress without full Dual CT.
+
+No commit/push/version bump/Test publication in this implementation turn. Mainline
+and Live unchanged; Test remains v1.10.41 / Build 56. Capture lifetime remains
+in-memory only; do not promise earlier structure survives an app update/restart.
+Local acceptance: 696 tests and lint pass; diff checks pass. Regressions cover
+oversized mixed-format coverage, duplicate merging/field unions, privacy, size
+limits, deterministic non-mutating export, scalar prioritisation and received
+versus subscribed provenance. No new hardware observation or remote CI claimed.
+
+## Test v1.10.41 / Build 56 — published 13 October 2026
+
+Diagnostic source `dbfc1a3bd5df2ed9dcfbad903d0fccf44893f8e2`; exact uploaded
+release/tag `v1.10.41` is `349cb7df59cfe002afbb13f07f863884112dedea`.
+Later documentation-only commits are not the uploaded source.
+
+- Source CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446293310 — passed.
+- Version: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446511526 — passed.
+- Exact release CI: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446697699 — passed (tests, lint, audit, verified Homey validation).
+- Upload: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38446932148 — passed.
+- Build 56 explicitly published to Test; portal readback confirms available for
+  testing and public Test listing shows v1.10.41. No certification submission.
+- 692 local tests and lint pass. No actual Dual CT capture/decoded measurement,
+  installed-host/mobile acceptance or physical validation claimed.
+- Mainline/Live untouched. Portal Live still v1.10.3 / Build 18 before Test action.
+  Protected local master `8bb4e468e9bcc510c28049ec4e89736ac2733879` and remote
+  master `66b1cb5f828a53333739798281fce86125f61c28` remain unchanged.
+
+Provisional productType 421 admission affects opt-in discovery only. Dual CT
+driver/pairing/readings/Energy/Flows/controls remain disabled. Optional next
+capture: install v1.10.41, Homey app settings > Dual CT research > Start two-minute
+discovery, then Refresh local summary and Copy compact Dual CT report. One private
+compact report when convenient; no new screenshots/full JSON/manual splitting.
+Report even a failure outcome: identification, subscription and structure are
+separate gates. Reply to Robert remains draft-only for owner review.
+
+## Selected identity and discovery outcomes — unpublished diagnostic work
+
+Capture now retains up to two anonymous selected-meter records: identity basis,
+provisional flag and authorised account-route availability, never serial/name.
+The compact report preserves these and transport results ahead of optional
+candidate metadata/structure. EN/DE/NL settings distinguish identification,
+subscription without recognised structure, unavailable transports, unmapped
+responses and recognised structure. No measurement contract is inferred.
+
+### Production acceptance gates (separate from Dual CT completeness)
+
+- Existing devices: update-in-place, retained IDs/Flows/counters, restart and
+  account reconnect; no deletion/re-pairing required for a routine update.
+- STREAM/5000: compare unit versus installation scope, freshness and charging/
+  discharging signs; verify missing/stale telemetry cannot drive wrong decisions.
+- Energy: charging/discharging integration, outages/restarts and socket flows;
+  no double counting, discontinuity or unexpected cumulative-counter reset.
+- Reliability: concurrent normal/research subscriptions, connection recovery,
+  expired/cancelled captures and no diagnostic load regression during a soak.
+- Settings/report export: actual Homey mobile/web host acceptance and review of
+  privacy/size/fallback; passing synthetic DOM tests is not installed-host proof.
+- Release: exact source CI, upgrade smoke/soak evidence, clear supported-model
+  matrix and known limitations, then separately approved certification/Live.
+
+Dual CT can remain quarantined while otherwise validated app functionality
+progresses. Full Dual CT support additionally needs actual telemetry structure,
+field units/signs/channel roles (grid versus solar, per phase versus total),
+freshness, corroborated model identity, verified decoder fixtures, then dedicated
+read-only pairing acceptance. Energy and commands are later gates, not automatic
+consequences of identifying productType 421. Do not make repeated/time-limited
+tester captures a condition of progress; finish software checks independently.
+
+## ProductType 421 discovery fix — local only, 13 October 2026
+
+Unpublished diagnostic-branch work after Test v1.10.40. Field report plus matching
+EcoFlow screenshots corroborate app productType 421 on one Dual CT installation.
+Independent upstream/official confirmation is still absent (see Dual CT plan).
+Provisional opt-in discovery admits owned app productType 421 with empty/numeric
+fallback name, rejects contradictory names and other identifiers, and separates
+observed-code counts from explicit-name counts. It does not enable pairing,
+readings, Energy, Flows or controls. Mainline/Live unchanged; no publish, version
+bump, commit or push in this turn. Reply to tester is draft-only.
+Local verification: 691 tests pass, lint and diff checks pass. Regression coverage
+includes observed-code versus explicit-name counts, app-owned identity admission,
+Developer-only exclusion, contradictory names/shared/invalid identities, wrong
+code fields, cached-reply rejection, structure-only live capture and Stop cleanup.
+No real Dual CT telemetry or hardware validation occurred in this turn.
+
+## Test v1.10.40 / Build 55 — published 13 October 2026
+
+Diagnostic branch source `ae9c5b70a47b63653af61953353386df17258b55`;
+exact release/tag `v1.10.40` is `775958850e9764458c040bc6524746f82d5b0d13`.
+Later handover commits are not the uploaded release source.
+
+- Source CI passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38441836511
+- Version workflow passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38442012964
+- Exact tag CI passed (tests/lint/audit/Homey verified validation): https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38442809440
+- Upload passed: https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38443074136
+- Developer Tools Build 55 explicitly published to Test; readback confirms
+  available for testing. Public Test store shows v1.10.40 and its changelog.
+- Mainline refs unchanged: local master `8bb4e468e9bcc510c28049ec4e89736ac2733879`,
+  remote master `66b1cb5f828a53333739798281fce86125f61c28`.
+  Portal Live remains v1.10.3 / Build 18. No certification submission or install.
+- 688 local tests and lint pass; hardware/mobile-host acceptance remains open.
+
+Optional next evidence: install Test v1.10.40, open app settings in Homey,
+Dual CT research, Start two-minute discovery, then Refresh local summary and
+Copy compact Dual CT report. Send that small report privately when convenient;
+download and displayed-text fallback are available. No full integration report,
+manual splitting or repeated screenshots requested. Even no_explicit_model is
+useful identification evidence. Do not claim the model or channel mapping is fixed.
+Dual CT values, pairing, Energy, Flows and controls are still disabled.
+Reply to Robert is draft-only pending owner review.
+
+## Dual CT next-wave sprints — unpublished, 13 October 2026
+
+Sprints 1–2 implemented locally on the diagnostic branch, extending the compact
+report work below. Capture retains only allowlisted numeric vendor model/type
+codes for up to eight anonymous meter-like candidates per account. App inventory
+normalisation preserves those codes; Developer inventory is projected directly.
+No custom names, serials, arbitrary metadata strings or measurement values are
+exported. Codes and display-name hints do not authorise capture or pairing.
+Unsupported string model identifiers remain an evidence gap, not guessed models.
+
+Compact schema 2 includes safe installed app version, inventory evidence,
+allowlisted JSON paths/types and bounded protobuf field/wire structure. Pretty
+JSON is limited to 7,500 characters by omitting structure, then excess candidate
+metadata, with explicit flags when necessary. Copy acknowledgement, failed-copy/download fallback, a distinct
+download filename and mobile download-request wording are provided in EN/DE/NL.
+Exports remain manual/local; no automatic transmission or new telemetry polling.
+
+Sprint 3 has an honest gated preview in opt-in research settings: grid, solar
+and phase readings are explicitly Not available, not zero. There is no verified
+Dual CT channel decoder or live field contract yet, so candidate measurements
+are not implemented. No selectable driver, Energy, Flows or controls enabled.
+
+Sprint 4 release is held: no commit/push, remote CI, version bump, upload or Test
+publication this turn. Mainline and Live remain unchanged. Next step is owner
+review, then approved Git/CI/Test release and one convenient compact report from
+Robert. Do not request repeated screenshots or promise the model issue is fixed.
+
+Local acceptance: 688 tests pass, lint and diff checks pass. Regressions include
+numeric model-code projection, unsafe metadata rejection, structural export
+privacy, report size/omission flags, settings copy success/fallback, local-only
+refresh, clearing on navigation and the distinct compact download filename.
+No hardware, actual mobile download or remote CI acceptance claimed.
+
+## Dual CT identification and compact report — local work, 13 October 2026
+
+Unpublished diagnostic-branch changes. Robert reports `no_explicit_model` with
+zero devices/frames while EcoFlow shows house/grid and solar three-phase views.
+This proves discovery selected no eligible model, not that telemetry is absent.
+No raw inventory/report has been received to establish the rejected metadata.
+
+- Retain exact product-metadata and ownership admission; display-name hints do
+  not authorise subscriptions or infer a model/channel mapping.
+- Manual discovery now retains anonymous per-account inventory availability,
+  bounded row counts, missing metadata, explicit matches and display-name hints.
+  No names, serials, account identifiers or raw metadata are exported.
+- Settings provide a compact fixed-field Dual CT summary, copy and JSON download
+  with visible text fallback; unrelated integration payloads are excluded.
+  This is an identification summary, not a substitute for full protocol evidence.
+- Main/Live unchanged; no publication, version bump, commit or push requested.
+  Real Dual CT mapping still requires evidence; no Energy/control enablement.
+- Local verification: 682 tests pass, lint and diff whitespace checks pass.
+  Five new regressions cover name-only rejection, ownership/bounds, compact
+  export privacy, forged input and clearing inventory after account changes.
+  No new hardware validation or remote CI run claimed.
+
+## Test v1.10.39 / Build 54 — Dual CT discovery and reliability, 13 October 2026
+
+Published to Test from the diagnostic branch only. Combined implementation
+`b6ab1dd4c37aceb7049012727bb4e0dbc0326255`; exact release/tag `v1.10.39` is
+`61cb03f90607f909d6a04a84ecff58f40b7d2629`. A later documentation-only handover
+commit is not the uploaded release source.
+
+- [Source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38394491908).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38394773771).
+- [Exact release CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38394907919):
+  tests, lint, dependency audit and verified Homey validation.
+- [Upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38395137964).
+- [Build 54](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/54)
+  explicitly published to Test; portal readback says available for testing.
+  [Public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows v1.10.39
+  and the discovery/reliability changelog. No certification submission.
+- Protected local master remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote master remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Developer Tools still showed Live v1.10.3 / Build 18. No Mainline/Live action,
+  installation, hardware command or Community message was performed.
+- Local acceptance: 677 tests, lint and Homey 4.5.3 verified validation pass,
+  with synthetic/browser fixtures. Real Dual CT/broker behaviour remains pending.
+
+Optional testing: install the Test update in place; in app settings open Dual CT
+research and Start two-minute discovery. Afterwards refresh the local summary
+and export one integration report when convenient. No timed screenshots,
+deletion/re-pairing, operating-mode change or repeat of earlier live comparisons
+is needed for this exploratory capture. Shared account connections may affect
+an EcoFlow app session, as disclosed in the settings overview.
+
+This release is **not full Dual CT support**: actual channel values/roles/units
+remain unverified; vendor-contract registry and dormant channel foundation are
+not connected to live data. No Dual CT pairing, Energy contribution, Flows or
+controls are enabled. Next work must be evidence-led rather than guessing a
+channel mapping from discovery structure.
+
+## Combined Dual CT diagnostic Test release preparation — 13 October 2026
+
+Owner approved commit/push and a new Test build from the diagnostic branch only.
+Source and exact release CI must pass before upload and explicit Publish to Test.
+No Mainline merge, certification submission, Live update or hardware action.
+Dual CT discovery records anonymous structure only; channel-state foundation
+remains dormant and pairing, actual channel readings, Energy and controls remain
+disabled. Release verification receipts will be added after portal readback.
+
+## Dual CT sprint 4 reliability — 13 October 2026
+
+Local diagnostic-branch work on top of uncommitted sprint 3; no commit/push,
+version bump, Test publication or Mainline/Live action in this implementation.
+
+- App/Developer subscriptions accept a capture cancellation guard and re-check
+  it after connection readiness, preventing late stopped captures attaching.
+  Replaced connection objects cannot receive stale registrations.
+- Pending subscriber counts protect a shared connection while other devices
+  are awaiting readiness. Research removes only its own callbacks; normal meter
+  and status-only listeners keep the connection alive. An otherwise idle research
+  Developer connection is released after pending work settles, stopping its retry
+  activity without shutting down an active ordinary-device connection.
+- An inventory response arriving beyond the capture window cannot start further
+  connections/probes. Probe responses after Stop are discarded before attachment.
+- Cleanup exceptions are isolated per listener. Generation guards invalidate all
+  capture callbacks first; failures are counted anonymously and shown as a warning
+  rather than allowing one failed detachment to prevent all subsequent cleanup.
+- Synthetic tests use actual shared MQTT handler registries, including same-SN
+  research/ordinary meter coexistence. No hardware/Broker acceptance is inferred.
+
+All 677 tests, lint and Homey 4.5.3 verified validation pass locally. Release gate:
+commit/push the combined sprint 3/4 work, inspect exact-source CI, and obtain
+explicit Test-release approval before versioning/uploading. Real Dual CT identity,
+channel contract and account/broker behaviour still require hardware evidence.
+Pairing, channel readings, Energy and controls remain disabled.
+
+## Dual CT sprint 2 Git/CI and sprint 3 tester UX — 13 October 2026
+
+Sprint 2 pushed as `a6da2abc210d5e17652cf4c65705571a397fec17` on the diagnostic
+branch. [Exact source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38391670497)
+(tests, lint, audit and Homey verified validation). No Test build published.
+
+Sprint 3 is local/uncommitted: plain-language EN/DE/NL capture summary distinguishes
+model-not-found, source-unavailable, empty responses, subscribed-without-receipt
+and observed structure. It never claims confirmed channel values, units or roles.
+Manual summary refresh reads only the existing local support endpoint: no cloud
+enumeration, new capture or polling. Late/duplicate callbacks cannot replace newer
+action results. A bounded 24-entry anonymous event timeline coalesces repeated
+events, stores no payload/identity/values, exports relative ages and clears on
+account changes/restart. It is not a full packet trace or measurement history.
+
+The legacy one-minute screenshot/report deadline has been removed from support
+guidance in EN/DE/NL. Existing live comparisons are acknowledged; fresh captures
+are requested only for a specific issue and can be sent when convenient.
+Pairing, actual channel decoder, Energy and controls remain disabled. Mainline,
+Live and current Test releases are untouched; no version bump or upload.
+
+Sprint 3 local verification: all 669 tests pass, lint passes and Homey 4.5.3
+verified validation passes. Chromium settings checks at 390px confirm readable
+summary, no horizontal overflow, one local request per explicit refresh and no
+hidden polling; JSON download/message-part integrity remains covered. Synthetic
+preview at `/tmp/ecoflow-dualct-local-summary.png` is not a hardware capture.
+
+## Dual CT sprint 1 Git/CI and sprint 2 foundation — 13 October 2026
+
+Sprint 1 committed/pushed as `bad386a7331c41302364aa97b4fed10fee8ac434` on
+`codex/mixed-generation-reporting-diagnostics`.
+[Exact source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38391007733),
+including tests, lint, audit and verified Homey validation. No version bump,
+Test upload/publication or Mainline/Live action.
+
+Sprint 2 (now committed/pushed as noted above): `DualCtChannels` prepares independent CT1/CT2
+normalized reading state, explicit unknown/grid/solar/load roles and one selected
+source per channel. Per-field measurement/receipt ages, zero/signed power,
+partial frames, source/role changes and clock rollback are covered by tests.
+Grid import/export direction requires an explicit sign convention; channels are
+never summed and missing voltage/current are never manufactured from power.
+
+This is deliberately dormant: no vendor field decoder or verified contract is
+registered, and it is not connected to the live research recorder, Homey
+capabilities, Energy, Flows or controls. Synthetic normalized fixtures establish
+software behaviour only. Hardware field units/channel roles remain unverified.
+
+Sprint 2 local verification: all 662 tests, lint and Homey 4.5.3 verified
+validation pass; exact-source CI subsequently passed before sprint 3 began.
+No upload/publication is authorised. Protected
+local/remote master refs remain unchanged; existing Test/Live releases are untouched.
+
+## Unpublished Dual CT research option — 13 October 2026
+
+Sprint 1 follow-up broadens manual discovery to independently authorised app and
+Developer inventories, JSON/protobuf app frames, Developer JSON MQTT, and bounded
+own/resolved-host quota snapshots. Sources remain separate and values are not
+captured or promoted to capabilities. Host probing requires a known STREAM model
+in the same Developer inventory; resolution is not a CT-role or membership claim.
+Read [the model/API audit](SMART_METER_DUAL_CT_PLAN.md) for pinned upstream findings
+and the remaining hardware evidence gate. Sprint 1 commit/push is approved on
+13 October, with CI required before proceeding. No publication is authorised;
+prior opt-in probe commit `6164d84` already passed CI.
+
+Diagnostic branch only. Commit/push approved on 13 October; CI must pass before
+any future release decision. No version bump, Test upload/publication, Mainline
+merge or Live change is authorised by this work.
+
+- Settings offer explicit Start/Stop for a two-minute read-only discovery capture.
+  One list operation per saved app/Developer account; at most two owned devices with exact Dual CT
+  product metadata. No guessed serial prefix, custom-name admission or shared devices.
+- Uses shared app/Developer MQTT transports, not second competing sessions.
+  Cached app replies cannot count as fresh data; bounded REST snapshots are labelled separately.
+  Counts, protobuf command/field/wire and allowlisted JSON path/types only: no values, raw payloads,
+  names, serials, credentials or persistence. Shapes/frames/payload sizes are bounded.
+- Local support JSON adds `dualCtResearch`; no automatic upload or extra polling.
+  Stop, expiry, account change and teardown remove only this capture's callbacks.
+  Late inventory/subscription completions cannot resume stopped capture.
+- This is an opt-in transport/structure probe, **not** a Dual CT driver or verified
+  CT1/CT2 adapter. Product names may be absent and the meter may expose data via its
+  host or Developer transport instead; absent/rejected frames remain inconclusive.
+  No nested field interpretation, channel mapping, units/sign or native counters are
+  inferred. Dedicated pairing, capabilities, Energy and controls remain disabled.
+- Next evidence gate: confirm actual discovery identity/transport, then add a
+  narrowly allowlisted channel decoder once semantics are established. Existing
+  original-meter and battery accounting remain unchanged.
+
+Robert's live comparisons are accepted as display evidence for the conditions he
+tested. The one-minute multi-screen/report request has been withdrawn; no repeat
+capture is required before this software work can proceed.
+
+Verification after sprint 1: all 654 tests pass, lint passes, and Homey CLI 4.5.3 verified
+validation passes. Regression coverage includes explicit metadata admission,
+manual-only UI actions, cached/wrong-source/malformed/oversized frames, privacy
+projection, frame limits, expiry, clock rollback, account changes/teardown and
+late discovery/subscription/callback races. This does not validate real Dual CT
+hardware or establish that the meter uses any particular transport. New regressions
+cover independent inventory authorisation, Developer-only discovery, off-account
+host rejection, bounded own/host reads, JSON wrappers/arrays/privacy, separate
+source labels and stopped/restarted account/subscription races.
+
+## Test v1.10.38 / Build 53 — bounded comparison diagnostics, 12 October 2026
+
+Published to Test from `codex/mixed-generation-reporting-diagnostics` only.
+Implementation `5ff1c3a86e06ecd3ec73f5ab242e9785db3ee80b`; exact release source
+and tag `v1.10.38` are `223e9e24875a7aac0552308f6ee4d19fa944198b`.
+
+- [Source CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38316958615).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38317077235).
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38317157501),
+  including tests, lint, dependency audit and Homey verified validation.
+- [Upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38317307780).
+- [Build 53](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/53)
+  explicitly published to Test. The portal says available for testing; a refreshed
+  [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows v1.10.38
+  and its comparison/queue/report-transport changelog.
+- Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Live remains v1.10.3 / Build 18. No Mainline merge/push, certification submission,
+  Live publication, user installation, or hardware command was performed.
+  This subsequent handover-only commit is not the uploaded release source.
+
+- Support schema 16 adds anonymous BMS/peer/grid comparisons with separate
+  scopes and receipt ages. Peer minus BMS magnitude is diagnostic only: neither
+  common measurement, sign/scale nor conversion loss is certified. Exact serial
+  matching remains private; prefix, SOC and naming similarities never match.
+- Five-minute session-only histories retain at most 16 samples per fixed power
+  field. BMS charge/discharge components remain paired in the same 32/50 frame;
+  no rescaling, aggregate substitution, energy-source migration or new controls.
+- Original Unit app telemetry now has one running and one merged pending batch,
+  rather than an unbounded promise backlog. Partial fields keep their own receipt
+  times. Rejected/expired BMS writes cannot renew freshness; teardown discards
+  pending work, but cannot cancel an already-running Homey SDK write.
+- Monitoring trial diagnostics distinguish applied versus current candidate
+  watts and report the last application-start age. Its 15-second local cadence
+  and all accounting/control boundaries are unchanged.
+- Numbered report messages use ASCII-encoded, fenced parts with capture grouping,
+  part counts and a copy-integrity checksum. The JSON download is unchanged.
+  `scripts/reassemble-support-report.cjs` reconstructs complete parts locally;
+  missing, mixed or damaged parts fail closed. Encoding is not encryption.
+- Local validation: 638/638 tests, lint and Homey `verified` validation passed.
+  Tests cover slow SDK writes, burst coalescing, retained partial receipt ages,
+  stale queued samples, fixed privacy projections, Unicode report reconstruction
+  and inconsistent-part rejection. This does not certify physical accuracy.
+
+Latest field review confirmed installed v1.10.37 and the expected idle-versus-
+discharging remaining-time display in the supplied screenshots. Some screenshots
+and JSON receipts are not simultaneous; DC-pack and peer/grid values must not be
+treated as an established scale error. Native mobile file download is not proven
+by a pasted report. The separate app-log ID and Homey mobile app version remain
+outstanding. No new message is sent here; the user is reviewing a draft first.
+Private reports/screenshots/identities are not retained in this repository.
+Installed v1.10.38, the native mobile encoded-parts workflow and physical accuracy
+remain unverified. The updated draft asks for an in-place update, five minutes of
+normal operation, a close-timed combined EcoFlow/AC Keller/Home Battery screenshot
+set, schema-16 JSON (or all complete encoded parts), and a matching app-log ID.
+
+## Test v1.10.37 / Build 52 — support export and original Unit readings, 12 October 2026
+
+The diagnostic follow-up described below is now published to Test. Mainline and
+Live are unchanged; no certification submission or Live action was performed.
+
+- Implementation `1b335122abb20e16e3c5e10dd61d3ea5364881e7`; final source
+  `682a2aba355b917c1ce20cc335f89172ec3d08d6` adds deterministic ordering to the
+  real-clock lifecycle regression. Direction is established before its matching
+  estimate; the earlier test was timing-sensitive under the new safety rule.
+- All 625 tests and lint pass locally. Final source
+  [CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308419331).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308587294).
+  Tag `v1.10.37` / exact uploaded source is
+  `8022af83269ed72b6965a067e7ed17c90ddb9ba7`.
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308734683)
+  including tests, lint, dependency audit and verified Homey validation, then
+  [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38308891943).
+- [Build 52](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/52)
+  explicitly published to Test. Portal says available for testing, and a refresh
+  of the [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  shows v1.10.37 and the new report/BMS/runtime changelog.
+- Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Portal Live baseline remains v1.10.3 / Build 18. These refs intentionally
+  differ; neither was synced, reset, merged or pushed.
+- Installed v1.10.37, native mobile export, matching pack/AC comparisons and
+  physical acceptance remain unverified. Draft asks for update-in-place, five
+  minutes of normal operation, a matching screenshot/report set, complete JSON
+  or all numbered parts, and a separate app-log ID. No message sent this turn.
+  This later handover-only commit is not the uploaded release source.
+
+## Test v1.10.36 / Build 51 — original-Unit startup hotfix, 12 October 2026
+
+### Diagnostic follow-up — export, original Unit BMS flow and runtime (released above)
+
+The tester confirmed that v1.10.36 restored both original Units without restart
+or re-pairing. Later feedback describes a silent JSON-download failure, available
+grid-port watts but blank original battery flow/state, and simultaneous charge
+and discharge estimates. Private messages/images are not stored in Git.
+
+- Browser download now delays blob-URL revocation rather than racing the
+  download. UI says requested, not successfully saved. A manual, lossless
+  8000-character parts fallback works without downloads or clipboard permission;
+  it uses the same snapshot, resets on refresh/pagehide, never uploads or polls,
+  and includes EN/DE/NL instructions. Native Homey mobile download is not proven.
+- Original Units can restore their existing flow/state tiles from a live,
+  subscribed-identity BK BMS 32/50 packet containing both field 26 charge watts
+  and field 27 discharge watts. DC pack sign is charge minus discharge. No
+  aggregate/port fallback, cross-packet pairing, cached get-reply promotion,
+  Energy participation, or hardware control is added. Invalid packets fail
+  closed; writes use the device queue and independent three-minute freshness.
+- Pinned [upstream parser and public masked captures](https://github.com/shuette42/ecoflow-energy-ha/tree/12509ef6f198f57675a98872b08a870fc009943d)
+  support this BMS path. Included public masked pdata regressions reproduce
+  -843 W discharge, +532 W charge and -2 W idle; other admitted BK layouts and
+  the tester's installation still need physical comparison. DC pack power is
+  not expected to equal the app's AC-side system/connection power exactly.
+- Runtime tiles require fresh same-scope signed battery power; idle, unknown,
+  stale and opposite-direction estimates clear. A direction change requires a
+  new matching estimate, rather than reviving the old inactive duration. 5939
+  is not treated as a magic sentinel. Schema 15 keeps bounded raw minutes and
+  fixed suppression reasons plus anonymous original DC pack watts. Combined
+  trial time suppression and energy accounting remain unchanged. Known released
+  Time to full/empty defaults migrate safely to existing scoped titles.
+- Local verification: 625 automated tests passed, including lifecycle/SDK
+  failures, malformed/partial/wrong-source BMS, expiry, charging/discharging/
+  idle, runtime direction changes, public captures, and browser downloads,
+  lossless multipart/manual clipboard fallback, refresh and pagehide.
+  Verified Homey validation passed. Lint and final checks recorded in the turn.
+- This increment was initially held locally on the diagnostic branch, then
+  released as v1.10.37 / Build 52 with the receipts above. Mainline and Live
+  remain unchanged. The response to the new feedback is draft only, pending
+  user review; private messages, raw reports and screenshots stay out of Git.
+
+After Test v1.10.35, two original STREAM units were reported unavailable with
+`Invalid Capability: stream_unit_power_grid`; the combined Home Battery and
+5000 monitor remained available. The same exception was reproduced in a
+synthetic original-Unit startup test before changing the code. A valid custom
+capability can have no driver/instance options entry, and an uncaught synchronous
+`getCapabilityOptions` error aborted onReady before polling/subscription setup.
+This Homey behavior is also described in [SDK issue 296](https://github.com/athombv/homey-apps-sdk-issues/issues/296).
+The Build 50 crash-report inventory was empty when checked; a device init error
+does not necessarily produce an app crash report. No private reports/images are
+stored here.
+
+- A shared optional title migration boundary now catches synchronous getters,
+  synchronous setters and rejected writes for original grid, original runtime
+  and 5000 scope labels. Failed/unknown reads are skipped, not replaced by {},
+  so existing custom titles/options are not overwritten. Missing capabilities,
+  missing SDK methods and teardown are guarded.
+- The original Unit driver explicitly declares grid-title options for fresh
+  metadata. Existing capability IDs, device identities, Flows, history, signs,
+  energy accounting and control behavior remain unchanged. No deletion/re-pair.
+- Regressions reproduce the exact exception on synthetic Ultra/AC Pro devices,
+  exercise full init with polling/MQTT and runtime updates, and cover 5000 startup
+  and metadata failures. The Unit harness now models unreadable custom options
+  instead of always returning {}, and gives timers distinct handles.
+- All 614 tests, lint and verified Homey validation passed locally.
+  Implementation `52149cd6bbde407ddc145dcbc4089e9e4e5e9861` committed/pushed;
+  [implementation CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38300678209).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38300839521).
+  Tag `v1.10.36` / uploaded source `f01fce67a1840658200827b152b47b81577d0cef`;
+  [exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38300943783)
+  including dependency audit, then [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38301096223).
+- [Build 51](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/51)
+  explicitly published to Test. Portal confirms available for testing and the
+  [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows 1.10.36.
+  No certification/Live action or mainline merge. Protected local `master`
+  remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`; remote `master` remains
+  `66b1cb5f828a53333739798281fce86125f61c28`. Live baseline v1.10.3 / Build 18.
+- Actual restoration on the affected installation requires update-in-place and
+  tester confirmation. Prior detailed capture request is secondary to confirming
+  both original devices are accessible. The new apology/update reply is draft
+  only; no further community/private message was sent in this hotfix turn.
+
+## Test release v1.10.35 / Build 50 — EcoFlow terminology, 12 October 2026
+
+Diagnostic branch only. Original STREAM's default grid tile now reads **Unit
+grid connection port**, matching the native EcoFlow app's **Grid connection
+port** with an explicit unit scope. EN/DE/NL capability assets and support
+explanations are consistent. The translations are ours, not a claim about
+EcoFlow's localized app labels. Migration recognizes both the pre-1.10.34
+import/export defaults and the released 1.10.34 grid-port defaults, while
+preserving custom titles, options, capability IDs and Flow references.
+
+The [official STREAM contract](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
+describes `gridConnectionPower` as grid-port active power in W with positive
+input and negative feed-in. The native app displays magnitude with Input/Output
+arrows. This is a wording change only: no sign conversion, inferred battery
+direction, energy accounting or control changes. Whole-house grid-meter and
+individual battery-flow capabilities remain separate. Naming regressions cover
+both default generations, partial localized custom names, idempotent migration,
+packaged/compose agreement and unchanged positive/negative/zero values.
+All 610 tests, lint, dependency audit and verified Homey validation passed.
+Other suggested naming changes are not part of this increment.
+
+- Implementation `df5d738f502d6559d0ec5c642de32e69b6bf344d` committed/pushed
+  on the diagnostic branch; [CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296486924).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296648201).
+  Tag `v1.10.35` / uploaded source `f1686752b1ea49259124daabbd8b9e2f914025ae`.
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296783935),
+  then [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38296947705).
+- [Build 50](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/50)
+  published explicitly to Test. Portal and [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  verified as v1.10.35 at approximately 19:35 UTC. A browser-control stall was
+  recovered before publishing; no duplicate upload or repeated publish occurred.
+- Live still v1.10.3 / Build 18; no certification or Live action performed.
+  Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+- The approved follow-up was sent privately and reopened for verification,
+  updated to v1.10.35 and the final grid label. It asks for one matching capture
+  set with screenshots, downloaded integration JSON, separate app-log ID and
+  capture time/timezone. Existing evidence is retained; no mode/grouping change.
+  Private message content, raw reports, screenshots and identifiers are not in Git.
+- Installed version and physical acceptance are still unverified. Later
+  handover-only commits are not the uploaded release tag.
+
+## Test release v1.10.34 / Build 49 — original STREAM freshness and support capture, 12 October 2026
+
+The user now authorizes Test publication from the diagnostic branch, including
+the earlier unshipped grid/scope/runtime fixes below. Local and remote `master`
+already differ and are protected separately; neither is merged/reset/pushed.
+Live remains v1.10.3 / Build 18. Test advanced from v1.10.33 / Build 48 to
+v1.10.34 / Build 49; portal and public Test listing verified at 18:43 UTC.
+
+Release receipts:
+
+- Implementation commit: `1e0ef6601771f8f0ac57788994b135dca3041771` on
+  `codex/mixed-generation-reporting-diagnostics`;
+  [implementation CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38291679387).
+- [Version workflow passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38291823684).
+  Tag `v1.10.34` and uploaded release source:
+  `4a3ccdc335df905be8692e94a606709b6bfe0733`.
+- [Exact-tag CI passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38291955747),
+  then [upload passed](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38292136499).
+- [Build 49](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/49)
+  explicitly published to Test. Portal confirms available for testing;
+  [public Test listing](https://homey.app/a/uk.co.zarb.ecoflow/test/) shows 1.10.34.
+  No certification submission or Live publication was performed.
+- Protected local `master` remains `8bb4e468e9bcc510c28049ec4e89736ac2733879`;
+  remote `master` remains `66b1cb5f828a53333739798281fce86125f61c28`.
+  Neither was changed. Any later handover-only commit is not the uploaded tag.
+- Installed version and physical acceptance are not established by this release.
+  Matching hardware captures and restart/recovery/rollback/soak checks remain open.
+
+- Original Home Battery/Unit watt and state tiles have independent three-minute
+  receipts and minute expiry. Empty REST, SOC-only and temperature-only updates
+  cannot renew old watts; unit-port packets cannot renew house-meter watts.
+  Startup clears persisted watts. Actual unchanged receipts and zero are valid;
+  SDK failures, delayed/future/out-of-order packets, clock rollback, trial
+  suppression and teardown have regressions. Energy accounting stays unchanged.
+- EN/DE/NL support settings include a matching-capture checklist: combined
+  EcoFlow flow with units expanded, matching Homey pages, the same downloaded
+  JSON, and an immediately-created separate Homey app-log ID. Aim for one minute
+  and record local time/timezone or a longer gap. No automatic upload, deletion,
+  re-pair or mode change is required.
+- Anonymous schema 14 adds original applied/received watt freshness and
+  `originalLimits`. A bounded BK 254/21 decoder observes four limit/max fields
+  from pinned upstream definitions. Cached get replies do not renew limits;
+  readings expire in three minutes. Known models and subscribed identity are
+  required. Maxima and setpoints stay distinct, scope remains unverified and
+  controls disabled. Existing shared app telemetry is used, not another login.
+- Fresh read-only API queries at 18:15 UTC covered all six owned batteries:
+  two BK61 and four BK31. Each quota/all returned 15 fields; neither all nor
+  targeted reads returned the four limit fields. Other routes/models may differ.
+  No commands were sent; credentials, raw responses and serials are not stored.
+
+Local checks: 608 tests, TypeScript, lint, dependency audit (zero vulnerabilities),
+Homey CLI 4.5.3 verified validation and whitespace checks passed. Matched hardware
+captures, restart/recovery/rollback and normal-use soak remain production gates.
+
+## Earlier unshipped follow-up — freshness, scopes and diagnostic continuity, 12 October 2026
+
+Changes confined to `codex/mixed-generation-reporting-diagnostics`, based on
+`ab08bf20eb950792ba4afe7ea90c1f53fc2b7ece`. Diagnostic-branch commit/push and
+exact-commit CI verification were authorized on 12 October. This earlier increment
+was held for Test; the new authorization above included it in the v1.10.34 Test
+release. Mainline merge and Live changes remain on hold. The baseline below remains
+separate from these unshipped changes. Check the exact branch HEAD in
+[GitHub Actions](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/workflows/homey-app-validate.yml)
+when continuing; source sync and CI success do not establish hardware acceptance.
+
+- A telemetry receipt is no longer marked successfully applied before the
+  Homey capability write completes. Anonymous schema 13 `readingFreshness`
+  separates `receivedAgeSec`, the last applied `ageSec` and fixed
+  `applicationStatus` (`applied`, `write_failed`, `stale`, `unavailable`).
+  Rejected writes do not renew freshness or restore availability. Clearing
+  failures remain visible and retry on the watchdog; clearing old values is
+  not another telemetry receipt. A fresh successful reading of the failed
+  field is required for recovery; unrelated temperature deltas cannot mask it.
+- Expired/future/out-of-order queued writes cannot overwrite fresh values or
+  manufacture availability. Slow writes retain original receipt age. Expired
+  accessory data cannot create tiles. SDK failures are isolated per reading;
+  later fields and queued work continue, with teardown guards retained.
+- Physical 5000/legacy monitors label battery readings as **Unit** and house/grid
+  context as **System**. The signed reported meter and flow-derived import/export
+  remain separate sources. Default-title migration preserves custom titles,
+  existing options, capability IDs and Flow references; no re-pair is needed.
+- Original STREAM `stream_unit_power_grid` is now **Unit grid-port power**,
+  sourced unchanged from `gridConnectionPower`. A supplied AC Pro screenshot
+  shows positive port watts while sockets are zero and signed battery tiles
+  are blank. These measurements are distinct: do not invert port power or
+  substitute combined power/state for an unverified individual reading.
+  The screenshot is not a matched API capture or proof of a universal sign
+  convention. Subsequent read-only app/API checks on original hardware confirm
+  the app shows positive port watts with an Output arrow and a distinct signed
+  system battery reading. This is not acceptance of mixed-generation unit power.
+- Original Home Battery grid now reads only `powGetSysGrid`. Neither unit
+  `gridConnectionPower` nor installation AC `sysGridConnectionPower` can replace
+  the whole-house meter in a partial packet. Startup clears persisted fallback
+  grid values. Unit port watts and their existing sign remain unchanged.
+- Original remaining-time capabilities use BMS estimates for physical units
+  and CMS estimates for the Home Battery; absent CMS never borrows a pack's
+  estimate. EN/DE/NL default titles identify Unit/System while retaining custom
+  titles/options/IDs. Estimates are non-negative finite minutes; explicit zero
+  and long durations such as 5939 are retained, not guessed to be sentinels.
+  Independent three-minute receipts, startup clearing, minute expiry/retry,
+  SDK-write failures, delayed/future packets, clock rollback and teardown are
+  covered. Widgets reject expired/failed estimates before the watchdog clears
+  tiles. Trial/rollback suppression remains intact. Missing system estimates
+  intentionally stay unavailable instead of displaying individual runtime.
+  Anonymous `remainingTime` diagnostics project fixed source/age/status fields
+  only; no raw values, identities, network calls or private captures are added.
+- Energy integration, counters, checkpoints, reporter selection, controls and
+  grouping remain unchanged. No private reports/screenshots/identities are
+  stored in this increment; tests use synthetic and already-masked fixtures.
+- The mixed-discharge regression separates idle AC 5000/Ultra observations,
+  active original AC Pro peer watts and combined battery power. Raw peer watts
+  remain diagnostic-only; they do not enable signed physical flow or accounting.
+- Anonymous schema 13 `readingExplanations` and the support UI distinguish
+  unverified physical flow, expiry, application failure and missing reports.
+  Trial wording explicitly separates combined monitoring from original counters.
+- Exact private peer identity can correlate a paired original STREAM monitor to
+  an anonymous driver/index reference. SOC and raw-power-versus-port comparisons
+  require independent fresh receipts within 30 seconds of each other. Prefix/SOC
+  similarity, duplicates and stale peers never establish a match. No public
+  serial, automatic grouping, verified measurement equivalence or control
+  authority is created; optional getter failures remain isolated.
+- Session-only counter continuity records missing/invalid/stale/baseline,
+  unchanged, advances and reset evidence. A five-minute unchanged counter plus
+  current matching-direction watts is only a possible stall, not proof of a
+  faulty counter or sustained discharge. Missing fields do not renew receipts;
+  gaps, invalid recovery, rollback and teardown prevent false continuity.
+  Counter sources and cumulative totals are unchanged.
+- A read-only native-app/Developer API/Homey comparison on the owner's original
+  STREAM installation found close combined power/SOC agreement, duplicated
+  parallel port flows and an advancing Homey discharge counter. Individual
+  remaining-time estimates are not proof of combined runtime. App-only grid
+  output/AC charging limits remain investigation candidates, not guessed writes.
+  See the 12 October section of `STREAM_REPORTING_API_AUDIT_2026_10_09.md`.
+
+Local checks: all 596 tests passed, TypeScript, lint, Homey CLI 4.5.3 `verified`
+validation and whitespace checks passed. These local checks do not establish
+real-hardware acceptance; GitHub CI is a separate exact-commit gate.
+Next release gates remain matched combined/individual discharge evidence,
+restart/recovery/rollback checks and a normal-use soak, not a capability-label
+change alone. Test is now explicitly authorized above; Live is not.
+
+## Latest Test release — v1.10.33 / Build 48, 12 October 2026
+
+Working only on `codex/mixed-generation-reporting-diagnostics`, based on the
+latest mixed-generation feedback and review of manually submitted reports.
+Committed and pushed to the diagnostic branch, then released to Test with
+support schema 12. Mainline and Live remain unchanged; the Robert reply is a
+review-only draft, not posted.
+
+- Implementation: `f4d90a5edf65a093b19461262acd05ade5d7c2da`;
+  release/tag: `adda09b60af2db6cd66aa081c15c628ba5284eb7` / `v1.10.33`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38257541669),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38257723239),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38257851008)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38258048377)
+  succeeded. Exact-release CI passed 554 tests, lint, zero-vulnerability audit
+  and Homey CLI 4.5.3 validation at `verified` level.
+- [Build 48](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/48)
+  was published using Publish to Test; the portal confirmed available for
+  testing and the [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  showed v1.10.33. The refreshed Live store remains v1.10.3. Remote `master`
+  remains `66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge,
+  certification submission, hub installation, Community post or hardware
+  acceptance occurred. Publication was explicitly authorized for Test only.
+
+- Fresh, fully applied combined SOC/power/state remain available while newer
+  donor values await the next local tick. Their own conservative three-minute
+  expiry cannot be renewed by later packets. Removal, changed identity, stale
+  evidence, clock rollback and capability-write failures still fail closed.
+  Core Flow conditions and widgets retain exact-current-value checks; a
+  superseded snapshot cannot fire a crossing. `updatePending` is separately
+  reported rather than misclassifying every value change as a connection loss.
+- Individual watts/PV/socket/state have a three-minute freshness limit,
+  independent of the configurable connection timeout. Temperature-only deltas
+  cannot renew old watts. Expiry clears values on the existing minute watchdog;
+  diagnostics mark them stale immediately. SOC/temperature/health retain their
+  existing timeout. Accounting algorithms, checkpoints and sources are unchanged.
+- Linked physical monitors explain intentionally unavailable signed power and
+  direction with a localized warning. System watts are not substituted for unit
+  watts. Support schema 12 adds fixed anonymous `physicalPower` explanations and
+  `ownUnit` SOC/raw-power observations, independent of system and peer records.
+  Raw sign/scale and pack scope remain unverified; no new Energy input or control.
+- EN/DE/NL support guidance separates the JSON file from Homey's app-log ID and
+  warns that pasted report messages may be truncated. A screenshot-first route
+  is offered; technical JSON is collapsed by default. No automatic network
+  refresh, upload or support message is introduced.
+- Local validation: 554 tests passed, including a serial-keyed self-record
+  lifecycle replay, write-race/removal/expiry/clock regressions, independent
+  reading expiry, safe diagnostic projection and browser settings checks.
+  TypeScript, lint, `git diff --check`, dependency audit (zero vulnerabilities)
+  and Homey CLI 4.5.3 validation at `verified` level also passed locally.
+  Implementation and exact-release GitHub CI also passed; no hardware soak occurred.
+
+The latest evidence supports combined charging monitoring but the screenshots
+and JSON were captured at different times. Combined discharge while original
+units contribute, cumulative-counter scope and physical control migration are
+not accepted. Preserve all supplied evidence; request only a matching EcoFlow
+combined/individual breakdown and refreshed JSON during natural original-unit
+discharge. New app-log IDs are needed for reproduced problems, not every snapshot.
+See the updated [trial plan](MONITORING_REPORTER_TRIAL.md) for late-October hardware
+acceptance. Private reports, serials, contact details and screenshots remain out
+of Git; tests use synthetic or already-masked public fixtures.
+
+## Previous Test release — v1.10.32 / Build 47, 11 October 2026
+
+Implemented on `codex/mixed-generation-reporting-diagnostics` while waiting for
+the time-matched evidence requested in [Community reply 67](https://community.homey.app/t/157399/67).
+Published to Test with support schema 11. Mainline and Live remain unchanged.
+
+- Implementation: `912cf6810fb00477ce7cdcc61e8e4312fd71ff79`;
+  release/tag: `13fef587ee6a45860ebc44e89909540ee383bdf6` / `v1.10.32`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181513564),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181645010),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181714544)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38181838179)
+  succeeded. Exact-release CI passed 543 tests, lint, dependency audit (zero
+  vulnerabilities) and verified Homey validation.
+- [Build 47](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/47)
+  confirmed available for testing; the refreshed [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  showed v1.10.32. The refreshed Live store remains v1.10.3. Remote `master`
+  remains `66b1cb5f828a53333739798281fce86125f61c28`. No mainline merge,
+  certification submission, hub installation, Community post or hardware
+  acceptance occurred. Publication was explicitly authorized for Test only.
+
+- Settings report requests have a 15-second local-report deadline and a
+  180-second explicit reporter-check deadline (up to eight sequential bounded
+  checks). A timeout permits manual retry, clears copy/download, and rejects
+  late/duplicate callbacks. There is no automatic retry or server cancellation
+  claim. Page teardown cancels UI timers and invalidates pending callbacks.
+- EN/DE/NL capture metadata shows app version, UTC capture time and elapsed age.
+  A ten-second local UI ticker does not fetch telemetry or change the saved JSON.
+  Readiness, receipt ages and stale flags remain explicitly capture-time values.
+  Invalid/future capture timestamps show an unknown/clock-mismatch warning.
+- Peer and system/flow caches reject future receipts and discard future cached
+  observations after a backwards wall-clock jump. New partial packets cannot
+  revive old power or PV fields. Delayed packets on an unchanged clock remain
+  out-of-order packets, not a reset. This does not affect energy accounting.
+- Anonymous session summaries retain active/unavailable/unobserved durations,
+  longest observed unavailable/stale-or-disconnected intervals, state transitions,
+  discarded-event counts and clock-reset counts even after the 32-event tail
+  rolls over. Repeated identical checks renew observation without adding events.
+  Healthy time is bounded by the three-minute freshness window; unchecked gaps
+  are not counted as healthy. Backwards clock jumps start a new measurement epoch.
+  These are observed software states, not packet-level gap measurements or proof
+  of hardware/controller/whole-installation acceptance.
+- A deterministic 72-hour mixed-generation simulation exercises 4,320 steps,
+  outages/recovery, partial/delayed packets, identity changes, six restarts and
+  rollback. Original counters/address stay unchanged; controls remain blocked.
+  Another test checks timer/subscription cleanup over 100 physical-monitor
+  sessions. Existing duplicate/overlap and write-failure regressions remain.
+- Local validation: 543/543 tests, lint, TypeScript, `git diff --check` and
+  Homey CLI 4.5.3 validation at `verified` level passed. The mobile capture-age
+  display and unchanged JSON download/no hidden API polling were checked in
+  Playwright. Implementation and exact-release CI also passed; no new hardware
+  soak has been run.
+
+Next: review Robert's original v1.10.31 JSON, EcoFlow combined/individual
+screenshots and separate app diagnostic ID together before changing combined
+capacity/grouping, energy-counter sources or 5000 controls. Preserve any existing
+v1.10.31 capture and its timestamps; identify the installed version for subsequent
+captures. v1.10.32 adds diagnostic reliability, not a combined-system repair or
+new battery controls. Keep release and hardware acceptance claims separate.
+
+## Previous Test release — v1.10.31 / Build 46, 11 October 2026
+
+Released from `codex/mixed-generation-reporting-diagnostics`, following the
+[pasted report in reply 65](https://community.homey.app/t/157399/65) and
+[Homey overview screenshot in reply 66](https://community.homey.app/t/157399/66).
+The screenshot is not an EcoFlow combined-system screen; individual tile SOCs
+do not prove combined capacity, membership or controller ownership. No raw
+reports, device identities, contact details or screenshots are stored in Git.
+
+- Implementation: `84c5f393cd4cf9531bdd5a4b256592c6d12413eb`;
+  release/tag: `30c0f975d93b25ec540f340f219f5100b485285a` / `v1.10.31`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38177795236),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38177904291),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38177957863)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38178064178)
+  succeeded. Exact-release CI passed 533 tests, lint, dependency audit (zero
+  vulnerabilities) and verified Homey validation.
+- [Build 46](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/46)
+  confirmed available for testing; the refreshed [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/)
+  showed v1.10.31. Live was rechecked and remains v1.10.3. Remote `master` remains
+  `66b1cb5f828a53333739798281fce86125f61c28`; no mainline merge, certification
+  submission, hub installation, Community post or hardware acceptance occurred.
+
+- Support schema 10 adds bounded, anonymous peer SOC/raw-power/PV values with
+  independent receipt ages and three-minute stale flags. Partial records do not
+  refresh absent fields; invalid/future data, foreign sources and out-of-order
+  overwrites cannot appear as fresh readings. Session reset clears the cache.
+- Peer power remains raw protocol data with unverified sign/scale and entity
+  scope. It is diagnostic-only: no power summation, SOC averaging, capacity
+  inference, capability remapping or accounting input.
+- Grid-meter and flow-derived grid power now have separate fixed source labels
+  and a receipt-aligned diagnostic comparison in EN/DE/NL settings. A difference
+  is not labelled battery loss or a verified common measurement boundary.
+- Readiness explicitly labels eligibility as activation-only. An active trial
+  is not failed merely because it is no longer eligible for activation.
+- A synthetic mixed-generation regression joins two original peers, original
+  zero readings, selected reporter SOC/power and disagreeing grid sources;
+  restart clears cached donor values until fresh evidence returns. Counter
+  continuity and blocked controls remain asserted.
+- Local tests: 533/533 passed; TypeScript build, lint, whitespace checks and
+  Homey validation at `verified` level passed. Mobile settings layout and JSON
+  download were checked. Physical acceptance remains pending.
+- The capture request was subsequently approved, posted and reopened for
+  verification as [Community reply 67](https://community.homey.app/t/157399/67).
+  Await one time-matched EcoFlow combined/individual battery capture, Homey Home
+  Battery detail, refreshed schema-10 JSON and a separate app diagnostic ID from
+  v1.10.31. Preserve any original capture; v1.10.32 now exports schema 11 and
+  subsequent captures must identify the installed app version.
+
+## Previous Test release — v1.10.30 / Build 45, 11 October 2026
+
+Published to Test from `codex/mixed-generation-reporting-diagnostics`, following
+Robert's close-time follow-up capture in reply 59. The portal confirmed "Your app
+is currently available for testing" and the refreshed Test store showed v1.10.30.
+Mainline `master` and Live remain unchanged (v1.10.3 / Build 18). No certification,
+hub installation or hardware acceptance was performed. This is a default-off
+monitoring trial, not an automatic migration or a validated whole-system repair.
+
+- Implementation commit: `63a7304a1c7c9bbe2b03ef394f4559e6de303b21`;
+  exact release/tag: `16a006728ac2d6af8d66b1ec622a427455f7802b` / `v1.10.30`.
+- [Implementation CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159264875),
+  [version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159378948),
+  [exact-release CI](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159459071)
+  and [tag-pinned upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38159612115)
+  succeeded. CI passed 529 tests, lint, dependency audit and verified Homey validation.
+- [Build 45](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/45)
+  is published to [Test](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+
+- Default-off per-original-Home-Battery opt-in reuses an exact, fresh, paired
+  ES21/ES22 reporter for system SOC, derived battery watts and charging state.
+  Existing device ID/Flows stay; no re-pairing or extra Energy aggregate.
+- Original charged/discharged accounting and history sources are unchanged and
+  not promoted to verified combined-system totals. Old installation flow tiles
+  clear during the trial; battery controls are blocked, not migrated.
+- Fail-closed freshness, duplicate/overlap checks, restart, persisted rollback
+  wait, capability-write failure and in-flight operation safeguards are tested.
+  Widgets remain local-only; old control floors do not create combined runtime
+  estimates. Missing solar is not treated as zero by below-threshold conditions.
+- Reliability hardening rechecks trial receipts and applied values when Flow
+  conditions execute; unavailable/suppressed conditions throw even if inverted.
+  Local expiry clearing continues while network lookup is pending. Identity
+  checks have a 20-second overall abort deadline and REST attempts a 15-second
+  wall-clock deadline. Cancelled requests and HTTP 429 are not retried.
+- Private binding/rollback state uses one versioned record; setting/record
+  mismatches and corrupt records fail safely on restart. Setting changes are
+  bounded/serialized and cancelled across teardown; rollback completion stays
+  unavailable until persistence succeeds. Failure-injection tests cover these
+  paths, delayed packets and timer cleanup without hardware commands.
+- Schema 9 adds anonymous trial state and independent raw-flow/grid comparison
+  diagnostics; existing formulas and accounting are unchanged.
+- Readiness panel explains fixed blockers and safe next steps, with local JSON
+  download separate from Homey's app-log ID. Refresh/check requests cannot
+  overlap. Widgets distinguish selected system readings from original-source
+  history and suppress old control advice during trial/rollback.
+- Session-only anonymous timeline is bounded to 32 events. Local refreshes
+  coalesce during slow Homey writes; post-write freshness is checked before
+  availability or threshold triggers can recover. Widget freshness is captured
+  once per response. No additional widget polling or subscriptions.
+- Local checks: 529 tests passed; TypeScript, lint, whitespace checks and Homey
+  CLI 4.5.3 verified validation passed. Exact-commit CI also passed as linked above.
+- See [implementation and tester acceptance steps](MONITORING_REPORTER_TRIAL.md).
+  Real combined coverage, charging/daytime/original-unit-active captures,
+  counter scope, a normal-operation hardware soak and 5000 command acceptance
+  remain external gates.
+
+## Previous Test release — v1.10.29 / Build 44, 10 October 2026
+
+Published to Test from `codex/mixed-generation-reporting-diagnostics` and
+verified in the portal and refreshed store listing. Mainline `master` is unchanged;
+Live remains v1.10.3 / Build 18. No certification submission, hub installation or
+physical acceptance was performed. See [the comparison and acceptance plan](REPORTER_SHADOW_VALIDATION.md).
+
+- Exact source/tag: `82fedeaad159896ee1b87025f38e226b0ce9105b` / `v1.10.29`;
+  implementation commit `c50ca99f81fb10bb045116ef7a467431b585699f`.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38077544151),
+  [exact-release validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38077593274)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38077674719)
+  succeeded. CI passed tests, lint, dependency audit and verified Homey validation.
+- [Build 44](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/44)
+  confirmed "Your app is currently available for testing";
+  [Test store](https://homey.app/a/uk.co.zarb.ecoflow/test/) showed v1.10.29.
+
+- Support schema 8 adds a UTC `capturedAt` and anonymous `reporterShadow`
+  comparisons. Exact main-serial resolution and fresh peer correlation must agree;
+  model-family similarity alone cannot select a reporter. Duplicate paired
+  representations remain ambiguous instead of silently choosing one.
+- Resolved identity is session-only and private. Teardown/reinitialization and
+  failed lookups invalidate it; late lookup completions cannot restore it.
+- Original aggregate observations and candidate system SOC/power are compared
+  per field, with freshness and receipt skew. SOC is a reported system field;
+  battery power is derived from app-protocol flow data. Neither is promoted to
+  verified installation-wide evidence by the comparison.
+- No accounting, history, device identity, Flow, control target, grouping or
+  pairing changes. No extra subscriptions, polling timers or automatic lookups.
+- Local build, lint, Homey verified validation and all 474 tests passed.
+  Mixed-generation captures and hardware acceptance remain required; this release
+  does not repair the aggregate source or change Homey Energy accounting.
+
+## Previous Test release — v1.10.28 / Build 43, 10 October 2026
+
+Both STREAM 5000 Series Unit and STREAM Home Battery (5000) store cards now
+show the supplied actual AC 5000 product photo on white, visually verified on
+the refreshed Test listing. The shared wireframe SVG icons remain byte-for-byte
+unchanged. Photo preparation and wireframe raster preparation now target separate
+directories to prevent accidental replacement of store photos.
+
+- Source/tag: `18b0b54fe2c001e247b9c4fdc0e18cb20f85041f` / `v1.10.28`;
+  photo fix commit `8ed98d0` on `codex/mixed-generation-reporting-diagnostics`.
+- All 459 local tests, lint and verified Homey validation passed.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064896023),
+  [exact-release validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064956742)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38065084696)
+  succeeded for this release.
+- [Build 43](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/43)
+  is published to Test; portal confirmed "Your app is currently available for
+  testing." Store version and both photos were verified after refreshing.
+- No pairing, runtime, Energy accounting or control changes. No re-pairing is
+  required. Mainline `master` and Live are unchanged; no certification, hub
+  install or physical acceptance was performed. Existing hardware acceptance
+  gates below remain open.
+
+## Previous Test release — v1.10.27 / Build 42, 10 October 2026
+
+Owner approved lifting the publication hold for this diagnostic release. Build
+42 is published to Test and verified in the developer portal: "Your app is
+currently available for testing." [Test link](https://homey.app/a/uk.co.zarb.ecoflow/test/).
+Source remains on `codex/mixed-generation-reporting-diagnostics`; mainline
+`master` was not merged or changed. Live remains v1.10.3 / Build 18, verified
+in the portal before publishing. No certification, hub install or physical
+acceptance was performed.
+
+- Exact source/tag: `85d8fb7ecf823548f8281c2379dbff2b47f0a931` / `v1.10.27`.
+- [Version run](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38063812285),
+  [exact-release validation](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064181883)
+  and [upload](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38064286184)
+  succeeded. CI passed tests, lint, dependency audit and verified Homey validation.
+- [Build 42](https://tools.developer.homey.app/apps/app/uk.co.zarb.ecoflow/build/42)
+  includes Sprint 3 source/freshness guidance, original-meter direct MQTT and
+  host fallback, reporter/counter diagnostics, and the prior AC 5000 artwork/name
+  changes. No re-pairing is required. Energy accounting and control safeguards
+  remain unchanged; native counter migration and Dual CT admission stay disabled.
+- Next acceptance: installed meter source/freshness checks, Robert's integration
+  report plus separate app-log ID, original-meter midnight/export/restart evidence,
+  and authorised Dual CT channel discovery. Software checks do not establish
+  installation-wide reporting, CT roles or physical control behaviour.
+
+## Diagnostic meter Sprint 3 — 10 October 2026 (publication hold)
+
+The diagnostic branch `codex/mixed-generation-reporting-diagnostics` now includes
+the original-meter direct MQTT/fallback implementation, counter evidence checks
+and meter UX follow-up. App settings show anonymous direct/fallback/missing/stale
+grid summaries with receipt ages and EN/DE/NL guidance. Energy accounting remains
+integrated power; native counter migration, topology repair and Dual CT admission
+remain disabled. Existing device IDs and pairings are preserved.
+
+All 456 tests, lint and local verified-level Homey validation passed; Chromium
+mobile-width summary rendering was checked. No installed hardware acceptance is
+claimed. See [meter roadmap and evidence gates](SMART_METER_DUAL_CT_PLAN.md).
+
+At this implementation checkpoint, publishing to Test was explicitly on hold;
+the owner subsequently approved Build 42 above. The earlier uploaded Build 41 contains
+the artwork/name release only, not these subsequent meter/reporting changes.
+To test the new diagnostic code through the store, first approve a new versioned
+release from this branch, validate that exact release commit, upload a new build
+and then publish it to Test. Do not publish Build 41 expecting it to contain Sprint
+3. Last verified store status below is historical, not rechecked by this Git sync.
+Mainline `master`, release version and store channels remain unchanged.
 
 ## Artwork and display-name update — 10 October 2026
 
@@ -15,8 +7033,9 @@ Local 419 tests, lint and verified-level Homey validation passed. Release status
 is v1.10.26 / uploaded Build 41, NOT verified as published to Test. The developer
 portal first returned Failed to fetch, then the browser connection timed out
 twice before the Publish to Test action could be taken. Last verified Test remains
-v1.10.25 / Build 40; Live remains v1.10.3 / Build 18. Do not re-run the version or
-upload workflows: recover the portal and publish the existing Build 41 to Test.
+v1.10.25 / Build 40; Live remains v1.10.3 / Build 18. This earlier release plan is
+superseded by the diagnostic publication hold above; Build 41 does not contain
+the subsequent meter sprints.
 
 - Source/tag: `93fc6e951d47a33025dbbc8588cf2b9458b42d2a` / `v1.10.26`.
 - [Version](https://github.com/zarbjustin/uk.co.zarb.ecoflow/actions/runs/38051359738),

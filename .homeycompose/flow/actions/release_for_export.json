@@ -1,14 +1,14 @@
 {
   "id": "release_for_export",
   "title": {
-    "en": "Release battery for export now",
-    "de": "Batterie jetzt für Einspeisung freigeben",
-    "nl": "Batterij nu vrijgeven voor teruglevering"
+    "en": "Allow battery export (minimum reserve)",
+    "de": "Batterieeinspeisung erlauben (minimale Reserve)",
+    "nl": "Batterijexport toestaan (minimale reserve)"
   },
   "titleFormatted": {
-    "en": "Release battery for export now",
-    "de": "Batterie jetzt für Einspeisung freigeben",
-    "nl": "Batterij nu vrijgeven voor teruglevering"
+    "en": "Allow battery export (minimum reserve)",
+    "de": "Batterieeinspeisung erlauben (minimale Reserve)",
+    "nl": "Batterijexport toestaan (minimale reserve)"
   },
   "hint": {
     "en": "Sets reserve to 3%, lowers the discharge limit first when required, and permits grid feed-in. Each setting is read back; physical export is not guaranteed. Review previous settings before restoring them.",

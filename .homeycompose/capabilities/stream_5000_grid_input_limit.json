@@ -1,7 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Reported grid input limit"
+    "en": "Max Power from Grid",
+    "de": "Max. Leistung aus dem Netz",
+    "nl": "Max. vermogen uit het net"
   },
   "units": {
     "en": "W"

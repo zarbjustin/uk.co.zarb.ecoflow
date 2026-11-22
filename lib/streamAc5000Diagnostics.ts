@@ -1,9 +1,8 @@
 'use strict';
 
 import { createHash } from 'crypto';
-import { decodeFrameHeaders, parseStreamAc5000Frame } from './streamAc5000Protocol';
+import { decodeFrameHeaders } from './streamAc5000Protocol';
 
-const DEFAULT_SAMPLE_BYTES = 192;
 const SHAPE_BUCKET_BYTES = 32;
 const DEFAULT_SHAPE_LIMIT = 8;
 const DEFAULT_SAMPLE_BUDGET = 24;
@@ -44,7 +43,7 @@ export function es22FrameShape(diagnostic: Pick<Es22FrameDiagnostic, 'bytes' | '
   return `${commands}@${bucket}`;
 }
 
-/** Bounded, rolling admission control for unparsed raw-frame samples. */
+/** Bounded, rolling admission control for unparsed frame metadata. */
 export class Es22SampleGate {
   private accepted = 0;
   private readonly shapes = new Map<string, { at: number; sha256: string }>();
@@ -95,62 +94,33 @@ export function formatEs22CapabilitySnapshot(values: Record<string, number | str
   return parts.join(',') || 'none';
 }
 
-function redactAscii(payload: Buffer, value: string): Buffer {
-  const redacted = Buffer.from(payload);
-  const needle = Buffer.from(value, 'utf8');
-  if (needle.length === 0) return redacted;
-
-  let offset = redacted.indexOf(needle);
-  while (offset !== -1) {
-    redacted.fill(0x2a, offset, offset + needle.length);
-    offset += needle.length;
-    offset = redacted.indexOf(needle, offset);
-  }
-  return redacted;
-}
-
 /**
- * Produce a bounded frame sample suitable for Homey's submitted app log.
- *
- * The device serial is replaced before encoding, no account identifiers or
- * credentials are included, and the sample is capped so malformed or noisy
- * devices cannot flood a diagnostic report.
+ * Export metadata only: unknown protobuf fields cannot be safely redacted.
+ * Identity/sample arguments and the empty sample field retain adapter compatibility.
  */
 export function describeEs22Frame(
   payload: Buffer,
-  deviceSn: string,
-  sampleBytes = DEFAULT_SAMPLE_BYTES,
+  _deviceSn: string,
+  _sampleBytes = 0,
 ): Es22FrameDiagnostic {
   let commands: string[] = [];
-  const serials = new Set([deviceSn]);
   try {
     const headers = decodeFrameHeaders(payload);
-    for (const header of headers) if (header.deviceSn) serials.add(header.deviceSn);
     commands = [...new Set(
       headers
         .filter((header) => header.cmdFunc >= 0 && header.cmdId >= 0)
         .map((header) => `${header.cmdFunc}/${header.cmdId}`),
     )].sort();
   } catch {
-    // Invalid protobuf is still useful as a bounded redacted sample.
+    // Malformed input still has useful size and fingerprint metadata.
   }
 
-  // Linked snapshots can contain neighbours' serials, not just the subscription SN.
-  // Parsed records plus a conservative prefix scan also cover damaged frames.
-  if (sampleBytes > 0) {
-    const telemetry = parseStreamAc5000Frame(payload);
-    for (const serial of Object.keys(telemetry?.unitsBySn || {})) serials.add(serial);
-    for (const match of payload.toString('latin1').matchAll(/(?:ES\d{2}|BK\d{2})[A-Z0-9]{8,60}/g)) serials.add(match[0]);
-  }
-  let redacted = payload;
-  for (const serial of serials) redacted = redactAscii(redacted, serial);
-  const limit = Math.max(0, Math.min(sampleBytes, DEFAULT_SAMPLE_BYTES));
   return {
     bytes: payload.length,
     sha256: createHash('sha256').update(payload).digest('hex').slice(0, 16),
     commands,
-    sampleBase64: redacted.subarray(0, limit).toString('base64'),
-    truncated: redacted.length > limit,
+    sampleBase64: '',
+    truncated: payload.length > 0,
   };
 }
 

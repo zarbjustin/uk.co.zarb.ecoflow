@@ -20,6 +20,7 @@ function device(id, name, { capabilities = {}, settings = {} } = {}) {
     getName: () => name,
     getAvailable: () => true,
     getCapabilityValue: (capability) => capabilities[capability] ?? null,
+    getReadingDiagnostics: () => Object.fromEntries(Object.keys(capabilities).map(cap => [cap, { stale: false }])),
     getSetting: (setting) => settings[setting] ?? null,
   };
 }
@@ -38,6 +39,37 @@ function homey(streamDevices, unitDevices = [], stream5000Systems = []) {
   };
 }
 
+test('widget feed-in and battery estimates preserve unknown or expired source evidence', () => {
+  for (const value of [null, undefined, 'true', 1]) {
+    const d = device('one', 'Battery', { capabilities: { feed_in_control: value } });
+    assert.equal(streamData(homey([d])).feedIn, null);
+  }
+  const d = device('one', 'Battery', { capabilities: {
+    feed_in_control: false, measure_battery: 80, measure_power: -1000, backup_reserve_soc: 20, discharge_limit: 10,
+  }, settings: { installed_capacity_kwh: 10 } });
+  d.getReadingDiagnostics = () => ({ measure_power: { stale: false } });
+  const report = streamData(homey([d]));
+  assert.equal(report.feedIn, null);
+  assert.equal(report.soc, null);
+  assert.equal(report.usableEnergyKwh, null);
+  assert.equal(report.timeToEmpty, null);
+});
+
+test('widget usable energy and calculated runtime require both independently fresh original limits', () => {
+  for (const expired of ['backup_reserve_soc', 'discharge_limit']) {
+    const capabilities = { measure_battery: 80, measure_power: -1000, backup_reserve_soc: 60, discharge_limit: 10 };
+    const d = device('one', 'Battery', { capabilities, settings: { installed_capacity_kwh: 10 } });
+    assert.equal(streamData(homey([d])).usableEnergyKwh, 2);
+    d.getReadingDiagnostics = () => Object.fromEntries(Object.keys(capabilities).map(cap => [cap, { stale: cap === expired }]));
+    const report = streamData(homey([d]));
+    assert.equal(report.soc, 80, 'SOC remains fresh when only a limit expires');
+    assert.equal(report.storedEnergyKwh, 8);
+    assert.equal(report.usableEnergyKwh, null);
+    assert.equal(report.effectiveFloorSoc, null);
+    assert.equal(report.timeToEmpty, null);
+  }
+});
+
 test('5000 widgets consume fresh reported settings and honour reserve enabled state', () => {
   const aggregate = device('five', '5000 Home Battery', { capabilities: { measure_battery: 80, measure_power: -400 },
     settings: { installed_capacity_kwh: 5, discharge_efficiency_percent: 100 } });
@@ -55,6 +87,48 @@ test('5000 widgets consume fresh reported settings and honour reserve enabled st
   assert.equal(streamData(homey([], [], [aggregate])).usableEnergyKwh, 3.5);
   enabled = null;
   assert.equal(streamData(homey([], [], [aggregate])).usableEnergyKwh, null);
+});
+
+test('monitoring trial does not mix combined SOC/power with original control-floor runtime estimates', () => {
+  const aggregate = device('mixed', 'Home Battery', { capabilities: { measure_battery: 53, measure_power: -300,
+    backup_reserve_soc: 10, discharge_limit: 5 }, settings: { installed_capacity_kwh: 10 } });
+  aggregate.getMonitoringTrialDiagnostics = () => ({ enabled: true });
+  const report = streamData(homey([aggregate]));
+  assert.equal(report.soc, 53);
+  assert.equal(report.battery, -300);
+  assert.equal(report.usableEnergyKwh, null);
+  assert.equal(report.timeToEmpty, null);
+  assert.equal(report.mode, null);
+  assert.equal(report.backupReserve, null);
+  assert.equal(report.chargeLimit, null);
+  assert.equal(report.dischargeLimit, null);
+  assert.equal(report.feedIn, null);
+  assert.equal(report.controlsAvailable, false);
+});
+
+test('widgets compute freshness once per response and trial tariff advice stays monitoring-only', async () => {
+  const aggregate = device('mixed', 'Home Battery', { capabilities: { measure_battery: 53, measure_power: -300,
+    backup_reserve_soc: 80, tariff_price_now: -5, operating_mode: 'custom', feed_in_control: true } });
+  let checks = 0;
+  aggregate.getReadingDiagnostics = () => { checks++; return {}; };
+  aggregate.getMonitoringTrialDiagnostics = () => ({ enabled: true });
+  const ctx = { homey: homey([aggregate]) };
+  const report = await require('../widgets/stream_tariff_opportunity/api').getTariffOpportunity(ctx);
+  assert.equal(checks, 1);
+  assert.equal(report.recommendation, 'Monitoring trial');
+  assert.match(report.reason, /no charging recommendation/);
+  assert.equal(report.mode, null); assert.equal(report.feedIn, null);
+});
+
+test('rollback does not revive reserve advice or original controls before fresh recovery', async () => {
+  const aggregate = device('mixed', 'Home Battery', { capabilities: { measure_battery: 53, measure_power: -300,
+    backup_reserve_soc: 80, tariff_price_now: -5, operating_mode: 'custom' } });
+  aggregate.getMonitoringTrialDiagnostics = () => ({ enabled: false, rollbackAwaitingFreshOriginal: true });
+  const report = await require('../widgets/stream_tariff_opportunity/api').getTariffOpportunity({ homey: homey([aggregate]) });
+  assert.equal(report.controlsAvailable, false); assert.equal(report.backupReserve, null);
+  assert.equal(report.mode, null); assert.equal(report.recommendation, 'Awaiting original readings');
+  aggregate.getMonitoringTrialDiagnostics = () => { throw Error('PRIVATE'); };
+  assert.equal(streamData(homey([aggregate])).controlsAvailable, false);
 });
 
 test('5000 widget settings and power fail closed when stale, absent or diagnostics fail', () => {
@@ -303,4 +377,24 @@ test('streamData exposes stored, usable and preferred runtime data', () => {
   assert.ok(Math.abs(data.timeToEmpty - 356.57142857142856) < 1e-9);
   assert.equal(data.timeToEmptySource, 'calculated');
   assert.equal(data.dischargeRemaining, 5460);
+});
+
+test('original STREAM widget capacity uses the selected installation setting, never device count or another space', () => {
+  const settings = { installed_capacity_kwh: 3.84 };
+  const capabilities = { measure_battery: 50, backup_reserve_soc: 0, discharge_limit: 0 };
+  const selected = device('original-system', 'Original system', { settings, capabilities });
+  const other = device('separate-space', 'Separate space', {
+    settings: { installed_capacity_kwh: 10 }, capabilities: { measure_battery: 100 },
+  });
+  const units = [device('unit-a', 'AC Pro A'), device('unit-b', 'AC Pro B')];
+  const host = homey([other, selected], units);
+  const first = streamData(host, { deviceId: 'original-system' });
+  assert.equal(first.capacityKwh, 3.84);
+  assert.equal(first.storedEnergyKwh, 1.92);
+  assert.equal(first.usableEnergyKwh, 1.92);
+  settings.installed_capacity_kwh = null;
+  const unknown = streamData(host, { deviceId: 'original-system' });
+  assert.equal(unknown.capacityKwh, null);
+  assert.equal(unknown.storedEnergyKwh, null);
+  assert.equal(unknown.soc, 50, 'missing capacity does not prevent live percentage updates');
 });

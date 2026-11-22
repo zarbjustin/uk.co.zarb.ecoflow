@@ -1,7 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Reported backup reserve"
+    "en": "Backup reserve target (stored)",
+    "de": "Backup-Reserveziel (gespeichert)",
+    "nl": "Back-upreservedoel (opgeslagen)"
   },
   "units": {
     "en": "%"

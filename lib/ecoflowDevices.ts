@@ -31,6 +31,7 @@ export type EcoFlowRole =
 /** Product-name fallback used only after the shared prefix-role lookup. */
 function nameRole(name: string): EcoFlowRole | undefined {
   const n = name.toLowerCase();
+  if (/smart[\s_-]*meter.*dual[\s_-]*ct\b/.test(n)) return 'unsupported_stream_5000';
   if (/smart\s*meter/.test(n)) return 'smart_meter';
   if (/microinverter/.test(n)) return 'microinverter';
   if (/powerstream/.test(n)) return 'other';
@@ -71,6 +72,10 @@ export function hasKnownStreamUnitPrefix(sn: string | undefined): boolean {
  * as an authoritative tie-breaker when the prefix/name are inconclusive.
  */
 export function classifyDevice(d: EcoFlowDevice, quota?: Quota): EcoFlowRole {
+  // Explicit new product metadata must not inherit the old meter contract,
+  // even if EcoFlow reuses a prefix. User-assigned names never override a
+  // documented original-series identity here.
+  if (/smart[\s_-]*meter.*dual[\s_-]*ct\b/i.test(d.productName || '')) return 'unsupported_stream_5000';
   const byPrefix = knownDeveloperApiRole(d.sn);
   if (byPrefix) return byPrefix;
 

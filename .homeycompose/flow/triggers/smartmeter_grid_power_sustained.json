@@ -1,0 +1,38 @@
+{
+  "id": "smartmeter_grid_power_sustained",
+  "title": {
+    "en": "Grid import/export power is sustained",
+    "de": "Netzbezug/-einspeisung hält an",
+    "nl": "Netafname/-teruglevering houdt aan"
+  },
+  "titleFormatted": {
+    "en": "Grid [[direction]] above [[watts]] W for [[seconds]] s, hysteresis [[hysteresis]] W, cooldown [[cooldown]] s",
+    "de": "Netz [[direction]] über [[watts]] W für [[seconds]] s, Hysterese [[hysteresis]] W, Pause [[cooldown]] s",
+    "nl": "Net [[direction]] boven [[watts]] W gedurende [[seconds]] s, hysterese [[hysteresis]] W, pauze [[cooldown]] s"
+  },
+  "hint": {
+    "en": "Qualified CT1 only. Fresh advancing readings must stay strictly above the threshold throughout dwell. Gaps reset it; one event per excursion, rearmed at or below threshold minus hysteresis. Use notifications, not battery control.",
+    "de": "Nur qualifiziertes CT1. Neue aktuelle Messwerte müssen während der gesamten Dauer über der Schwelle liegen. Lücken setzen sie zurück. Ein Ereignis je Überschreitung; erneut bereit auf oder unter Schwelle minus Hysterese. Keine Batteriesteuerung.",
+    "nl": "Alleen gekwalificeerde CT1. Nieuwe actuele metingen moeten gedurende de hele duur boven de drempel blijven. Hiaten starten opnieuw. Eén gebeurtenis per overschrijding; opnieuw gereed op of onder drempel min hysterese. Geen batterijbesturing."
+  },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=smartmeter_dual_ct_energy" },
+    {
+      "type": "dropdown", "name": "direction",
+      "title": { "en": "Direction", "de": "Richtung", "nl": "Richting" },
+      "values": [
+        { "id": "import", "title": { "en": "import", "de": "Bezug", "nl": "afname" } },
+        { "id": "export", "title": { "en": "export", "de": "Einspeisung", "nl": "teruglevering" } }
+      ]
+    },
+    { "type": "number", "name": "watts", "min": 0, "max": 100000, "title": { "en": "Threshold W", "de": "Schwelle W", "nl": "Drempel W" } },
+    { "type": "number", "name": "seconds", "min": 1, "max": 1800, "title": { "en": "Dwell seconds", "de": "Dauer Sekunden", "nl": "Duur seconden" } },
+    { "type": "number", "name": "hysteresis", "min": 0, "max": 100000, "title": { "en": "Hysteresis W", "de": "Hysterese W", "nl": "Hysterese W" } },
+    { "type": "number", "name": "cooldown", "min": 0, "max": 86400, "title": { "en": "Cooldown seconds", "de": "Pause Sekunden", "nl": "Pauze seconden" } }
+  ],
+  "tokens": [
+    { "name": "direction", "type": "string", "title": { "en": "Direction", "de": "Richtung", "nl": "Richting" } },
+    { "name": "power", "type": "number", "title": { "en": "Import/export W", "de": "Bezug/Einspeisung W", "nl": "Afname/teruglevering W" } },
+    { "name": "grid_power", "type": "number", "title": { "en": "Signed grid W", "de": "Netzleistung mit Vorzeichen W", "nl": "Netvermogen met teken W" } }
+  ]
+}

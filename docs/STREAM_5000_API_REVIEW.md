@@ -1,5 +1,117 @@
 # STREAM 5000 API review — Sprint 1 telemetry correctness
 
+## 1.11.10 deployment preparation — 31 October 2026
+
+Owner authorised Development deployment followed by Test after validation.
+Current installation is held by active battery coordination; no reserve change
+or coordinator pause is implied by app deployment approval. Fresh idle/lease and
+preservation checks are mandatory immediately before a restart.
+
+Development tooling was updated to patched minimatch 11.0.1 with a process-local
+callable export adapter in `scripts/lint.cjs` for legacy ESLint consumers. Full
+`npm audit` remains in CI unchanged; it now reports zero findings. Lint keeps all
+145 prior source files, and synthetic tests cover callable/named/class matching
+APIs. Production dependencies are unchanged. This supersedes the earlier tooling
+audit finding below and does not confer hardware acceptance on the SOC fallback.
+
+
+## Official SOC recovery candidate — 31 October 2026
+
+Owner authorised a bounded read-only comparison and preparation of a fix with
+regression tests. Main-device resolution returned the paired ES21 itself. Two
+uncached public quota reads ten seconds apart explicitly contained system SOC
+0%, agreeing with the physical unit's recent 0%. Other system fields updated.
+The app-protocol aggregate SOC had expired; the favourite battery indicator
+therefore received null. Numeric zero rendering is not the confirmed defect.
+Neither quota response supplied a measurement timestamp. Other fields changing
+is not evidence that SOC shares their measurement time. Private evidence is
+outside Git; no raw responses, identifiers or household power figures are here.
+
+The local candidate adds a narrow fallback for `stream_5000_system` only:
+
+- Use existing Developer API credentials; app-account-only users retain the
+  original monitoring behaviour. No credential prompt or setting change.
+- When SOC is absent/expired, resolve the main reporter, query its explicitly
+  documented system percentage, and resolve again to reject reporter changes.
+  Require an ES21/ES22 reporter, numeric range 0–100 and explicit field presence.
+- Apply SOC alone through the existing serialized capability-writing path.
+  Fresh app SOC wins, including zero. Request-start time conservatively bounds
+  local receipt age; a response cannot overwrite newer queued MQTT SOC.
+- Attempt at startup and on the existing minute watchdog, with a 15-second
+  abort deadline and one in-flight request. No extra recurring timer, MQTT
+  subscription, forced reconnect, device command or automatic Energy switch.
+- Physical-unit percentage, power, availability and energy integration remain
+  on existing telemetry. Charged/discharged checkpoints and counters are untouched.
+- Diagnostics label the fallback `cloud_latest_report`, with unknown hardware
+  timestamp and explicit lack of hardware-freshness verification. It expires
+  through existing SOC age limits; failed reads do not renew it or invent zero.
+
+All 1,306 tests pass, including explicit zero, missing/invalid fields, wrong or
+changing reporters, request cancellation/time rollback, startup/watchdog wiring,
+physical-role isolation, newer MQTT wins, write failures, expiry, privacy and
+counter preservation. Lint, release checks, pinned Homey 4.5.3 verified validation
+and whitespace checks pass using Node 22 and the committed lockfile.
+Production dependency audit: zero findings. Full tooling audit now reports 20
+moderate findings through the existing development minimatch dependency chain
+([advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249)); the lockfile is
+unchanged. Review dependency remediation before a subsequent release.
+
+This is an uncommitted, unversioned source candidate after Test 1.11.9, not an
+installed fix or hardware UI acceptance. ES21 public access/SOC agreement was
+observed; ES22 access, linked-installation aggregate behaviour, nonzero SOC and
+restored native favourite/ Energy UI remain candidate-specific hardware checks.
+No installation, publication, restart, pairing or battery/Flow/settings mutation
+was performed. Fresh installation approval and the usual reviewed archive/CI
+and preservation procedure are required for an eventual Development update.
+
+
+## Official STREAM 5000 Developer API reference — reviewed 31 October 2026
+
+Canonical [STREAM 5000 Series API documentation](https://developer-eu.ecoflow.com/us/document/PP3?id=2115695633708867585).
+The owner requested retaining this official path. It explicitly covers STREAM
+5000 and STREAM 5000 AC. The original October review below is historical and
+must not be used to claim that no official 5000 Developer API is documented.
+This reference documents the public HTTP/Open-MQTT path; it does not make the
+existing app-account binary protocol an official contract or prove device access.
+
+Useful additions to validate against the current implementation:
+
+- Resolve the main serial before querying system-level readings. Keep physical
+  unit readings and the socket-owning device separate from system aggregates.
+- The system report defines battery SOC, battery/PV/load/grid power and signed
+  directions: battery positive charges; grid positive imports. Missing fields
+  may be unavailable, so do not substitute zero or refresh absent fields.
+- Public quota query/report routes offer an official adapter candidate. Existing
+  `EcoFlowClient` already implements the HTTP transport methods; the 5000 drivers
+  still use `subscribeAppRealtime` and their capture-based decoder. Test a new
+  adapter read-only before switching any device or accounting source.
+- History queries specify UTC boundaries and system metrics, including grid
+  import/export in Wh. Period history is not a lifetime meter and must not be
+  imported into existing cumulative counters or backfilled across missing data.
+- Reserve, mode, export-limit switch and socket commands are documented, including
+  readback expectations. Documentation does not authorise executing them, replace
+  hardware acceptance or establish safe restoration of an active coordinator.
+
+Remaining ambiguities: the MQTT prose describes flattened fields while examples
+are nested; battery history labels are followed by a note requiring confirmation;
+measurement time, replay/buffering, delivery cadence and `onGridPwr` scope are not
+sufficiently specified for new accounting assumptions. A status-message timestamp
+is not proof of the measurement time of every quota field.
+
+The page does not document a product-421 Dual CT interface, CT1/CT2 field mapping,
+phase order/scaling/sign or three-phase netting, firmware discovery, measurement
+freshness, or native cumulative meter counter/reset semantics. Do not apply the
+5000 battery system grid history as whole-property Dual CT meter accounting.
+No raw correspondence, credentials, device serials or household captures are
+included here. Only the public documentation is summarised.
+
+Recommended next step: bounded read-only 5000 public-API/app-reading comparison,
+then an adapter proposal with regression tests. Separately request the supported
+Dual CT contract and precise answers to the gaps above. No runtime change,
+installation, Energy activation, publication or hardware acceptance is performed
+by retaining this reference.
+
+
 **6 October model follow-up:** [coverage and evidence](STREAM_MODEL_COVERAGE.md)
 now admits ES21 core monitoring locally. Earlier ES21 non-admission statements
 below describe the original Sprint 1 boundary, not the current local registry.

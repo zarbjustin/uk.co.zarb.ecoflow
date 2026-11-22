@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "qualification": "controlled_candidate",
+  "reference": "docs/CT1_ENERGY_CANDIDATE_VALIDATION.md",
+  "profiles": [
+    {
+      "id": "dual_ct_421_10041_ct1_receipt_v1",
+      "productType": 421,
+      "firmware": "1.0.0.41",
+      "channel": "ct1",
+      "bank": "A",
+      "unit": "W",
+      "importSign": "positive",
+      "timing": "verified_live_receipt_estimate",
+      "encoding": "omitted_zero_candidate",
+      "liveFreshnessValidated": true,
+      "singlePhaseOnly": true,
+      "freshnessMs": 5000
+    }
+  ]
+}

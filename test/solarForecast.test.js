@@ -49,3 +49,20 @@ test('fetchSolarRadiation returns nulls for invalid coordinates', async () => {
   const r = await fetchSolarRadiation(NaN, NaN, async () => ({}));
   assert.deepStrictEqual(r, { today: null, tomorrow: null });
 });
+
+test('dated radiation preserves provider calendar labels and requests the explicit installation timezone', async () => {
+  let called;
+  const result = await fetchSolarRadiation(51.5, -0.12, async url => {
+    called = url;
+    return { timezone: 'Europe/London', daily: { time: ['2026-10-25', '2026-10-26'], shortwave_radiation_sum: [10, 20] } };
+  }, 'Europe/London');
+  assert.match(called, /timezone=Europe%2FLondon/);
+  assert.deepStrictEqual(result.dates, ['2026-10-25', '2026-10-26']); assert.equal(result.timeZone, 'Europe/London');
+});
+
+test('malformed provider calendar labels are never exposed as dated evidence', () => {
+  for (const time of [['2026-02-31', '2026-03-01'], ['bad', '2026-10-18'], ['2026-10-17'], [null, '2026-10-18']]) {
+    const result = parseRadiation({ timezone: 'Europe/London', daily: { time, shortwave_radiation_sum: [10, 20] } });
+    assert.equal(result.dates, undefined);
+  }
+});

@@ -1,6 +1,6 @@
 {
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.26",
+  "version": "1.11.31",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -82,6 +82,30 @@
     "homey:manager:geolocation"
   ],
   "api": {
+    "coordinationFlowMonitor": {
+      "method": "POST",
+      "path": "/coordination-flow-monitor"
+    },
+    "coordinationWorkspace": {
+      "method": "POST",
+      "path": "/coordination-workspace"
+    },
+    "dualCtResearchView": {
+      "method": "GET",
+      "path": "/dual-ct-research/view"
+    },
+    "dualCtPreview": {
+      "method": "GET",
+      "path": "/dual-ct-preview"
+    },
+    "startDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/start"
+    },
+    "stopDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/stop"
+    },
     "coordinationPreview": {
       "method": "POST",
       "path": "/coordination-preview"
@@ -90,9 +114,25 @@
       "method": "GET",
       "path": "/support-snapshot"
     },
+    "refreshReporterDiagnostics": {
+      "method": "POST",
+      "path": "/reporter-diagnostics"
+    },
     "validateCredentials": {
       "method": "POST",
       "path": "/validate-credentials"
+    },
+    "houseReserveControl": {
+      "method": "POST",
+      "path": "/house-reserve-control"
+    },
+    "coordinatedReserveControl": {
+      "method": "POST",
+      "path": "/coordinated-reserve-control"
+    },
+    "coordinatedReadings": {
+      "method": "POST",
+      "path": "/coordinated-readings"
     }
   },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",

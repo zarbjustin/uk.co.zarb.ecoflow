@@ -1,7 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Reported charge limit"
+    "en": "Charge limit",
+    "de": "Ladegrenze",
+    "nl": "Laadlimiet"
   },
   "units": {
     "en": "%"

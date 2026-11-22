@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Unit",
-    "de": "STREAM-Einheit",
-    "nl": "STREAM-unit"
+    "en": "STREAM Unit Monitor",
+    "de": "STREAM-Gerätemonitor",
+    "nl": "STREAM-apparaatmonitor"
   },
   "class": "battery",
   "platforms": [
@@ -53,6 +53,13 @@
         "en": "Battery state",
         "de": "Batteriestatus",
         "nl": "Batterijstatus"
+      }
+    },
+    "stream_unit_power_grid": {
+      "title": {
+        "en": "Unit grid connection port",
+        "de": "Einheit: Netzanschluss",
+        "nl": "Unit: netaansluiting"
       }
     },
     "operating_mode": {
@@ -275,6 +282,11 @@
     {
       "id": "add_devices",
       "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "app_account_repair"
     }
   ]
 }

@@ -1,4 +1,31 @@
-# Current development roadmap — community feedback and STREAM 5000
+# Community feedback — historical roadmap and current entry point
+
+Updated 12 October 2026. The historical release/sprint descriptions below are
+not current release status. Use [STATUS.md](STATUS.md) for Git/CI/Test/Live gates
+and [MONITORING_REPORTER_TRIAL.md](MONITORING_REPORTER_TRIAL.md) for the one active
+work plan and acceptance checklist. Do not restart already completed sprints.
+
+Current priority: guarded default-off mixed-generation monitoring trial, scope
+labels/readiness/JSON export, bounded anonymous session events and slow-write
+regressions. Original accounting/history and control targets stay unchanged.
+After exact-commit validation and Test publication, validate combined coverage,
+older-unit activity, charging, rollback/restart and 48–72-hour normal-operation
+soak. Counter scope and actual control migration remain separate research gates.
+Expansion/ES21/ES22 and independent-installation cases need labelled hardware
+acceptance. Ed's Solis/controller-ownership requests remain advisory and separate.
+
+12 October follow-up: diagnostic-branch update-race handling, three-minute
+power-field freshness independent of connection health, linked-unit explanations,
+anonymous self-record observations and simpler support capture guidance are
+implemented and published to Test as v1.10.33 / Build 48 after exact-release CI.
+Mainline and Live remain unchanged; hardware acceptance is still open. Ed's latest feedback calls
+for less technical testing requests: offer screenshots first, JSON optional.
+Preserve the already-supplied charging screenshots/report/log; the remaining
+target is matched evidence while original-generation batteries discharge.
+Expected late-October owned-hardware acceptance and separate counter/control
+gates are detailed in the trial plan linked above.
+
+## Historical roadmap — 7 October 2026
 
 Updated: 7 October 2026. This is the current priority order; older sprint documents
 remain historical records. Local implementation, automated verification, hardware

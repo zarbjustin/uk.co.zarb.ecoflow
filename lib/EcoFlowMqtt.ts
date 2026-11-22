@@ -3,7 +3,15 @@
 import mqtt, { MqttClient } from 'mqtt';
 import { EcoFlowClient } from './EcoFlowClient';
 
-export type QuotaHandler = (quota: Record<string, any>) => void;
+export interface MqttDelivery {
+  receivedAt: number;
+  retained: boolean;
+  duplicate: boolean;
+  connectionEpoch?: number;
+  isCurrent?: () => boolean;
+}
+
+export type QuotaHandler = (quota: Record<string, any>, delivery?: MqttDelivery) => void;
 export type StatusHandler = (online: boolean) => void;
 
 export interface EcoFlowMqttOptions {
@@ -25,6 +33,7 @@ export class EcoFlowMqtt {
   private ended = false;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private backoffMs = 0;
+  private connectionEpoch = 0;
   // Multiple devices may share one SN (e.g. the STREAM system device, the main
   // unit sub-device and the Smart Meter all read the main SN), so each SN keeps
   // a set of handlers rather than a single one.
@@ -34,6 +43,11 @@ export class EcoFlowMqtt {
 
   constructor(private opts: EcoFlowMqttOptions) {
     this.log = opts.log || (() => {});
+  }
+
+  /** Include status-only listeners when deciding whether a shared connection is idle. */
+  get hasSubscribers(): boolean {
+    return this.quotaHandlers.size > 0 || this.statusHandlers.size > 0;
   }
 
   /** Update credentials/region; the next (re)connect uses them. */
@@ -74,6 +88,7 @@ export class EcoFlowMqtt {
     if (this.client) {
       this.client.removeAllListeners('close');
       this.client.removeAllListeners('offline');
+      this.client.removeAllListeners('message');
       try {
         this.client.end(true);
       } catch { /* ignore */ }
@@ -105,9 +120,21 @@ export class EcoFlowMqtt {
       clean: true,
     });
     this.client = client;
-    client.on('message', (topic, payload) => this.onMessage(topic, payload));
-    client.on('close', () => this.onDisconnect('close'));
-    client.on('offline', () => this.onDisconnect('offline'));
+    const connectionEpoch = ++this.connectionEpoch;
+    const isCurrent = () => !this.ended && this.client === client && client.connected;
+    client.on('message', (topic, payload, packet) => {
+      if (!this.ended && this.client === client) {
+        this.onMessage(topic, payload, packet && {
+          receivedAt: Date.now(), retained: packet.retain, duplicate: packet.dup, connectionEpoch, isCurrent,
+        });
+      }
+    });
+    client.on('close', () => {
+      if (this.client === client) this.onDisconnect('close');
+    });
+    client.on('offline', () => {
+      if (this.client === client) this.onDisconnect('offline');
+    });
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       client.once('connect', () => {
@@ -118,7 +145,7 @@ export class EcoFlowMqtt {
           this.reconnectTimer = null;
         }
         this.log('connected');
-        for (const sn of this.quotaHandlers.keys()) this.subscribeTopics(sn);
+        for (const sn of new Set([...this.quotaHandlers.keys(), ...this.statusHandlers.keys()])) this.subscribeTopics(sn);
         resolve();
       });
       client.once('close', () => {
@@ -132,6 +159,7 @@ export class EcoFlowMqtt {
       if (this.client === client) this.client = null;
       client.removeAllListeners('close');
       client.removeAllListeners('offline');
+      client.removeAllListeners('message');
       client.end(true);
       throw e;
     });
@@ -143,6 +171,7 @@ export class EcoFlowMqtt {
     if (this.client) {
       this.client.removeAllListeners('close');
       this.client.removeAllListeners('offline');
+      this.client.removeAllListeners('message');
       try {
         this.client.end(true);
       } catch { /* ignore */ }
@@ -168,6 +197,7 @@ export class EcoFlowMqtt {
   }
 
   subscribe(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): void {
+    const alreadySubscribed = this.quotaHandlers.has(sn) || this.statusHandlers.has(sn);
     let qh = this.quotaHandlers.get(sn);
     if (!qh) {
       qh = new Set();
@@ -182,7 +212,7 @@ export class EcoFlowMqtt {
       }
       sh.add(onStatus);
     }
-    this.subscribeTopics(sn);
+    if (!alreadySubscribed) this.subscribeTopics(sn);
   }
 
   /**
@@ -218,7 +248,7 @@ export class EcoFlowMqtt {
     this.client.subscribe(this.topic(sn, 'status'), (e) => e && this.log('subscribe status', e.message));
   }
 
-  private onMessage(topic: string, payload: Buffer): void {
+  private onMessage(topic: string, payload: Buffer, delivery?: MqttDelivery): void {
     let data: any;
     try {
       data = JSON.parse(payload.toString('utf8'));
@@ -230,10 +260,22 @@ export class EcoFlowMqtt {
     const kind = parts[4];
     if (kind === 'quota') {
       const quota = this.extractQuota(data);
-      this.quotaHandlers.get(sn)?.forEach((h) => h(quota));
+      this.quotaHandlers.get(sn)?.forEach((h) => {
+        try {
+          h(quota, delivery);
+        } catch {
+          this.log('quota handler failed');
+        }
+      });
     } else if (kind === 'status') {
       const online = (data?.params?.status ?? data?.status) === 1;
-      this.statusHandlers.get(sn)?.forEach((h) => h(online));
+      this.statusHandlers.get(sn)?.forEach((h) => {
+        try {
+          h(online);
+        } catch {
+          this.log('status handler failed');
+        }
+      });
     }
   }
 
@@ -261,6 +303,7 @@ export class EcoFlowMqtt {
       } catch { /* ignore */ }
     }
     if (this.client) {
+      this.client.removeAllListeners('message');
       await new Promise<void>((res) => {
         this.client!.end(false, {}, () => res());
       });

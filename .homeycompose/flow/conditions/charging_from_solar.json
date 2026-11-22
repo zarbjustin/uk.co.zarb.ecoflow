@@ -1,19 +1,19 @@
 {
   "id": "charging_from_solar",
   "title": {
-    "en": "Battery !{{is|is not}} charging from solar",
-    "de": "Batterie !{{is|is not}} per Solar am Laden",
-    "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+    "en": "Charging with PV above home load !{{is|is not}} observed",
+    "de": "Laden bei PV über Hausverbrauch !{{wird|wird nicht}} beobachtet",
+    "nl": "Laden met PV boven huisverbruik !{{wordt|wordt niet}} waargenomen"
   },
   "titleFormatted": {
-    "en": "Battery !{{is|is not}} charging from solar",
-    "de": "Batterie !{{is|is not}} per Solar am Laden",
-    "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+    "en": "Charging with PV above home load !{{is|is not}} observed",
+    "de": "Laden bei PV über Hausverbrauch !{{wird|wird nicht}} beobachtet",
+    "nl": "Laden met PV boven huisverbruik !{{wordt|wordt niet}} waargenomen"
   },
   "hint": {
-    "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid).",
-    "de": "Wahr, wenn die Batterie lädt und die Solarerzeugung die aktuelle Hauslast übersteigt (die Ladung kommt aus Solarüberschuss, nicht aus dem Netz).",
-    "nl": "Waar wanneer de batterij oplaadt en de zonne-opwek hoger is dan de huidige huisbelasting (de lading komt uit zonnestroomoverschot, niet uit het net)."
+    "en": "Requires recent, coherent battery/PV/home-load readings. Missing load is not zero. This observation does not prove exclusively solar charging or rule out another battery supplying energy. Unavailable readings stop evaluation, including inversion.",
+    "de": "Erfordert aktuelle, zeitlich stimmige Batterie-/PV-/Hausverbrauchswerte. Fehlender Verbrauch ist nicht null. Keine Bestätigung ausschließlicher Solarladung oder Ausschluss einer anderen liefernden Batterie. Nicht verfügbare Werte stoppen auch die umgekehrte Bedingung.",
+    "nl": "Vereist recente, gelijktijdige batterij-/PV-/huisverbruikswaarden. Ontbrekend verbruik is niet nul. Bewijst geen uitsluitend laden op zon en sluit levering door een andere batterij niet uit. Niet-beschikbare waarden stoppen ook de omgekeerde voorwaarde."
   },
   "args": [
     {

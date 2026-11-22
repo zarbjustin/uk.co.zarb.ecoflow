@@ -1,0 +1,1102 @@
+{
+  "sourceCommit": "81312aa9395a03f6cd71d8eeeff0f785dc6db4f8",
+  "version": "1.10.54",
+  "flow": {
+    "triggers": [
+      {
+        "id": "battery_level_crossed",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "title": {
+              "en": "Battery level",
+              "de": "Batteriestand",
+              "nl": "Batterijniveau"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "battery",
+            "type": "number",
+            "title": {
+              "en": "Battery",
+              "de": "Batterie",
+              "nl": "Batterij"
+            },
+            "example": 20
+          }
+        ]
+      },
+      {
+        "id": "charging_started",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
+            },
+            "example": 800
+          }
+        ]
+      },
+      {
+        "id": "device_came_online",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "device_went_offline",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "discharging_started",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
+            },
+            "example": -600
+          }
+        ]
+      },
+      {
+        "id": "fault_cleared",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "fault_raised",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "source",
+            "type": "string",
+            "title": {
+              "en": "Source",
+              "de": "Quelle",
+              "nl": "Bron"
+            },
+            "example": "inverter"
+          },
+          {
+            "name": "code",
+            "type": "number",
+            "title": {
+              "en": "Code",
+              "de": "Code",
+              "nl": "Code"
+            },
+            "example": 4096
+          }
+        ]
+      },
+      {
+        "id": "grid_export_above",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 15000,
+            "step": 50,
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            },
+            "title": {
+              "en": "Export power threshold",
+              "de": "Einspeiseleistungsschwelle",
+              "nl": "Drempel voor terugleververmogen"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid export",
+              "de": "Netzeinspeisung",
+              "nl": "Teruglevering aan net"
+            },
+            "example": 800
+          }
+        ]
+      },
+      {
+        "id": "grid_export_started",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid power",
+              "de": "Netzleistung",
+              "nl": "Netvermogen"
+            },
+            "example": -500
+          }
+        ]
+      },
+      {
+        "id": "grid_import_above",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 15000,
+            "step": 50,
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            },
+            "title": {
+              "en": "Import power threshold",
+              "de": "Netzbezugsleistungsschwelle",
+              "nl": "Drempel voor netafnamevermogen"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid import",
+              "de": "Netzbezug",
+              "nl": "Netafname"
+            },
+            "example": 1200
+          }
+        ]
+      },
+      {
+        "id": "grid_import_started",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid power",
+              "de": "Netzleistung",
+              "nl": "Netvermogen"
+            },
+            "example": 700
+          }
+        ]
+      },
+      {
+        "id": "grid_power_changed",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Grid power",
+              "de": "Netzleistung",
+              "nl": "Netvermogen"
+            },
+            "example": -800
+          }
+        ]
+      },
+      {
+        "id": "operating_mode_changed",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "mode",
+            "type": "string",
+            "title": {
+              "en": "Mode",
+              "de": "Modus",
+              "nl": "Modus"
+            },
+            "example": "self_powered"
+          }
+        ]
+      },
+      {
+        "id": "solar_power_changed",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Solar power",
+              "de": "Solarleistung",
+              "nl": "Zonnevermogen"
+            },
+            "example": 450
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "battery_soc",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "title": {
+              "en": "Battery level",
+              "de": "Batteriestand",
+              "nl": "Batterijniveau"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "charging_from_solar",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "electricity_price",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "price",
+            "min": -1000,
+            "max": 1000,
+            "step": 0.01,
+            "placeholder": {
+              "en": "price/kWh"
+            },
+            "title": {
+              "en": "Electricity price threshold",
+              "de": "Strompreisschwelle",
+              "nl": "Drempel voor stroomprijs"
+            }
+          }
+        ]
+      },
+      {
+        "id": "electricity_price_negative",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "feed_in_enabled",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "is_charging",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "is_exporting",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "operating_mode_is",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Operating mode",
+              "de": "Betriebsmodus",
+              "nl": "Bedrijfsmodus"
+            },
+            "values": [
+              {
+                "id": "self_powered",
+                "title": {
+                  "en": "Self-powered",
+                  "de": "Eigenversorgung",
+                  "nl": "Zelfvoorzienend"
+                }
+              },
+              {
+                "id": "ai",
+                "title": {
+                  "en": "AI / Smart scheduling",
+                  "de": "KI / intelligente Planung",
+                  "nl": "AI / slimme planning"
+                }
+              },
+              {
+                "id": "scheduled",
+                "title": {
+                  "en": "Scheduled",
+                  "de": "Geplant",
+                  "nl": "Gepland"
+                }
+              },
+              {
+                "id": "tou",
+                "title": {
+                  "en": "Time-of-use",
+                  "de": "Zeitabhängiger Tarif",
+                  "nl": "Tijdafhankelijk tarief"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "smartmeter_grid_power_above",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=smartmeter"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "import",
+                "title": {
+                  "en": "import",
+                  "de": "Bezug",
+                  "nl": "afname"
+                }
+              },
+              {
+                "id": "export",
+                "title": {
+                  "en": "export",
+                  "de": "Einspeisung",
+                  "nl": "teruglevering"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "title": {
+              "en": "Power",
+              "de": "Leistung",
+              "nl": "Vermogen"
+            },
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            }
+          }
+        ]
+      },
+      {
+        "id": "solar_forecast_today",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "kwh",
+            "min": 0,
+            "max": 200,
+            "step": 0.5,
+            "placeholder": {
+              "en": "kWh"
+            },
+            "title": {
+              "en": "Solar energy threshold",
+              "de": "Solarenergieschwelle",
+              "nl": "Drempel voor zonne-energie"
+            }
+          }
+        ]
+      },
+      {
+        "id": "solar_forecast_tomorrow",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "kwh",
+            "min": 0,
+            "max": 200,
+            "step": 0.5,
+            "placeholder": {
+              "en": "kWh"
+            },
+            "title": {
+              "en": "Solar energy threshold",
+              "de": "Solarenergieschwelle",
+              "nl": "Drempel voor zonne-energie"
+            }
+          }
+        ]
+      },
+      {
+        "id": "solar_power_above",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "title": {
+              "en": "Solar power",
+              "de": "Solarleistung",
+              "nl": "Zonnevermogen"
+            },
+            "min": 0,
+            "max": 10000,
+            "step": 10,
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            }
+          }
+        ]
+      },
+      {
+        "id": "solar_power_below",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 10000,
+            "step": 10,
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            },
+            "title": {
+              "en": "Solar power threshold",
+              "de": "Solarleistungsschwelle",
+              "nl": "Drempel voor zonnevermogen"
+            }
+          }
+        ]
+      },
+      {
+        "id": "stream_5000_mode_is",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream_5000_system|stream_5000_unit|stream_ac5000"
+          },
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "title": {
+              "en": "Operating mode"
+            },
+            "values": [
+              {
+                "id": "self_powered",
+                "title": {
+                  "en": "Self-powered"
+                }
+              },
+              {
+                "id": "intelligent_plus",
+                "title": {
+                  "en": "Intelligent Mode+"
+                }
+              },
+              {
+                "id": "custom",
+                "title": {
+                  "en": "Custom"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stream_5000_reserve_enabled",
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=stream_5000_system|stream_5000_unit|stream_ac5000"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "prepare_for_cheap_import",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "reserve",
+            "title": {
+              "en": "Reserve level",
+              "de": "Reservelevel",
+              "nl": "Reserveniveau"
+            },
+            "min": 3,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "prepare_for_peak_export",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "reserve",
+            "title": {
+              "en": "Reserve level",
+              "de": "Reservelevel",
+              "nl": "Reserveniveau"
+            },
+            "min": 3,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "refresh_now",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "release_for_export",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          }
+        ]
+      },
+      {
+        "id": "set_backup_reserve",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "title": {
+              "en": "Reserve level",
+              "de": "Reservelevel",
+              "nl": "Reserveniveau"
+            },
+            "min": 3,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "set_charge_limit",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "title": {
+              "en": "Charge limit",
+              "de": "Ladegrenze",
+              "nl": "Laadlimiet"
+            },
+            "min": 50,
+            "max": 100,
+            "step": 1,
+            "label": "%",
+            "labelDecimals": 0
+          }
+        ]
+      },
+      {
+        "id": "set_discharge_limit",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "range",
+            "name": "level",
+            "title": {
+              "en": "Discharge limit",
+              "de": "Entladegrenze",
+              "nl": "Ontlaadlimiet"
+            },
+            "min": 0,
+            "max": 30,
+            "step": 1,
+            "label": "%",
+            "labelDecimals": 0
+          }
+        ]
+      },
+      {
+        "id": "set_electricity_price",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "number",
+            "name": "price",
+            "min": -1000,
+            "max": 1000,
+            "step": 0.01,
+            "placeholder": {
+              "en": "price/kWh"
+            },
+            "title": {
+              "en": "Current electricity price",
+              "de": "Aktueller Strompreis",
+              "nl": "Huidige stroomprijs"
+            }
+          }
+        ]
+      },
+      {
+        "id": "set_feed_in",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "state",
+            "title": {
+              "en": "Feed-in state",
+              "de": "Einspeisestatus",
+              "nl": "Terugleverstatus"
+            },
+            "values": [
+              {
+                "id": "on",
+                "title": {
+                  "en": "on",
+                  "de": "ein",
+                  "nl": "aan"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "off",
+                  "de": "aus",
+                  "nl": "uit"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "set_operating_mode",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Operating mode",
+              "de": "Betriebsmodus",
+              "nl": "Bedrijfsmodus"
+            },
+            "values": [
+              {
+                "id": "self_powered",
+                "title": {
+                  "en": "Self-powered",
+                  "de": "Eigenversorgung",
+                  "nl": "Zelfvoorzienend"
+                }
+              },
+              {
+                "id": "ai",
+                "title": {
+                  "en": "AI / Smart scheduling",
+                  "de": "KI / intelligente Planung",
+                  "nl": "AI / slimme planning"
+                }
+              },
+              {
+                "id": "scheduled",
+                "title": {
+                  "en": "Scheduled",
+                  "de": "Geplant",
+                  "nl": "Gepland"
+                }
+              },
+              {
+                "id": "tou",
+                "title": {
+                  "en": "Time-of-use",
+                  "de": "Zeitabhängiger Tarif",
+                  "nl": "Tijdafhankelijk tarief"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

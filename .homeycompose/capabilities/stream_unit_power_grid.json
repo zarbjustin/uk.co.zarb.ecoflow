@@ -1,9 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Grid import/export",
-    "de": "Netzbezug/-einspeisung",
-    "nl": "Netafname/-teruglevering"
+    "en": "Unit grid connection port",
+    "de": "Einheit: Netzanschluss",
+    "nl": "Unit: netaansluiting"
   },
   "units": {
     "en": "W",

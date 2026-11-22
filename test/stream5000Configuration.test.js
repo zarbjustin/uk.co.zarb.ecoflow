@@ -16,6 +16,24 @@ test('clock rollback makes configuration stale rather than apparently newly rece
   assert.equal(project(tracker.snapshot(1999)).values.maxGridInputW.stale, true);
 });
 
+test('follow-on configuration snapshots fail closed for nonfinite clocks without extending field TTL', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(Buffer.concat([scalar(25, 2), group(30, scalar(1, 0))])), 2000);
+  for (const now of [NaN, Infinity, -Infinity]) {
+    const values = tracker.snapshot(now).values;
+    assert.equal(values.mode.stale, true);
+    assert.equal(values.backupReserveEnabled.stale, true);
+  }
+  tracker.observe(frame(group(30, scalar(2, 0))), 1202000);
+  const boundary = tracker.snapshot(1202000).values;
+  assert.equal(boundary.mode.stale, false, 'retain the established inclusive 20-minute boundary');
+  assert.equal(boundary.backupReserveEnabled.value, false);
+  const expired = tracker.snapshot(1202001).values;
+  assert.equal(expired.mode.stale, true);
+  assert.equal(expired.backupReserveEnabled.stale, true);
+  assert.equal(expired.backupReservePct.stale, false, 'percentage-only receipt cannot renew the enable flag');
+});
+
 function varint(value) {
   let n = BigInt(value);
   const bytes = [];
@@ -79,7 +97,62 @@ test('known mode/reserve/socket and authoritative 32/2 SOC limits decode indepen
   assert.deepEqual(parse(frame(group(1, Buffer.concat([scalar(7, 95), scalar(21, 10)])), 32, 2), SN),
     [{ maxChargeSocPct: 95, minDischargeSocPct: 10 }]);
   assert.deepEqual(parse(frame(Buffer.concat([scalar(25, 99), group(19, Buffer.alloc(0)), group(30, Buffer.alloc(0))])), SN),
-    [{ mode: null, backupSocketEnabled: false, backupReserveEnabled: false }]);
+    [{ mode: null, backupSocketEnabled: false }]);
+});
+
+test('percentage-only reserve delta preserves enable value and original enable receipt age', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(group(30, Buffer.concat([scalar(1, 1), scalar(2, 100)]))), 1000);
+  tracker.observe(frame(group(30, scalar(2, 47))), 11000);
+  const values = tracker.snapshot(11000).values;
+  assert.equal(values.backupReserveEnabled.value, true);
+  assert.equal(values.backupReserveEnabled.ageSec, 10);
+  assert.equal(values.backupReservePct.value, 47);
+  assert.equal(values.backupReservePct.ageSec, 0);
+});
+
+test('reserve disabled must be explicitly reported; absent delta does not invent a flag', () => {
+  assert.deepEqual(parse(frame(group(30, scalar(2, 47))), SN), [{ backupReservePct: 47 }]);
+  assert.deepEqual(parse(frame(group(30, scalar(1, 0))), SN), [{ backupReserveEnabled: false }]);
+  assert.deepEqual(parse(frame(group(30, Buffer.alloc(0))), SN), []);
+});
+
+test('duplicate singular configuration fields reject the header rather than selecting a superseded value', () => {
+  const reserve = group(30, Buffer.concat([scalar(1, 1), scalar(2, 51)]));
+  const cases = [
+    frame(group(30, Buffer.concat([scalar(1, 1), scalar(1, 0), scalar(2, 51)]))),
+    frame(group(30, Buffer.concat([scalar(2, 50), scalar(2, 51)]))),
+    frame(group(30, Buffer.concat([scalar(1, 1), group(1, Buffer.alloc(0))]))),
+    frame(Buffer.concat([reserve, group(30, scalar(1, 0))])),
+    frame(Buffer.concat([group(10, scalar(2, 100)), group(10, scalar(2, 200))])),
+    frame(group(10, Buffer.concat([scalar(2, 100), scalar(2, 200)]))),
+    frame(Buffer.concat([scalar(25, 2), scalar(25, 0)])),
+    frame(group(19, Buffer.concat([scalar(1, 1), scalar(1, 0)]))),
+    frame(group(1, Buffer.concat([scalar(7, 90), scalar(7, 95)])), 32, 2),
+    frame(Buffer.concat([group(1, scalar(7, 90)), group(1, scalar(7, 95))]), 32, 2),
+    frame(group(40, group(1, Buffer.concat([
+      group(8, group(3, scalar(3, 500))), group(7, varint(7)), group(7, varint(8)),
+    ])))),
+  ];
+  for (const input of cases) assert.deepEqual(parse(input, SN), []);
+});
+
+test('ambiguous configuration cannot renew old field ages and does not discard a valid bundle sibling', () => {
+  const tracker = new Tracker(SN);
+  tracker.observe(frame(group(30, Buffer.concat([scalar(1, 0), scalar(2, 40)]))), 1000);
+  const ambiguous = frame(Buffer.concat([
+    group(30, Buffer.concat([scalar(1, 1), scalar(2, 51)])),
+    group(30, scalar(1, 0)),
+  ]));
+  tracker.observe(Buffer.concat([ambiguous, frame(scalar(25, 0))]), 2000);
+  const values = tracker.snapshot(2000).values;
+  assert.deepEqual(values.backupReserveEnabled, { value: false, ageSec: 1, stale: false });
+  assert.deepEqual(values.backupReservePct, { value: 40, ageSec: 1, stale: false });
+  assert.deepEqual(values.mode, { value: 'self_powered', ageSec: 0, stale: false });
+  const expired = tracker.snapshot(1201001).values;
+  assert.equal(expired.backupReserveEnabled.stale, true);
+  assert.equal(expired.backupReservePct.stale, true);
+  assert.equal(expired.mode.stale, false);
 });
 
 test('configuration deltas preserve unrelated fields and age per field; restart has no restored settings', () => {
@@ -131,4 +204,19 @@ test('privacy projection excludes arbitrary identifiers and nested secrets; malf
   assert.ok(!JSON.stringify(snapshot).includes('PRIVATE'));
   input.values.tasks.value[0].chargeW = Infinity;
   assert.equal(project(input).values.tasks, undefined);
+});
+
+test('configuration projection requires explicit freshness and never promotes an unknown reserve status', () => {
+  const { stream5000ConfigurationValues } = require('../.homeybuild/lib/stream5000Readings');
+  for (const stale of [undefined, null, 'false', 0, true]) {
+    const projected = project({ source: 'captured_app_protocol', values: {
+      backupReserveEnabled: { value: false, ageSec: 0, stale },
+      backupReservePct: { value: 40, ageSec: 0, stale: false },
+      mode: { value: 'custom', ageSec: 0, stale },
+    } });
+    const values = stream5000ConfigurationValues(projected);
+    assert.equal(values.stream_5000_backup_reserve_state, null);
+    assert.equal(values.stream_5000_mode, null);
+    assert.equal(values.stream_5000_backup_reserve, 40);
+  }
 });

@@ -1,0 +1,81 @@
+{
+  "id": "stream_unit_battery_level_crossed",
+  "title": {
+    "en": "Unit battery level crossed",
+    "de": "Batteriestand der Einheit hat den Schwellenwert erreicht",
+    "nl": "Batterijniveau van de unit passeert drempel"
+  },
+  "titleFormatted": {
+    "en": "Unit battery level goes [[direction]] [[level]]%",
+    "de": "Batteriestand der Einheit geht [[direction]] [[level]]%",
+    "nl": "Batterijniveau van de unit gaat [[direction]] [[level]]%"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=stream_unit"
+    },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": {
+        "en": "Direction",
+        "de": "Richtung",
+        "nl": "Richting"
+      },
+      "values": [
+        {
+          "id": "above",
+          "title": {
+            "en": "above",
+            "de": "über",
+            "nl": "boven"
+          }
+        },
+        {
+          "id": "below",
+          "title": {
+            "en": "below",
+            "de": "unter",
+            "nl": "onder"
+          }
+        }
+      ]
+    },
+    {
+      "type": "number",
+      "name": "level",
+      "title": {
+        "en": "Battery level",
+        "de": "Batteriestand",
+        "nl": "Batterijniveau"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "placeholder": {
+        "en": "%",
+        "de": "%",
+        "nl": "%"
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "name": "battery",
+      "type": "number",
+      "title": {
+        "en": "Battery",
+        "de": "Batterie",
+        "nl": "Batterij"
+      },
+      "example": 20
+    }
+  ],
+  "hint": {
+    "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+    "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+    "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+  }
+}

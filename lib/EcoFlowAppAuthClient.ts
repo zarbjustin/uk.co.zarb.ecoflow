@@ -5,6 +5,7 @@ import { URL } from 'url';
 import { ECOFLOW_API_HOSTS, normalizeApiHost } from './apiHost';
 import { decryptCertification } from './appAuthCrypto';
 import { AppDevice, normalizeAppDeviceList } from './appDevices';
+import { DualCtFirmwareReadback, readDualCtCurrentFirmware } from './dualCtFirmware';
 
 /**
  * EXPERIMENTAL — EcoFlow **app** (mobile/portal) authentication client.
@@ -233,7 +234,7 @@ export class EcoFlowAppAuthClient {
           this.log('app-auth login rejected by', host);
           continue;
         }
-        this.log('app-auth login failed on', host, '-', e?.message || 'unknown error');
+        this.log('app-auth login failed on', host, 'transport_failed');
       }
     }
     this.invalidateSession();
@@ -251,18 +252,36 @@ export class EcoFlowAppAuthClient {
     return normalizeAppDeviceList(data);
   }
 
+  /**
+   * Read the meter's cloud current-package record. Native DualCt.bundle uses
+   * this GET with lang/version headers; the headerless request returned 400.
+   * No update, version-report PUT, package download or MQTT command is sent.
+   * This metadata has no hardware timestamp and cannot qualify measurement timing.
+   */
+  async getDualCtCurrentFirmware(sn: string): Promise<DualCtFirmwareReadback | null> {
+    if (typeof sn !== 'string' || !/^[A-Z0-9]{8,64}$/.test(sn)) return null;
+    const data = await this.authorized((session) => ({
+      method: 'GET' as const,
+      url: `${session.host}/iot-service/device/latestPackInfo?sn=${encodeURIComponent(sn)}&supportSelfRD=1`,
+      headers: { Authorization: `Bearer ${session.token}`, lang: 'en-us', version: '6.17.5' },
+    }));
+    return readDualCtCurrentFirmware(data, sn);
+  }
+
   /** Broker credentials for the app (WSS) MQTT session. */
   async getMqttCredentials(): Promise<AppMqttCredentials> {
-    const session = await this.getSession();
-    const data = await this.authorized((s) => ({
-      method: 'GET' as const,
-      url: `${s.host}${CERTIFICATION_PATH}`,
-      headers: { Authorization: `Bearer ${s.token}` },
-    }));
+    let requestToken = '';
+    const data = await this.authorized((s) => {
+      requestToken = s.token;
+      return {
+        method: 'GET' as const,
+        url: `${s.host}${CERTIFICATION_PATH}`,
+        headers: { Authorization: `Bearer ${s.token}` },
+      };
+    });
     // The payload is encrypted with a key derived from the token that fetched it,
     // so decrypt with the token of the session that actually served the request.
-    const token = this.session?.token || session.token;
-    const decoded = typeof data === 'string' ? decryptCertification(token, data) : (data as Record<string, unknown>);
+    const decoded = typeof data === 'string' ? decryptCertification(requestToken, data) : (data as Record<string, unknown>);
     const account = String(decoded?.certificateAccount || decoded?.userName || '');
     const password = String(decoded?.certificatePassword || decoded?.password || '');
     const url = String(decoded?.url || '');
@@ -280,8 +299,9 @@ export class EcoFlowAppAuthClient {
       return await this.send(session.host, build(session));
     } catch (e: any) {
       if (!(e instanceof EcoFlowAppAuthError) || !e.authFailure) throw e;
-      this.invalidateSession();
-      const refreshed = await this.getSession(true);
+      // A late rejection for an old token must not invalidate a newer login.
+      if (this.session === session) this.invalidateSession();
+      const refreshed = await this.getSession();
       return this.send(refreshed.host, build(refreshed));
     }
   }

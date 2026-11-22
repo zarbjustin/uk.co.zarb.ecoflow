@@ -1,5 +1,8 @@
 'use strict';
 
+import { streamDeliverySnapshot } from './streamDeliveryDiagnostics';
+import { mainResolutionSnapshot } from './streamReporterEvidence';
+
 /** Fixed projection: never include quota objects, names, serials or exception text. */
 export const REPORTING_CAPABILITIES = [
   'measure_battery', 'measure_power', 'measure_power.pv', 'measure_power.grid',
@@ -23,11 +26,27 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
       currentReadings[key] = null;
     }
   }
+  let delivery: Record<string, unknown> | null = null;
+  try {
+    delivery = streamDeliverySnapshot(device.getDeliveryDiagnostics?.(), now);
+  } catch { /* Optional evidence. */ }
   let observations: Record<string, unknown> = {};
   let readAddressMatchesSavedMain: boolean | null = null;
   let lastControlFailure: Record<string, unknown> | null = null;
+  let mainResolution = mainResolutionSnapshot(null, now);
+  let aggregateRecovery: Record<string, unknown> | null = null;
   try {
     const input = device.getReportingDiagnostics?.();
+    mainResolution = mainResolutionSnapshot(input?.mainResolution, now);
+    if (input?.aggregateRecovery && typeof input.aggregateRecovery === 'object') {
+      const evidence = input.aggregateRecovery;
+      const count = (value: unknown) => (Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 65535 ? value : 0);
+      aggregateRecovery = {
+        state: ['not_checked', 'verified_original_main', 'blocked', 'identity_changed', 'startup_unverified'].includes(evidence.state) ? evidence.state : 'unknown',
+        verificationFailures: count(evidence.verificationFailures),
+        recoveries: count(evidence.recoveries),
+      };
+    }
     const failure = input?.lastControlFailure;
     if (failure) {
       const reason = ['read_failed', 'cancelled', 'observation_failed', 'preflight_rejected',
@@ -65,7 +84,10 @@ export function reportingSnapshot(device: any, now: number): Record<string, unkn
   }
   return {
     currentReadings,
+    delivery,
+    aggregateRecovery,
     lastControlFailure,
+    mainResolution,
     observations,
     readAddressMatchesSavedMain,
     // Matching addresses do not establish that EcoFlow still uses that reporter.

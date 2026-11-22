@@ -1,15 +1,26 @@
 'use strict';
 
-import { BaseEcoFlowDevice } from '../../lib/BaseEcoFlowDevice';
+import { BaseEcoFlowDevice, QuotaSampleContext } from '../../lib/BaseEcoFlowDevice';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import { streamModelFromSn, streamAcOutletCount } from '../../lib/streamModels';
 import { OperatingMode } from '../../lib/streamProtocol';
 import { executeStreamControl, readStreamControlState, StreamControlIntent } from '../../lib/streamControls';
 import { EcoFlowAppApi, getApp } from '../../lib/appApi';
 import { AppFrameHandler } from '../../lib/EcoFlowAppMqtt';
+import type { MqttDelivery } from '../../lib/EcoFlowMqtt';
 import { BK_PV_CAPS, BkPvReceipts, decodeBkPvDiagnostics } from '../../lib/streamBkPvDiagnostics';
+import { migrateReadingTitle, STREAM_UNIT_GRID_TITLE } from '../../lib/streamReadingScopes';
+import { StreamUnitComparison } from '../../lib/streamDiagnosticChecks';
+import { decodeStreamLimits, StreamLimitObservations } from '../../lib/streamLimitDiagnostics';
+import { decodeBkBatteryReading } from '../../lib/streamBkBatteryTelemetry';
+import { StreamPowerHistory } from '../../lib/streamPowerHistory';
+import { CoalescedTelemetryQueue } from '../../lib/coalescedTelemetryQueue';
+import { UNIT_ALERT_CARDS, UnitAlertEdge, UnitAlertEvent } from '../../lib/streamUnitAlerts';
 
 type ControlWait = () => void;
+type TimedValue = { value: number; at: number };
+type DiagnosticBatch = { pv: Record<string, TimedValue>; limits: Record<string, TimedValue>;
+  battery?: { reading: NonNullable<ReturnType<typeof decodeBkBatteryReading>>; at: number; delivery?: MqttDelivery; discontinuity?: boolean } };
 
 /**
  * A single physical STREAM inverter/battery unit. The device is tailored to its
@@ -30,6 +41,7 @@ type ControlWait = () => void;
  */
 module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private mainSn = '';
+  private unitComparison = new StreamUnitComparison();
   private controlGeneration = 0;
   private readonly controlWaits = new Map<NodeJS.Timeout, ControlWait>();
   private pvReceipts = new BkPvReceipts();
@@ -38,15 +50,65 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   private pvHandler?: AppFrameHandler;
   private pvSn = '';
   private pvChain: Promise<void> = Promise.resolve();
+  private limitObservations = new StreamLimitObservations();
+  private powerHistory = new StreamPowerHistory();
+  private pvWork?: CoalescedTelemetryQueue<DiagnosticBatch>;
+
+  private unitAlertOfflineAt = 0;
+  private readonly socAlert = new UnitAlertEdge<number>();
+  private readonly directionAlert = new UnitAlertEdge<string>();
+
+  private supportsUnitAlerts(): boolean {
+    return /^(BK31|BK61)/i.test(this.getData().sn);
+  }
+
+  private resetUnitAlerts(): void {
+    this.socAlert.reset();
+    this.directionAlert.reset();
+  }
+
+  async matchesUnitAlert(card: string, args: { direction?: string; level?: number }, event?: UnitAlertEvent): Promise<boolean> {
+    if (!event || this.mqttOffline || this.isShuttingDown() || !this.supportsUnitAlerts()) return false;
+    if (card === UNIT_ALERT_CARDS.soc) {
+      const { level, direction } = args;
+      const { previous, value } = event;
+      if (typeof level !== 'number' || !Number.isFinite(level) || level < 0 || level > 100
+        || typeof previous !== 'number' || typeof value !== 'number'
+        || !this.socAlert.matches(event, this.getCapabilityValue('measure_battery'))) return false;
+      return direction === 'above' ? previous < level && value >= level
+        : direction === 'below' && previous > level && value <= level;
+    }
+    if (card !== UNIT_ALERT_CARDS.charging && card !== UNIT_ALERT_CARDS.discharging) return false;
+    const direction = card === UNIT_ALERT_CARDS.charging ? 'charging' : 'discharging';
+    return event.value === direction && this.directionAlert.matches(event, this.getCapabilityValue('battery_charging_state'));
+  }
+
+  private emitUnitAlert(card: string, tokens: Record<string, number>, event: UnitAlertEvent): void {
+    if (this.isShuttingDown()) return;
+    this.homey.flow.getDeviceTriggerCard(card).trigger(this, tokens, event).catch((e) => this.error(card, e));
+  }
+
+  getPowerHistoryDiagnostics() {
+    return this.powerHistory.evidence();
+  }
+
+  getTelemetryQueueDiagnostics() {
+    return this.pvWork?.snapshot();
+  }
+
+  getLimitDiagnostics(): Record<string, unknown> {
+    return this.limitObservations.snapshot();
+  }
 
   getReadingDiagnostics(): Record<string, unknown> {
-    return this.pvReceipts.snapshot(Date.now());
+    return { ...this.pvReceipts.snapshot(Date.now()), ...this.getRemainingTimeFreshness(), ...this.getLiveReadingFreshness() };
   }
 
   private async startPvDiagnostics(sn: string): Promise<void> {
     const generation = this.controlGeneration;
     const active = () => generation === this.controlGeneration && !this.isShuttingDown();
     this.pvReceipts = new BkPvReceipts();
+    this.limitObservations = new StreamLimitObservations();
     for (const cap of BK_PV_CAPS) {
       if (!active()) return;
       if (this.hasCapability(cap)) {
@@ -56,7 +118,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
         } else await this.setCapabilityValue(cap, null);
       }
     }
-    if (!active() || !/^(BK11|BK12|BK61)/i.test(sn)) return;
+    if (!active() || !/^(BK11|BK12|BK31|BK41|BK51|BK61)[A-Z0-9]+$/i.test(sn)) return;
     const expire = async () => {
       for (const cap of this.pvReceipts.expired(Date.now())) {
         if (!active()) return;
@@ -71,22 +133,68 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       return;
     }
     if (!app?.subscribeAppRealtime) return;
-    const handler: AppFrameHandler = (payload, topic) => {
+    this.pvWork?.stop();
+    this.pvWork = new CoalescedTelemetryQueue<DiagnosticBatch>((old, next) => ({
+      pv: { ...old.pv, ...next.pv },
+      limits: { ...old.limits, ...next.limits },
+      battery: old.battery && next.battery ? { ...next.battery, discontinuity: true } : next.battery || old.battery,
+    }), async (batch) => {
+      if (!active()) return;
+      for (const [key, field] of Object.entries(batch.limits)) this.limitObservations.observe({ [key]: field.value }, field.at, 'app_property');
+      if (batch.battery) {
+        const {
+          reading, at, delivery, discontinuity,
+        } = batch.battery; const batteryPower = reading.powerW;
+        await this.queueDeviceWork(async () => {
+          if (!active()) return;
+          const applied = await this.applyLiveReading('stream_unit_power_battery_flow', batteryPower, at);
+          if (!active()) return;
+          if (applied) {
+            this.unitComparison.observe('stream_unit_power_battery_flow', batteryPower, at);
+            const appliedAt = Date.now();
+            this.powerHistory.observe('bmsBatteryW', batteryPower, at, appliedAt);
+            this.powerHistory.observe('bmsChargeW', reading.chargeW, at, appliedAt);
+            this.powerHistory.observe('bmsDischargeW', reading.dischargeW, at, appliedAt);
+            let state = 'idle';
+            if (batteryPower > 5) state = 'charging';
+            if (batteryPower < -5) state = 'discharging';
+            const stateApplied = await this.applyLiveReading('battery_charging_state', state, at);
+            if (active() && this.supportsUnitAlerts() && this.canUseAlertDelivery(delivery)) {
+              const event = this.directionAlert.observe(stateApplied ? state : undefined, delivery, discontinuity);
+              if (event && state !== 'idle') {
+                const card = state === 'charging' ? UNIT_ALERT_CARDS.charging : UNIT_ALERT_CARDS.discharging;
+                this.emitUnitAlert(card, { power: batteryPower }, event);
+              }
+            }
+            await this.applyRemainingTimePower(batteryPower, at);
+          } else {
+            if (this.canUseAlertDelivery(delivery)) this.directionAlert.observe(undefined, delivery, discontinuity);
+            this.unitComparison.failed('stream_unit_power_battery_flow');
+            await this.applyLiveReading('battery_charging_state', null, at);
+            await this.applyRemainingTimePower(null, at);
+          }
+        });
+      }
+      for (const [cap, field] of Object.entries(batch.pv)) {
+        if (!active() || !this.pvReceipts.observe(cap, field.at, Date.now())) continue;
+        if (!this.hasCapability(cap)) await this.addCapability(cap);
+        if (!active()) return;
+        await this.setCapabilityValue(cap, field.value);
+      }
+      await expire();
+    });
+    const handler: AppFrameHandler = (payload, topic, delivery) => {
       if (!active() || !(topic === `/app/device/property/${sn}`
         || (/^\/app\/[^/]+\/[^/]+\/thing\/property\/get_reply$/.test(topic)
           && topic.split('/')[3] === sn))) return;
       const at = Date.now();
       const values = decodeBkPvDiagnostics(payload, sn);
-      this.pvChain = this.pvChain.then(async () => {
-        if (!active()) return;
-        for (const [cap, value] of Object.entries(values)) {
-          if (!active() || !this.pvReceipts.observe(cap, at, Date.now())) continue;
-          if (!this.hasCapability(cap)) await this.addCapability(cap);
-          if (!active()) return;
-          await this.setCapabilityValue(cap, value);
-        }
-        await expire();
-      }).catch(() => { /* Optional diagnostics must not disrupt the official quota path. */ });
+      // Cached get replies are not evidence of a fresh limit observation.
+      const limits = topic === `/app/device/property/${sn}` ? decodeStreamLimits(payload, sn) : {};
+      const reading = topic === `/app/device/property/${sn}` ? decodeBkBatteryReading(payload, sn) : undefined;
+      if (!reading && !Object.keys(values).length && !Object.keys(limits).length) return;
+      const timed = (fields: Record<string, number>) => Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, { value, at }]));
+      this.pvChain = this.pvWork!.submit({ pv: timed(values), limits: timed(limits), battery: reading ? { reading, at, delivery } : undefined });
     };
     this.pvApp = app; this.pvSn = sn; this.pvHandler = handler;
     let subscribed = false;
@@ -99,7 +207,7 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       return;
     }
     this.pvTimer = this.homey.setInterval(() => {
-      this.pvChain = this.pvChain.then(expire).catch(() => {});
+      this.pvChain = this.pvWork!.submit({ pv: {}, limits: {} });
     }, 60000);
   }
 
@@ -151,16 +259,20 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   };
 
   protected async onReady(): Promise<void> {
+    this.unitAlertOfflineAt = 0;
+    this.resetUnitAlerts();
+    this.unitComparison = new StreamUnitComparison();
     this.controlGeneration += 1;
+    await this.startRemainingTime('unit');
     const sn = this.getData().sn as string;
     const spec = streamModelFromSn(sn);
-    this.mainSn = (this.getStoreValue('mainSn') as string) || sn;
-    let roleResolved = !!this.getStoreValue('mainSn');
+    this.mainSn = '';
+    let roleResolved = false;
     try {
-      if (this.mainSn === sn) {
-        this.mainSn = await this.client.getMainSn(sn);
-        roleResolved = true;
-      }
+      // Relinking can change the main unit while the paired serial stays the
+      // same. A stored former parent must never grant or suppress current role.
+      this.mainSn = await this.client.getMainSn(sn, { fresh: true });
+      roleResolved = true;
     } catch (e) {
       this.mainSn = '';
       roleResolved = false;
@@ -172,9 +284,11 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     const outlets = streamAcOutletCount(sn);
     const acCaps = StreamUnitDevice.AC_CAPS.filter((cap) => (cap.endsWith('1') ? outlets >= 1 : outlets >= 2));
     await this.ensureCapabilities(['battery_charging_state', 'stream_unit_power_battery_flow', 'stream_unit_power_grid', ...acCaps]);
+    await migrateReadingTitle(this, 'stream_unit_power_grid', STREAM_UNIT_GRID_TITLE, () => !this.isShuttingDown());
     await this.removeCapabilities(StreamUnitDevice.AC_CAPS.filter((cap) => !acCaps.includes(cap)));
     // Previous versions could copy aggregate battery power/state onto a unit.
-    // Clear persisted values: no proven signed per-unit path is exposed here.
+    // Clear persisted values; only a fresh, paired BMS charge/discharge packet
+    // may restore them. The aggregate and grid-port paths never populate them.
     await this.setCapabilityValue('stream_unit_power_battery_flow', null);
     await this.setCapabilityValue('battery_charging_state', null);
     await this.removeCapabilities(['measure_power', 'measure_power.grid', 'meter_power.charged', 'meter_power.discharged']);
@@ -185,8 +299,19 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
 
     // Whole-home controls/tiles only on the system main unit.
     if (isMain) await this.ensureCapabilities(StreamUnitDevice.SYSTEM_CAPS);
-    else await this.removeCapabilities(StreamUnitDevice.SYSTEM_CAPS);
+    else if (roleResolved) await this.removeCapabilities(StreamUnitDevice.SYSTEM_CAPS);
+    else {
+      // Unknown is not a confirmed member. Preserve existing tile/history IDs,
+      // clear unverified system values and leave system control listeners blocked.
+      for (const cap of StreamUnitDevice.SYSTEM_CAPS) {
+        if (this.hasCapability(cap)) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.setCapabilityValue(cap, null).catch((e) => this.error(`clear ${cap}`, e));
+        }
+      }
+    }
     await this.removeCapabilities(StreamUnitDevice.LEGACY_SYSTEM_CAPS);
+    await this.startLiveReadings('unit');
 
     this.registerControlListeners(isMain);
     await this.refreshInfoSettings(sn, isMain, roleResolved).catch((e) => this.error('refresh info settings', e));
@@ -245,7 +370,16 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     if (this.hasCapability('onoff.ac2')) {
       this.registerCapabilityListener('onoff.ac2', async (v: boolean) => this.runControl({ kind: 'ac2', value: v }));
     }
-    if (!isMain) return;
+    if (!isMain) {
+      for (const cap of ['operating_mode', 'backup_reserve_soc', 'charge_limit', 'discharge_limit', 'feed_in_control']) {
+        if (this.hasCapability(cap)) {
+          this.registerCapabilityListener(cap, async () => {
+            throw new Error('A verified system main role is required for this control.');
+          });
+        }
+      }
+      return;
+    }
     this.registerCapabilityListener('operating_mode', async (v: OperatingMode) => this.runControl({ kind: 'mode', value: v }));
     this.registerCapabilityListener('backup_reserve_soc', async (v: number) => this.runControl({ kind: 'reserve', value: v }));
     this.registerCapabilityListener('charge_limit', async (v: number) => this.runControl({ kind: 'charge', value: v }));
@@ -286,13 +420,20 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
   }
 
   protected async onTeardown(): Promise<void> {
+    this.resetUnitAlerts();
+    this.stopLiveReadings();
+    this.stopRemainingTime();
     this.controlGeneration += 1;
     if (this.pvTimer) this.homey.clearInterval(this.pvTimer);
     this.pvTimer = null;
     if (this.pvHandler) this.pvApp?.unsubscribeAppRealtime(this.pvSn, this.pvHandler);
     this.pvHandler = undefined;
+    this.pvWork?.stop();
     await this.pvChain;
     this.pvReceipts = new BkPvReceipts();
+    this.limitObservations = new StreamLimitObservations();
+    this.unitComparison = new StreamUnitComparison();
+    this.powerHistory = new StreamPowerHistory();
     for (const [timer, resolve] of this.controlWaits) {
       this.homey.clearTimeout(timer);
       resolve();
@@ -321,8 +462,33 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
     return true;
   }
 
-  async applyQuota(quota: Record<string, any>): Promise<void> {
+  private canUseAlertDelivery(delivery?: MqttDelivery): delivery is MqttDelivery {
+    return !this.mqttOffline && !!delivery && delivery.receivedAt > this.unitAlertOfflineAt;
+  }
+
+  protected onRealtimeOffline(): void {
+    this.unitAlertOfflineAt = Date.now();
+    this.resetUnitAlerts();
+  }
+
+  protected async setOnlineState(online: boolean, message?: string): Promise<void> {
+    if (!online) this.onRealtimeOffline();
+    await super.setOnlineState(online, message);
+  }
+
+  async applyQuota(quota: Record<string, any>, context?: QuotaSampleContext): Promise<void> {
+    this.limitObservations.observe(quota, context?.receivedAt ?? Date.now(), 'developer_quota');
+    await this.applyRemainingTime(quota, context);
     const values = mapStreamQuota(quota, 'unit');
+    const ownSocDelivery = context?.source === 'mqtt' && context.sourceSn === this.getData().sn && this.supportsUnitAlerts()
+      ? context.mqttDelivery : undefined;
+    if (context?.accountingDiscontinuity) this.socAlert.reset();
+    // Only the original unit SOC fields accepted by the unit mapper are evidence.
+    const ownSocReported = !!ownSocDelivery
+      && ['f32ShowSoc', 'soc', 'actSoc'].some((field) => Object.prototype.hasOwnProperty.call(quota, field));
+    let socApplied = false;
+    delete values.charge_remaining;
+    delete values.discharge_remaining;
     for (const [source, target] of Object.entries(StreamUnitDevice.POWER_CAP_MAP)) {
       const value = values[source];
       if (value !== undefined) values[target] = value;
@@ -334,9 +500,40 @@ module.exports = class StreamUnitDevice extends BaseEcoFlowDevice {
       await this.addCapability('self_heating').catch((e) => this.error('add self_heating', e));
     }
     for (const [cap, value] of Object.entries(values)) {
+      if (StreamUnitDevice.SYSTEM_CAPS.includes(cap) && this.mainSn !== this.getData().sn) continue;
       if (!this.hasCapability(cap)) continue;
-      if (this.getCapabilityValue(cap) === value) continue;
-      await this.setCapabilityValue(cap, value).catch((e) => this.error(`setCapabilityValue ${cap}`, e));
+      try {
+        if (this.isLiveReading(cap)) {
+          const applied = await this.applyLiveReading(cap, value, context?.receivedAt ?? Date.now());
+          if (!applied) {
+            this.unitComparison.failed(cap); continue;
+          }
+        } else
+          if (this.getCapabilityValue(cap) !== value) await this.setCapabilityValue(cap, value);
+        if (cap === 'measure_battery') socApplied = true;
+        this.unitComparison.observe(cap, value, context?.receivedAt ?? Date.now());
+        if (cap === 'stream_unit_power_grid' && typeof value === 'number') {
+          this.powerHistory.observe('gridPortW', value, context?.receivedAt ?? Date.now());
+        }
+      } catch (e) {
+        this.unitComparison.failed(cap);
+        this.error(`setCapabilityValue ${cap}`, e);
+      }
     }
+    if (ownSocReported && this.canUseAlertDelivery(ownSocDelivery)) {
+      const soc = values.measure_battery;
+      const valid = socApplied && typeof soc === 'number' && soc >= 0 && soc <= 100;
+      const event = this.socAlert.observe(valid ? soc : undefined, ownSocDelivery);
+      if (event && valid) this.emitUnitAlert(UNIT_ALERT_CARDS.soc, { battery: soc }, event);
+    }
+    await this.expireLiveReadings();
+  }
+
+  getUnitCorrelationDiagnostics(): Record<string, unknown> {
+    const readings = this.unitComparison.snapshot(Date.now());
+    for (const [key, cap] of [['socPct', 'measure_battery'], ['gridPortW', 'stream_unit_power_grid'], ['bmsBatteryW', 'stream_unit_power_battery_flow']]) {
+      if (readings[key] && this.getCapabilityValue(cap) !== readings[key].value) delete readings[key];
+    }
+    return readings;
   }
 };

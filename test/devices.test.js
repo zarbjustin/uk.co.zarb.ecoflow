@@ -45,6 +45,16 @@ test('isStreamUnit / isSmartMeter helpers', () => {
   assert.strictEqual(isStreamUnit({ sn: 'BK21Z1BB7H414289' }), false);
 });
 
+test('Dual CT catalogue identity cannot silently inherit the original Smart Meter driver', () => {
+  for (const sn of ['ZZ99SYNTHETIC', 'BK21SYNTHETIC']) {
+    const device = { sn, productName: 'EcoFlow Smart Meter Dual CT', deviceName: 'Grid meter' };
+    assert.strictEqual(classifyDevice(device), 'unsupported_stream_5000');
+    assert.strictEqual(isSmartMeter(device), false);
+  }
+  assert.strictEqual(classifyDevice({ sn: 'ZZ99SYNTHETIC', deviceName: 'Smart Meter Dual-CT' }), 'unsupported_stream_5000');
+  assert.strictEqual(classifyDevice({ sn: 'BK21SYNTHETIC', productName: 'CT_EF_01', deviceName: 'Smart Meter Dual CT' }), 'smart_meter');
+});
+
 test('the STREAM AC 5000 (ES22) is its own role, never a BK-series unit', () => {
   const es22 = { sn: 'ES22ZE1B2J6W0110', deviceName: 'STREAM AC 5000', productName: 'STREAM AC 5000' };
   assert.strictEqual(classifyDevice(es22), 'stream_5000_unit');

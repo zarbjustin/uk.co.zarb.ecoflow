@@ -6,96 +6,90 @@
   <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; max-width: 520px; margin: 0 auto; }
-    h1 { font-size: 20px; }
-    .help { color: #888; font-size: 13px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 17px; }
+    details.settings-section { border-top: 1px solid #e3e3e3; margin-top: 24px; padding-top: 18px; }
+    details.settings-section > summary { font-size: 17px; font-weight: 600; cursor: pointer; padding: 6px 0; }
+    summary:focus-visible, button:focus-visible { outline: 2px solid #147eb5; outline-offset: 3px; }
+    .help { color: #666; font-size: 13px; line-height: 1.5; }
+    #dualCtExportAvailability { color: #333; font-size: 14px; line-height: 1.45; border-left: 3px solid #1AA3E8; padding-left: 10px; }
     pre { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #f4f4f4; }
     label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: 13px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
     button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1AA3E8; color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
     .saved { color: #1a7f37; font-size: 13px; margin-top: 12px; min-height: 18px; }
-    .beta-warning { border: 1px solid #e0a800; background: #fff8e1; color: #5e4700; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; }
-    .beta-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
-    .beta-toggle input { width:auto; margin-top:3px; }
+    .connection-notice { border: 1px solid #e0a800; background: #fff8e1; color: #5e4700; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; }
+    .setting-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-weight:600; font-size:14px; line-height:1.4; }
+    .setting-toggle input { width:auto; margin-top:3px; }
+    button:disabled { opacity:0.5; cursor:default; }
+    .dual-ct-card { border:1px solid #ccc; border-radius:8px; padding:10px; margin:12px 0; overflow-wrap:anywhere; }
+    .dual-ct-card table { width:100%; table-layout:fixed; font-size:12px; border-collapse:collapse; }
+    .dual-ct-card th, .dual-ct-card td { padding:5px; border:1px solid #ddd; vertical-align:top; overflow-wrap:anywhere; }
+    .secondary-action { background:#eee; color:#333; }
+    #dualCtWorkflowStatus, #dualCtExportKind { font-size:14px; line-height:1.5; }
   </style>
 </head>
 <body>
-  <h1>EcoFlow account</h1>
-  <p class="help">
-    Credentials come from the EcoFlow developer portal (developer.ecoflow.com &rarr; IoT Background).
-    Changing them here updates all paired EcoFlow devices.
-  </p>
+  <h1>EcoFlow STREAM</h1>
+  <p class="help" id="connectionIntro">Connect your devices using the account requested during pairing.</p>
+  <details class="settings-section" id="developerConnection">
+    <summary id="developerConnectionTitle">Developer API connection</summary>
+    <p class="help" id="developerConnectionHelp">For devices paired with EcoFlow Developer API keys. Updating these keys applies to devices using this connection.</p>
+    <label for="accessKey">Access Key</label>
+    <input id="accessKey" type="text" autocomplete="off" spellcheck="false" />
+    <label for="secretKey">Secret Key</label>
+    <input id="secretKey" type="password" autocomplete="off" spellcheck="false" />
+    <label for="host" id="regionLabel">Region</label>
+    <select id="host">
+      <option value="https://api.ecoflow.com">Global (api.ecoflow.com)</option>
+      <option value="https://api-e.ecoflow.com">Europe (api-e.ecoflow.com)</option>
+    </select>
+    <label class="setting-toggle" for="mqtt">
+      <input id="mqtt" type="checkbox" checked />
+      <span id="mqttLabel">Realtime updates</span>
+    </label>
+    <button id="save" type="button">Save</button>
+    <div class="saved" id="saved" role="status" aria-live="polite"></div>
+  </details>
 
-  <label for="accessKey">Access Key</label>
-  <input id="accessKey" type="text" autocomplete="off" spellcheck="false" />
-
-  <label for="secretKey">Secret Key</label>
-  <input id="secretKey" type="password" autocomplete="off" spellcheck="false" />
-
-  <label for="host">Region</label>
-  <select id="host">
-    <option value="https://api.ecoflow.com">Global (api.ecoflow.com)</option>
-    <option value="https://api-e.ecoflow.com">Europe (api-e.ecoflow.com)</option>
-  </select>
-
-  <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
-    <input id="mqtt" type="checkbox" style="width:auto;" checked />
-    Realtime updates (MQTT)
-  </label>
-
-  <button id="save" type="button">Save</button>
-  <div class="saved" id="saved"></div>
-
-  <hr style="margin:28px 0;border:0;border-top:1px solid #e3e3e3;" />
-
-  <h1 style="font-size:17px;">STREAM 5000 Series (Beta)</h1>
-  <div class="beta-warning">
-    <strong>Experimental, read-only integration</strong><br />
-    EcoFlow does not currently provide a supported public API for these products. This beta uses
-    the connection used by EcoFlow's mobile app. It may stop working, and the device model,
-    capabilities, Homey Energy behaviour, credentials or pairing may need to change when EcoFlow
-    releases its official API. Re-pairing may be required.
-  </div>
-  <label class="beta-toggle" for="stream5000BetaEnabled">
-    <input id="stream5000BetaEnabled" type="checkbox" />
-    <span>Enable STREAM 5000 beta pairing</span>
-  </label>
-  <p class="help">
-    Disabled by default. Turning this off later prevents new pairing only; it does not remove or
-    disable STREAM 5000 devices you already paired.
-  </p>
-  <div class="saved" id="stream5000BetaSaved"></div>
-  <div class="help" id="stream5000PairingHelp">
-    <p>Use these settings in the <strong>Homey EcoFlow integration</strong>, not in EcoFlow's own mobile app.</p>
-    <ol>
-      <li>Install a Homey app version that includes the beta choices. They are currently available in the
-        <a href="https://homey.app/a/uk.co.zarb.ecoflow/test/" target="_blank" rel="noopener noreferrer">Homey test version</a>.</li>
-      <li>Enable beta pairing above, then open <strong>Add device &rarr; EcoFlow STREAM Series</strong>.</li>
-      <li>Choose <strong>STREAM Home Battery (5000)</strong> once for the installation's Homey Energy readings.</li>
-      <li>Optionally choose <strong>STREAM 5000 Series Unit</strong> for a physical monitor, not a second Energy battery.</li>
-    </ol>
-    <p>This switch permits pairing only; it does not install or update the app or dynamically add device types.
-      If the two beta choices are missing, report the installed EcoFlow Homey app version, Homey OS version,
-      Homey mobile-app version and a screenshot of the device picker. Please do not delete existing devices
-      until the correct replacement is visible; deleting a device can affect its Flows and history.</p>
-  </div>
-  <p class="help">
-    Verified STREAM 5000-family units use EcoFlow's app connection because they are not available
-    through the supported public API. This beta supports STREAM AC 5000
-    (<code>ES22&hellip;</code>) and STREAM 5000 (<code>ES21&hellip;</code>) core battery monitoring.
-    ES21 still needs Homey hardware validation; direct PV/string tiles, expansion batteries,
-    STREAM 3000 and Gateway pairing are not enabled. Your EcoFlow <em>account</em> sign-in is stored separately from the
-    keys above. Monitoring only &mdash; controls are intentionally disabled and no commands are sent.
-    Removing the last STREAM 5000-family unit also clears it.
-  </p>
+  <h2 id="appConnectionTitle">EcoFlow app connection</h2>
+  <p class="help" id="appConnectionHelp">STREAM 5000 Series and Dual CT use your EcoFlow app account. Sign in when adding a device; Developer API keys are separate.</p>
   <p class="help" id="appAuthState" style="color:#555;">Checking&hellip;</p>
-  <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
-  <div class="saved" id="appAuthSaved"></div>
+  <details id="accountManagement">
+    <summary id="accountManagementTitle">Manage stored account</summary>
+    <p class="help" id="accountManagementHelp">To update the shared app sign-in, use Repair on an existing app-connected device. Removing this sign-in interrupts readings until an account is stored again. Developer API keys are kept separately.</p>
+    <button id="clearAppAuth" type="button" style="background:#c0392b;">Remove stored EcoFlow account</button>
+    <div class="saved" id="appAuthSaved" role="status" aria-live="polite"></div>
+  </details>
 
-  <h1 style="font-size:17px;">Setup and Energy diagnostics</h1>
+  <details class="settings-section" id="energySetup">
+    <summary id="energySetupTitle">Homey Energy</summary>
+    <p class="help" id="energyGridHelp">Use one whole-property grid meter in Homey Energy. A meter on a downstream circuit must not also count as the whole-property meter. Review each meter’s Energy settings before changing sources.</p>
+    <p class="help" id="energyBatteryHelp">Add one Home Battery per separate installation. Physical unit monitors provide device readings without contributing a second battery to Homey Energy. Capacity entered for app widgets does not set Homey Energy capacity.</p>
+    <div class="connection-notice" id="energyAvailability">Dual CT monitoring is available; its CT1 property Energy contribution is still being validated. STREAM 5000 battery monitoring is available; installation-level Homey Energy accounting is still being validated. Battery settings are managed in EcoFlow.</div>
+    <label class="setting-toggle" for="stream5000AggregatePairingEnabled">
+      <input id="stream5000AggregatePairingEnabled" type="checkbox" />
+      <span id="aggregatePairingLabel">Allow Home Battery (5000) Energy pairing</span>
+    </label>
+    <p class="help" id="aggregatePairingHelp">Off by default while installation Energy validation is in progress. This permits adding a new installation-level Home Battery only. Turning it off does not remove existing devices or stop their accounting. Check for overlap before adding a battery.</p>
+    <div class="saved" id="stream5000AggregateSaved" role="status" aria-live="polite"></div>
+    <p class="help" id="stream5000PairingHelp">Choose STREAM 5000 Home Battery once per independent battery system, STREAM 5000 Solar for each ES21 with directly connected panels, or STREAM 5000 Unit Monitor for individual readings.</p>
+  </details>
+
+  <details class="settings-section" id="supportPanel">
+    <summary id="supportTitle">Support and advanced diagnostics</summary>
+    <p class="help" id="supportIntro">Open a local support report or use an optional diagnostic tool when investigating a problem. Reports are never sent automatically. Review exported information before sharing.</p>
+    <details id="connectionDetails">
+      <summary id="connectionDetailsTitle">Connection details and supported devices</summary>
+      <p class="help" id="connectionDetailsHelp">STREAM 5000 (ES21) and STREAM AC 5000 (ES22) monitoring uses EcoFlow’s app service rather than its Developer API. Service changes can affect availability. Monitoring does not send control commands. Expansion batteries, STREAM 3000 and Gateway pairing are not available. Readings depend on model, configuration and fresh data.</p>
+    </details>
+    <p class="help" id="pairingSupportHelp">Missing a device choice? Check the installed app and Homey versions before changing devices.</p>
+    <h2 id="supportReportTitle">Integration report</h2>
+
   <p class="help">This local report shows the installed app and Homey versions, packaged/registered
-    battery drivers, beta pairing access, anonymous Energy accounting counters and observed battery
+    battery drivers, separate aggregate pairing access, anonymous Energy accounting counters and observed battery
     peer counts and which peer fields have been seen during this session. After opening an existing
-    beta pairing device list, it also includes a cached account inventory: model prefixes, counts and
+    app-connected pairing device list, it also includes a cached account inventory: model prefixes, counts and
     unverified product-category hints for expansion batteries, STREAM 3000, Gateway and Dual CT.
     You can cancel pairing without adding or deleting a device. The inventory is not an installation
     membership list; a missing expansion entry does not mean no expansion is connected. Possible overlap between Home Batteries is a review hint, not confirmed membership;
@@ -107,44 +101,738 @@
     A recent setting receipt is not proof that a command changed physical power. Copy it when reporting
     missing device choices or incorrect energy totals. Also include your Homey mobile-app version
     and a screenshot; this report cannot determine the mobile device picker or store channel.</p>
-  <button id="supportSnapshot" type="button">Show support report</button>
-  <button id="copySupportSnapshot" type="button" disabled>Copy report</button>
-  <p class="help">This displayed JSON report is separate from Homey's diagnostic log ID.
-    Click Show support report, then Copy report and paste the text into your support message
+  <p id="dualCtComparisonHelp"></p>
+  <button id="dualCtComparisonStep" type="button">Record comparison baseline</button>
+  <button id="dualCtSupportSummary" type="button">Show Dual CT support summary</button>
+  <button id="supportSnapshot" type="button">Show integration support report</button>
+  <button id="copySupportSnapshot" type="button" disabled>Copy integration support report</button>
+  <button id="downloadSupportSnapshot" type="button" disabled>Download integration JSON</button>
+  <button id="refreshReporterDiagnostics" type="button">Check current battery reporter (read-only)</button>
+  <details id="dualCtResearch">
+    <summary id="dualCtTitle">Dual CT research — opt-in, read-only</summary>
+    <p id="dualCtOverview">Two-minute read-only discovery using saved accounts. Default capture records structure only. Local numeric candidates are optional; sharing them requires additional consent. Energy, Flows and commands remain disabled.</p>
+    <details id="dualCtTechnical"><summary id="dualCtTechnicalTitle">How capture works and privacy</summary>
+    <p>This is not Dual CT pairing or meter support. Start checks the saved EcoFlow app and Developer
+      accounts once each, then listens for up to two minutes to at most two owned devices explicitly labelled
+      Smart Meter Dual CT in product metadata, or the provisionally observed app productType 421.
+      A display name alone never qualifies; shared devices are excluded. ProductType 421 is
+      admitted for discovery only, not verified readings or pairing.
+      It uses existing shared MQTT connections, which may affect an EcoFlow app session. Developer
+      observations require the device to appear in that account's inventory. At most three read-only
+      operations per identified meter check its quota and resolved host, using the existing request retry
+      policy; hosts must also be known STREAM
+      models in the same Developer inventory. A resolved host does not prove CT channel membership.
+      No commands, verified channel readings, Energy sources or Flows are enabled. By default only anonymous frame structure and
+      counts and allowlisted JSON key/types are retained in memory; no values, raw payloads, device names
+      or complete serials are saved. The report separates empty, unavailable and observed responses;
+      observed telemetry does not establish units, direction or channel roles. The separate optional
+      numeric preview retains unverified candidates in memory only, never in normal support exports.
+      A separate candidate export requires explicit consent and a manual Copy or Download action. It requires
+      valid model/message headers and a supported encoding interpretation. An omitted marker
+      is tested as an unverified zero/default candidate only after strict payload checks;
+      masked or unsupported markers remain blocked. Additional scalar fields have no assigned units or channel roles.
+      No reports are sent automatically. Afterwards use Show integration support report at your convenience.
+      No detected model or no frames is inconclusive: this path may not expose the meter directly.</p>
+    </details>
+    <h3 id="dualCtCaptureStep">1. Choose what to capture</h3>
+    <label class="setting-toggle"><input id="enableDualCtPreview" type="checkbox"><span id="dualCtPreviewOptIn"></span></label>
+    <label class="setting-toggle"><input id="enableDualCtCounters" type="checkbox" disabled><span id="dualCtCounterOptIn"></span></label>
+    <button id="startDualCtResearch" type="button">Start two-minute Dual CT discovery</button>
+    <p id="dualCtWorkflowStatus" role="status" aria-live="polite"></p>
+    <button id="stopDualCtResearch" class="secondary-action" type="button">Stop Dual CT discovery</button>
+    <button id="refreshDualCtResearch" class="secondary-action" type="button">Refresh local capture summary</button>
+    <p id="dualCtCaptureHelp" class="help">Let the capture run, then send one integration report when convenient. No timed screenshots are required.</p>
+    <p id="dualCtCaptureMode" role="status" aria-live="polite"></p>
+    <h3 id="dualCtExportStep">2. Review and export captured readings</h3>
+    <details id="dualCtPreviewPanel"><summary id="dualCtPreviewTitle">Read-only Dual CT preview</summary>
+      <button id="refreshDualCtPreview" class="secondary-action" type="button"></button>
+      <p id="dualCtDiagnosticState" class="help" role="status" aria-live="polite"></p>
+      <label class="setting-toggle"><input id="includeDualCtComparison" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtComparisonInclude"></span></label>
+      <p id="dualCtExportKind" role="status" aria-live="polite"></p>
+      <label class="setting-toggle"><input id="consentDualCtCandidateExport" type="checkbox" aria-describedby="dualCtExportAvailability" disabled><span id="dualCtCandidateConsent"></span></label>
+      <p id="dualCtExportAvailability" class="help" role="status" aria-live="polite"></p>
+      <button id="downloadDualCtCandidates" type="button" disabled></button>
+      <button id="copyDualCtCandidates" class="secondary-action" type="button" disabled></button>
+      <p id="dualCtCandidateShareStatus" role="status" aria-live="polite"></p>
+      <p id="dualCtCandidateHelp" class="help"></p>
+      <pre id="dualCtCandidateText" hidden></pre>
+      <p id="dualCtPreviewState" style="white-space:pre-wrap"></p>
+      <p id="dualCtBankState" class="help" style="white-space:pre-wrap" role="status" aria-live="polite"></p>
+      <details id="dualCtComparisonPanel"><summary id="dualCtComparisonTitle"></summary>
+        <div id="dualCtComparisonState"></div>
+      </details>
+    </details>
+    <details id="dualCtCompactPanel">
+      <summary id="dualCtCompactTitle">Technical diagnostics — no numeric readings</summary>
+      <p id="dualCtCompactHelp" class="help"></p>
+      <div id="dualCtResearchResult" role="status" aria-live="polite"></div>
+      <button id="copyDualCtCompact" class="secondary-action" type="button" disabled>Copy compact Dual CT report</button>
+      <button id="downloadDualCtCompact" class="secondary-action" type="button" disabled>Download compact Dual CT report</button>
+      <p id="dualCtShareStatus" role="status" aria-live="polite"></p>
+      <pre id="dualCtCompactText" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+    </details>
+  </details>
+  <p class="help">For general integration support only, not the Dual CT numeric export above:
+    this displayed integration JSON report is separate from Homey's diagnostic log ID.
+    Open this app's settings page, click Show integration support report, then Copy integration support report and paste the text into your support message
     (or a direct message). Review it for private information before sharing. Nothing is sent automatically.</p>
   <p id="supportCopyStatus" role="status" aria-live="polite"></p>
-  <p class="help">STREAM 5000 configuration tiles are read-only and refer to the subscribed unit's
-    reported settings, not verified installation-wide limits. Stale readings clear rather than showing
+  <details id="supportParts" hidden>
+    <summary id="supportPartsTitle">Download not working? Send the report in parts</summary>
+    <p id="supportPartsHelp" class="help"></p>
+    <p id="supportPartLabel" role="status" aria-live="polite"></p>
+    <textarea id="supportPartText" readonly aria-label="Integration report part" style="width:100%;box-sizing:border-box;height:180px;"></textarea>
+    <button id="supportPartPrevious" type="button">Previous part</button>
+    <button id="supportPartCopy" type="button">Copy this part</button>
+    <button id="supportPartNext" type="button">Next part</button>
+  </details>
+  <p id="supportCaptureStatus" class="help" role="status" aria-live="polite"></p>
+  <h2 id="supportCaptureGuideTitle" style="font-size:17px;">Capture a matching support set</h2>
+  <div id="supportCaptureGuide" class="help"></div>
+  <p class="help" id="monitoringTrialHelp"></p>
+  <h2 id="reporterStatusTitle" style="font-size:17px;">Battery reporter readiness</h2>
+  <div id="reporterStatus" role="status" aria-live="polite"></div>
+  <p class="help" id="reporterHelp">The optional reporter check makes a read-only EcoFlow API request for each existing original Home Battery (up to eight).
+    It does not change devices, controls, counters or grouping. A match is not proof of installation-wide reporting.
+    Do not delete or re-pair devices while investigating. Homey's Create diagnostic report button supplies a separate app-log ID; please send both.</p>
+  <p class="help" id="reporterCheckHelp"></p>
+  <p class="help">STREAM 5000 configuration tiles display the subscribed unit's reported settings.
+    Manage battery settings in EcoFlow; installation-wide limits are not verified. Stale readings clear rather than showing
     zero. Physical monitors can show direct MPPT/string and backup-socket readings after those
     accessories have produced a positive reading; these do not add another Homey Energy source.</p>
-  <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
+  <h2 id="meterStatusTitle" style="font-size:17px;">Smart Meter readings</h2>
+  <p id="meterStatusHelp" class="help"></p>
+  <div id="meterStatus" role="status" aria-live="polite"></div>
+  <details id="technicalReport"><summary id="technicalReportTitle">Technical report (optional)</summary>
+    <pre id="supportSnapshotResult" role="status" aria-live="polite"></pre>
+  </details>
 
+  <script src="meter-status.js"></script>
+  <details id="coordinationPanel">
+    <summary id="coordinationTitle">Advanced energy coordination</summary>
+    <div id="coordinationWorkspace"></div>
+  </details>
+  </details>
+  <script src="coordination-settings.js"></script>
+  <script src="reporter-status.js"></script>
+  <script src="dual-ct-contract.js"></script>
+  <script src="dual-ct-status.js"></script>
+  <script src="dual-ct-comparison.js"></script>
   <script type="text/javascript">
     function onHomeyReady(Homey) {
       Homey.ready();
+      [
+        'connectionIntro', 'developerConnectionTitle', 'developerConnectionHelp', 'regionLabel', 'mqttLabel',
+        'appConnectionTitle', 'appConnectionHelp', 'accountManagementTitle', 'accountManagementHelp',
+        'energySetupTitle', 'energyGridHelp', 'energyBatteryHelp', 'energyAvailability', 'aggregatePairingLabel',
+        'aggregatePairingHelp', 'stream5000PairingHelp', 'supportTitle', 'supportIntro',
+        'connectionDetailsTitle', 'connectionDetailsHelp', 'supportReportTitle', 'pairingSupportHelp',
+      ].forEach(function (id) {
+        document.getElementById(id).textContent = Homey.__('settings.setup.' + id);
+      });
+      if (window.EcoFlowCoordinationSettings) window.EcoFlowCoordinationSettings.mount(document.getElementById('coordinationWorkspace'), Homey);
       Homey.get('accessKey', function (err, v) { if (!err && v) document.getElementById('accessKey').value = v; });
       Homey.get('secretKey', function (err, v) { if (!err && v) document.getElementById('secretKey').value = v; });
       Homey.get('host', function (err, v) { if (!err && v) document.getElementById('host').value = v; });
       Homey.get('mqtt_enabled', function (err, v) { if (!err && v === false) document.getElementById('mqtt').checked = false; });
-      document.getElementById('stream5000BetaEnabled').checked = false;
-      Homey.get('stream5000BetaEnabled', function (err, v) {
-        if (!err) document.getElementById('stream5000BetaEnabled').checked = v === true;
+      document.getElementById('stream5000AggregatePairingEnabled').checked = false;
+      var aggregatePairingTouched = false;
+      Homey.get('stream5000AggregatePairingEnabled', function (err, v) {
+        if (!err && !aggregatePairingTouched) document.getElementById('stream5000AggregatePairingEnabled').checked = v === true;
       });
 
       // The stored account password is never read back into this page.
       function refreshAppAuthState() {
         Homey.get('appAuthEmail', function (err, v) {
           document.getElementById('appAuthState').textContent = (!err && v)
-            ? 'Signed in as ' + v + '.'
-            : 'No EcoFlow account stored.';
+            ? Homey.__('settings.setup.accountStored') + ' ' + v + '.'
+            : Homey.__('settings.setup.accountMissing');
         });
       }
       refreshAppAuthState();
 
+      var dualCtOperation = 0;
+      var dualCtDeadline;
+      var dualCtCompact = null;
+      var previewOperation = 0;
+      var previewDeadline;
+      var previewExpiry;
+      var previewSnapshot = null;
+      var previewReadAt = 0;
+      var candidateExpiry;
+      var candidateSnapshot = null;
+      var candidateReport = null;
+      var candidateReadAt = 0;
+      var candidateCaptureId = null;
+      var comparisonSnapshot = null;
+      var comparisonTimer;
+      var comparisonNotes = [];
+      var candidateAvailability = 'not_loaded';
+      var comparisonDefaultCaptureId = null;
+      var completionRefreshTimer;
+      var completionRefreshCaptureId = null;
+      var completionRefreshUsed = false;
+      var completionRefreshGeneration = 0;
+      function cancelCompletionRefresh() {
+        completionRefreshGeneration++;
+        clearTimeout(completionRefreshTimer);
+        completionRefreshTimer = null;
+        completionRefreshCaptureId = null;
+      }
+      function scheduleCompletionRefresh(evidence) {
+        var research = evidence?.research;
+        var id = evidence?.preview?.captureId;
+        var age = research?.captureAgeSec;
+        if (completionRefreshUsed || research?.previewDiagnostics?.enabled !== true
+          || !['discovering', 'listening'].includes(research?.status)
+          || typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id)
+          || !Number.isFinite(age) || age < 0 || age >= 120) return;
+        completionRefreshCaptureId = id;
+        var generation = completionRefreshGeneration;
+        // One local read after an explicitly started numeric capture. Never poll,
+        // discover, renew retention, restart a capture or opt into sharing.
+        completionRefreshTimer = setTimeout(function () {
+          completionRefreshTimer = null;
+          if (generation !== completionRefreshGeneration || completionRefreshCaptureId !== id || completionRefreshUsed) return;
+          completionRefreshUsed = true;
+          completionRefreshCaptureId = null;
+          dualCtAction('refresh', id);
+        }, Math.ceil((120 - age) * 1000) + 250);
+      }
+      function renderCandidateAvailability() {
+        document.getElementById('includeDualCtComparison').disabled = !candidateSnapshot || !comparisonSnapshot;
+        document.getElementById('consentDualCtCandidateExport').disabled = !candidateSnapshot;
+        document.getElementById('dualCtExportAvailability').textContent = Homey.__('settings.dual_ct.export_' + candidateAvailability);
+        var combined = !!comparisonSnapshot && document.getElementById('includeDualCtComparison').checked;
+        document.getElementById('dualCtExportKind').textContent = candidateSnapshot
+          ? Homey.__('settings.dual_ct.' + (combined ? 'numeric_combined_identity' : 'numeric_scalar_identity')) : '';
+        document.getElementById('downloadDualCtCandidates').textContent = Homey.__('settings.dual_ct.'
+          + (combined ? 'numeric_combined_download' : 'candidate_download'));
+      }
+      function renderComparisonView() {
+        clearTimeout(comparisonTimer);
+        var elapsed = Date.now() - candidateReadAt;
+        var view = comparisonSnapshot && elapsed >= 0 ? window.EcoFlowDualCtComparison.age(comparisonSnapshot, elapsed / 1000, true) : null;
+        var ttl = window.EcoFlowDualCtComparison.render(document.getElementById('dualCtComparisonState'), view,
+          function (key) { return Homey.__('settings.dual_ct.' + key); }, function (note) {
+            comparisonNotes = comparisonNotes.filter(function (row) { return row.deviceIndex !== note.deviceIndex || row.bank !== note.bank; });
+            comparisonNotes.push(note);
+            comparisonSnapshot = window.EcoFlowDualCtComparison.comparisonView(comparisonSnapshot, comparisonNotes);
+            document.getElementById('consentDualCtCandidateExport').checked = false;
+            prepareCandidateExport();
+            renderComparisonView();
+          });
+        if (ttl) comparisonTimer = setTimeout(renderComparisonView, Math.max(1, Math.ceil(ttl)));
+      }
+      function clearCandidateExport(reason, availability) {
+        clearTimeout(candidateExpiry);
+        candidateSnapshot = null;
+        comparisonSnapshot = null;
+        comparisonNotes = [];
+        clearTimeout(comparisonTimer);
+        document.getElementById('dualCtComparisonState').textContent = '';
+        document.getElementById('includeDualCtComparison').checked = false;
+        document.getElementById('consentDualCtCandidateExport').checked = false;
+        document.getElementById('consentDualCtCandidateExport').disabled = true;
+        document.getElementById('dualCtBankState').textContent = '';
+        document.getElementById('dualCtDiagnosticState').textContent = reason
+          ? Homey.__('settings.dual_ct.' + reason) : '';
+        candidateAvailability = availability || (reason === 'candidate_snapshot_expired' ? 'expired' : 'no_snapshot');
+        renderCandidateAvailability();
+      }
+      function renderCaptureMode(evidence) {
+        var active = ['discovering', 'listening'].includes(evidence?.status);
+        var enabled = evidence?.previewDiagnostics?.enabled;
+        var checkbox = document.getElementById('enableDualCtPreview');
+        checkbox.disabled = active;
+        if (active && typeof enabled === 'boolean') checkbox.checked = enabled;
+        var counter = document.getElementById('enableDualCtCounters');
+        counter.disabled = active || !checkbox.checked;
+        if (active) counter.checked = enabled === true && evidence?.previewDiagnostics?.counterResearch?.enabled === true;
+        var mode = document.getElementById('dualCtCaptureMode');
+        mode.textContent = evidence ? Homey.__('settings.dual_ct.' + (enabled === true ? 'capture_mode_numeric'
+          : enabled === false ? 'capture_mode_structure' : 'capture_mode_unknown')) : '';
+        if (active) mode.textContent += ' ' + Homey.__('settings.dual_ct.capture_mode_locked');
+        if (evidence?.captureStart?.requiresRestart === true) mode.textContent += ' ' + Homey.__('settings.dual_ct.capture_mode_mismatch');
+        document.getElementById('dualCtWorkflowStatus').textContent = Homey.__('settings.dual_ct.'
+          + (active ? enabled === true ? completionRefreshUsed ? 'workflow_numeric_manual' : 'workflow_numeric_running' : 'workflow_structure_running'
+            : ['stopped', 'account_changed'].includes(evidence?.status) ? 'export_' + evidence.status
+            : evidence?.valuesCaptured === true && ['complete', 'sample_limit'].includes(evidence?.status)
+              ? 'workflow_complete' : 'workflow_idle'));
+        renderCaptureStartLabel();
+      }
+      function renderCaptureStartLabel() {
+        document.getElementById('startDualCtResearch').textContent = Homey.__('settings.dual_ct.'
+          + (document.getElementById('enableDualCtPreview').checked ? 'numeric_start' : 'start'));
+      }
+      function prepareCandidateExport() {
+        candidateReport = null;
+        document.getElementById('dualCtCandidateShareStatus').textContent = '';
+        var consent = document.getElementById('consentDualCtCandidateExport');
+        var elapsed = Date.now() - candidateReadAt;
+        if (candidateSnapshot && (elapsed < 0 || elapsed >= candidateSnapshot.retentionRemainingSec * 1000)) {
+          clearCandidateExport('candidate_snapshot_expired', elapsed < 0 ? 'clock_changed' : 'expired');
+        }
+        renderCandidateAvailability();
+        if (consent.checked === true && candidateSnapshot && elapsed >= 0) {
+          var aged = JSON.parse(JSON.stringify(candidateSnapshot));
+          aged.devices.forEach(function (device) { device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; }); });
+          aged.retainedForSec += elapsed / 1000;
+          aged.retentionRemainingSec -= elapsed / 1000;
+          aged.lastPacketAgeSec += elapsed / 1000;
+          ageBankChecks(aged.bankChecks, elapsed / 1000);
+          candidateReport = window.EcoFlowDualCtStatus.diagnosticExport({ ...aged,
+            diagnosticSnapshot: { ...aged, kind: 'historical_capture' } });
+          if (document.getElementById('includeDualCtComparison').checked) {
+            var comparison = comparisonSnapshot && window.EcoFlowDualCtComparison.age(comparisonSnapshot, elapsed / 1000, true);
+            candidateReport = comparison ? window.EcoFlowDualCtComparison.comparisonExport(comparison, comparisonNotes) : null;
+          }
+        }
+        var text = document.getElementById('dualCtCandidateText');
+        text.textContent = candidateReport ? (candidateReport.reportType === 'dual_ct_comparison'
+          ? window.EcoFlowDualCtComparison.serialize(candidateReport) : JSON.stringify(candidateReport, null, 2)) : '';
+        text.hidden = !candidateReport;
+        document.getElementById('copyDualCtCandidates').disabled = !candidateReport;
+        document.getElementById('downloadDualCtCandidates').disabled = !candidateReport;
+      }
+      function ageBankChecks(checks, seconds) {
+        if (Array.isArray(checks)) checks.forEach(function (entry) {
+          [entry.latest, entry.lastComplete].forEach(function (check) { if (check) check.receivedAgeSec += seconds; });
+        });
+      }
+      function renderBankChecks() {
+        var checks = candidateSnapshot?.bankChecks || [];
+        document.getElementById('dualCtBankState').textContent = checks.length
+          ? Homey.__('settings.dual_ct.bank_warning') + '\n' + checks.map(function (entry) {
+            var latest = entry.latest;
+            var text = Homey.__('settings.dual_ct.meter') + ' ' + (entry.deviceIndex + 1) + ' · '
+              + Homey.__('settings.dual_ct.bank_candidate') + ' ' + entry.bank + ' · '
+              + Homey.__('settings.dual_ct.bank_latest') + ' #' + latest.packetIndex + ': '
+              + Homey.__('settings.dual_ct.bank_' + latest.status);
+            if (entry.lastComplete) text += ' · ' + Homey.__('settings.dual_ct.bank_last_complete') + ' #'
+              + entry.lastComplete.packetIndex + ': ' + Homey.__('settings.dual_ct.bank_' + entry.lastComplete.status);
+            return text;
+          }).join('\n') : '';
+      }
+      function clearDualCtPreview(reason, preserveConsent) {
+        if (['request_failed', 'stopped', 'account_changed', 'transport_unavailable', 'discovery_unavailable'].includes(reason)) cancelCompletionRefresh();
+        if (['request_failed', 'stopped', 'account_changed'].includes(reason)) {
+          document.getElementById('dualCtWorkflowStatus').textContent = Homey.__('settings.dual_ct.export_' + reason);
+        }
+        previewOperation++;
+        clearTimeout(previewDeadline);
+        clearTimeout(previewExpiry);
+        clearTimeout(candidateExpiry);
+        clearTimeout(comparisonTimer);
+        comparisonSnapshot = null;
+        document.getElementById('dualCtComparisonState').textContent = '';
+        previewSnapshot = null;
+        candidateSnapshot = null;
+        if (!preserveConsent) {
+          comparisonDefaultCaptureId = null;
+          document.getElementById('consentDualCtCandidateExport').checked = false;
+          candidateCaptureId = null;
+          comparisonNotes = [];
+          document.getElementById('includeDualCtComparison').checked = false;
+        }
+        document.getElementById('consentDualCtCandidateExport').disabled = true;
+        document.getElementById('dualCtCandidateShareStatus').textContent = '';
+        document.getElementById('dualCtDiagnosticState').textContent = '';
+        document.getElementById('dualCtBankState').textContent = '';
+        candidateAvailability = ({ request_failed: 'request_failed', stopped: 'stopped', account_changed: 'account_changed',
+          transport_unavailable: 'capture_unavailable', discovery_unavailable: 'capture_unavailable', refreshing: 'refreshing',
+          starting: 'starting' })[reason] || 'not_loaded';
+        prepareCandidateExport();
+        window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), { reason: reason },
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+      }
+      function renderDualCt(evidence, preservePreview) {
+        dualCtCompact = evidence ? window.EcoFlowDualCtStatus.compact(evidence, evidence.appVersion) : null;
+        document.getElementById('dualCtShareStatus').textContent = '';
+        renderCaptureMode(evidence);
+        if (!preservePreview || !evidence || ['stopped', 'account_changed', 'not_started', 'discovery_unavailable', 'transport_unavailable'].includes(evidence.status)) clearDualCtPreview(evidence?.status);
+        document.getElementById('dualCtCompactText').textContent = dualCtCompact ? JSON.stringify(dualCtCompact, null, 2) : '';
+        document.getElementById('copyDualCtCompact').disabled = !dualCtCompact;
+        document.getElementById('downloadDualCtCompact').disabled = !dualCtCompact;
+        window.EcoFlowDualCtStatus.render(document.getElementById('dualCtResearchResult'), evidence,
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+        if (dualCtCompact?.structureOmitted) {
+          var coverage = document.createElement('p');
+          coverage.textContent = Homey.__('settings.dual_ct.structure_partial') + ' '
+            + dualCtCompact.structureCoverage.fieldsIncluded + '/' + dualCtCompact.structureCoverage.fieldsAvailable;
+          document.getElementById('dualCtResearchResult').appendChild(coverage);
+        }
+        if (dualCtCompact?.metadataOmitted) {
+          var trimmed = document.createElement('p');
+          trimmed.textContent = Homey.__('settings.dual_ct.metadata_trimmed');
+          document.getElementById('dualCtResearchResult').appendChild(trimmed);
+        }
+      }
+      document.getElementById('dualCtTitle').textContent = Homey.__('settings.dual_ct.title');
+      document.getElementById('dualCtOverview').textContent = Homey.__('settings.dual_ct.overview');
+      document.getElementById('dualCtTechnicalTitle').textContent = Homey.__('settings.dual_ct.technical_title');
+      document.getElementById('dualCtCaptureStep').textContent = Homey.__('settings.dual_ct.capture_step');
+      document.getElementById('dualCtExportStep').textContent = Homey.__('settings.dual_ct.export_step');
+      document.getElementById('dualCtCompactTitle').textContent = Homey.__('settings.dual_ct.compact_title');
+      document.getElementById('dualCtCompactHelp').textContent = Homey.__('settings.dual_ct.compact_help');
+      document.getElementById('dualCtWorkflowStatus').textContent = Homey.__('settings.dual_ct.workflow_idle');
+      document.getElementById('startDualCtResearch').textContent = Homey.__('settings.dual_ct.start');
+      document.getElementById('stopDualCtResearch').textContent = Homey.__('settings.dual_ct.stop');
+      document.getElementById('refreshDualCtResearch').textContent = Homey.__('settings.dual_ct.refresh');
+      document.getElementById('dualCtCaptureHelp').textContent = Homey.__('settings.dual_ct.capture_help');
+      document.getElementById('copyDualCtCompact').textContent = Homey.__('settings.dual_ct.compact_copy');
+      document.getElementById('downloadDualCtCompact').textContent = Homey.__('settings.dual_ct.compact_download');
+      document.getElementById('dualCtPreviewTitle').textContent = Homey.__('settings.dual_ct.preview_title');
+      document.getElementById('dualCtPreviewOptIn').textContent = Homey.__('settings.dual_ct.preview_opt_in');
+      document.getElementById('enableDualCtPreview').checked = false;
+      document.getElementById('enableDualCtCounters').checked = false;
+      document.getElementById('includeDualCtComparison').checked = false;
+      document.getElementById('dualCtCounterOptIn').textContent = Homey.__('settings.dual_ct.counter_opt_in');
+      document.getElementById('dualCtComparisonTitle').textContent = Homey.__('settings.dual_ct.comparison_title');
+      document.getElementById('dualCtComparisonInclude').textContent = Homey.__('settings.dual_ct.comparison_include');
+      document.getElementById('enableDualCtPreview').addEventListener('change', function () {
+        var counter = document.getElementById('enableDualCtCounters');
+        counter.disabled = !this.checked;
+        if (!this.checked) counter.checked = false;
+        renderCaptureStartLabel();
+      });
+      document.getElementById('includeDualCtComparison').addEventListener('change', function () {
+        document.getElementById('consentDualCtCandidateExport').checked = false;
+        prepareCandidateExport();
+      });
+      document.getElementById('refreshDualCtPreview').textContent = Homey.__('settings.dual_ct.preview_refresh');
+      document.getElementById('dualCtCandidateConsent').textContent = Homey.__('settings.dual_ct.candidate_consent');
+      document.getElementById('dualCtCandidateHelp').textContent = Homey.__('settings.dual_ct.candidate_help');
+      document.getElementById('copyDualCtCandidates').textContent = Homey.__('settings.dual_ct.candidate_copy');
+      document.getElementById('downloadDualCtCandidates').textContent = Homey.__('settings.dual_ct.candidate_download');
+      document.getElementById('consentDualCtCandidateExport').addEventListener('change', prepareCandidateExport);
+      document.getElementById('copyDualCtCandidates').addEventListener('click', async function () {
+        prepareCandidateExport();
+        if (!candidateReport) return;
+        var report = candidateReport;
+        try {
+          await navigator.clipboard.writeText(report.reportType === 'dual_ct_comparison'
+            ? window.EcoFlowDualCtComparison.serialize(report) : JSON.stringify(report, null, 2));
+          if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copied');
+        } catch {
+          if (candidateReport === report) document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback');
+        }
+      });
+      document.getElementById('downloadDualCtCandidates').addEventListener('click', function () {
+        prepareCandidateExport();
+        if (!candidateReport) return;
+        try {
+          var downloadable = candidateReport.reportType === 'dual_ct_comparison'
+            ? JSON.parse(window.EcoFlowDualCtComparison.serialize(candidateReport)) : candidateReport;
+          window.EcoFlowReporterStatus.download(downloadable, document, URL, Blob);
+          document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_download_requested');
+        } catch { document.getElementById('dualCtCandidateShareStatus').textContent = Homey.__('settings.dual_ct.candidate_copy_fallback'); }
+      });
+      renderDualCt(null);
+      function renderLocalPreview() {
+        clearTimeout(previewExpiry);
+        if (!previewSnapshot) return;
+        var elapsed = Date.now() - previewReadAt;
+        if (elapsed < 0) { clearDualCtPreview('request_failed'); return; }
+        var aged = JSON.parse(JSON.stringify(previewSnapshot));
+        var hadRows = aged.devices.some(function (device) { return device.readings.length; });
+        aged.devices.forEach(function (device) { device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; }); });
+        aged.devices.forEach(function (device) { device.readings = device.readings.filter(function (row) { return row.receivedAgeSec >= 0 && row.receivedAgeSec < 90; }); });
+        aged.devices = aged.devices.filter(function (device) { return device.readings.length; });
+        if (hadRows && !aged.devices.length) aged.reason = 'expired';
+        previewSnapshot = aged;
+        previewReadAt = Date.now();
+        // Re-render at each field deadline; do not clear newer fields or historical evidence.
+        var ttl = window.EcoFlowDualCtStatus.renderPreview(document.getElementById('dualCtPreviewState'), aged,
+          function (key) { return Homey.__('settings.dual_ct.' + key); });
+        if (ttl) previewExpiry = setTimeout(renderLocalPreview, Math.max(1, Math.ceil(ttl)));
+      }
+      function applyDualCtPreview(evidence, requestedAt) {
+        var elapsed = Date.now() - requestedAt;
+        if (elapsed < 0 || elapsed >= 20000) { clearDualCtPreview('request_failed'); return; }
+        var id = typeof evidence?.captureId === 'string' && /^[0-9a-f-]{36}$/.test(evidence.captureId) ? evidence.captureId : null;
+        if (completionRefreshCaptureId && id !== completionRefreshCaptureId) cancelCompletionRefresh();
+        if (!id || id !== candidateCaptureId) {
+          document.getElementById('consentDualCtCandidateExport').checked = false;
+          comparisonNotes = [];
+          document.getElementById('includeDualCtComparison').checked = false;
+        }
+        candidateCaptureId = id;
+        // Account for request transit time; receipt age is not measurement age.
+        if (Array.isArray(evidence?.devices)) evidence.devices.forEach(function (device) {
+          if (Array.isArray(device?.readings)) device.readings.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+        });
+        if (evidence?.diagnosticSnapshot) {
+          evidence.diagnosticSnapshot.retainedForSec += elapsed / 1000;
+          evidence.diagnosticSnapshot.retentionRemainingSec -= elapsed / 1000;
+          evidence.diagnosticSnapshot.lastPacketAgeSec += elapsed / 1000;
+          ageBankChecks(evidence.diagnosticSnapshot.bankChecks, elapsed / 1000);
+          evidence.diagnosticSnapshot.counterRecords?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+          evidence.diagnosticSnapshot.counterContinuity?.records?.forEach(function (row) {
+            row.receivedAgeSec += elapsed / 1000;
+            if (Number.isFinite(row.lastPacketAgeSec)) row.lastPacketAgeSec += elapsed / 1000;
+          });
+          evidence.diagnosticSnapshot.devices?.forEach(function (device) {
+            device.readings?.forEach(function (row) { row.receivedAgeSec += elapsed / 1000; });
+          });
+        }
+        document.getElementById('dualCtPreviewPanel').open = true;
+        previewSnapshot = { enabled: evidence?.enabled, reason: evidence?.reason, interpretation: evidence?.interpretation,
+          unitsVerified: evidence?.unitsVerified, directionVerified: evidence?.directionVerified,
+          devices: Array.isArray(evidence?.devices) ? evidence.devices : [] };
+        previewReadAt = Date.now();
+        renderLocalPreview();
+        candidateSnapshot = id ? window.EcoFlowDualCtStatus.diagnosticExport(evidence) : null;
+        comparisonSnapshot = id ? window.EcoFlowDualCtComparison.comparisonView(evidence, comparisonNotes) : null;
+        candidateReadAt = Date.now();
+        candidateAvailability = window.EcoFlowDualCtStatus.candidateExportAvailability(evidence, !!candidateSnapshot, !!comparisonSnapshot);
+        if (!comparisonSnapshot) document.getElementById('includeDualCtComparison').checked = false;
+        else if (comparisonDefaultCaptureId !== id) {
+          // Format is a default, not collection or sharing consent. Consent stays
+          // unchecked and no report is prepared until the user explicitly agrees.
+          document.getElementById('includeDualCtComparison').checked = true;
+          comparisonDefaultCaptureId = id;
+        }
+        if (candidateSnapshot) {
+          document.getElementById('dualCtDiagnosticState').textContent = Homey.__('settings.dual_ct.candidate_snapshot_ready');
+          candidateExpiry = setTimeout(function () {
+            clearCandidateExport('candidate_snapshot_expired'); prepareCandidateExport();
+          }, Math.ceil(candidateSnapshot.retentionRemainingSec * 1000));
+        } else clearCandidateExport(undefined, candidateAvailability);
+        renderBankChecks();
+        renderComparisonView();
+        prepareCandidateExport();
+      }
+      document.getElementById('refreshDualCtPreview').addEventListener('click', function () {
+        clearDualCtPreview('refreshing', true);
+        var operation = previewOperation;
+        var requestedAt = Date.now();
+        previewDeadline = setTimeout(function () { clearDualCtPreview('request_failed'); }, 20000);
+        Homey.api('GET', '/dual-ct-preview', null, function (err, evidence) {
+          if (operation !== previewOperation) return;
+          clearTimeout(previewDeadline);
+          previewOperation++;
+          if (err) { clearDualCtPreview('request_failed'); return; }
+          applyDualCtPreview(evidence, requestedAt);
+        });
+      });
+      document.getElementById('copyDualCtCompact').addEventListener('click', async function () {
+        if (!dualCtCompact) return;
+        var reportToCopy = dualCtCompact;
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(reportToCopy, null, 2));
+          if (dualCtCompact === reportToCopy) document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copied');
+        } catch {
+          if (dualCtCompact === reportToCopy) document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback');
+        }
+      });
+      document.getElementById('downloadDualCtCompact').addEventListener('click', function () {
+        if (!dualCtCompact) return;
+        try {
+          window.EcoFlowReporterStatus.download(dualCtCompact, document, URL, Blob);
+          document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.download_requested');
+        } catch { document.getElementById('dualCtShareStatus').textContent = Homey.__('settings.dual_ct.copy_fallback'); }
+      });
+      function dualCtAction(action, automaticCaptureId) {
+        var numericStartRequested = action === 'start' && document.getElementById('enableDualCtPreview').checked === true;
+        if (action !== 'refresh') {
+          cancelCompletionRefresh();
+          completionRefreshUsed = false;
+          comparisonDefaultCaptureId = null;
+        }
+        clearDualCtPreview(action === 'refresh' ? 'refreshing' : action === 'start' ? 'starting' : 'stopped', action === 'refresh');
+        dualCtCompact = null;
+        document.getElementById('dualCtCompactText').textContent = '';
+        document.getElementById('copyDualCtCompact').disabled = true;
+        document.getElementById('downloadDualCtCompact').disabled = true;
+        var operation = ++dualCtOperation;
+        var previewGeneration = previewOperation;
+        var requestedAt = Date.now();
+        var startAcknowledged = false;
+        clearTimeout(dualCtDeadline);
+        var result = document.getElementById('dualCtResearchResult');
+        var start = document.getElementById('startDualCtResearch');
+        start.disabled = true;
+        document.getElementById('enableDualCtPreview').disabled = true;
+        document.getElementById('enableDualCtCounters').disabled = true;
+        result.textContent = Homey.__('settings.dual_ct.' + (action === 'start' ? 'discovering' : action === 'refresh' ? 'refreshing' : 'stopping'));
+        dualCtDeadline = setTimeout(function () {
+          if (operation !== dualCtOperation) return;
+          dualCtOperation++;
+          start.disabled = false;
+          clearDualCtPreview('request_failed');
+          result.textContent = Homey.__('settings.dual_ct.timeout');
+        }, 20000);
+        function finish(err, evidence, captureStart) {
+          if (operation !== dualCtOperation) return;
+          clearTimeout(dualCtDeadline);
+          dualCtOperation++;
+          start.disabled = false;
+          if (err) { cancelCompletionRefresh(); clearDualCtPreview('request_failed'); result.textContent = Homey.__('settings.dual_ct.error'); return; }
+          if (action === 'stop') { renderDualCt(evidence); return; }
+          var id = evidence?.preview?.captureId;
+          if ((automaticCaptureId && id !== automaticCaptureId)
+            || (completionRefreshCaptureId && id !== completionRefreshCaptureId)) {
+            cancelCompletionRefresh();
+            if (automaticCaptureId) { clearDualCtPreview('account_changed'); return; }
+          }
+          if (!['discovering', 'listening'].includes(evidence?.research?.status)) cancelCompletionRefresh();
+          var showPreview = previewGeneration === previewOperation;
+          renderDualCt({ ...evidence?.research, captureStart: captureStart }, true);
+          if (showPreview) applyDualCtPreview(evidence?.preview, requestedAt);
+          if (numericStartRequested && !captureStart?.requiresRestart && !captureStart?.superseded) scheduleCompletionRefresh(evidence);
+        }
+        Homey.api(action === 'refresh' ? 'GET' : 'POST', action === 'refresh' ? '/dual-ct-research/view' : '/dual-ct-research/' + action,
+          action === 'refresh' ? null : action === 'start'
+            ? { previewEnabled: document.getElementById('enableDualCtPreview').checked === true,
+              counterPreviewEnabled: document.getElementById('enableDualCtPreview').checked === true && document.getElementById('enableDualCtCounters').checked === true } : {}, function (err, evidence) {
+          if (operation !== dualCtOperation) return;
+          if (err || action !== 'start') { finish(err, evidence); return; }
+          if (startAcknowledged) return;
+          startAcknowledged = true;
+          // One explicit Start also shows its effective local preview; no background polling.
+          Homey.api('GET', '/dual-ct-research/view', null, function (viewError, view) { finish(viewError, view, evidence?.captureStart); });
+        });
+      }
+      document.getElementById('startDualCtResearch').addEventListener('click', function () { dualCtAction('start'); });
+      document.getElementById('stopDualCtResearch').addEventListener('click', function () { dualCtAction('stop'); });
+      document.getElementById('refreshDualCtResearch').addEventListener('click', function () { dualCtAction('refresh'); });
+      function invalidateDualCtView() {
+        cancelCompletionRefresh();
+        dualCtOperation++;
+        clearTimeout(dualCtDeadline);
+        document.getElementById('startDualCtResearch').disabled = false;
+        document.getElementById('enableDualCtPreview').checked = false;
+        document.getElementById('enableDualCtCounters').checked = false;
+        renderDualCt(null);
+        candidateAvailability = 'account_changed';
+        renderCandidateAvailability();
+      }
+
       var reportText = '';
+      var displayedReport = null;
+      var reportBusy = false;
+      var reportOperation = 0;
+      var reportDeadline = null;
+      var captureTimer = null;
+      var reportParts = [];
+      var reportPartIndex = 0;
+      var comparisonSnapshots = [];
+      var comparisonStartedAt = null;
+      var comparisonButton = document.getElementById('dualCtComparisonStep');
+      function renderComparisonStep() {
+        var step = comparisonSnapshots.length % 3;
+        comparisonButton.textContent = Homey.__('settings.support.comparison_step_' + step);
+        document.getElementById('dualCtComparisonHelp').textContent = Homey.__('settings.support.comparison_help_' + step);
+      }
+      renderComparisonStep();
+      var dualCtSummaryButton = document.getElementById('dualCtSupportSummary');
+      dualCtSummaryButton.textContent = Homey.__('settings.support.dual_ct_summary');
+      var showButton = document.getElementById('supportSnapshot');
+      var checkButton = document.getElementById('refreshReporterDiagnostics');
+      var downloadButton = document.getElementById('downloadSupportSnapshot');
       var copyButton = document.getElementById('copySupportSnapshot');
       var copyStatus = document.getElementById('supportCopyStatus');
+      document.getElementById('supportSnapshot').textContent = Homey.__('settings.support.show');
+      copyButton.textContent = Homey.__('settings.support.copy');
+      downloadButton.textContent = Homey.__('settings.reporter.download');
+      document.getElementById('reporterStatusTitle').textContent = Homey.__('settings.reporter.title');
+      document.getElementById('refreshReporterDiagnostics').textContent = Homey.__('settings.support.check');
+      document.getElementById('reporterHelp').textContent = Homey.__('settings.support.instructions');
+      document.getElementById('reporterCheckHelp').textContent = Homey.__('settings.support.check_scope');
+      document.getElementById('technicalReportTitle').textContent = Homey.__('settings.support.technical');
+      document.getElementById('monitoringTrialHelp').textContent = Homey.__('settings.monitoring_trial.help');
+      document.getElementById('supportCaptureGuideTitle').textContent = Homey.__('settings.reporter.capture_guide_title');
+      document.getElementById('meterStatusTitle').textContent = Homey.__('settings.meter.title');
+      document.getElementById('meterStatusHelp').textContent = Homey.__('settings.meter.help');
+      ['Title', 'Help', 'Previous', 'Copy', 'Next'].forEach(function (suffix) {
+        document.getElementById(suffix === 'Title' || suffix === 'Help' ? 'supportParts' + suffix : 'supportPart' + suffix)
+          .textContent = Homey.__('settings.reporter.parts_' + suffix.toLowerCase());
+      });
+      function renderReportPart() {
+        document.getElementById('supportParts').hidden = !reportParts.length;
+        document.getElementById('supportPartText').value = reportParts[reportPartIndex] || '';
+        document.getElementById('supportPartLabel').textContent = reportParts.length
+          ? Homey.__('settings.reporter.parts_part') + ' ' + (reportPartIndex + 1) + ' / ' + reportParts.length : '';
+        document.getElementById('supportPartPrevious').disabled = reportPartIndex === 0;
+        document.getElementById('supportPartNext').disabled = reportPartIndex >= reportParts.length - 1;
+        document.getElementById('supportPartCopy').disabled = !reportParts.length;
+      }
+      document.getElementById('supportPartPrevious').addEventListener('click', function () {
+        if (reportPartIndex > 0) reportPartIndex--; renderReportPart();
+      });
+      document.getElementById('supportPartNext').addEventListener('click', function () {
+        if (reportPartIndex < reportParts.length - 1) reportPartIndex++; renderReportPart();
+      });
+      document.getElementById('supportPartCopy').addEventListener('click', async function () {
+        if (!reportParts.length) return;
+        try {
+          await navigator.clipboard.writeText(reportParts[reportPartIndex]);
+          copyStatus.textContent = Homey.__('settings.reporter.parts_copied') + ' ' + (reportPartIndex + 1) + ' / ' + reportParts.length;
+        } catch (err) {
+          var part = document.getElementById('supportPartText'); part.focus(); part.select();
+          copyStatus.textContent = Homey.__('settings.reporter.parts_manual');
+        }
+      });
+      function renderMeterStatus(report) {
+        displayedReport = report;
+        try {
+          reportParts = window.EcoFlowReporterStatus.reportMessages(report ? reportText : '');
+        } catch (err) {
+          // Unsupported webview/oversize fallback must not hide the JSON download.
+          reportParts = [];
+        }
+        reportPartIndex = 0; renderReportPart();
+        downloadButton.disabled = !report;
+        window.EcoFlowReporterStatus.render(document.getElementById('reporterStatus'), report, function (key) {
+          return Homey.__('settings.reporter.' + key);
+        });
+        window.EcoFlowMeterStatus.render(document.getElementById('meterStatus'), report, function (key) {
+          return Homey.__('settings.meter.' + key);
+        });
+        renderCaptureStatus();
+        window.EcoFlowReporterStatus.renderCaptureGuide(document.getElementById('supportCaptureGuide'), report,
+          function (key) { return Homey.__('settings.reporter.' + key); });
+      }
+      function renderCaptureStatus() {
+        window.EcoFlowReporterStatus.renderCapture(document.getElementById('supportCaptureStatus'), displayedReport,
+          function (key) { return Homey.__('settings.reporter.' + key); }, Date.now());
+      }
+      // UI-only elapsed age; never refresh telemetry or alter the downloadable snapshot.
+      function startCaptureTimer() {
+        if (captureTimer === null) captureTimer = setInterval(renderCaptureStatus, 10000);
+      }
+      startCaptureTimer();
+      window.addEventListener('pagehide', function () {
+        comparisonSnapshots = []; comparisonStartedAt = null; renderComparisonStep();
+        cancelCompletionRefresh();
+        document.getElementById('enableDualCtPreview').checked = false;
+        renderDualCt(null);
+        dualCtOperation++;
+        clearTimeout(dualCtDeadline);
+        reportOperation++;
+        clearTimeout(reportDeadline);
+        clearInterval(captureTimer);
+        captureTimer = null;
+        reportBusy = false;
+        showButton.disabled = checkButton.disabled = false;
+        reportText = '';
+        copyButton.disabled = true;
+        document.getElementById('supportSnapshotResult').textContent = '';
+        renderMeterStatus(null);
+      });
+      window.addEventListener('pageshow', function () { clearDualCtPreview(); startCaptureTimer(); renderCaptureStatus(); });
+      renderMeterStatus(null);
+      downloadButton.addEventListener('click', function () {
+        renderCaptureStatus();
+        if (!displayedReport) return;
+        try {
+          window.EcoFlowReporterStatus.download(displayedReport, document, URL, Blob);
+          copyStatus.textContent = Homey.__('settings.reporter.downloaded');
+        } catch (err) { copyStatus.textContent = Homey.__('settings.reporter.download_failed'); }
+      });
       copyButton.addEventListener('click', async function () {
+        renderCaptureStatus();
         if (!reportText) return;
         try {
           await navigator.clipboard.writeText(reportText);
@@ -154,21 +842,62 @@
         }
       });
 
-      document.getElementById('supportSnapshot').addEventListener('click', function () {
-        var button = document.getElementById('supportSnapshot');
+      function requestReport(remoteCheck, dualCtOnly, comparison) {
+        if (reportBusy) return;
+        reportBusy = true;
+        var operation = ++reportOperation;
+        var dualCtAtRequest = dualCtOperation;
         var output = document.getElementById('supportSnapshotResult');
-        button.disabled = true;
+        comparisonButton.disabled = dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = true;
         reportText = '';
         copyButton.disabled = true;
         copyStatus.textContent = '';
-        output.textContent = 'Reading local diagnostics...';
-        Homey.api('GET', '/support-snapshot', null, function (err, report) {
-          button.disabled = false;
-          reportText = err ? '' : JSON.stringify(report, null, 2);
-          output.textContent = err ? 'Could not read local diagnostics. Please try again.' : reportText;
+        output.textContent = remoteCheck ? 'Checking reporter resolution; no commands are sent...' : 'Reading local diagnostics...';
+        renderMeterStatus(null);
+        function finish(err, report, timedOut) {
+          // A late/duplicate callback cannot replace a newer result or re-enable busy buttons.
+          if (operation !== reportOperation) return;
+          reportOperation++;
+          clearTimeout(reportDeadline);
+          reportDeadline = null;
+          reportBusy = false;
+          comparisonButton.disabled = dualCtSummaryButton.disabled = showButton.disabled = checkButton.disabled = false;
+          if (dualCtOnly && report && !err) report = { schemaVersion: 1, scope: "dual_ct_support_summary", appVersion: report.appVersion,
+            homeyVersion: report.homeyVersion, persistence: "since_app_start_bounded_recent_events",
+            dualCtPreviews: report.dualCtPreviews, dualCtCommunityTrials: report.dualCtCommunityTrials,
+            dualCtOwnedInventory: report.dualCtOwnedInventory, dualCtEnergyRecovery: report.dualCtEnergyRecovery };
+          if (comparison && report && !err && report.scope === 'dual_ct_support_summary') {
+            var now = Date.now();
+            if (comparisonSnapshots.length === 3 || (comparisonStartedAt !== null && (now < comparisonStartedAt || now - comparisonStartedAt > 900000))
+              || (comparisonSnapshots.length && comparisonSnapshots[0].report.appVersion !== report.appVersion)) {
+              comparisonSnapshots = []; comparisonStartedAt = null;
+            }
+            if (comparisonStartedAt === null) comparisonStartedAt = now;
+            comparisonSnapshots.push({ phase: ['baseline', 'native_screen_open', 'native_screen_closed'][comparisonSnapshots.length],
+              elapsedSec: (now - comparisonStartedAt) / 1000, report: report });
+            report = { schemaVersion: 1, scope: 'dual_ct_native_comparison', phaseLabels: 'user_reported_not_device_verified',
+              completed: comparisonSnapshots.length === 3, outgoingRequestsObserved: false, snapshots: comparisonSnapshots };
+            renderComparisonStep();
+          }
+          try { reportText = err || !report || typeof report !== 'object' ? '' : JSON.stringify(report, null, 2); }
+          catch (serializationError) { reportText = ''; }
+          output.textContent = timedOut ? Homey.__('settings.reporter.request_timeout') : reportText
+            || (remoteCheck ? 'Could not check the reporter. Use the local support report instead.' : 'Could not read local diagnostics. Please try again.');
           copyButton.disabled = !reportText;
-        });
-      });
+          renderMeterStatus(reportText ? report : null);
+          if (reportText && dualCtAtRequest === dualCtOperation) renderDualCt(report.dualCtResearch);
+        }
+        // Longer than the server's bounded reporter lookup. Timeout does not cancel server work.
+        reportDeadline = setTimeout(function () { finish(true, null, true); }, remoteCheck ? 180000 : 15000);
+        try {
+          Homey.api(remoteCheck ? 'POST' : 'GET', remoteCheck ? '/reporter-diagnostics' : '/support-snapshot',
+            remoteCheck ? {} : null, function (err, report) { finish(err, report, false); });
+        } catch (apiError) { finish(true, null, false); }
+      }
+      comparisonButton.addEventListener('click', function () { requestReport(false, true, true); });
+      dualCtSummaryButton.addEventListener('click', function () { requestReport(false, true); });
+      showButton.addEventListener('click', function () { requestReport(false); });
+      checkButton.addEventListener('click', function () { requestReport(true); });
 
       function saveSetting(Homey, key, value) {
         return new Promise(function (resolve, reject) {
@@ -194,43 +923,48 @@
         });
       }
 
-      function confirmBetaEnable(Homey) {
+      function confirmAggregateEnable(Homey) {
         return new Promise(function (resolve) {
           if (typeof Homey.confirm !== 'function') {
             resolve(false);
             return;
           }
           Homey.confirm(
-            'STREAM 5000 support is experimental and uses EcoFlow\'s unsupported app connection. It may stop working or require changes and re-pairing when EcoFlow releases its official API. Enable beta pairing?',
+            'Allow new Home Battery (5000) Energy pairing? Aggregate validation is still in progress. Pair one per combined installation and check for overlap with existing Home Batteries. Calculated charged/discharged totals are not historical EcoFlow totals. Unit monitoring needs no opt-in. No control commands will be enabled.',
             'warning',
             function (err, accepted) { resolve(!err && accepted === true); }
           );
         });
       }
 
-      document.getElementById('stream5000BetaEnabled').addEventListener('change', async function () {
-        var checkbox = document.getElementById('stream5000BetaEnabled');
-        var status = document.getElementById('stream5000BetaSaved');
+      document.getElementById('stream5000AggregatePairingEnabled').addEventListener('change', async function () {
+        var checkbox = document.getElementById('stream5000AggregatePairingEnabled');
+        var status = document.getElementById('stream5000AggregateSaved');
+        if (checkbox.disabled) return;
+        aggregatePairingTouched = true;
         var enabled = checkbox.checked === true;
-        if (enabled && !(await confirmBetaEnable(Homey))) {
-          checkbox.checked = false;
-          status.textContent = 'Beta pairing remains disabled.';
-          return;
-        }
-        status.textContent = 'Saving...';
+        checkbox.disabled = true;
         try {
-          await saveSetting(Homey, 'stream5000BetaEnabled', enabled);
+          if (enabled && !(await confirmAggregateEnable(Homey))) {
+            checkbox.checked = false;
+            status.textContent = 'Home Battery Energy pairing remains disabled. Unit monitoring is available without it.';
+            return;
+          }
+          status.textContent = 'Saving...';
+          await saveSetting(Homey, 'stream5000AggregatePairingEnabled', enabled);
           status.textContent = enabled
-            ? 'Beta pairing enabled. Choose STREAM Home Battery (5000) for Homey Energy; the physical unit monitor is optional.'
-            : 'Beta pairing disabled. Existing paired devices will continue to run.';
+            ? 'Home Battery Energy pairing enabled. Add one aggregate per combined installation; check for duplicate Energy sources.'
+            : 'Home Battery Energy pairing disabled. Existing paired devices will continue to run; unit monitoring is unaffected.';
         } catch (err) {
           checkbox.checked = !enabled;
-          status.textContent = 'Could not update beta access: '
-            + ((err && err.message) ? err.message : err);
+          status.textContent = 'Could not update Home Battery pairing access. Please try again.';
+        } finally {
+          checkbox.disabled = false;
         }
       });
 
       document.getElementById('clearAppAuth').addEventListener('click', async function () {
+        invalidateDualCtView();
         var status = document.getElementById('appAuthSaved');
         status.textContent = 'Removing...';
         try {
@@ -238,11 +972,9 @@
           await clearSetting(Homey, 'appAuthPassword');
           await clearSetting(Homey, 'appAuthEmail');
           await clearSetting(Homey, 'appAuthHost');
-          status.textContent = 'Removed. Any STREAM 5000-family unit will go unavailable until you re-pair it.';
+          status.textContent = Homey.__('settings.setup.accountRemoved');
         } catch (err) {
-          status.textContent = 'Could not remove the stored EcoFlow account: '
-            + ((err && err.message) ? err.message : err)
-            + ' Please try again.';
+          status.textContent = Homey.__('settings.setup.accountRemoveFailed');
         }
         refreshAppAuthState();
       });
@@ -254,6 +986,7 @@
         var m = document.getElementById('mqtt').checked;
         var status = document.getElementById('saved');
         if (!a || !s) { status.textContent = 'Access Key and Secret Key are required.'; return; }
+        invalidateDualCtView();
         status.textContent = 'Saving...';
         try {
           await validateCredentials(Homey, a, s, h);
@@ -263,7 +996,7 @@
           await saveSetting(Homey, 'mqtt_enabled', m);
           status.textContent = 'Saved. Running devices will apply the new connection settings.';
         } catch (err) {
-          status.textContent = 'Could not save settings: ' + (err && err.message ? err.message : err);
+          status.textContent = Homey.__('settings.setup.connectionSaveFailed');
         }
       });
     }

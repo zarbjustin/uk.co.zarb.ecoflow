@@ -1,0 +1,31 @@
+<style>
+  .preview { padding:16px; max-width:460px; margin:auto; font:14px/1.5 -apple-system,system-ui,sans-serif; }
+  .preview h2 { font-size:20px; }
+  .preview label { display:flex; gap:10px; margin:20px 0; }
+  .preview button { padding:12px; width:100%; border:0; border-radius:8px; background:#1aa3e8; color:white; font:600 15px system-ui,sans-serif; }
+  .preview button:disabled { opacity:0.5; }
+</style>
+<div class="preview">
+  <h2 id="title"></h2><p id="warning"></p><p id="privacy"></p>
+  <label><input type="checkbox" id="consent"><span id="consentLabel"></span></label>
+  <button id="continue" disabled></button><p id="error" role="status"></p>
+</div>
+<script type="text/javascript">
+  ['title','warning','privacy','consentLabel','continue'].forEach(function(id) {
+    document.getElementById(id).textContent = Homey.__('dual_ct_preview.pair_' + id);
+  });
+  document.getElementById('consent').addEventListener('change', function() {
+    document.getElementById('continue').disabled = !this.checked;
+    if (!this.checked) Homey.emit('dual_ct_preview_consent', {accepted:false}, function() {});
+  });
+  document.getElementById('continue').addEventListener('click', function() {
+    var button = this; button.disabled = true;
+    Homey.emit('dual_ct_preview_consent', {accepted:document.getElementById('consent').checked === true}, function(error, accepted) {
+      if (error || accepted !== true) { button.disabled = false; document.getElementById('error').textContent = Homey.__('dual_ct_preview.consent_required'); return; }
+      Homey.emit('check_app_credentials', null, function(err, saved) {
+        if (err) { button.disabled = false; document.getElementById('error').textContent = Homey.__('dual_ct_preview.account_required'); return; }
+        Homey.showView(saved === true ? 'list_devices' : 'app_credentials');
+      });
+    });
+  });
+</script>

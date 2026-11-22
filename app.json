@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "uk.co.zarb.ecoflow",
-  "version": "1.10.26",
+  "version": "1.11.31",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -83,6 +83,30 @@
     "homey:manager:geolocation"
   ],
   "api": {
+    "coordinationFlowMonitor": {
+      "method": "POST",
+      "path": "/coordination-flow-monitor"
+    },
+    "coordinationWorkspace": {
+      "method": "POST",
+      "path": "/coordination-workspace"
+    },
+    "dualCtResearchView": {
+      "method": "GET",
+      "path": "/dual-ct-research/view"
+    },
+    "dualCtPreview": {
+      "method": "GET",
+      "path": "/dual-ct-preview"
+    },
+    "startDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/start"
+    },
+    "stopDualCtResearch": {
+      "method": "POST",
+      "path": "/dual-ct-research/stop"
+    },
     "coordinationPreview": {
       "method": "POST",
       "path": "/coordination-preview"
@@ -91,9 +115,25 @@
       "method": "GET",
       "path": "/support-snapshot"
     },
+    "refreshReporterDiagnostics": {
+      "method": "POST",
+      "path": "/reporter-diagnostics"
+    },
     "validateCredentials": {
       "method": "POST",
       "path": "/validate-credentials"
+    },
+    "houseReserveControl": {
+      "method": "POST",
+      "path": "/house-reserve-control"
+    },
+    "coordinatedReserveControl": {
+      "method": "POST",
+      "path": "/coordinated-reserve-control"
+    },
+    "coordinatedReadings": {
+      "method": "POST",
+      "path": "/coordinated-readings"
     }
   },
   "support": "https://github.com/zarbjustin/uk.co.zarb.ecoflow/issues",
@@ -220,6 +260,72 @@
               "nl": "Batterijvermogen"
             },
             "example": 800
+          }
+        ]
+      },
+      {
+        "id": "coordination_assessment_changed",
+        "title": {
+          "en": "Read-only coordination assessment changed",
+          "de": "Schreibgeschützte Koordinationsbewertung geändert",
+          "nl": "Alleen-lezen coördinatiebeoordeling gewijzigd"
+        },
+        "hint": {
+          "en": "Requires separate Flow-monitoring opt-in. Tokens describe observations, not permission to charge. A trigger may run your existing THEN actions.",
+          "de": "Erfordert eine separate Zustimmung zur Flow-Beobachtung. Tokens beschreiben Beobachtungen, keine Ladefreigabe. Der Auslöser kann vorhandene DANN-Aktionen starten.",
+          "nl": "Vereist aparte toestemming voor Flow-monitoring. Tokens beschrijven waarnemingen, geen toestemming om te laden. Deze trigger kan bestaande DAN-acties starten."
+        },
+        "tokens": [
+          {
+            "name": "state",
+            "type": "string",
+            "title": {
+              "en": "Assessment state",
+              "de": "Bewertungsstatus",
+              "nl": "Beoordelingsstatus"
+            }
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason code",
+              "de": "Begründungscode",
+              "nl": "Redencode"
+            }
+          }
+        ]
+      },
+      {
+        "id": "coordination_readings_changed",
+        "title": {
+          "en": "Selected coordination readings availability changed",
+          "de": "Verfügbarkeit gewählter Koordinationswerte geändert",
+          "nl": "Beschikbaarheid van geselecteerde coördinatiewaarden gewijzigd"
+        },
+        "hint": {
+          "en": "Available means current capability timestamps, not verified hardware freshness. This is not an instruction to charge.",
+          "de": "Verfügbar bedeutet aktuelle Zeitstempel der Messwerte, keine bestätigte Hardware-Aktualität. Dies ist keine Ladeanweisung.",
+          "nl": "Beschikbaar betekent actuele tijdstempels van waarden, niet bewezen actuele hardwaremetingen. Dit is geen opdracht om te laden."
+        },
+        "tokens": [
+          {
+            "name": "availability",
+            "type": "string",
+            "title": {
+              "en": "Availability code",
+              "de": "Verfügbarkeitscode",
+              "nl": "Beschikbaarheidscode"
+            }
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason code",
+              "de": "Begründungscode",
+              "nl": "Redencode"
+            }
           }
         ]
       },
@@ -544,6 +650,292 @@
         ]
       },
       {
+        "id": "smartmeter_dual_ct_power_below_sustained",
+        "title": {
+          "en": "Dual CT import/export stays below a threshold",
+          "de": "Dual CT Bezug/Einspeisung bleibt unter einer Schwelle",
+          "nl": "Dual CT afname/teruglevering blijft onder een drempel"
+        },
+        "titleFormatted": {
+          "en": "[[channel]] [[direction]] below [[watts]] W for [[seconds]] s, hysteresis [[hysteresis]] W, cooldown [[cooldown]] s",
+          "de": "[[channel]] [[direction]] unter [[watts]] W für [[seconds]] s, Hysterese [[hysteresis]] W, Pause [[cooldown]] s",
+          "nl": "[[channel]] [[direction]] onder [[watts]] W gedurende [[seconds]] s, hysterese [[hysteresis]] W, pauze [[cooldown]] s"
+        },
+        "hint": {
+          "en": "Fresh readings must stay strictly below the threshold. Gaps restart the wait. A live reading flowing in the opposite direction counts as zero for the selected direction. CT2 requires a confirmed phase layout and import direction in device settings. Use for notifications.",
+          "de": "Aktuelle Messwerte müssen unter der Schwelle bleiben. Lücken starten die Wartezeit neu. Ein aktueller Wert in Gegenrichtung zählt in der gewählten Richtung als null. Für CT2 Phasen und Bezugsrichtung in den Geräteeinstellungen bestätigen. Für Benachrichtigungen verwenden.",
+          "nl": "Actuele metingen moeten onder de drempel blijven. Hiaten starten de wachttijd opnieuw. Een actuele meting in de tegengestelde richting telt als nul voor de gekozen richting. Bevestig voor CT2 de fasen en afnamerichting in de apparaatinstellingen. Gebruik voor meldingen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=smartmeter_dual_ct_energy"
+          },
+          {
+            "type": "dropdown",
+            "name": "channel",
+            "title": {
+              "en": "Channel",
+              "de": "Kanal",
+              "nl": "Kanaal"
+            },
+            "values": [
+              {
+                "id": "ct1",
+                "title": {
+                  "en": "CT1",
+                  "de": "CT1",
+                  "nl": "CT1"
+                }
+              },
+              {
+                "id": "ct2",
+                "title": {
+                  "en": "CT2",
+                  "de": "CT2",
+                  "nl": "CT2"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "import",
+                "title": {
+                  "en": "import",
+                  "de": "Bezug",
+                  "nl": "afname"
+                }
+              },
+              {
+                "id": "export",
+                "title": {
+                  "en": "export",
+                  "de": "Einspeisung",
+                  "nl": "teruglevering"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 1,
+            "max": 100000,
+            "title": {
+              "en": "Threshold W",
+              "de": "Schwelle W",
+              "nl": "Drempel W"
+            }
+          },
+          {
+            "type": "number",
+            "name": "seconds",
+            "min": 1,
+            "max": 1800,
+            "title": {
+              "en": "Dwell seconds",
+              "de": "Dauer Sekunden",
+              "nl": "Duur seconden"
+            }
+          },
+          {
+            "type": "number",
+            "name": "hysteresis",
+            "min": 0,
+            "max": 100000,
+            "title": {
+              "en": "Hysteresis W",
+              "de": "Hysterese W",
+              "nl": "Hysterese W"
+            }
+          },
+          {
+            "type": "number",
+            "name": "cooldown",
+            "min": 0,
+            "max": 86400,
+            "title": {
+              "en": "Cooldown seconds",
+              "de": "Pause Sekunden",
+              "nl": "Pauze seconden"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "channel",
+            "type": "string",
+            "title": {
+              "en": "Channel",
+              "de": "Kanal",
+              "nl": "Kanaal"
+            }
+          },
+          {
+            "name": "direction",
+            "type": "string",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            }
+          },
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Import/export W",
+              "de": "Bezug/Einspeisung W",
+              "nl": "Afname/teruglevering W"
+            }
+          },
+          {
+            "name": "grid_power",
+            "type": "number",
+            "title": {
+              "en": "Signed channel W",
+              "de": "Kanalleistung mit Vorzeichen W",
+              "nl": "Kanaalvermogen met teken W"
+            }
+          }
+        ]
+      },
+      {
+        "id": "smartmeter_grid_power_sustained",
+        "title": {
+          "en": "Grid import/export power is sustained",
+          "de": "Netzbezug/-einspeisung hält an",
+          "nl": "Netafname/-teruglevering houdt aan"
+        },
+        "titleFormatted": {
+          "en": "Grid [[direction]] above [[watts]] W for [[seconds]] s, hysteresis [[hysteresis]] W, cooldown [[cooldown]] s",
+          "de": "Netz [[direction]] über [[watts]] W für [[seconds]] s, Hysterese [[hysteresis]] W, Pause [[cooldown]] s",
+          "nl": "Net [[direction]] boven [[watts]] W gedurende [[seconds]] s, hysterese [[hysteresis]] W, pauze [[cooldown]] s"
+        },
+        "hint": {
+          "en": "Qualified CT1 only. Fresh advancing readings must stay strictly above the threshold throughout dwell. Gaps reset it; one event per excursion, rearmed at or below threshold minus hysteresis. Use notifications, not battery control.",
+          "de": "Nur qualifiziertes CT1. Neue aktuelle Messwerte müssen während der gesamten Dauer über der Schwelle liegen. Lücken setzen sie zurück. Ein Ereignis je Überschreitung; erneut bereit auf oder unter Schwelle minus Hysterese. Keine Batteriesteuerung.",
+          "nl": "Alleen gekwalificeerde CT1. Nieuwe actuele metingen moeten gedurende de hele duur boven de drempel blijven. Hiaten starten opnieuw. Eén gebeurtenis per overschrijding; opnieuw gereed op of onder drempel min hysterese. Geen batterijbesturing."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=smartmeter_dual_ct_energy"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "import",
+                "title": {
+                  "en": "import",
+                  "de": "Bezug",
+                  "nl": "afname"
+                }
+              },
+              {
+                "id": "export",
+                "title": {
+                  "en": "export",
+                  "de": "Einspeisung",
+                  "nl": "teruglevering"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "max": 100000,
+            "title": {
+              "en": "Threshold W",
+              "de": "Schwelle W",
+              "nl": "Drempel W"
+            }
+          },
+          {
+            "type": "number",
+            "name": "seconds",
+            "min": 1,
+            "max": 1800,
+            "title": {
+              "en": "Dwell seconds",
+              "de": "Dauer Sekunden",
+              "nl": "Duur seconden"
+            }
+          },
+          {
+            "type": "number",
+            "name": "hysteresis",
+            "min": 0,
+            "max": 100000,
+            "title": {
+              "en": "Hysteresis W",
+              "de": "Hysterese W",
+              "nl": "Hysterese W"
+            }
+          },
+          {
+            "type": "number",
+            "name": "cooldown",
+            "min": 0,
+            "max": 86400,
+            "title": {
+              "en": "Cooldown seconds",
+              "de": "Pause Sekunden",
+              "nl": "Pauze seconden"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "direction",
+            "type": "string",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            }
+          },
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Import/export W",
+              "de": "Bezug/Einspeisung W",
+              "nl": "Afname/teruglevering W"
+            }
+          },
+          {
+            "name": "grid_power",
+            "type": "number",
+            "title": {
+              "en": "Signed grid W",
+              "de": "Netzleistung mit Vorzeichen W",
+              "nl": "Netvermogen met teken W"
+            }
+          }
+        ]
+      },
+      {
         "id": "solar_power_changed",
         "title": {
           "en": "Solar power changed",
@@ -574,6 +966,151 @@
             "example": 450
           }
         ]
+      },
+      {
+        "id": "stream_unit_battery_level_crossed",
+        "title": {
+          "en": "Unit battery level crossed",
+          "de": "Batteriestand der Einheit hat den Schwellenwert erreicht",
+          "nl": "Batterijniveau van de unit passeert drempel"
+        },
+        "titleFormatted": {
+          "en": "Unit battery level goes [[direction]] [[level]]%",
+          "de": "Batteriestand der Einheit geht [[direction]] [[level]]%",
+          "nl": "Batterijniveau van de unit gaat [[direction]] [[level]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_unit"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "above",
+                "title": {
+                  "en": "above",
+                  "de": "über",
+                  "nl": "boven"
+                }
+              },
+              {
+                "id": "below",
+                "title": {
+                  "en": "below",
+                  "de": "unter",
+                  "nl": "onder"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "level",
+            "title": {
+              "en": "Battery level",
+              "de": "Batteriestand",
+              "nl": "Batterijniveau"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "battery",
+            "type": "number",
+            "title": {
+              "en": "Battery",
+              "de": "Batterie",
+              "nl": "Batterij"
+            },
+            "example": 20
+          }
+        ],
+        "hint": {
+          "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+          "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+          "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+        }
+      },
+      {
+        "id": "stream_unit_charging_started",
+        "title": {
+          "en": "Unit battery started charging",
+          "de": "Batterie der Einheit lädt jetzt",
+          "nl": "Batterij van de unit is begonnen met opladen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_unit"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
+            },
+            "example": 800
+          }
+        ],
+        "hint": {
+          "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+          "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+          "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+        }
+      },
+      {
+        "id": "stream_unit_discharging_started",
+        "title": {
+          "en": "Unit battery started discharging",
+          "de": "Batterie der Einheit entlädt jetzt",
+          "nl": "Batterij van de unit is begonnen met ontladen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_unit"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Battery power",
+              "de": "Batterieleistung",
+              "nl": "Batterijvermogen"
+            },
+            "example": -600
+          }
+        ],
+        "hint": {
+          "en": "Uses the individual STREAM Ultra X or STREAM AC Pro battery.",
+          "de": "Verwendet die Batterie der einzelnen STREAM Ultra X oder STREAM AC Pro Einheit.",
+          "nl": "Gebruikt de batterij van de afzonderlijke STREAM Ultra X of STREAM AC Pro."
+        }
       }
     ],
     "conditions": [
@@ -639,24 +1176,29 @@
               "nl": "%"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "charging_from_solar",
         "title": {
-          "en": "Battery !{{is|is not}} charging from solar",
-          "de": "Batterie !{{is|is not}} per Solar am Laden",
-          "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+          "en": "Charging with PV above home load !{{is|is not}} observed",
+          "de": "Laden bei PV über Hausverbrauch !{{wird|wird nicht}} beobachtet",
+          "nl": "Laden met PV boven huisverbruik !{{wordt|wordt niet}} waargenomen"
         },
         "titleFormatted": {
-          "en": "Battery !{{is|is not}} charging from solar",
-          "de": "Batterie !{{is|is not}} per Solar am Laden",
-          "nl": "Batterij !{{is|is not}} aan het opladen via zonne-energie"
+          "en": "Charging with PV above home load !{{is|is not}} observed",
+          "de": "Laden bei PV über Hausverbrauch !{{wird|wird nicht}} beobachtet",
+          "nl": "Laden met PV boven huisverbruik !{{wordt|wordt niet}} waargenomen"
         },
         "hint": {
-          "en": "True when the battery is charging and solar generation exceeds the current home load (the charge is coming from surplus solar, not the grid).",
-          "de": "Wahr, wenn die Batterie lädt und die Solarerzeugung die aktuelle Hauslast übersteigt (die Ladung kommt aus Solarüberschuss, nicht aus dem Netz).",
-          "nl": "Waar wanneer de batterij oplaadt en de zonne-opwek hoger is dan de huidige huisbelasting (de lading komt uit zonnestroomoverschot, niet uit het net)."
+          "en": "Requires recent, coherent battery/PV/home-load readings. Missing load is not zero. This observation does not prove exclusively solar charging or rule out another battery supplying energy. Unavailable readings stop evaluation, including inversion.",
+          "de": "Erfordert aktuelle, zeitlich stimmige Batterie-/PV-/Hausverbrauchswerte. Fehlender Verbrauch ist nicht null. Keine Bestätigung ausschließlicher Solarladung oder Ausschluss einer anderen liefernden Batterie. Nicht verfügbare Werte stoppen auch die umgekehrte Bedingung.",
+          "nl": "Vereist recente, gelijktijdige batterij-/PV-/huisverbruikswaarden. Ontbrekend verbruik is niet nul. Bewijst geen uitsluitend laden op zon en sluit levering door een andere batterij niet uit. Niet-beschikbare waarden stoppen ook de omgekeerde voorwaarde."
         },
         "args": [
           {
@@ -665,6 +1207,182 @@
             "filter": "driver_id=stream"
           }
         ]
+      },
+      {
+        "id": "coordination_circuit_power_sustained",
+        "title": {
+          "en": "Selected branch power is sustained above a threshold",
+          "de": "Gewählte Zweigleistung liegt anhaltend über einer Schwelle",
+          "nl": "Geselecteerd circuitvermogen blijft boven een drempel"
+        },
+        "titleFormatted": {
+          "en": "Observed [[role]] power [[direction]] exceeds [[watts]] W for [[seconds]] seconds",
+          "de": "Beobachtete [[role]]-Leistung [[direction]] übersteigt [[watts]] W für [[seconds]] Sekunden",
+          "nl": "Waargenomen [[role]]-vermogen [[direction]] is hoger dan [[watts]] W gedurende [[seconds]] seconden"
+        },
+        "hint": {
+          "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+          "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+          "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+        },
+        "args": [
+          {
+            "name": "role",
+            "type": "dropdown",
+            "title": {
+              "en": "Configured branch role",
+              "de": "Konfigurierte Zweigfunktion",
+              "nl": "Ingestelde circuitrol"
+            },
+            "values": [
+              {
+                "id": "solar_inverter",
+                "title": {
+                  "en": "Solar-only inverter",
+                  "de": "Reiner Solarwechselrichter",
+                  "nl": "Alleen-zonne-omvormer"
+                }
+              },
+              {
+                "id": "hybrid_inverter",
+                "title": {
+                  "en": "Hybrid solar and battery inverter",
+                  "de": "Hybridwechselrichter für Solar und Batterie",
+                  "nl": "Hybride zonne- en batterijomvormer"
+                }
+              },
+              {
+                "id": "load",
+                "title": {
+                  "en": "Load branch",
+                  "de": "Verbrauchszweig",
+                  "nl": "Verbruikscircuit"
+                }
+              }
+            ]
+          },
+          {
+            "name": "direction",
+            "type": "dropdown",
+            "title": {
+              "en": "Flow direction",
+              "de": "Flussrichtung",
+              "nl": "Stroomrichting"
+            },
+            "values": [
+              {
+                "id": "to_house",
+                "title": {
+                  "en": "towards the house",
+                  "de": "zum Haus",
+                  "nl": "naar het huis"
+                }
+              },
+              {
+                "id": "from_house",
+                "title": {
+                  "en": "away from the house",
+                  "de": "vom Haus weg",
+                  "nl": "van het huis af"
+                }
+              }
+            ]
+          },
+          {
+            "name": "watts",
+            "type": "number",
+            "title": {
+              "en": "Power threshold (W)",
+              "de": "Leistungsschwelle (W)",
+              "nl": "Vermogensdrempel (W)"
+            },
+            "min": 21,
+            "max": 100000,
+            "step": 1
+          },
+          {
+            "name": "seconds",
+            "type": "number",
+            "title": {
+              "en": "Observed duration (seconds)",
+              "de": "Beobachtete Dauer (Sekunden)",
+              "nl": "Waargenomen duur (seconden)"
+            },
+            "min": 1,
+            "max": 1800,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "coordination_external_priority",
+        "title": {
+          "en": "External battery priority is satisfied",
+          "de": "Vorrang der externen Batterie ist erfüllt",
+          "nl": "Prioriteit van de externe batterij is voldaan"
+        },
+        "hint": {
+          "en": "Uses the observation session's SOC start/stop thresholds and a ±20 W battery-power deadband. It requires the external battery to be neither actively charging nor discharging. Unavailable readings stop evaluation.",
+          "de": "Verwendet die SOC-Start-/Stoppschwellen der Sitzung und ±20 W Leistungstoleranz. Die externe Batterie darf weder aktiv laden noch entladen. Nicht verfügbare Werte stoppen die Auswertung.",
+          "nl": "Gebruikt de SOC-start-/stopdrempels van de sessie en een vermogensmarge van ±20 W. De externe batterij mag niet actief laden of ontladen. Niet-beschikbare waarden stoppen de evaluatie."
+        }
+      },
+      {
+        "id": "coordination_grid_export_sustained",
+        "title": {
+          "en": "Observed grid export is sustained above a threshold",
+          "de": "Beobachtete Netzeinspeisung liegt anhaltend über einer Schwelle",
+          "nl": "Waargenomen netexport blijft boven een drempel"
+        },
+        "titleFormatted": {
+          "en": "Observed grid export exceeds [[watts]] W for [[seconds]] seconds",
+          "de": "Beobachtete Netzeinspeisung übersteigt [[watts]] W für [[seconds]] Sekunden",
+          "nl": "Waargenomen netexport is hoger dan [[watts]] W gedurende [[seconds]] seconden"
+        },
+        "hint": {
+          "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+          "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+          "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+        },
+        "args": [
+          {
+            "name": "watts",
+            "type": "number",
+            "title": {
+              "en": "Power threshold (W)",
+              "de": "Leistungsschwelle (W)",
+              "nl": "Vermogensdrempel (W)"
+            },
+            "min": 21,
+            "max": 100000,
+            "step": 1
+          },
+          {
+            "name": "seconds",
+            "type": "number",
+            "title": {
+              "en": "Observed duration (seconds)",
+              "de": "Beobachtete Dauer (Sekunden)",
+              "nl": "Waargenomen duur (seconden)"
+            },
+            "min": 1,
+            "max": 1800,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "coordination_readings_current",
+        "title": {
+          "en": "Selected coordination readings are current and coherent",
+          "de": "Gewählte Koordinationswerte sind aktuell und zeitlich stimmig",
+          "nl": "Geselecteerde coördinatiewaarden zijn actueel en gelijktijdig"
+        },
+        "hint": {
+          "en": "Opt-in observation session only; this is not charging permission or proof of solar origin. Missing, stale or incoherent readings stop this condition, including when inverted.",
+          "de": "Nur eine aktivierte Beobachtungssitzung; keine Ladefreigabe oder Bestätigung der Solarherkunft. Fehlende, veraltete oder zeitlich unstimmige Werte stoppen die Bedingung auch bei Umkehrung.",
+          "nl": "Alleen een ingeschakelde observatiesessie; geen toestemming om te laden of bewijs van zonne-energie. Ontbrekende, verouderde of niet-gelijktijdige waarden stoppen deze voorwaarde, ook bij omkering."
+        }
       },
       {
         "id": "electricity_price",
@@ -761,9 +1479,9 @@
       {
         "id": "feed_in_enabled",
         "title": {
-          "en": "Grid feed-in !{{is|is not}} enabled",
-          "de": "Netzeinspeisung !{{is|is not}} aktiviert",
-          "nl": "Teruglevering aan net !{{is|is not}} ingeschakeld"
+          "en": "Reported grid feed-in permission !{{is|is not}} enabled",
+          "de": "Gemeldete Netzeinspeisefreigabe !{{ist|ist nicht}} aktiviert",
+          "nl": "Gemelde toestemming voor netexport !{{is|is niet}} ingeschakeld"
         },
         "args": [
           {
@@ -771,7 +1489,12 @@
             "name": "device",
             "filter": "driver_id=stream"
           }
-        ]
+        ],
+        "hint": {
+          "en": "Reported permission only; use grid-power readings to check actual export. Unknown or expired settings stop evaluation, including inversion.",
+          "de": "Nur gemeldete Freigabe; tatsächliche Einspeisung anhand der Netzleistung prüfen. Unbekannte oder veraltete Einstellungen stoppen auch die umgekehrte Bedingung.",
+          "nl": "Alleen gemelde toestemming; controleer werkelijke export met netvermogen. Onbekende of verlopen instellingen stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "is_charging",
@@ -786,7 +1509,12 @@
             "name": "device",
             "filter": "driver_id=stream"
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "is_exporting",
@@ -801,19 +1529,24 @@
             "name": "device",
             "filter": "driver_id=stream"
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "operating_mode_is",
         "title": {
-          "en": "Operating mode !{{is|is not}}",
-          "de": "Betriebsmodus !{{is|is not}}",
-          "nl": "Bedrijfsmodus !{{is|is not}}"
+          "en": "Reported operating mode !{{is|is not}}",
+          "de": "Gemeldeter Betriebsmodus !{{ist|ist nicht}}",
+          "nl": "Gemelde bedrijfsmodus !{{is|is niet}}"
         },
         "titleFormatted": {
-          "en": "Operating mode !{{is|is not}} [[mode]]",
-          "de": "Betriebsmodus !{{is|is not}} [[mode]]",
-          "nl": "Bedrijfsmodus !{{is|is not}} [[mode]]"
+          "en": "Reported operating mode !{{is|is not}} [[mode]]",
+          "de": "Gemeldeter Betriebsmodus !{{ist|ist nicht}} [[mode]]",
+          "nl": "Gemelde bedrijfsmodus !{{is|is niet}} [[mode]]"
         },
         "args": [
           {
@@ -863,6 +1596,73 @@
                 }
               }
             ]
+          }
+        ],
+        "hint": {
+          "en": "Checks a recently reported setting, not actual charging or export. Unknown or expired settings stop evaluation, including inversion.",
+          "de": "Prüft eine kürzlich gemeldete Einstellung, nicht tatsächliches Laden oder Einspeisen. Unbekannte oder veraltete Einstellungen stoppen auch die umgekehrte Bedingung.",
+          "nl": "Controleert een recent gemelde instelling, niet werkelijk laden of terugleveren. Onbekende of verlopen instellingen stoppen ook de omgekeerde voorwaarde."
+        }
+      },
+      {
+        "id": "smartmeter_grid_power_above",
+        "title": {
+          "en": "Grid import/export power is above",
+          "de": "Netzbezug/-einspeisung liegt über",
+          "nl": "Netafname/-teruglevering is boven"
+        },
+        "titleFormatted": {
+          "en": "Grid [[direction]] power is above [[watts]] W",
+          "de": "Netzleistung ([[direction]]) liegt über [[watts]] W",
+          "nl": "Netvermogen ([[direction]]) is boven [[watts]] W"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=smartmeter|smartmeter_dual_ct_energy"
+          },
+          {
+            "type": "dropdown",
+            "name": "direction",
+            "title": {
+              "en": "Direction",
+              "de": "Richtung",
+              "nl": "Richting"
+            },
+            "values": [
+              {
+                "id": "import",
+                "title": {
+                  "en": "import",
+                  "de": "Bezug",
+                  "nl": "afname"
+                }
+              },
+              {
+                "id": "export",
+                "title": {
+                  "en": "export",
+                  "de": "Einspeisung",
+                  "nl": "teruglevering"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "watts",
+            "min": 0,
+            "title": {
+              "en": "Power",
+              "de": "Leistung",
+              "nl": "Vermogen"
+            },
+            "placeholder": {
+              "en": "W",
+              "de": "W",
+              "nl": "W"
+            }
           }
         ]
       },
@@ -926,7 +1726,12 @@
               "nl": "Drempel voor zonne-energie"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Planning estimate, not measured generation. Requires a forecast less than six hours old for the correct Homey-local calendar date and current location/calibration. Missing or expired data stops evaluation, including inversion.",
+          "de": "Planungsprognose, keine gemessene Erzeugung. Erfordert eine weniger als sechs Stunden alte Prognose für das richtige lokale Homey-Datum und den aktuellen Standort/Kalibrierfaktor. Fehlende oder veraltete Daten stoppen auch die umgekehrte Bedingung.",
+          "nl": "Planningsschatting, geen gemeten opwek. Vereist een prognose jonger dan zes uur voor de juiste lokale Homey-datum en huidige locatie/kalibratie. Ontbrekende of verlopen gegevens stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "solar_forecast_tomorrow",
@@ -988,7 +1793,12 @@
               "nl": "Drempel voor zonne-energie"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Planning estimate, not measured generation. Requires a forecast less than six hours old for the correct Homey-local calendar date and current location/calibration. Missing or expired data stops evaluation, including inversion.",
+          "de": "Planungsprognose, keine gemessene Erzeugung. Erfordert eine weniger als sechs Stunden alte Prognose für das richtige lokale Homey-Datum und den aktuellen Standort/Kalibrierfaktor. Fehlende oder veraltete Daten stoppen auch die umgekehrte Bedingung.",
+          "nl": "Planningsschatting, geen gemeten opwek. Vereist een prognose jonger dan zes uur voor de juiste lokale Homey-datum en huidige locatie/kalibratie. Ontbrekende of verlopen gegevens stoppen ook de omgekeerde voorwaarde."
+        }
       },
       {
         "id": "solar_power_above",
@@ -1025,7 +1835,12 @@
               "nl": "W"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "solar_power_below",
@@ -1062,7 +1877,12 @@
               "nl": "Drempel voor zonnevermogen"
             }
           }
-        ]
+        ],
+        "hint": {
+          "en": "Requires a recent matching observation. Unknown, stale or failed readings stop evaluation, including inversion; they are not treated as zero.",
+          "de": "Erfordert eine aktuelle passende Beobachtung. Unbekannte, veraltete oder fehlgeschlagene Werte stoppen auch die umgekehrte Bedingung und werden nicht als null behandelt.",
+          "nl": "Vereist een recente passende waarneming. Onbekende, verouderde of mislukte waarden stoppen ook de omgekeerde voorwaarde en worden niet als nul behandeld."
+        }
       },
       {
         "id": "stream_5000_mode_is",
@@ -1101,6 +1921,93 @@
                 "id": "custom",
                 "title": {
                   "en": "Custom"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stream_5000_reading_current",
+        "title": {
+          "en": "STREAM 5000 reading is current for its source role",
+          "de": "STREAM-5000-Messwert ist für seine Quellenrolle aktuell",
+          "nl": "STREAM 5000-meting is actueel voor de bronrol"
+        },
+        "titleFormatted": {
+          "en": "[[field]] has a current [[role]] observation",
+          "de": "[[field]] hat eine aktuelle [[role]]-Beobachtung",
+          "nl": "[[field]] heeft een actuele [[role]]-waarneming"
+        },
+        "hint": {
+          "en": "Read-only guard. Missing, stale, failed or wrong-scope readings reject the Flow, including inversion. Cloud-latest SOC and unverified linked unit power do not qualify. This does not enable battery control.",
+          "de": "Nur lesende Prüfung. Fehlende, veraltete, fehlgeschlagene oder falsch zugeordnete Werte brechen den Flow auch bei Umkehrung ab. Cloud-SOC und ungeprüfte Leistung verbundener Einheiten gelten nicht. Keine Batteriesteuerung.",
+          "nl": "Alleen-lezen controle. Ontbrekende, verouderde, mislukte of verkeerd toegewezen metingen stoppen de Flow, ook bij omkering. Cloud-SOC en ongeverifieerd vermogen van gekoppelde units tellen niet. Geen batterijbesturing."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_5000_system|stream_5000_unit|stream_ac5000"
+          },
+          {
+            "type": "dropdown",
+            "name": "field",
+            "title": {
+              "en": "Reading",
+              "de": "Messwert",
+              "nl": "Meting"
+            },
+            "values": [
+              {
+                "id": "soc",
+                "title": {
+                  "en": "Battery SOC",
+                  "de": "Batterie-SOC",
+                  "nl": "Batterij-SOC"
+                }
+              },
+              {
+                "id": "state",
+                "title": {
+                  "en": "Battery state",
+                  "de": "Batteriestatus",
+                  "nl": "Batterijstatus"
+                }
+              },
+              {
+                "id": "power",
+                "title": {
+                  "en": "Battery power",
+                  "de": "Batterieleistung",
+                  "nl": "Batterijvermogen"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "role",
+            "title": {
+              "en": "Source role",
+              "de": "Quellenrolle",
+              "nl": "Bronrol"
+            },
+            "values": [
+              {
+                "id": "unit",
+                "title": {
+                  "en": "Physical unit",
+                  "de": "Physische Einheit",
+                  "nl": "Fysieke unit"
+                }
+              },
+              {
+                "id": "system",
+                "title": {
+                  "en": "System aggregate",
+                  "de": "Gesamtsystem",
+                  "nl": "Systeemaggregaat"
                 }
               }
             ]
@@ -1224,14 +2131,14 @@
       {
         "id": "release_for_export",
         "title": {
-          "en": "Release battery for export now",
-          "de": "Batterie jetzt für Einspeisung freigeben",
-          "nl": "Batterij nu vrijgeven voor teruglevering"
+          "en": "Allow battery export (minimum reserve)",
+          "de": "Batterieeinspeisung erlauben (minimale Reserve)",
+          "nl": "Batterijexport toestaan (minimale reserve)"
         },
         "titleFormatted": {
-          "en": "Release battery for export now",
-          "de": "Batterie jetzt für Einspeisung freigeben",
-          "nl": "Batterij nu vrijgeven voor teruglevering"
+          "en": "Allow battery export (minimum reserve)",
+          "de": "Batterieeinspeisung erlauben (minimale Reserve)",
+          "nl": "Batterijexport toestaan (minimale reserve)"
         },
         "hint": {
           "en": "Sets reserve to 3%, lowers the discharge limit first when required, and permits grid feed-in. Each setting is read back; physical export is not guaranteed. Review previous settings before restoring them.",
@@ -1286,9 +2193,9 @@
       {
         "id": "set_charge_limit",
         "title": {
-          "en": "Set charge limit",
-          "de": "Ladegrenze festlegen",
-          "nl": "Laadlimiet instellen"
+          "en": "Set charge limit (%)",
+          "de": "Ladegrenze festlegen (%)",
+          "nl": "Laadlimiet instellen (%)"
         },
         "titleFormatted": {
           "en": "Set charge limit to [[level]]%",
@@ -1315,19 +2222,24 @@
             "label": "%",
             "labelDecimals": 0
           }
-        ]
+        ],
+        "hint": {
+          "en": "Upper battery charge level, not a wattage limit or a start-charging command. Settings are read back; actual charging still depends on EcoFlow modes, schedules and limits.",
+          "de": "Oberer Batterieladestand, keine Wattgrenze oder Anweisung zum Ladestart. Einstellungen werden zurückgelesen; tatsächliches Laden hängt weiter von EcoFlow-Modi, Zeitplänen und Grenzen ab.",
+          "nl": "Bovenste batterijlading, geen wattlimiet of opdracht om te laden. Instellingen worden teruggelezen; werkelijk laden blijft afhankelijk van EcoFlow-modi, schema's en limieten."
+        }
       },
       {
         "id": "set_discharge_limit",
         "title": {
-          "en": "Set discharge limit",
-          "de": "Entladegrenze festlegen",
-          "nl": "Ontlaadlimiet instellen"
+          "en": "Set minimum discharge level (%)",
+          "de": "Minimalen Entladestand festlegen (%)",
+          "nl": "Minimaal ontlaadniveau instellen (%)"
         },
         "titleFormatted": {
-          "en": "Set discharge limit to [[level]]%",
-          "de": "Entladegrenze auf [[level]]% setzen",
-          "nl": "Ontlaadlimiet instellen op [[level]]%"
+          "en": "Set minimum discharge level to [[level]]%",
+          "de": "Minimalen Entladestand auf [[level]]% setzen",
+          "nl": "Minimaal ontlaadniveau instellen op [[level]]%"
         },
         "args": [
           {
@@ -1349,7 +2261,12 @@
             "label": "%",
             "labelDecimals": 0
           }
-        ]
+        ],
+        "hint": {
+          "en": "Lower battery SOC limit, not discharge watts and not a command to force discharge. Existing reserve constraints and EcoFlow operating rules still apply.",
+          "de": "Untere SOC-Grenze der Batterie, keine Entladeleistung und kein erzwungenes Entladen. Bestehende Reservegrenzen und EcoFlow-Betriebsregeln gelten weiterhin.",
+          "nl": "Ondergrens van batterij-SOC, geen ontlaadvermogen of opdracht om ontladen te forceren. Bestaande reservegrenzen en EcoFlow-bedrijfsregels blijven gelden."
+        }
       },
       {
         "id": "set_electricity_price",
@@ -1394,14 +2311,14 @@
       {
         "id": "set_feed_in",
         "title": {
-          "en": "Set grid feed-in",
-          "de": "Netzeinspeisung einstellen",
-          "nl": "Teruglevering aan net instellen"
+          "en": "Set grid feed-in permission",
+          "de": "Freigabe der Netzeinspeisung einstellen",
+          "nl": "Toestemming voor netexport instellen"
         },
         "titleFormatted": {
-          "en": "Turn grid feed-in [[state]]",
-          "de": "Netzeinspeisung [[state]] schalten",
-          "nl": "Teruglevering aan net [[state]] zetten"
+          "en": "Set grid feed-in permission [[state]]",
+          "de": "Freigabe der Netzeinspeisung [[state]] setzen",
+          "nl": "Toestemming voor netexport [[state]] zetten"
         },
         "args": [
           {
@@ -1436,7 +2353,12 @@
               }
             ]
           }
-        ]
+        ],
+        "hint": {
+          "en": "Changes the reported feed-in setting, not a wattage target. Native modes, schedules and limits determine actual power flow; check grid readings separately.",
+          "de": "Ändert die gemeldete Einspeiseeinstellung, keinen Watt-Sollwert. Native Modi, Zeitpläne und Grenzen bestimmen den tatsächlichen Leistungsfluss; Netzwerte separat prüfen.",
+          "nl": "Wijzigt de gemelde terugleverinstelling, geen wattdoel. Eigen modi, schema's en limieten bepalen de werkelijke energiestroom; controleer netmetingen apart."
+        }
       },
       {
         "id": "set_operating_mode",
@@ -1500,6 +2422,48 @@
             ]
           }
         ]
+      },
+      {
+        "id": "stream_5000_request_backup_reserve",
+        "title": {
+          "en": "Request installation backup reserve (no confirmation)",
+          "de": "Notstromreserve der Anlage anfordern (ohne Bestätigung)",
+          "nl": "Back-upreserve voor installatie aanvragen (geen bevestiging)"
+        },
+        "titleFormatted": {
+          "en": "Request installation backup reserve of [[percent]]% (no confirmation)",
+          "de": "Notstromreserve der Anlage von [[percent]]% anfordern (ohne Bestätigung)",
+          "nl": "Back-upreserve voor installatie van [[percent]]% aanvragen (geen bevestiging)"
+        },
+        "hint": {
+          "en": "Opt in in this device's Advanced Settings and configure Developer API keys. Targets EcoFlow's reported main device and may affect linked units. Requires reserve already on and Self-consumption mode. Success means API acceptance only, not application or charging. No automatic retry or restoration. Check EcoFlow independently.",
+          "de": "In den erweiterten Geräteeinstellungen aktivieren und Developer-API-Schlüssel einrichten. Ziel ist das von EcoFlow gemeldete Hauptgerät; verbundene Einheiten können betroffen sein. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. Erfolg bedeutet nur API-Annahme, nicht Anwendung oder Laden. Keine automatische Wiederholung oder Wiederherstellung. Unabhängig in EcoFlow prüfen.",
+          "nl": "Activeer in de geavanceerde apparaatinstellingen en stel Developer-API-sleutels in. Richt zich op het door EcoFlow gemelde hoofdapparaat en kan gekoppelde units beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. Succes betekent alleen API-acceptatie, niet toepassing of laden. Geen automatische herhaling of herstel. Controleer onafhankelijk in EcoFlow."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=stream_5000_unit|stream_ac5000|stream_5000_system"
+          },
+          {
+            "type": "number",
+            "name": "percent",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "title": {
+              "en": "Requested reserve",
+              "de": "Angeforderte Reserve",
+              "nl": "Aangevraagde reserve"
+            },
+            "placeholder": {
+              "en": "%",
+              "de": "%",
+              "nl": "%"
+            }
+          }
+        ]
       }
     ]
   },
@@ -1558,33 +2522,33 @@
           "id": "meter_source",
           "type": "dropdown",
           "label": {
-            "en": "Energy meter shows",
-            "de": "Energiezähler zeigt",
-            "nl": "Energiemeter toont"
+            "en": "Additional home-load reading",
+            "de": "Zusätzlicher Hausverbrauchswert",
+            "nl": "Extra huisverbruikswaarde"
           },
           "value": "grid",
           "values": [
             {
               "id": "grid",
               "label": {
-                "en": "Grid power (import / export)",
-                "de": "Netzleistung (Bezug / Einspeisung)",
-                "nl": "Netvermogen (afname / teruglevering)"
+                "en": "Grid readings only",
+                "de": "Nur Netzwerte",
+                "nl": "Alleen netwaarden"
               }
             },
             {
               "id": "load",
               "label": {
-                "en": "Home load (total consumption)",
-                "de": "Hauslast (Gesamtverbrauch)",
-                "nl": "Huisbelasting (totaalverbruik)"
+                "en": "Also show home load when available",
+                "de": "Hausverbrauch anzeigen, wenn verfügbar",
+                "nl": "Ook huisverbruik tonen indien beschikbaar"
               }
             }
           ],
           "hint": {
-            "en": "Grid = net flow to/from the grid (import positive, export negative). Home load = the total power your home is using right now (always positive).",
-            "de": "Netz = Nettofluss zum/vom Netz (Import positiv, Export negativ). Hauslast = Gesamtleistung, die dein Zuhause gerade verbraucht (immer positiv).",
-            "nl": "Net = nettostroom van/naar het net (import positief, export negatief). Huisbelasting = het totale vermogen dat je huis nu gebruikt (altijd positief)."
+            "en": "Homey Energy always uses grid power (import positive, export negative). Home load is an optional separate reading from the linked STREAM installation, not another CT channel.",
+            "de": "Homey Energy nutzt immer die Netzleistung (Bezug positiv, Einspeisung negativ). Hausverbrauch ist ein optionaler separater Wert der STREAM-Anlage, kein zusätzlicher CT-Kanal.",
+            "nl": "Homey Energy gebruikt altijd netvermogen (afname positief, teruglevering negatief). Huisverbruik is een optionele aparte waarde van de STREAM-installatie, geen extra CT-kanaal."
           }
         },
         {
@@ -1602,6 +2566,47 @@
             "en": "How often to fetch data over REST. MQTT delivers realtime updates between polls.",
             "de": "Wie oft Daten per REST abgerufen werden. MQTT liefert Echtzeit-Updates zwischen den Abfragen.",
             "nl": "Hoe vaak gegevens via REST worden opgehaald. MQTT levert realtime updates tussen polls."
+          }
+        },
+        {
+          "id": "property_meter_role",
+          "type": "dropdown",
+          "label": {
+            "en": "Homey Energy meter role",
+            "de": "Zählerrolle in Homey Energy",
+            "nl": "Meterrol in Homey Energy"
+          },
+          "value": "unreviewed",
+          "values": [
+            {
+              "id": "unreviewed",
+              "label": {
+                "en": "Not reviewed",
+                "de": "Nicht geprüft",
+                "nl": "Niet gecontroleerd"
+              }
+            },
+            {
+              "id": "included",
+              "label": {
+                "en": "Included as a whole-property meter",
+                "de": "Als Gesamtzähler einbezogen",
+                "nl": "Opgenomen als hoofdmeter"
+              }
+            },
+            {
+              "id": "not_included",
+              "label": {
+                "en": "Excluded or configured as a submeter",
+                "de": "Ausgeschlossen oder als Unterzähler eingerichtet",
+                "nl": "Uitgesloten of ingesteld als tussenmeter"
+              }
+            }
+          ],
+          "hint": {
+            "en": "Review this meter in Homey Energy before choosing a role. This review is used when the app SDK cannot read Homey’s inclusion flags. It does not change Energy inclusion or counters. Review again after changing Energy inclusion or wiring. The selected Dual CT does not need its own review; other cumulative EcoFlow meters do.",
+            "de": "Prüfen Sie diesen Zähler in Homey Energy, bevor Sie eine Rolle wählen. Diese Angabe wird verwendet, wenn das App-SDK die Einbeziehung nicht lesen kann. Sie ändert weder Energy-Einstellungen noch Zählerstände. Nach Änderungen an Einbeziehung oder Verdrahtung erneut prüfen. Der ausgewählte Dual CT benötigt keine eigene Prüfung, andere kumulative EcoFlow-Zähler schon.",
+            "nl": "Controleer deze meter in Homey Energy voordat u een rol kiest. Deze controle wordt gebruikt als de app-SDK de deelname niet kan lezen. Dit verandert de Energy-instellingen of tellerstanden niet. Controleer opnieuw na wijzigingen in deelname of bedrading. De geselecteerde Dual CT heeft zelf geen controle nodig; andere cumulatieve EcoFlow-meters wel."
           }
         }
       ],
@@ -1627,6 +2632,1090 @@
         }
       ],
       "id": "smartmeter"
+    },
+    {
+      "name": {
+        "en": "Smart Meter Dual CT",
+        "de": "Smart Meter Dual CT",
+        "nl": "Smart Meter Dual CT"
+      },
+      "class": "sensor",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_power",
+        "meter_power.imported",
+        "meter_power.exported",
+        "dual_ct_preview_power.a_p1",
+        "dual_ct_preview_voltage.a_p1",
+        "dual_ct_preview_current.a_p1",
+        "dual_ct_preview_power.a_p2",
+        "dual_ct_preview_voltage.a_p2",
+        "dual_ct_preview_current.a_p2",
+        "dual_ct_preview_power.a_p3",
+        "dual_ct_preview_voltage.a_p3",
+        "dual_ct_preview_current.a_p3",
+        "dual_ct_preview_power.b_p1",
+        "dual_ct_preview_voltage.b_p1",
+        "dual_ct_preview_current.b_p1",
+        "dual_ct_preview_power.b_p2",
+        "dual_ct_preview_voltage.b_p2",
+        "dual_ct_preview_current.b_p2",
+        "dual_ct_preview_power.b_p3",
+        "dual_ct_preview_voltage.b_p3",
+        "dual_ct_preview_current.b_p3",
+        "dual_ct_preview_net.b"
+      ],
+      "capabilitiesOptions": {
+        "dual_ct_linked_grid_power": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "measure_power": {
+          "approximation": true
+        },
+        "meter_power.imported": {
+          "title": {
+            "en": "Imported energy",
+            "de": "Bezogene Energie",
+            "nl": "Afgenomen energie"
+          }
+        },
+        "meter_power.exported": {
+          "title": {
+            "en": "Exported energy",
+            "de": "Eingespeiste Energie",
+            "nl": "Teruggeleverde energie"
+          }
+        },
+        "dual_ct_preview_power.a_p1": {
+          "title": {
+            "en": "CT1 phase 1 power",
+            "de": "CT1 Phase 1 Leistung",
+            "nl": "CT1 fase 1 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.a_p1": {
+          "title": {
+            "en": "CT1 phase 1 voltage",
+            "de": "CT1 Phase 1 Spannung",
+            "nl": "CT1 fase 1 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.a_p1": {
+          "title": {
+            "en": "CT1 phase 1 current",
+            "de": "CT1 Phase 1 Strom",
+            "nl": "CT1 fase 1 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.a_p2": {
+          "title": {
+            "en": "CT1 phase 2 power",
+            "de": "CT1 Phase 2 Leistung",
+            "nl": "CT1 fase 2 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.a_p2": {
+          "title": {
+            "en": "CT1 phase 2 voltage",
+            "de": "CT1 Phase 2 Spannung",
+            "nl": "CT1 fase 2 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.a_p2": {
+          "title": {
+            "en": "CT1 phase 2 current",
+            "de": "CT1 Phase 2 Strom",
+            "nl": "CT1 fase 2 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.a_p3": {
+          "title": {
+            "en": "CT1 phase 3 power",
+            "de": "CT1 Phase 3 Leistung",
+            "nl": "CT1 fase 3 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.a_p3": {
+          "title": {
+            "en": "CT1 phase 3 voltage",
+            "de": "CT1 Phase 3 Spannung",
+            "nl": "CT1 fase 3 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.a_p3": {
+          "title": {
+            "en": "CT1 phase 3 current",
+            "de": "CT1 Phase 3 Strom",
+            "nl": "CT1 fase 3 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.b_p1": {
+          "title": {
+            "en": "CT2 phase 1 power",
+            "de": "CT2 Phase 1 Leistung",
+            "nl": "CT2 fase 1 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.b_p1": {
+          "title": {
+            "en": "CT2 phase 1 voltage",
+            "de": "CT2 Phase 1 Spannung",
+            "nl": "CT2 fase 1 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.b_p1": {
+          "title": {
+            "en": "CT2 phase 1 current",
+            "de": "CT2 Phase 1 Strom",
+            "nl": "CT2 fase 1 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.b_p2": {
+          "title": {
+            "en": "CT2 phase 2 power",
+            "de": "CT2 Phase 2 Leistung",
+            "nl": "CT2 fase 2 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.b_p2": {
+          "title": {
+            "en": "CT2 phase 2 voltage",
+            "de": "CT2 Phase 2 Spannung",
+            "nl": "CT2 fase 2 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.b_p2": {
+          "title": {
+            "en": "CT2 phase 2 current",
+            "de": "CT2 Phase 2 Strom",
+            "nl": "CT2 fase 2 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.b_p3": {
+          "title": {
+            "en": "CT2 phase 3 power",
+            "de": "CT2 Phase 3 Leistung",
+            "nl": "CT2 fase 3 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.b_p3": {
+          "title": {
+            "en": "CT2 phase 3 voltage",
+            "de": "CT2 Phase 3 Spannung",
+            "nl": "CT2 fase 3 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.b_p3": {
+          "title": {
+            "en": "CT2 phase 3 current",
+            "de": "CT2 Phase 3 Strom",
+            "nl": "CT2 fase 3 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_net.b": {
+          "title": {
+            "en": "CT2 total power",
+            "de": "CT2 Gesamtleistung",
+            "nl": "CT2 totaal vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        }
+      },
+      "energy": {
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power.imported",
+        "cumulativeExportedCapability": "meter_power.exported"
+      },
+      "images": {
+        "small": "/drivers/smartmeter_dual_ct_preview/assets/images/small.png",
+        "large": "/drivers/smartmeter_dual_ct_preview/assets/images/large.png",
+        "xlarge": "/drivers/smartmeter_dual_ct_preview/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "energy_setup"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "app_account_repair"
+        }
+      ],
+      "settings": [
+        {
+          "id": "paired_mode_summary",
+          "type": "label",
+          "label": {
+            "en": "Paired Energy mode",
+            "de": "Gekoppelter Energy-Modus",
+            "nl": "Gekoppelde Energy-modus"
+          },
+          "value": "—",
+          "hint": {
+            "en": "Recorded at pairing. The phase display settings below do not change this accounting mode. CT2 is never added to property grid totals.",
+            "de": "Beim Koppeln festgelegt. Die Phasenanzeige unten ändert diesen Berechnungsmodus nicht. CT2 wird nie zur Netzbilanz addiert.",
+            "nl": "Vastgelegd bij koppelen. De faseweergave hieronder verandert deze berekening niet. CT2 wordt nooit bij het netverbruik opgeteld."
+          }
+        },
+        {
+          "id": "display_ct1",
+          "type": "dropdown",
+          "value": "default",
+          "label": {
+            "en": "CT1 phase display",
+            "de": "CT1 Phasenanzeige",
+            "nl": "CT1 faseweergave"
+          },
+          "hint": {
+            "en": "Display only. Does not change your Energy source, accounting mode, signs or counters. Hidden readings remain available internally; no history or Flow references are removed. Default keeps the monitor layout or follows the paired Energy mode. Details use independently received readings for up to 90 seconds; Energy power keeps its stricter freshness checks. Reopen the device view after saving.",
+            "de": "Nur Anzeige. Ändert weder Energy-Quelle, Abrechnung, Vorzeichen noch Zähler. Ausgeblendete Werte bleiben intern erhalten; Verlauf und Flow-Verweise werden nicht entfernt. Standard behält die Monitoransicht bzw. folgt dem gekoppelten Energy-Modus. Details zeigen separat empfangene Werte bis zu 90 Sekunden lang; Energy-Leistung behält ihre strengeren Aktualitätsprüfungen. Geräteansicht nach dem Speichern erneut öffnen.",
+            "nl": "Alleen weergave. Wijzigt geen Energy-bron, rekenmethode, tekens of tellers. Verborgen waarden blijven intern beschikbaar; geschiedenis en Flow-verwijzingen blijven behouden. Standaard behoudt de monitorweergave of volgt de gekoppelde Energy-modus. Details tonen afzonderlijk ontvangen waarden tot 90 seconden; Energy-vermogen behoudt zijn strengere actualiteitscontroles. Open de apparaatweergave opnieuw na opslaan."
+          },
+          "values": [
+            {
+              "id": "default",
+              "label": {
+                "en": "Default layout",
+                "de": "Standardansicht",
+                "nl": "Standaardweergave"
+              }
+            },
+            {
+              "id": "single_phase",
+              "label": {
+                "en": "Single phase",
+                "de": "Einphasig",
+                "nl": "Eenfase"
+              }
+            },
+            {
+              "id": "three_phase",
+              "label": {
+                "en": "Three phase",
+                "de": "Dreiphasig",
+                "nl": "Driefase"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ct2_flow_import_sign",
+          "type": "dropdown",
+          "value": "off",
+          "label": {
+            "en": "CT2 notifications: import direction",
+            "de": "CT2-Benachrichtigungen: Bezugsrichtung",
+            "nl": "CT2-meldingen: afnamerichting"
+          },
+          "hint": {
+            "en": "Experimental. Select the CT2 phase layout and compare its watts and sign against your known circuit before enabling. Choose the sign that means import on this circuit.",
+            "de": "Experimentell. Vor dem Aktivieren das CT2-Phasenlayout auswählen und Wattwerte und Vorzeichen am bekannten Stromkreis prüfen. Das Vorzeichen für Bezug auswählen.",
+            "nl": "Experimenteel. Kies de CT2-fase-indeling en vergelijk het vermogen en teken met je bekende circuit. Kies het teken dat afname betekent."
+          },
+          "values": [
+            {
+              "id": "off",
+              "label": {
+                "en": "Off",
+                "de": "Aus",
+                "nl": "Uit"
+              }
+            },
+            {
+              "id": "positive",
+              "label": {
+                "en": "Positive means import",
+                "de": "Positiv bedeutet Bezug",
+                "nl": "Positief betekent afname"
+              }
+            },
+            {
+              "id": "negative",
+              "label": {
+                "en": "Negative means import",
+                "de": "Negativ bedeutet Bezug",
+                "nl": "Negatief betekent afname"
+              }
+            }
+          ]
+        },
+        {
+          "id": "display_ct2",
+          "type": "dropdown",
+          "value": "default",
+          "label": {
+            "en": "CT2 display",
+            "de": "CT2 Anzeige",
+            "nl": "CT2 weergave"
+          },
+          "hint": {
+            "en": "Choose Off, single phase or three phase for optional CT2 readings. CT2 does not contribute to whole-property Energy totals. Display changes preserve history and Flow references. Reopen the device after saving.",
+            "de": "Wählen Sie Aus, einphasig oder dreiphasig für optionale CT2-Werte. CT2 trägt nicht zur Hausenergie bei. Anzeigeänderungen erhalten Verlauf und Flow-Verweise. Öffnen Sie das Gerät nach dem Speichern erneut.",
+            "nl": "Kies Uit, één fase of drie fasen voor optionele CT2-metingen. CT2 telt niet mee in de woningenergie. Weergavewijzigingen behouden historie en Flow-verwijzingen. Open het apparaat opnieuw na opslaan."
+          },
+          "values": [
+            {
+              "id": "default",
+              "label": {
+                "en": "Default layout",
+                "de": "Standardansicht",
+                "nl": "Standaardweergave"
+              }
+            },
+            {
+              "id": "off",
+              "label": {
+                "en": "Hide CT2",
+                "de": "CT2 ausblenden",
+                "nl": "CT2 verbergen"
+              }
+            },
+            {
+              "id": "single_phase",
+              "label": {
+                "en": "Single phase",
+                "de": "Einphasig",
+                "nl": "Eenfase"
+              }
+            },
+            {
+              "id": "three_phase",
+              "label": {
+                "en": "Three phase",
+                "de": "Dreiphasig",
+                "nl": "Driefase"
+              }
+            }
+          ]
+        },
+        {
+          "id": "property_meter_role",
+          "type": "dropdown",
+          "label": {
+            "en": "Homey Energy meter role",
+            "de": "Zählerrolle in Homey Energy",
+            "nl": "Meterrol in Homey Energy"
+          },
+          "value": "unreviewed",
+          "values": [
+            {
+              "id": "unreviewed",
+              "label": {
+                "en": "Not reviewed",
+                "de": "Nicht geprüft",
+                "nl": "Niet gecontroleerd"
+              }
+            },
+            {
+              "id": "included",
+              "label": {
+                "en": "Included as a whole-property meter",
+                "de": "Als Gesamtzähler einbezogen",
+                "nl": "Opgenomen als hoofdmeter"
+              }
+            },
+            {
+              "id": "not_included",
+              "label": {
+                "en": "Excluded or configured as a submeter",
+                "de": "Ausgeschlossen oder als Unterzähler eingerichtet",
+                "nl": "Uitgesloten of ingesteld als tussenmeter"
+              }
+            }
+          ],
+          "hint": {
+            "en": "Review this meter in Homey Energy before choosing a role. This review is used when the app SDK cannot read Homey’s inclusion flags. It does not change Energy inclusion or counters. Review again after changing Energy inclusion or wiring. The selected Dual CT does not need its own review; other cumulative EcoFlow meters do.",
+            "de": "Prüfen Sie diesen Zähler in Homey Energy, bevor Sie eine Rolle wählen. Diese Angabe wird verwendet, wenn das App-SDK die Einbeziehung nicht lesen kann. Sie ändert weder Energy-Einstellungen noch Zählerstände. Nach Änderungen an Einbeziehung oder Verdrahtung erneut prüfen. Der ausgewählte Dual CT benötigt keine eigene Prüfung, andere kumulative EcoFlow-Zähler schon.",
+            "nl": "Controleer deze meter in Homey Energy voordat u een rol kiest. Deze controle wordt gebruikt als de app-SDK de deelname niet kan lezen. Dit verandert de Energy-instellingen of tellerstanden niet. Controleer opnieuw na wijzigingen in deelname of bedrading. De geselecteerde Dual CT heeft zelf geen controle nodig; andere cumulatieve EcoFlow-meters wel."
+          }
+        }
+      ],
+      "id": "smartmeter_dual_ct_energy"
+    },
+    {
+      "name": {
+        "en": "Smart Meter Dual CT — detailed readings",
+        "de": "Smart Meter Dual CT — Detailwerte",
+        "nl": "Smart Meter Dual CT — detailmetingen"
+      },
+      "class": "other",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "dual_ct_preview_status",
+        "dual_ct_preview_age",
+        "dual_ct_preview_net.a",
+        "dual_ct_preview_net_status.a",
+        "dual_ct_preview_net.b",
+        "dual_ct_preview_net_status.b",
+        "dual_ct_preview_power.a_p1",
+        "dual_ct_preview_voltage.a_p1",
+        "dual_ct_preview_current.a_p1",
+        "dual_ct_preview_power.a_p2",
+        "dual_ct_preview_voltage.a_p2",
+        "dual_ct_preview_current.a_p2",
+        "dual_ct_preview_power.a_p3",
+        "dual_ct_preview_voltage.a_p3",
+        "dual_ct_preview_current.a_p3",
+        "dual_ct_preview_power.b_p1",
+        "dual_ct_preview_voltage.b_p1",
+        "dual_ct_preview_current.b_p1",
+        "dual_ct_preview_power.b_p2",
+        "dual_ct_preview_voltage.b_p2",
+        "dual_ct_preview_current.b_p2",
+        "dual_ct_preview_power.b_p3",
+        "dual_ct_preview_voltage.b_p3",
+        "dual_ct_preview_current.b_p3",
+        "dual_ct_preview_total.a",
+        "dual_ct_preview_total.b",
+        "dual_ct_preview_fields.a_power",
+        "dual_ct_preview_fields.a_voltage",
+        "dual_ct_preview_fields.a_current",
+        "dual_ct_preview_fields.b_power",
+        "dual_ct_preview_fields.b_voltage",
+        "dual_ct_preview_fields.b_current",
+        "dual_ct_preview_counters",
+        "dual_ct_preview_trends"
+      ],
+      "capabilitiesOptions": {
+        "dual_ct_preview_status": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_age": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_total.a": {
+          "title": {
+            "en": "A raw total",
+            "de": "A Rohsumme",
+            "nl": "A ruw totaal"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_total.b": {
+          "title": {
+            "en": "B raw total",
+            "de": "B Rohsumme",
+            "nl": "B ruw totaal"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.a_power": {
+          "title": {
+            "en": "CT1 power",
+            "de": "CT1 Leistung",
+            "nl": "CT1 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.a_voltage": {
+          "title": {
+            "en": "CT1 voltage",
+            "de": "CT1 Spannung",
+            "nl": "CT1 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.a_current": {
+          "title": {
+            "en": "CT1 current",
+            "de": "CT1 Strom",
+            "nl": "CT1 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.b_power": {
+          "title": {
+            "en": "CT2 power",
+            "de": "CT2 Leistung",
+            "nl": "CT2 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.b_voltage": {
+          "title": {
+            "en": "CT2 voltage",
+            "de": "CT2 Spannung",
+            "nl": "CT2 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_fields.b_current": {
+          "title": {
+            "en": "CT2 current",
+            "de": "CT2 Strom",
+            "nl": "CT2 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_counters": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_trends": {
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_net.a": {
+          "title": {
+            "en": "CT1 phase sum (candidate)",
+            "de": "CT1 Phasensumme (Kandidat)",
+            "nl": "CT1 fasesom (kandidaat)"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_net_status.a": {
+          "title": {
+            "en": "CT1 circuit / sum status",
+            "de": "CT1 Stromkreis / Summenstatus",
+            "nl": "CT1 circuit / somstatus"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.a_p1": {
+          "title": {
+            "en": "CT1 phase 1 power",
+            "de": "CT1 Phase 1 Leistung",
+            "nl": "CT1 fase 1 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.a_p1": {
+          "title": {
+            "en": "CT1 phase 1 voltage",
+            "de": "CT1 Phase 1 Spannung",
+            "nl": "CT1 fase 1 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.a_p1": {
+          "title": {
+            "en": "CT1 phase 1 current",
+            "de": "CT1 Phase 1 Strom",
+            "nl": "CT1 fase 1 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.a_p2": {
+          "title": {
+            "en": "CT1 phase 2 power",
+            "de": "CT1 Phase 2 Leistung",
+            "nl": "CT1 fase 2 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.a_p2": {
+          "title": {
+            "en": "CT1 phase 2 voltage",
+            "de": "CT1 Phase 2 Spannung",
+            "nl": "CT1 fase 2 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.a_p2": {
+          "title": {
+            "en": "CT1 phase 2 current",
+            "de": "CT1 Phase 2 Strom",
+            "nl": "CT1 fase 2 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.a_p3": {
+          "title": {
+            "en": "CT1 phase 3 power",
+            "de": "CT1 Phase 3 Leistung",
+            "nl": "CT1 fase 3 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.a_p3": {
+          "title": {
+            "en": "CT1 phase 3 voltage",
+            "de": "CT1 Phase 3 Spannung",
+            "nl": "CT1 fase 3 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.a_p3": {
+          "title": {
+            "en": "CT1 phase 3 current",
+            "de": "CT1 Phase 3 Strom",
+            "nl": "CT1 fase 3 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_net.b": {
+          "title": {
+            "en": "CT2 phase sum (candidate)",
+            "de": "CT2 Phasensumme (Kandidat)",
+            "nl": "CT2 fasesom (kandidaat)"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_net_status.b": {
+          "title": {
+            "en": "CT2 circuit / sum status",
+            "de": "CT2 Stromkreis / Summenstatus",
+            "nl": "CT2 circuit / somstatus"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.b_p1": {
+          "title": {
+            "en": "CT2 phase 1 power",
+            "de": "CT2 Phase 1 Leistung",
+            "nl": "CT2 fase 1 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.b_p1": {
+          "title": {
+            "en": "CT2 phase 1 voltage",
+            "de": "CT2 Phase 1 Spannung",
+            "nl": "CT2 fase 1 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.b_p1": {
+          "title": {
+            "en": "CT2 phase 1 current",
+            "de": "CT2 Phase 1 Strom",
+            "nl": "CT2 fase 1 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.b_p2": {
+          "title": {
+            "en": "CT2 phase 2 power",
+            "de": "CT2 Phase 2 Leistung",
+            "nl": "CT2 fase 2 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.b_p2": {
+          "title": {
+            "en": "CT2 phase 2 voltage",
+            "de": "CT2 Phase 2 Spannung",
+            "nl": "CT2 fase 2 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.b_p2": {
+          "title": {
+            "en": "CT2 phase 2 current",
+            "de": "CT2 Phase 2 Strom",
+            "nl": "CT2 fase 2 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_power.b_p3": {
+          "title": {
+            "en": "CT2 phase 3 power",
+            "de": "CT2 Phase 3 Leistung",
+            "nl": "CT2 fase 3 vermogen"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_voltage.b_p3": {
+          "title": {
+            "en": "CT2 phase 3 voltage",
+            "de": "CT2 Phase 3 Spannung",
+            "nl": "CT2 fase 3 spanning"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        },
+        "dual_ct_preview_current.b_p3": {
+          "title": {
+            "en": "CT2 phase 3 current",
+            "de": "CT2 Phase 3 Strom",
+            "nl": "CT2 fase 3 stroom"
+          },
+          "preventTag": true,
+          "preventInsights": true
+        }
+      },
+      "images": {
+        "small": "/drivers/smartmeter_dual_ct_preview/assets/images/small.png",
+        "large": "/drivers/smartmeter_dual_ct_preview/assets/images/large.png",
+        "xlarge": "/drivers/smartmeter_dual_ct_preview/assets/images/xlarge.png"
+      },
+      "settings": [
+        {
+          "id": "preview_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Receive meter readings",
+            "de": "Messwerte empfangen",
+            "nl": "Meterstanden ontvangen"
+          },
+          "hint": {
+            "en": "Shows CT1/CT2 readings. Homey Energy accounting is not enabled on this device. Circuit descriptions change labels only. Measurement mapping, direction and timing are still being validated; do not use these readings for automation. Disabling clears readings and disconnects this device listener. Use Repair after updating the shared EcoFlow sign-in.",
+            "de": "Zeigt CT1/CT2-Messwerte. Homey Energy ist für dieses Gerät nicht aktiviert. Stromkreisbeschreibungen ändern nur die Beschriftung. Zuordnung, Richtung und Zeitbezug werden noch geprüft; diese Werte nicht zur Automatisierung verwenden. Deaktivieren löscht Werte und trennt diesen Listener. Nach Änderung der gemeinsamen EcoFlow-Anmeldung Reparieren verwenden.",
+            "nl": "Toont CT1/CT2-metingen. Homey Energy is niet ingeschakeld voor dit apparaat. Circuitbeschrijvingen wijzigen alleen labels. Meetkoppeling, richting en tijdsbasis worden nog gevalideerd; gebruik deze waarden niet voor automatisering. Uitschakelen wist waarden en koppelt deze listener los. Gebruik Repareren na het bijwerken van de gedeelde EcoFlow-aanmelding."
+          }
+        },
+        {
+          "id": "ct1_role",
+          "type": "dropdown",
+          "value": "unknown",
+          "label": {
+            "en": "CT1 circuit description",
+            "de": "CT1 Stromkreisbeschreibung",
+            "nl": "CT1 circuitbeschrijving"
+          },
+          "hint": {
+            "en": "Display only: choose what this port measures in your installation. Does not select an Energy source, invert signs or verify a mapping. A hybrid inverter includes solar and battery exchange; it is not solar-only production.",
+            "de": "Nur Anzeige: Wählen Sie den Stromkreis dieses Anschlusses. Keine Energiequelle, Vorzeichenumkehr oder bestätigte Zuordnung. Ein Hybridwechselrichter umfasst Solar- und Batterieaustausch, nicht nur Solarerzeugung.",
+            "nl": "Alleen weergave: kies wat deze poort meet. Geen selectie van Energy-bron, tekenomkering of geverifieerde koppeling. Een hybride omvormer omvat zon en batterij, niet alleen zonneproductie."
+          },
+          "values": [
+            {
+              "id": "unknown",
+              "label": {
+                "en": "Not specified",
+                "de": "Nicht angegeben",
+                "nl": "Niet opgegeven"
+              }
+            },
+            {
+              "id": "grid",
+              "label": {
+                "en": "Grid connection",
+                "de": "Netzanschluss",
+                "nl": "Netaansluiting"
+              }
+            },
+            {
+              "id": "hybrid_inverter",
+              "label": {
+                "en": "Hybrid inverter (solar + battery)",
+                "de": "Hybridwechselrichter (Solar + Batterie)",
+                "nl": "Hybride omvormer (zon + batterij)"
+              }
+            },
+            {
+              "id": "solar_inverter",
+              "label": {
+                "en": "Solar-only inverter",
+                "de": "Reiner Solarwechselrichter",
+                "nl": "Omvormer voor alleen zon"
+              }
+            },
+            {
+              "id": "load",
+              "label": {
+                "en": "Load circuit",
+                "de": "Laststromkreis",
+                "nl": "Verbruikscircuit"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ct2_role",
+          "type": "dropdown",
+          "value": "unknown",
+          "label": {
+            "en": "CT2 circuit description",
+            "de": "CT2 Stromkreisbeschreibung",
+            "nl": "CT2 circuitbeschrijving"
+          },
+          "hint": {
+            "en": "Display only: choose what this port measures in your installation. Does not select an Energy source, invert signs or verify a mapping. A hybrid inverter includes solar and battery exchange; it is not solar-only production.",
+            "de": "Nur Anzeige: Wählen Sie den Stromkreis dieses Anschlusses. Keine Energiequelle, Vorzeichenumkehr oder bestätigte Zuordnung. Ein Hybridwechselrichter umfasst Solar- und Batterieaustausch, nicht nur Solarerzeugung.",
+            "nl": "Alleen weergave: kies wat deze poort meet. Geen selectie van Energy-bron, tekenomkering of geverifieerde koppeling. Een hybride omvormer omvat zon en batterij, niet alleen zonneproductie."
+          },
+          "values": [
+            {
+              "id": "unknown",
+              "label": {
+                "en": "Not specified",
+                "de": "Nicht angegeben",
+                "nl": "Niet opgegeven"
+              }
+            },
+            {
+              "id": "grid",
+              "label": {
+                "en": "Grid connection",
+                "de": "Netzanschluss",
+                "nl": "Netaansluiting"
+              }
+            },
+            {
+              "id": "hybrid_inverter",
+              "label": {
+                "en": "Hybrid inverter (solar + battery)",
+                "de": "Hybridwechselrichter (Solar + Batterie)",
+                "nl": "Hybride omvormer (zon + batterij)"
+              }
+            },
+            {
+              "id": "solar_inverter",
+              "label": {
+                "en": "Solar-only inverter",
+                "de": "Reiner Solarwechselrichter",
+                "nl": "Omvormer voor alleen zon"
+              }
+            },
+            {
+              "id": "load",
+              "label": {
+                "en": "Load circuit",
+                "de": "Laststromkreis",
+                "nl": "Verbruikscircuit"
+              }
+            }
+          ]
+        },
+        {
+          "id": "display_ct1",
+          "type": "dropdown",
+          "value": "default",
+          "label": {
+            "en": "CT1 phase display",
+            "de": "CT1 Phasenanzeige",
+            "nl": "CT1 faseweergave"
+          },
+          "hint": {
+            "en": "Display only. Does not change your Energy source, accounting mode, signs or counters. Hidden readings remain available internally; no history or Flow references are removed. Default keeps the monitor layout or follows the paired Energy mode. Details use independently received readings for up to 90 seconds; Energy power keeps its stricter freshness checks. Reopen the device view after saving.",
+            "de": "Nur Anzeige. Ändert weder Energy-Quelle, Abrechnung, Vorzeichen noch Zähler. Ausgeblendete Werte bleiben intern erhalten; Verlauf und Flow-Verweise werden nicht entfernt. Standard behält die Monitoransicht bzw. folgt dem gekoppelten Energy-Modus. Details zeigen separat empfangene Werte bis zu 90 Sekunden lang; Energy-Leistung behält ihre strengeren Aktualitätsprüfungen. Geräteansicht nach dem Speichern erneut öffnen.",
+            "nl": "Alleen weergave. Wijzigt geen Energy-bron, rekenmethode, tekens of tellers. Verborgen waarden blijven intern beschikbaar; geschiedenis en Flow-verwijzingen blijven behouden. Standaard behoudt de monitorweergave of volgt de gekoppelde Energy-modus. Details tonen afzonderlijk ontvangen waarden tot 90 seconden; Energy-vermogen behoudt zijn strengere actualiteitscontroles. Open de apparaatweergave opnieuw na opslaan."
+          },
+          "values": [
+            {
+              "id": "default",
+              "label": {
+                "en": "Default layout",
+                "de": "Standardansicht",
+                "nl": "Standaardweergave"
+              }
+            },
+            {
+              "id": "single_phase",
+              "label": {
+                "en": "Single phase",
+                "de": "Einphasig",
+                "nl": "Eenfase"
+              }
+            },
+            {
+              "id": "three_phase",
+              "label": {
+                "en": "Three phase",
+                "de": "Dreiphasig",
+                "nl": "Driefase"
+              }
+            }
+          ]
+        },
+        {
+          "id": "display_ct2",
+          "type": "dropdown",
+          "value": "default",
+          "label": {
+            "en": "CT2 display",
+            "de": "CT2 Anzeige",
+            "nl": "CT2 weergave"
+          },
+          "hint": {
+            "en": "Default keeps CT2 visible on the detailed monitor and hidden on the Energy device. Its phase layout is independent of CT1. CT2 never contributes to property Energy. Display choices retain received values, history and Flow references. Reopen the device view after saving.",
+            "de": "Standard zeigt CT2 im Detailmonitor und blendet CT2 am Energy-Gerät aus. Die Phasenanzeige ist unabhängig von CT1. CT2 trägt nie zur Hausenergie bei. Werte, Verlauf und Flow-Verweise bleiben erhalten. Geräteansicht nach dem Speichern erneut öffnen.",
+            "nl": "Standaard toont CT2 op de detailmonitor en verbergt CT2 op het Energy-apparaat. De faseweergave is onafhankelijk van CT1. CT2 telt nooit mee voor woningenergie. Waarden, geschiedenis en Flow-verwijzingen blijven behouden. Open de apparaatweergave opnieuw na opslaan."
+          },
+          "values": [
+            {
+              "id": "default",
+              "label": {
+                "en": "Default layout",
+                "de": "Standardansicht",
+                "nl": "Standaardweergave"
+              }
+            },
+            {
+              "id": "off",
+              "label": {
+                "en": "Hide CT2",
+                "de": "CT2 ausblenden",
+                "nl": "CT2 verbergen"
+              }
+            },
+            {
+              "id": "single_phase",
+              "label": {
+                "en": "Single phase",
+                "de": "Einphasig",
+                "nl": "Eenfase"
+              }
+            },
+            {
+              "id": "three_phase",
+              "label": {
+                "en": "Three phase",
+                "de": "Dreiphasig",
+                "nl": "Driefase"
+              }
+            }
+          ]
+        },
+        {
+          "id": "display_diagnostics",
+          "type": "dropdown",
+          "value": "default",
+          "label": {
+            "en": "Diagnostic details",
+            "de": "Diagnosedetails",
+            "nl": "Diagnostische details"
+          },
+          "hint": {
+            "en": "Display only. Does not change your Energy source, accounting mode, signs or counters. Hidden readings remain available internally; no history or Flow references are removed. Default keeps the monitor layout or follows the paired Energy mode.",
+            "de": "Nur Anzeige. Ändert weder Energy-Quelle, Abrechnung, Vorzeichen noch Zähler. Ausgeblendete Werte bleiben intern erhalten; Verlauf und Flow-Verweise werden nicht entfernt. Standard behält die Monitoransicht bzw. folgt dem gekoppelten Energy-Modus.",
+            "nl": "Alleen weergave. Wijzigt geen Energy-bron, rekenmethode, tekens of tellers. Verborgen waarden blijven intern beschikbaar; geschiedenis en Flow-verwijzingen blijven behouden. Standaard behoudt de monitorweergave of volgt de gekoppelde Energy-modus."
+          },
+          "values": [
+            {
+              "id": "default",
+              "label": {
+                "en": "Default layout",
+                "de": "Standardansicht",
+                "nl": "Standaardweergave"
+              }
+            },
+            {
+              "id": "show",
+              "label": {
+                "en": "Show",
+                "de": "Anzeigen",
+                "nl": "Tonen"
+              }
+            },
+            {
+              "id": "hide",
+              "label": {
+                "en": "Hide",
+                "de": "Ausblenden",
+                "nl": "Verbergen"
+              }
+            }
+          ]
+        }
+      ],
+      "pair": [
+        {
+          "id": "preview_consent"
+        },
+        {
+          "id": "app_credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "app_account_repair"
+        }
+      ],
+      "deprecated": true,
+      "id": "smartmeter_dual_ct_preview"
     },
     {
       "name": {
@@ -1889,6 +3978,21 @@
       },
       "settings": [
         {
+          "id": "use_5000_reporter_trial",
+          "type": "checkbox",
+          "label": {
+            "en": "Use linked 5000 battery reporter (monitoring trial)",
+            "de": "Verknüpften 5000-Batterie-Melder verwenden (Messwert-Test)",
+            "nl": "Gekoppelde 5000-batterijbron gebruiken (meetproef)"
+          },
+          "value": false,
+          "hint": {
+            "en": "Opt-in trial for an existing mixed-generation Home Battery. Run the app's read-only reporter check first and keep the paired 5000 Unit monitor. Changes only combined battery percentage, live battery power and charging state. Energy totals/history keep their original source and are not verified as combined totals. Other installation flow tiles clear; controls are disabled. Checks the reporter address every four minutes; no extra MQTT subscription. Turn off to restore original readings without re-pairing. Do not add a second Home Battery for this installation.",
+            "de": "Optionaler Messwert-Test für eine bestehende Hausbatterie mit gemischten Generationen. Zuerst den Melder in den App-Einstellungen prüfen; den gekoppelten 5000-Einheitenmonitor behalten. Ändert nur Gesamt-Ladezustand, Batterieleistung und Lade-/Entladestatus. Energiesummen und Verlauf behalten ihre ursprüngliche Quelle; Gesamtumfang unbestätigt. Andere Anlagenflusswerte werden geleert, Steuerung deaktiviert. Adressprüfung alle vier Minuten, kein zusätzlicher MQTT-Datenstrom. Ausschalten stellt ursprüngliche Messwerte ohne Neukopplung wieder her. Keine zweite Hausbatterie für diese Anlage hinzufügen.",
+            "nl": "Optionele meetproef voor een bestaande thuisbatterij met gemengde generaties. Controleer eerst de bron in de app-instellingen en behoud de gekoppelde 5000-unitmonitor. Wijzigt alleen gezamenlijk batterijpercentage, batterijvermogen en laadstatus. Energietotalen/historie behouden hun oorspronkelijke bron; gezamenlijk bereik onbevestigd. Andere installatievermogens worden leeggemaakt; bediening is uitgeschakeld. Adrescontrole elke vier minuten, geen extra MQTT-abonnement. Uitschakelen herstelt oorspronkelijke metingen zonder opnieuw koppelen. Voeg geen tweede thuisbatterij voor deze installatie toe."
+          }
+        },
+        {
           "id": "poll_interval",
           "type": "number",
           "label": {
@@ -1993,9 +4097,9 @@
           "min": 0.1,
           "max": 200,
           "hint": {
-            "en": "Optional total usable capacity of all batteries in this installation. EcoFlow's public API does not report this reliably. Used only for stored-energy and runtime estimates.",
-            "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Die öffentliche EcoFlow-API meldet sie nicht zuverlässig. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
-            "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. De openbare EcoFlow-API meldt dit niet betrouwbaar. Alleen gebruikt voor energie- en looptijdschattingen."
+            "en": "Optional total usable capacity of all batteries in this installation. EcoFlow's public API does not report this reliably. Used only for this app’s widget stored-energy and runtime estimates; does not configure the capacity shown by Homey Energy.",
+            "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Die öffentliche EcoFlow-API meldet sie nicht zuverlässig. Nur für die Speicherenergie- und Laufzeitschätzungen der App-Widgets; konfiguriert nicht die in Homey Energy angezeigte Kapazität.",
+            "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. De openbare EcoFlow-API meldt dit niet betrouwbaar. Alleen voor schattingen van opgeslagen energie en looptijd in de app-widgets; stelt de capaciteit in Homey Energy niet in."
           }
         },
         {
@@ -2036,9 +4140,76 @@
     },
     {
       "name": {
-        "en": "STREAM Home Battery (5000)",
-        "de": "STREAM-Hausbatterie (5000)",
-        "nl": "STREAM-thuisbatterij (5000)"
+        "en": "STREAM 5000 Solar",
+        "de": "STREAM 5000 Solar",
+        "nl": "STREAM 5000 Solar"
+      },
+      "class": "solarpanel",
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "capabilities": [
+        "measure_power",
+        "meter_power"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Direct solar power",
+            "de": "Direkte Solarleistung",
+            "nl": "Direct zonnevermogen"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Solar energy generated",
+            "de": "Erzeugte Solarenergie",
+            "nl": "Opgewekte zonne-energie"
+          }
+        }
+      },
+      "energy": {
+        "meterPowerExportedCapability": "meter_power"
+      },
+      "images": {
+        "small": "/drivers/stream_solar/assets/images/small.png",
+        "large": "/drivers/stream_solar/assets/images/large.png",
+        "xlarge": "/drivers/stream_solar/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "connection_info"
+        },
+        {
+          "id": "app_credentials"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "app_account_repair"
+        }
+      ],
+      "id": "stream_5000_solar"
+    },
+    {
+      "name": {
+        "en": "STREAM 5000 Home Battery",
+        "de": "STREAM 5000 Hausbatterie",
+        "nl": "STREAM 5000 Thuisbatterij"
       },
       "class": "battery",
       "platforms": [
@@ -2151,6 +4322,21 @@
       },
       "settings": [
         {
+          "id": "reserve_request_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Allow experimental reserve requests",
+            "de": "Experimentelle Reserveanfragen erlauben",
+            "nl": "Experimentele reserveaanvragen toestaan"
+          },
+          "hint": {
+            "en": "Enabling verifies the current main unit using Developer API keys. Flow requests may affect the linked installation. If the main unit or Developer credentials change, review the installation and enable again. Reserve must already be on in Self-consumption mode. Flow success means API acceptance only.",
+            "de": "Beim Aktivieren wird das aktuelle Hauptgerät mit Developer-API-Schlüsseln geprüft. Flow-Anfragen können die verbundene Anlage betreffen. Nach einer Änderung des Hauptgeräts oder der Developer-Zugangsdaten die Anlage prüfen und erneut aktivieren. Die Reserve muss im Eigenverbrauch bereits aktiv sein. Flow-Erfolg bedeutet nur API-Annahme.",
+            "nl": "Bij inschakelen wordt de huidige hoofdeenheid gecontroleerd met Developer-API-sleutels. Flow-aanvragen kunnen de gekoppelde installatie beïnvloeden. Controleer de installatie en schakel opnieuw in als de hoofdeenheid of Developer-inloggegevens wijzigen. Reserve moet al aanstaan in Zelfverbruik-modus. Flow-succes betekent alleen API-acceptatie."
+          }
+        },
+        {
           "id": "installed_capacity_kwh",
           "type": "number",
           "label": {
@@ -2161,9 +4347,9 @@
           "min": 0.1,
           "max": 200,
           "hint": {
-            "en": "Optional total usable capacity of all batteries in this installation. Used only for stored-energy and runtime estimates.",
-            "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
-            "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen gebruikt voor energie- en looptijdschattingen."
+            "en": "Optional total usable capacity of all batteries in this installation. Used only for this app’s widget stored-energy and runtime estimates; does not configure the capacity shown by Homey Energy.",
+            "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Nur für die Speicherenergie- und Laufzeitschätzungen der App-Widgets; konfiguriert nicht die in Homey Energy angezeigte Kapazität.",
+            "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen voor schattingen van opgeslagen energie en looptijd in de app-widgets; stelt de capaciteit in Homey Energy niet in."
           }
         },
         {
@@ -2271,7 +4457,7 @@
                 "de": "Status",
                 "nl": "Status"
               },
-              "value": "Monitoring only · controls intentionally disabled",
+              "value": "Homey Energy monitoring · manage battery settings in EcoFlow",
               "hint": {
                 "en": "This verified STREAM 5000 installation is not available through EcoFlow's supported public API. This Home Battery signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
                 "de": "Diese verifizierte STREAM-5000-Anlage ist nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Hausbatterie meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
@@ -2283,7 +4469,7 @@
       ],
       "pair": [
         {
-          "id": "beta_access"
+          "id": "energy_access"
         },
         {
           "id": "app_credentials"
@@ -2300,13 +4486,18 @@
           "template": "add_devices"
         }
       ],
+      "repair": [
+        {
+          "id": "app_account_repair"
+        }
+      ],
       "id": "stream_5000_system"
     },
     {
       "name": {
-        "en": "STREAM 5000 Series Unit",
-        "de": "STREAM-5000-Serieneinheit",
-        "nl": "STREAM 5000-serie-unit"
+        "en": "STREAM 5000 Unit Monitor",
+        "de": "STREAM 5000 Gerätemonitor",
+        "nl": "STREAM 5000 Apparaatmonitor"
       },
       "class": "battery",
       "platforms": [
@@ -2319,6 +4510,7 @@
         "measure_battery",
         "battery_charging_state",
         "stream_unit_power_battery_flow",
+        "stream_5000_reading_status",
         "measure_power.load",
         "measure_power.grid",
         "measure_power.grid_import",
@@ -2327,60 +4519,71 @@
         "battery_soh"
       ],
       "capabilitiesOptions": {
+        "stream_5000_reading_status": {
+          "preventTag": true,
+          "preventInsights": true
+        },
         "measure_battery": {
           "title": {
-            "en": "Battery",
-            "de": "Batterie",
-            "nl": "Batterij"
+            "en": "Unit battery level",
+            "de": "Einheit: Batteriestand",
+            "nl": "Unit: batterijniveau"
           }
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery state",
-            "de": "Batteriestatus",
-            "nl": "Batterijstatus"
+            "en": "Unit battery state",
+            "de": "Einheit: Batteriestatus",
+            "nl": "Unit: batterijstatus"
           }
         },
         "measure_power.load": {
           "title": {
-            "en": "House consumption",
-            "de": "Hausverbrauch",
-            "nl": "Huisverbruik"
+            "en": "System house consumption",
+            "de": "System: Hausverbrauch",
+            "nl": "Systeem: huisverbruik"
           }
         },
         "measure_power.grid": {
           "title": {
-            "en": "Grid import/export",
-            "de": "Netzbezug/-einspeisung",
-            "nl": "Netafname/-teruglevering"
+            "en": "System grid meter",
+            "de": "System: Netzzähler",
+            "nl": "Systeem: netmeter"
           }
         },
         "measure_power.grid_import": {
           "title": {
-            "en": "Grid import",
-            "de": "Netzbezug",
-            "nl": "Netafname"
+            "en": "System grid import (flow)",
+            "de": "System: Netzbezug (Fluss)",
+            "nl": "Systeem: netafname (stroom)"
           }
         },
         "measure_power.grid_export": {
           "title": {
-            "en": "Grid export",
-            "de": "Netzeinspeisung",
-            "nl": "Netteruglevering"
+            "en": "System grid export (flow)",
+            "de": "System: Einspeisung (Fluss)",
+            "nl": "Systeem: teruglevering (stroom)"
           }
         },
         "measure_temperature": {
           "title": {
-            "en": "Battery temperature",
-            "de": "Batterietemperatur",
-            "nl": "Batterijtemperatuur"
+            "en": "Unit battery temperature",
+            "de": "Einheit: Batterietemperatur",
+            "nl": "Unit: batterijtemperatuur"
           }
         },
         "battery_soh": {
           "title": {
-            "en": "Battery health",
-            "de": "Batteriezustand",
-            "nl": "Batterijconditie"
+            "en": "Unit battery health",
+            "de": "Einheit: Batteriezustand",
+            "nl": "Unit: batterijconditie"
+          }
+        },
+        "stream_unit_power_battery_flow": {
+          "title": {
+            "en": "Unit battery flow",
+            "de": "Einheit: Batteriefluss",
+            "nl": "Unit: batterijstroom"
           }
         }
       },
@@ -2395,6 +4598,21 @@
         "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
       },
       "settings": [
+        {
+          "id": "reserve_request_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Allow experimental reserve requests",
+            "de": "Experimentelle Reserveanfragen erlauben",
+            "nl": "Experimentele reserveaanvragen toestaan"
+          },
+          "hint": {
+            "en": "Allows the request-only THEN card using Developer API keys. Requests target EcoFlow's reported main device and may affect the linked installation, not just this unit. Requires reserve already on and Self-consumption mode. API acceptance is not application or charging confirmation. No automatic retry/restoration. Do not combine with other controllers. Turning this off cannot cancel an already submitted request.",
+            "de": "Erlaubt die reine Anfrage-THEN-Karte mit Developer-API-Schlüsseln. Anfragen gehen an das von EcoFlow gemeldete Hauptgerät und können die verbundene Anlage betreffen. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. API-Annahme bestätigt weder Anwendung noch Laden. Keine automatische Wiederholung/Wiederherstellung. Nicht mit anderen Steuerungen kombinieren. Deaktivieren widerruft keine bereits gesendete Anfrage.",
+            "nl": "Staat de alleen-aanvragen-THEN-kaart toe met Developer-API-sleutels. Aanvragen richten zich op het door EcoFlow gemelde hoofdapparaat en kunnen de gekoppelde installatie beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. API-acceptatie bevestigt geen toepassing of laden. Geen automatische herhaling/herstel. Niet combineren met andere regelaars. Uitschakelen annuleert geen al verzonden aanvraag."
+          }
+        },
         {
           "type": "group",
           "label": {
@@ -2431,6 +4649,21 @@
                 "en": "This unit's EcoFlow serial number.",
                 "de": "Die EcoFlow-Seriennummer dieser Einheit.",
                 "nl": "Het EcoFlow-serienummer van deze unit."
+              }
+            },
+            {
+              "id": "reading_scope",
+              "type": "label",
+              "label": {
+                "en": "Reading scopes",
+                "de": "Messwertbereiche",
+                "nl": "Meetbereiken"
+              },
+              "value": "Unit battery / system house and grid",
+              "hint": {
+                "en": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy.",
+                "de": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie.",
+                "nl": "Unit-batterijwaarden beschrijven dit apparaat. Huis- en netwaarden beschrijven het systeem, niet de afzonderlijke batterij. Lege stroom-/statuswaarden betekenen niet geverifieerd, niet nul. Netmeter en stroomgebaseerde afname/teruglevering zijn aparte bronnen. Gebruik Home Battery voor gezamenlijke energie."
               }
             }
           ]
@@ -2483,11 +4716,11 @@
                 "de": "Status",
                 "nl": "Status"
               },
-              "value": "Monitoring only · controls intentionally disabled",
+              "value": "Battery monitoring · manage battery settings in EcoFlow",
               "hint": {
-                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit only reads per-device telemetry and does not contribute to Homey Energy. Pair STREAM Home Battery (5000) for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
-                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit liest nur Gerätetelemetrie und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM Home Battery (5000) für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
-                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze optionele fysieke unit leest alleen apparaattelemeterie en draagt niet bij aan Homey Energy. Koppel STREAM Home Battery (5000) voor de gecombineerde energiegegevens van de installatie. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
+                "en": "These verified STREAM 5000-family units are not available through EcoFlow's supported public API. This optional physical unit shows unit battery telemetry and separate system house/grid context and does not contribute to Homey Energy. Pair STREAM 5000 Home Battery for the installation's combined energy data. Controls remain disabled until a product-specific protocol is verified.",
+                "de": "Diese verifizierten Geräte der STREAM-5000-Familie sind nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese optionale physische Einheit zeigt Batteriewerte der Einheit und getrennte Haus-/Netzwerte des Systems und trägt nicht zu Homey Energy bei. Koppeln Sie STREAM 5000 Home Battery für die kombinierten Energiedaten der Anlage. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
+                "nl": "Deze geverifieerde apparaten uit de STREAM 5000-familie zijn niet beschikbaar via EcoFlows ondersteunde openbare API. Deze optionele fysieke unit toont unit-batterijgegevens en aparte huis-/netwaarden van het systeem en draagt niet bij aan Homey Energy. Koppel STREAM 5000 Home Battery voor de gecombineerde energiegegevens van de installatie. Bediening blijft uitgeschakeld totdat een productspecifiek protocol is geverifieerd."
               }
             }
           ]
@@ -2495,7 +4728,7 @@
       ],
       "pair": [
         {
-          "id": "beta_access"
+          "id": "connection_info"
         },
         {
           "id": "app_credentials"
@@ -2510,6 +4743,11 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "app_account_repair"
         }
       ],
       "id": "stream_5000_unit"
@@ -2532,6 +4770,7 @@
         "measure_battery",
         "battery_charging_state",
         "stream_unit_power_battery_flow",
+        "stream_5000_reading_status",
         "measure_power.load",
         "measure_power.grid",
         "measure_power.grid_import",
@@ -2540,60 +4779,71 @@
         "battery_soh"
       ],
       "capabilitiesOptions": {
+        "stream_5000_reading_status": {
+          "preventTag": true,
+          "preventInsights": true
+        },
         "measure_battery": {
           "title": {
-            "en": "Battery",
-            "de": "Batterie",
-            "nl": "Batterij"
+            "en": "Unit battery level",
+            "de": "Einheit: Batteriestand",
+            "nl": "Unit: batterijniveau"
           }
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery state",
-            "de": "Batteriestatus",
-            "nl": "Batterijstatus"
+            "en": "Unit battery state",
+            "de": "Einheit: Batteriestatus",
+            "nl": "Unit: batterijstatus"
           }
         },
         "measure_power.load": {
           "title": {
-            "en": "House consumption",
-            "de": "Hausverbrauch",
-            "nl": "Huisverbruik"
+            "en": "System house consumption",
+            "de": "System: Hausverbrauch",
+            "nl": "Systeem: huisverbruik"
           }
         },
         "measure_power.grid": {
           "title": {
-            "en": "Grid import/export",
-            "de": "Netzbezug/-einspeisung",
-            "nl": "Netafname/-teruglevering"
+            "en": "System grid meter",
+            "de": "System: Netzzähler",
+            "nl": "Systeem: netmeter"
           }
         },
         "measure_power.grid_import": {
           "title": {
-            "en": "Grid import",
-            "de": "Netzbezug",
-            "nl": "Netafname"
+            "en": "System grid import (flow)",
+            "de": "System: Netzbezug (Fluss)",
+            "nl": "Systeem: netafname (stroom)"
           }
         },
         "measure_power.grid_export": {
           "title": {
-            "en": "Grid export",
-            "de": "Netzeinspeisung",
-            "nl": "Netteruglevering"
+            "en": "System grid export (flow)",
+            "de": "System: Einspeisung (Fluss)",
+            "nl": "Systeem: teruglevering (stroom)"
           }
         },
         "measure_temperature": {
           "title": {
-            "en": "Battery temperature",
-            "de": "Batterietemperatur",
-            "nl": "Batterijtemperatuur"
+            "en": "Unit battery temperature",
+            "de": "Einheit: Batterietemperatur",
+            "nl": "Unit: batterijtemperatuur"
           }
         },
         "battery_soh": {
           "title": {
-            "en": "Battery health",
-            "de": "Batteriezustand",
-            "nl": "Batterijconditie"
+            "en": "Unit battery health",
+            "de": "Einheit: Batteriezustand",
+            "nl": "Unit: batterijconditie"
+          }
+        },
+        "stream_unit_power_battery_flow": {
+          "title": {
+            "en": "Unit battery flow",
+            "de": "Einheit: Batteriefluss",
+            "nl": "Unit: batterijstroom"
           }
         }
       },
@@ -2608,6 +4858,21 @@
         "xlarge": "/drivers/stream_ac5000/assets/images/xlarge.png"
       },
       "settings": [
+        {
+          "id": "reserve_request_enabled",
+          "type": "checkbox",
+          "value": false,
+          "label": {
+            "en": "Allow experimental reserve requests",
+            "de": "Experimentelle Reserveanfragen erlauben",
+            "nl": "Experimentele reserveaanvragen toestaan"
+          },
+          "hint": {
+            "en": "Allows the request-only THEN card using Developer API keys. Requests target EcoFlow's reported main device and may affect the linked installation, not just this unit. Requires reserve already on and Self-consumption mode. API acceptance is not application or charging confirmation. No automatic retry/restoration. Do not combine with other controllers. Turning this off cannot cancel an already submitted request.",
+            "de": "Erlaubt die reine Anfrage-THEN-Karte mit Developer-API-Schlüsseln. Anfragen gehen an das von EcoFlow gemeldete Hauptgerät und können die verbundene Anlage betreffen. Reserve muss bereits aktiv und Eigenverbrauch eingestellt sein. API-Annahme bestätigt weder Anwendung noch Laden. Keine automatische Wiederholung/Wiederherstellung. Nicht mit anderen Steuerungen kombinieren. Deaktivieren widerruft keine bereits gesendete Anfrage.",
+            "nl": "Staat de alleen-aanvragen-THEN-kaart toe met Developer-API-sleutels. Aanvragen richten zich op het door EcoFlow gemelde hoofdapparaat en kunnen de gekoppelde installatie beïnvloeden. Reserve moet al aanstaan in Zelfverbruik-modus. API-acceptatie bevestigt geen toepassing of laden. Geen automatische herhaling/herstel. Niet combineren met andere regelaars. Uitschakelen annuleert geen al verzonden aanvraag."
+          }
+        },
         {
           "type": "group",
           "label": {
@@ -2644,6 +4909,21 @@
                 "en": "This unit's EcoFlow serial number.",
                 "de": "Die EcoFlow-Seriennummer dieser Einheit.",
                 "nl": "Het EcoFlow-serienummer van deze unit."
+              }
+            },
+            {
+              "id": "reading_scope",
+              "type": "label",
+              "label": {
+                "en": "Reading scopes",
+                "de": "Messwertbereiche",
+                "nl": "Meetbereiken"
+              },
+              "value": "Unit battery / system house and grid",
+              "hint": {
+                "en": "Unit battery readings describe this physical device. House and grid readings describe the system and are not individual battery power. Blank unit flow/state means unverified, not zero. Grid meter and flow-derived import/export are separate sources. Use Home Battery for combined Energy.",
+                "de": "Einheits-Batteriewerte beschreiben dieses Gerät. Haus- und Netzwerte beschreiben das System, nicht die einzelne Batterie. Leere Fluss-/Statuswerte bedeuten nicht verifiziert, nicht null. Netzzähler und flussbasierter Bezug/Einspeisung sind getrennte Quellen. Home Battery liefert die Gesamtenergie.",
+                "nl": "Unit-batterijwaarden beschrijven dit apparaat. Huis- en netwaarden beschrijven het systeem, niet de afzonderlijke batterij. Lege stroom-/statuswaarden betekenen niet geverifieerd, niet nul. Netmeter en stroomgebaseerde afname/teruglevering zijn aparte bronnen. Gebruik Home Battery voor gezamenlijke energie."
               }
             }
           ]
@@ -2720,6 +5000,11 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "app_account_repair"
         }
       ],
       "id": "stream_ac5000"
@@ -2999,9 +5284,9 @@
     },
     {
       "name": {
-        "en": "STREAM Unit",
-        "de": "STREAM-Einheit",
-        "nl": "STREAM-unit"
+        "en": "STREAM Unit Monitor",
+        "de": "STREAM-Gerätemonitor",
+        "nl": "STREAM-apparaatmonitor"
       },
       "class": "battery",
       "platforms": [
@@ -3052,6 +5337,13 @@
             "en": "Battery state",
             "de": "Batteriestatus",
             "nl": "Batterijstatus"
+          }
+        },
+        "stream_unit_power_grid": {
+          "title": {
+            "en": "Unit grid connection port",
+            "de": "Einheit: Netzanschluss",
+            "nl": "Unit: netaansluiting"
           }
         },
         "operating_mode": {
@@ -3274,6 +5566,11 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "app_account_repair"
         }
       ],
       "id": "stream_unit"
@@ -3570,6 +5867,180 @@
       "uiComponent": "sensor",
       "icon": "/assets/capabilities/time-empty.svg",
       "insights": true
+    },
+    "dual_ct_linked_grid_power": {
+      "type": "number",
+      "title": {
+        "en": "Linked ES21 grid power",
+        "de": "Netzleistung des verknüpften ES21",
+        "nl": "Netvermogen van gekoppelde ES21"
+      },
+      "units": "W",
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_age": {
+      "type": "number",
+      "title": {
+        "en": "Packet receipt age",
+        "de": "Paketempfangsalter",
+        "nl": "Pakketontvangstleeftijd"
+      },
+      "units": {
+        "en": "s",
+        "de": "s",
+        "nl": "s"
+      },
+      "decimals": 0,
+      "min": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_counters": {
+      "type": "string",
+      "title": {
+        "en": "773 raw counters (unmapped)",
+        "de": "773 Rohzähler (nicht zugeordnet)",
+        "nl": "773 ruwe tellers (niet toegewezen)"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_current": {
+      "type": "number",
+      "title": {
+        "en": "Dual CT preview current",
+        "de": "Dual CT Vorschau current",
+        "nl": "Dual CT preview current"
+      },
+      "units": "A",
+      "decimals": 3,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_fields": {
+      "type": "string",
+      "title": {
+        "en": "Raw field candidates",
+        "de": "Rohe Feldkandidaten",
+        "nl": "Ruwe veldkandidaten"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_net": {
+      "type": "number",
+      "title": {
+        "en": "Dual CT preview net",
+        "de": "Dual CT Vorschau net",
+        "nl": "Dual CT preview net"
+      },
+      "units": "W",
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_net_status": {
+      "type": "string",
+      "title": {
+        "en": "Dual CT preview net_status",
+        "de": "Dual CT Vorschau net_status",
+        "nl": "Dual CT preview net_status"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_power": {
+      "type": "number",
+      "title": {
+        "en": "Dual CT preview power",
+        "de": "Dual CT Vorschau power",
+        "nl": "Dual CT preview power"
+      },
+      "units": "W",
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_status": {
+      "type": "string",
+      "title": {
+        "en": "Preview status",
+        "de": "Vorschaustatus",
+        "nl": "Previewstatus"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_total": {
+      "type": "number",
+      "title": {
+        "en": "Raw total candidate",
+        "de": "Roher Summenkandidat",
+        "nl": "Ruwe totaalkandidaat"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_trends": {
+      "type": "string",
+      "title": {
+        "en": "Raw counter trends",
+        "de": "Rohe Zählertrends",
+        "nl": "Ruwe tellertrends"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
+    },
+    "dual_ct_preview_voltage": {
+      "type": "number",
+      "title": {
+        "en": "Dual CT preview voltage",
+        "de": "Dual CT Vorschau voltage",
+        "nl": "Dual CT preview voltage"
+      },
+      "units": "V",
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/solar-meter.svg"
     },
     "energy_consumption_today": {
       "type": "number",
@@ -3870,7 +6341,9 @@
     "stream_5000_backup_reserve": {
       "type": "number",
       "title": {
-        "en": "Reported backup reserve"
+        "en": "Backup reserve target (stored)",
+        "de": "Backup-Reserveziel (gespeichert)",
+        "nl": "Back-upreservedoel (opgeslagen)"
       },
       "units": {
         "en": "%"
@@ -3883,10 +6356,43 @@
       "icon": "/assets/capabilities/reserve.svg",
       "insights": true
     },
+    "stream_5000_backup_reserve_state": {
+      "type": "enum",
+      "title": {
+        "en": "Backup reserve",
+        "de": "Backup-Reserve",
+        "nl": "Back-upreserve"
+      },
+      "values": [
+        {
+          "id": "enabled",
+          "title": {
+            "en": "Enabled",
+            "de": "Aktiviert",
+            "nl": "Ingeschakeld"
+          }
+        },
+        {
+          "id": "disabled",
+          "title": {
+            "en": "Disabled",
+            "de": "Deaktiviert",
+            "nl": "Uitgeschakeld"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/reserve.svg",
+      "insights": false
+    },
     "stream_5000_charge_limit": {
       "type": "number",
       "title": {
-        "en": "Reported charge limit"
+        "en": "Charge limit",
+        "de": "Ladegrenze",
+        "nl": "Laadlimiet"
       },
       "units": {
         "en": "%"
@@ -3917,7 +6423,9 @@
     "stream_5000_discharge_limit": {
       "type": "number",
       "title": {
-        "en": "Reported discharge limit"
+        "en": "Discharge limit",
+        "de": "Entladegrenze",
+        "nl": "Ontlaadlimiet"
       },
       "units": {
         "en": "%"
@@ -3933,7 +6441,9 @@
     "stream_5000_grid_input_limit": {
       "type": "number",
       "title": {
-        "en": "Reported grid input limit"
+        "en": "Max Power from Grid",
+        "de": "Max. Leistung aus dem Netz",
+        "nl": "Max. vermogen uit het net"
       },
       "units": {
         "en": "W"
@@ -3949,7 +6459,9 @@
     "stream_5000_grid_output_limit": {
       "type": "number",
       "title": {
-        "en": "Reported grid output limit"
+        "en": "Max grid-tied output power",
+        "de": "Max. netzgekoppelte Ausgangsleistung",
+        "nl": "Max. netgekoppeld uitgangsvermogen"
       },
       "units": {
         "en": "W"
@@ -3965,25 +6477,33 @@
     "stream_5000_mode": {
       "type": "enum",
       "title": {
-        "en": "Operating mode"
+        "en": "Operating mode",
+        "de": "Betriebsmodus",
+        "nl": "Bedrijfsmodus"
       },
       "values": [
         {
           "id": "self_powered",
           "title": {
-            "en": "Self-powered"
+            "en": "Self-consumption",
+            "de": "Eigenverbrauch",
+            "nl": "Eigen verbruik"
           }
         },
         {
           "id": "intelligent_plus",
           "title": {
-            "en": "Intelligent Mode+"
+            "en": "Intelligent Mode+",
+            "de": "Intelligenter Modus+",
+            "nl": "Intelligente modus+"
           }
         },
         {
           "id": "custom",
           "title": {
-            "en": "Custom"
+            "en": "Custom mode",
+            "de": "Benutzerdefinierter Modus",
+            "nl": "Aangepaste modus"
           }
         }
       ],
@@ -3991,6 +6511,77 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "/assets/capabilities/operating-mode.svg",
+      "insights": false
+    },
+    "stream_5000_reading_status": {
+      "type": "enum",
+      "title": {
+        "en": "Battery reading status",
+        "de": "Status der Batteriemessung",
+        "nl": "Status batterijmeting"
+      },
+      "values": [
+        {
+          "id": "waiting",
+          "title": {
+            "en": "Waiting for battery data",
+            "de": "Warte auf Batteriedaten",
+            "nl": "Wachten op batterijgegevens"
+          }
+        },
+        {
+          "id": "live",
+          "title": {
+            "en": "Live battery reading",
+            "de": "Aktuelle Batteriemessung",
+            "nl": "Actuele batterijmeting"
+          }
+        },
+        {
+          "id": "last_reported_standby",
+          "title": {
+            "en": "Last report: Standby (not live)",
+            "de": "Zuletzt: Standby (nicht aktuell)",
+            "nl": "Laatst gemeld: Stand-by (niet actueel)"
+          }
+        },
+        {
+          "id": "expired",
+          "title": {
+            "en": "Battery reading expired",
+            "de": "Batteriemessung veraltet",
+            "nl": "Batterijmeting verlopen"
+          }
+        },
+        {
+          "id": "disconnected",
+          "title": {
+            "en": "Waiting for connection data",
+            "de": "Warte auf Verbindungsdaten",
+            "nl": "Wachten op verbindingsgegevens"
+          }
+        },
+        {
+          "id": "write_failed",
+          "title": {
+            "en": "Reading could not be applied",
+            "de": "Messung konnte nicht übernommen werden",
+            "nl": "Meting kon niet worden toegepast"
+          }
+        },
+        {
+          "id": "scope_unverified",
+          "title": {
+            "en": "Individual battery scope unverified",
+            "de": "Bereich der Einzelbatterie unbestätigt",
+            "nl": "Bereik individuele batterij niet bevestigd"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/reserve.svg",
       "insights": false
     },
     "stream_5000_socket_power": {
@@ -4201,9 +6792,9 @@
     "stream_unit_power_grid": {
       "type": "number",
       "title": {
-        "en": "Grid import/export",
-        "de": "Netzbezug/-einspeisung",
-        "nl": "Netafname/-teruglevering"
+        "en": "Unit grid connection port",
+        "de": "Einheit: Netzanschluss",
+        "nl": "Unit: netaansluiting"
       },
       "units": {
         "en": "W",

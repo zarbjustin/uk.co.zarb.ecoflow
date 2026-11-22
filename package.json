@@ -1,11 +1,17 @@
 {
   "name": "uk.co.zarb.ecoflow",
-  "version": "1.10.26",
+  "version": "1.11.31",
   "scripts": {
     "build": "tsc",
     "test": "tsc && node --test test/*.test.js",
-    "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
-    "widgets:preview": "node scripts/generate-widget-previews.mjs"
+    "lint": "node scripts/lint.cjs",
+    "release:check": "node scripts/check-release-boundaries.mjs && node scripts/check-stream-5000-acceptance.mjs && node scripts/check-dual-ct-acceptance.mjs && node scripts/check-stream-5000-then-acceptance.mjs && node scripts/check-full-release-acceptance.mjs",
+    "release:acceptance": "node scripts/check-stream-5000-acceptance.mjs --require-ready",
+    "release:monitoring": "node scripts/check-stream-5000-acceptance.mjs --role unit --require-ready",
+    "widgets:preview": "node scripts/generate-widget-previews.mjs",
+    "release:dual-ct": "node scripts/check-dual-ct-acceptance.mjs --require-ready",
+    "release:then": "node scripts/check-stream-5000-then-acceptance.mjs --require-ready",
+    "release:full": "node scripts/check-full-release-acceptance.mjs --require-ready"
   },
   "dependencies": {
     "mqtt": "^5.10.1"
@@ -20,8 +26,6 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "@typescript-eslint/typescript-estree": {
-      "minimatch": "9.0.7"
-    }
+    "minimatch": "11.0.1"
   }
 }

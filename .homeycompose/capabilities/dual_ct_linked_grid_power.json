@@ -1,0 +1,11 @@
+{
+  "type": "number",
+  "title": { "en": "Linked ES21 grid power", "de": "Netzleistung des verknüpften ES21", "nl": "Netvermogen van gekoppelde ES21" },
+  "units": "W",
+  "decimals": 1,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "/assets/capabilities/solar-meter.svg"
+}

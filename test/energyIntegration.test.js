@@ -62,7 +62,7 @@ test('integration is monotonic over a sequence', () => {
   }
 });
 
-test('followResettableCounter follows a device counter and absorbs resets', () => {
+test('followResettableCounter anchors and advances without assuming a lower report proves a reset', () => {
   // First sample only anchors (no jump).
   let s = followResettableCounter(0, undefined, 1000);
   assert.strictEqual(s.totalWh, 0);
@@ -70,13 +70,30 @@ test('followResettableCounter follows a device counter and absorbs resets', () =
   // Normal increase adds the delta.
   s = followResettableCounter(s.totalWh, s.lastRawWh, 1500);
   assert.strictEqual(s.totalWh, 500);
-  // Firmware reset (raw drops) counts the new raw from zero, never decreasing.
+  // A lower report is ambiguous without an independent reset contract.
   s = followResettableCounter(s.totalWh, s.lastRawWh, 200);
-  assert.strictEqual(s.totalWh, 700);
-  assert.strictEqual(s.lastRawWh, 200);
+  assert.strictEqual(s.totalWh, 500);
+  assert.strictEqual(s.lastRawWh, 1500);
   // Invalid raw leaves the total unchanged.
   s = followResettableCounter(s.totalWh, s.lastRawWh, NaN);
-  assert.strictEqual(s.totalWh, 700);
+  assert.strictEqual(s.totalWh, 500);
+});
+
+test('unverified native decreases and duplicates cannot manufacture energy or lower the raw watermark', () => {
+  let state = { totalWh: 1000.125, lastRawWh: 1000 };
+  for (const raw of [1010, 1005, 1005, 1010, 1015]) {
+    state = followResettableCounter(state.totalWh, state.lastRawWh, raw);
+  }
+  assert.strictEqual(state.totalWh, 1015.125);
+  assert.strictEqual(state.lastRawWh, 1015);
+  // Even an actual reset to zero has no reset authority in this source contract.
+  for (const raw of [0, 1, 200, 1015]) {
+    state = followResettableCounter(state.totalWh, state.lastRawWh, raw);
+    assert.strictEqual(state.totalWh, 1015.125);
+    assert.strictEqual(state.lastRawWh, 1015);
+  }
+  state = followResettableCounter(state.totalWh, state.lastRawWh, 1015.5);
+  assert.strictEqual(state.totalWh, 1015.625);
 });
 
 const { batteryEnergyMode } = require('../.homeybuild/lib/energyIntegration.js');

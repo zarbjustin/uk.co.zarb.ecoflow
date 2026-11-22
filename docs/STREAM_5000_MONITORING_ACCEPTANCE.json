@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "scope": "read_only_monitoring",
+  "models": ["es21", "es22"],
+  "roles": ["unit", "system"],
+  "excluded": ["new_5000_controls", "remaining_time", "dual_ct_energy", "automatic_mixed_generation_merge", "new_product_admission"],
+  "gates": [
+    {"id":"native_upgrade","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11062-readback"},
+    {"id":"pairing_workflow","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11061-pairing-readback"},
+    {"id":"normal_use_soak","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#normal-use"},
+    {"id":"es21.identity","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"da1da009bfe7ee65d02b0c67bc5ccb238ee6242bb397347331722219a75baee1","observedAt":"2026-10-29T17:16:56.087Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-native-idle-comparison"},
+    {"id":"es21.discharge","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545","observedAt":"2026-10-30T00:01:51.749Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11062-charge-discharge"},
+    {"id":"es21.charge","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545","observedAt":"2026-10-29T23:56:05.248Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11062-charge-discharge"},
+    {"id":"es21.idle","status":"passed","evidence":"candidate_hardware","candidateFingerprint":"31c31c481516fa3c7ff4acd8ae75cd2bc9bf3f6121c7015b51ddee7c1ecd1545","observedAt":"2026-10-30T00:36:19.887Z","reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11062-idle-restart"},
+    {"id":"es21.freshness_recovery","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11062-idle-restart"},
+    {"id":"es21.configuration_scope","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-read-only-comparison"},
+    {"id":"es21.accessories","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#accessory-scope"},
+    {"id":"es21.system_scope","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"},
+    {"id":"es21.energy_continuity","status":"partial","evidence":"candidate_hardware","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#owner-development-11062-idle-restart"},
+    {"id":"es22.identity","status":"partial","evidence":"community","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#model-boundaries"},
+    {"id":"es22.discharge","status":"partial","evidence":"community","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#model-boundaries"},
+    {"id":"es22.charge","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#core-transitions"},
+    {"id":"es22.idle","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#core-transitions"},
+    {"id":"es22.freshness_recovery","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#recovery"},
+    {"id":"es22.configuration_scope","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#model-boundaries"},
+    {"id":"es22.accessories","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#accessory-scope"},
+    {"id":"es22.system_scope","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"},
+    {"id":"es22.energy_continuity","status":"open","evidence":"none","candidateFingerprint":null,"reference":"docs/STREAM_5000_MONITORING_RC.md#aggregate-energy"}
+  ]
+}

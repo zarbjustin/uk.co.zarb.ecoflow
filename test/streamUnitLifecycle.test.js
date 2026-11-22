@@ -5,15 +5,17 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const originalLoad = Module._load;
 let StreamUnit;
+let StreamUnitDriver;
 try {
   Module._load = function load(request, ...args) {
-    if (request === 'homey') return { Device: class {} };
+    if (request === 'homey') return { Device: class {}, Driver: class {} };
     return originalLoad.call(this, request, ...args);
   };
   StreamUnit = require('../.homeybuild/drivers/stream_unit/device');
+  StreamUnitDriver = require('../.homeybuild/drivers/stream_unit/driver');
 } finally { Module._load = originalLoad; }
 
-async function harness(sn, mainSn = sn, app) {
+async function harness(sn, mainSn = sn, app, configure) {
   const d = new StreamUnit();
   const caps = new Set(['onoff.ac1', 'onoff.ac2', 'stream_unit_power_ac1', 'stream_unit_power_ac2']);
   const values = {}; const listeners = {}; const writes = []; const reads = [];
@@ -22,13 +24,21 @@ async function harness(sn, mainSn = sn, app) {
   d.hasCapability = (cap) => caps.has(cap);
   d.addCapability = async (cap) => caps.add(cap); d.removeCapability = async (cap) => caps.delete(cap);
   d.getCapabilityValue = (cap) => values[cap];
+  // Homey does not necessarily return {} for a valid custom capability with
+  // no driver/instance options entry. Model that instead of hiding the failure.
+  const options = structuredClone(require('../drivers/stream_unit/driver.compose.json').capabilitiesOptions);
+  d.getCapabilityOptions = cap => {
+    if (!caps.has(cap) || !Object.hasOwn(options, cap)) throw new Error(`Invalid Capability: ${cap}`);
+    return structuredClone(options[cap]);
+  };
+  d.setCapabilityOptions = async (cap, next) => { options[cap] = structuredClone(next); };
   d.setCapabilityValue = async (cap, value) => { values[cap] = value; };
   d.registerCapabilityListener = (cap, callback) => { listeners[cap] = callback; };
   d.setSettings = async () => {}; d.error = () => {};
   d.client = { getMainSn: async () => { if (mainSn === null) throw new Error('offline'); return mainSn; } };
-  const intervals = new Map();
+  const intervals = new Map(); let nextInterval = 0;
   d.homey = { app, setTimeout: (fn) => { queueMicrotask(fn); return 1; }, clearTimeout() {},
-    setInterval: (fn) => { intervals.set(1, fn); return 1; }, clearInterval: (id) => intervals.delete(id) };
+    setInterval: (fn) => { const id = ++nextInterval; intervals.set(id, fn); return id; }, clearInterval: (id) => intervals.delete(id) };
   d.readControlQuota = async (target, fields) => {
     reads.push({ target, fields });
     return fields ? Object.fromEntries(fields.map((field) => [field, state[field]])) : { ...state };
@@ -40,15 +50,254 @@ async function harness(sn, mainSn = sn, app) {
     if ('cfgMinDsgSoc' in payload.params) state.cmsMinDsgSoc = payload.params.cfgMinDsgSoc;
     if ('cfgBackupReverseSoc' in payload.params) state.backupReverseSoc = payload.params.cfgBackupReverseSoc;
   };
+  if (configure) configure(d, caps, values, listeners);
   await d.onReady();
   return { d, caps, values, listeners, writes, reads, intervals, setState: (next) => { state = next; } };
 }
+
+test('valid original units initialise when Homey rejects options lookup for a custom grid capability', async () => {
+  for (const sn of ['BK11SYNTHETIC0001', 'BK31SYNTHETIC0001']) {
+    const optionWrites = [];
+    const h = await harness(sn, 'ES22SYNTHETIC0001', undefined, d => {
+      d.getCapabilityOptions = cap => {
+        if (cap === 'stream_unit_power_grid') throw new Error(`Invalid Capability: ${cap}`);
+        return {};
+      };
+      d.setCapabilityOptions = async (cap, options) => optionWrites.push({ cap, options });
+    });
+    assert.equal(h.caps.has('stream_unit_power_grid'), true);
+    assert.equal(optionWrites.some(item => item.cap === 'stream_unit_power_grid'), false,
+      'an unreadable existing option must not be replaced with an invented empty default');
+    assert.equal(typeof h.listeners['onoff.ac1'], 'function');
+    await h.d.applyQuota({ f32ShowSoc: 81, gridConnectionPower: 420 }, { receivedAt: Date.now(), source: 'mqtt' });
+    assert.equal(h.values.stream_unit_power_grid, 420);
+    assert.equal(h.writes.length, 0, 'startup recovery sends no hardware commands');
+    await h.d.onTeardown(); assert.equal(h.intervals.size, 0);
+  }
+});
+
+test('original Ultra and AC Pro complete init, poll and MQTT startup despite unreadable grid and runtime options', async () => {
+  for (const sn of ['BK11SYNTHETIC0001', 'BK31SYNTHETIC0001']) {
+    let pollCount = 0; let handler; let available = false; let unsubscribeCount = 0;
+    const h = await harness(sn, 'ES22SYNTHETIC0001', undefined, (d, caps) => {
+      for (const cap of require('../drivers/stream_unit/driver.compose.json').capabilities) caps.add(cap);
+      d.getCapabilityOptions = cap => { throw new Error(`Invalid Capability: ${cap}`); };
+      d.getStoreValue = key => (key === 'mainSn' ? 'ES22SYNTHETIC0001' : undefined);
+      d.getSetting = () => undefined;
+      d.homey.settings = { get: key => ({ accessKey: 'SYNTHETIC_ACCESS', secretKey: 'SYNTHETIC_SECRET' }[key]) };
+      d.homey.app = { subscribeRealtime: async (_sn, callback) => { handler = callback; return true; },
+        unsubscribeRealtime: () => { unsubscribeCount++; } };
+      d.getAvailable = () => available;
+      d.setAvailable = async () => { available = true; };
+      d.setUnavailable = async () => { available = false; };
+      d.log = () => {};
+      // Exercise the real lifecycle without connecting to an account or sending commands.
+      d.poll = async () => {
+        pollCount++;
+        await d.applyQuota({ gridConnectionPower: 420 }, { receivedAt: Date.now(), source: 'rest' });
+        await d.setOnlineState(true);
+      };
+    });
+    await h.d.onInit();
+    assert.equal(pollCount, 1); assert.equal(available, true);
+    assert.equal(h.intervals.size, 3, 'poll, runtime and watt freshness have independent timer handles');
+    assert.equal(typeof handler, 'function');
+    // Establish direction before the matching estimate. Real-clock milliseconds
+    // must not accidentally revive an estimate captured before a direction change.
+    await h.d.applyRemainingTimePower(-400, Date.now());
+    handler({ f32ShowSoc: 80, gridConnectionPower: 421, bmsDsgRemTime: 25 });
+    await h.d.queueDeviceWork(async () => {});
+    assert.equal(h.values.stream_unit_power_grid, 421);
+    assert.equal(h.values.discharge_remaining, 25);
+    assert.equal(h.values.measure_battery, 80);
+    assert.equal(h.caps.has('stream_unit_power_grid'), true);
+    assert.equal(h.writes.length, 0);
+    await h.d.onUninit();
+    assert.equal(unsubscribeCount, 1); assert.equal(h.intervals.size, 0);
+  }
+});
 
 function pvFrame(value) {
   // Synthetic wrapper: pdata field 998 (float), cmdFunc 254, cmdId 21.
   const data = Buffer.alloc(6); data[0] = 0xb5; data[1] = 0x3e; data.writeFloatLE(value, 2);
   return Buffer.concat([Buffer.from([0x0a, 13, 0x0a, 6]), data, Buffer.from([0x40, 0xfe, 1, 0x48, 21])]);
 }
+
+function bmsFrame(charge, discharge, sn) {
+  const vi = n => { const b = []; do { b.push((n & 127) | (n > 127 ? 128 : 0)); n = Math.floor(n / 128); } while (n); return Buffer.from(b); };
+  const int = (n, v) => Buffer.concat([vi(n * 8), vi(v)]);
+  const msg = (n, b) => Buffer.concat([vi(n * 8 + 2), vi(b.length), b]);
+  return msg(1, Buffer.concat([msg(1, Buffer.concat([int(26, charge), int(27, discharge)])),
+    int(8, 32), int(9, 50), msg(25, Buffer.from(sn))]));
+}
+
+test('fresh BMS restores unit flow/state and only matching runtime without borrowing aggregate or cached packets', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, 'ES22SYNTHETIC0001', app, (_d, caps) => {
+    caps.add('charge_remaining'); caps.add('discharge_remaining');
+  });
+  const discharge = bmsFrame(0, 404, sn);
+  await h.d.applyQuota({ powGetBpCms: -440, gridConnectionPower: 403.42, bmsChgRemTime: 5939, bmsDsgRemTime: 168 });
+  assert.equal(h.values.stream_unit_power_battery_flow, null);
+  assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.values.discharge_remaining, null, 'no same-scope direction yet');
+  handler(discharge, `/app/test/${sn}/thing/property/get_reply`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null, 'cached replies cannot revive live pack flow');
+  handler(discharge, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, -404);
+  assert.equal(h.values.battery_charging_state, 'discharging');
+  assert.equal(h.values.discharge_remaining, 168); assert.equal(h.values.charge_remaining, null);
+  assert.equal(h.values.stream_unit_power_grid, 403.42, 'DC flow does not overwrite AC connection');
+  handler(bmsFrame(300, 0, sn), `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, 300);
+  assert.equal(h.values.battery_charging_state, 'charging');
+  assert.equal(h.values.charge_remaining, 5939); assert.equal(h.values.discharge_remaining, null);
+  now += 180001; await h.d.applyQuota({ temp: 30, gridConnectionPower: 400 });
+  h.intervals.get(h.d.remainingTimeTimer)(); await h.d.queueDeviceWork(async () => {});
+  assert.equal(h.values.stream_unit_power_battery_flow, null); assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.values.charge_remaining, null); assert.equal(h.values.discharge_remaining, null);
+  assert.equal(h.writes.length, 0); assert.equal(h.caps.has('measure_power'), false);
+  await h.d.onTeardown(); handler(discharge, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null); assert.equal(h.intervals.size, 0);
+});
+
+test('failed BMS power write cannot invent battery state or direction', async () => {
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  const write = h.d.setCapabilityValue;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (cap === 'stream_unit_power_battery_flow' && value !== null) throw new Error('SDK');
+    await write(cap, value);
+  };
+  handler(bmsFrame(0, 404, sn), `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null); assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_power_battery_flow.applicationStatus, 'write_failed');
+  await h.d.onTeardown();
+});
+
+test('slow Homey writes coalesce BK bursts, retain partial PV receipts and expose applied BMS components', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK61SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  let release; let started;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const start = new Promise(resolve => { started = resolve; });
+  const write = h.d.setCapabilityValue; let first = true;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (first && cap === 'stream_unit_power_battery_flow' && value !== null) {
+      first = false; started(); await blocked;
+    }
+    await write(cap, value);
+  };
+  handler(bmsFrame(0, 450, sn), `/app/device/property/${sn}`); await start;
+  now += 1000; handler(pvFrame(32), `/app/device/property/${sn}`);
+  for (let i = 0; i < 100; i++) {
+    now += 10; handler(bmsFrame(0, 500 + i, sn), `/app/device/property/${sn}`);
+  }
+  release(); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, -599);
+  assert.equal(h.values.stream_unit_pv3_voltage, 32);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_pv3_voltage.ageSec, 1);
+  assert.equal(h.d.getTelemetryQueueDiagnostics().batches, 2);
+  assert.ok(h.d.getTelemetryQueueDiagnostics().coalesced >= 99);
+  const { powerHistorySnapshot } = require('../.homeybuild/lib/streamPowerHistory');
+  const history = powerHistorySnapshot(h.d.getPowerHistoryDiagnostics(), now);
+  assert.deepEqual(history.fields.bmsBatteryW.map(s => s.valueW), [-450, -599]);
+  assert.equal(history.fields.bmsBatteryW[0].queueDelaySec, 2);
+  assert.equal(history.fields.bmsChargeW.at(-1).valueW, 0);
+  assert.equal(history.fields.bmsDischargeW.at(-1).valueW, 599);
+  assert.equal(h.d.getUnitCorrelationDiagnostics().bmsBatteryW.value, -599);
+  assert.equal(h.writes.length, 0);
+  await h.d.onTeardown();
+  assert.deepEqual(h.d.getPowerHistoryDiagnostics().fields, {});
+  assert.equal(h.d.getTelemetryQueueDiagnostics().pending, false);
+});
+
+test('queued BK BMS receipts cannot become fresh merely because slow writes finish later', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  let release; let started; const block = new Promise(resolve => { release = resolve; });
+  const start = new Promise(resolve => { started = resolve; });
+  const write = h.d.setCapabilityValue; let first = true;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (first && cap === 'stream_unit_power_battery_flow' && value !== null) { first = false; started(); await block; }
+    await write(cap, value);
+  };
+  handler(bmsFrame(0, 450, sn), `/app/device/property/${sn}`); await start;
+  now += 1; handler(bmsFrame(0, 500, sn), `/app/device/property/${sn}`);
+  now += 180001; release(); await h.d.pvChain;
+  assert.equal(h.values.stream_unit_power_battery_flow, null);
+  assert.equal(h.values.battery_charging_state, null);
+  assert.equal(h.d.getUnitCorrelationDiagnostics().bmsBatteryW, undefined);
+  assert.deepEqual(h.d.getPowerHistoryDiagnostics().fields, {});
+  await h.d.onTeardown();
+});
+
+test('AC Pro limit diagnostics use live property packets, not cached replies, and never create controls or PV tiles', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler; let subscriptions = 0;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; subscriptions++; return true; },
+    unsubscribeAppRealtime() {} };
+  const h = await harness(sn, sn, app);
+  // uint32 property field 521 = 1200; cmdFunc 254 / cmdId 21.
+  const frame = Buffer.from([0x0a, 11, 0x0a, 4, 0xc8, 0x20, 0xb0, 9, 0x40, 0xfe, 1, 0x48, 21]);
+  handler(frame, `/app/test/${sn}/thing/property/get_reply`); await h.d.pvChain;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+  handler(frame, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, 1200);
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.controlEnabled, false);
+  assert.equal(subscriptions, 1); assert.equal(h.writes.length, 0);
+  assert.ok(![...h.caps].some(cap => /pv\d_voltage|feedGridModePowLimit/.test(cap)));
+  now += 180001;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+  await h.d.onTeardown(); assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+  handler(frame, `/app/device/property/${sn}`); await h.d.pvChain;
+  assert.equal(h.d.getLimitDiagnostics().feedGridModePowLimit.value, null);
+});
+
+test('original Unit port watts expire independently of SOC updates and recover on explicit zero', async t => {
+  let now = 1000000; t.mock.method(Date, 'now', () => now);
+  const h = await harness('BK31SYNTHETIC0001');
+  await h.d.applyQuota({ gridConnectionPower: 420 }, { receivedAt: now, source: 'mqtt' });
+  now += 180001;
+  await h.d.applyQuota({ f32ShowSoc: 75 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.values.stream_unit_power_grid, null);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_power_grid.stale, true);
+  await h.d.applyQuota({ gridConnectionPower: 0 }, { receivedAt: now, source: 'rest' });
+  assert.equal(h.values.stream_unit_power_grid, 0);
+  assert.equal(h.d.getReadingDiagnostics().stream_unit_power_grid.stale, false);
+  assert.equal(h.writes.length, 0);
+  await h.d.onTeardown(); assert.equal(h.intervals.size, 0);
+});
+
+test('unit correlation renews unchanged applied receipts, drops rejected writes and resets on teardown', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness('BK61SYNTHETIC0001');
+  h.caps.add('measure_battery'); // Present in the packaged physical-unit driver.
+  await h.d.applyQuota({ f32ShowSoc: 81, gridConnectionPower: 421 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.d.getUnitCorrelationDiagnostics().gridPortW.value, 421);
+  now += 10000;
+  await h.d.applyQuota({ gridConnectionPower: 421 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.d.getUnitCorrelationDiagnostics().gridPortW.ageSec, 0);
+  assert.equal(h.d.getUnitCorrelationDiagnostics().socPct.ageSec, 10);
+  const write = h.d.setCapabilityValue;
+  h.d.setCapabilityValue = async (cap, value) => {
+    if (cap === 'stream_unit_power_grid') throw new Error('PRIVATE SDK failure');
+    await write(cap, value);
+  };
+  await h.d.applyQuota({ gridConnectionPower: 430 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.d.getUnitCorrelationDiagnostics().gridPortW, undefined);
+  await h.d.onTeardown();
+  assert.deepEqual(h.d.getUnitCorrelationDiagnostics(), {});
+  assert.equal(h.writes.length, 0, 'diagnostics issue no hardware writes');
+});
 
 test('optional BK app diagnostics clear stale components and never touch power or energy', async (t) => {
   let now = 100000;
@@ -70,7 +319,7 @@ test('optional BK app diagnostics clear stale components and never touch power o
   await h.d.pvChain;
   assert.equal(h.values.stream_unit_pv3_voltage, 32);
   now += 20 * 60 * 1000 + 1;
-  h.intervals.get(1)(); await h.d.pvChain;
+  h.intervals.get(h.d.pvTimer)(); await h.d.pvChain;
   assert.equal(h.values.stream_unit_pv3_voltage, null);
   await h.d.onTeardown();
   assert.equal(unsubscribed, 1); assert.equal(h.intervals.size, 0);
@@ -78,7 +327,7 @@ test('optional BK app diagnostics clear stale components and never touch power o
   assert.equal(h.values.stream_unit_pv3_voltage, null);
   await h.d.onReady();
   assert.equal(h.values.stream_unit_pv3_voltage, null);
-  assert.deepEqual(h.d.getReadingDiagnostics(), {});
+  assert.ok(Object.values(h.d.getReadingDiagnostics()).every(field => field.stale === true));
   await h.d.onTeardown();
 });
 
@@ -95,14 +344,52 @@ test('BK subscription finishing after teardown is removed and cannot start a wat
   assert.ok(unsubscribed >= 1); assert.equal(h.intervals.size, 0);
 });
 
-test('REST-only BK unit stays usable without starting an app-diagnostic watchdog', async () => {
+test('REST-only BK unit stays usable with the display watchdog but no app-diagnostic subscription', async () => {
   const h = await harness('BK61SYNTHETIC0001', 'BK61SYNTHETIC0001', {
     subscribeAppRealtime: async () => false, unsubscribeAppRealtime() {},
   });
-  assert.equal(h.intervals.size, 0);
+  assert.equal(h.intervals.size, 1);
   assert.equal(h.caps.has('stream_unit_pv3_voltage'), false);
   await h.d.applyQuota({ powGetPv3: 42 });
   assert.equal(h.values.stream_unit_power_pv3, 42);
+  await h.d.onTeardown();
+});
+
+test('unit remaining estimates clear persisted values, expire independently, and release the local watchdog', async t => {
+  let now = 1000000;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness('BK61SYNTHETIC0001');
+  h.caps.add('charge_remaining'); h.caps.add('discharge_remaining');
+  h.values.discharge_remaining = 999;
+  await h.d.startRemainingTime('unit');
+  assert.equal(h.values.discharge_remaining, null);
+  await h.d.applyRemainingTimePower(-400, now);
+  await h.d.applyQuota({ bmsDsgRemTime: 207, bmsChgRemTime: 5939 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.values.discharge_remaining, 207);
+  now += 180001;
+  await h.d.applyQuota({ cmsDsgRemTime: 50, temp: 38 }, { receivedAt: now, source: 'mqtt' });
+  assert.equal(h.values.discharge_remaining, null);
+  assert.equal(h.values.charge_remaining, null);
+  await h.d.applyQuota({ bmsDsgRemTime: 210 }, { receivedAt: now, source: 'mqtt' });
+  now += 180001;
+  h.intervals.get(h.d.remainingTimeTimer)(); await h.d.queueDeviceWork(async () => {});
+  assert.equal(h.values.discharge_remaining, null);
+  await h.d.onTeardown();
+  assert.equal(h.intervals.size, 0);
+  await h.d.applyQuota({ bmsDsgRemTime: 5 });
+  assert.equal(h.values.discharge_remaining, null);
+});
+
+test('failed startup clearing of a persisted time estimate retries without a telemetry receipt', async () => {
+  const h = await harness('BK31SYNTHETIC0001');
+  h.caps.add('discharge_remaining'); h.values.discharge_remaining = 999;
+  const write = h.d.setCapabilityValue; let fail = true;
+  h.d.setCapabilityValue = async (cap, value) => { if (fail) throw new Error('SDK'); await write(cap, value); };
+  await h.d.startRemainingTime('unit');
+  assert.equal(h.d.getRemainingTimeDiagnostics().discharge_remaining.ageSec, null);
+  fail = false; h.intervals.get(h.d.remainingTimeTimer)(); await h.d.queueDeviceWork(async () => {});
+  assert.equal(h.values.discharge_remaining, null);
+  assert.equal(h.d.getRemainingTimeDiagnostics().discharge_remaining.source, 'unobserved');
   await h.d.onTeardown();
 });
 
@@ -162,4 +449,171 @@ test('teardown cancels a pending unit control readback and no later command is s
   await waiting; await h.d.onTeardown();
   await assert.rejects(pending, /incomplete/);
   timerFn(); assert.equal(h.writes.length, 1);
+});
+
+test('relinked unit refreshes a cached former main before assigning the system role', async () => {
+  const sn = 'BK61NEWMAINSYNTH';
+  let resolves = 0;
+  const h = await harness(sn, sn, undefined, d => {
+    d.getStoreValue = key => key === 'mainSn' ? 'BK61OLDMAINSYNTH' : undefined;
+    d.client.getMainSn = async queried => { assert.equal(queried, sn); resolves++; return sn; };
+  });
+  assert.equal(resolves, 1, 'a stored former main is not current membership evidence');
+  assert.equal(h.caps.has('operating_mode'), true);
+  assert.equal(typeof h.listeners.operating_mode, 'function');
+  assert.equal(h.writes.length, 0, 'role discovery sends no control command');
+  await h.d.onTeardown();
+});
+
+test('failed role refresh keeps existing system capability identities but blocks system controls', async () => {
+  const h = await harness('BK61SYNTHETICUNIT', null, undefined, (d, caps, values) => {
+    d.getStoreValue = key => key === 'mainSn' ? 'BK61FORMERMAINSYNTH' : undefined;
+    caps.add('operating_mode'); values.operating_mode = 'self_powered';
+  });
+  assert.equal(h.caps.has('operating_mode'), true, 'a failed lookup must not delete an existing capability');
+  assert.equal(h.values.operating_mode, null, 'unknown role cannot display old system mode as current');
+  await assert.rejects(h.listeners.operating_mode('ai'), /system main/i);
+  await h.d.applyQuota({ cmsSelfUsedMode: 1 }, { source: 'rest', receivedAt: Date.now() });
+  assert.equal(h.values.operating_mode, null);
+  assert.equal(h.reads.length, 0);
+  assert.equal(h.writes.length, 0);
+  await h.d.onTeardown();
+});
+
+function unitAlertFlows() {
+  const events = [];
+  const listeners = new Map();
+  const flow = {
+    getDeviceTriggerCard: (card) => ({
+      registerRunListener: listener => listeners.set(card, listener),
+      trigger: async (device, tokens, state) => events.push({ card, device, tokens, state }),
+    }),
+  };
+  const driver = new StreamUnitDriver();
+  driver.homey = { flow };
+  driver.log = () => {};
+  return {
+    events, flow, init: () => driver.onInit(),
+    run: (event, args = {}) => listeners.get(event.card)({ device: event.device, ...args }, event.state),
+  };
+}
+
+test('Ultra X SOC alert requires a fresh same-unit threshold crossing and reanchors after reconnect', async t => {
+  let now = 1000000; let epoch = 1;
+  t.mock.method(Date, 'now', () => now);
+  const sn = 'BK61SYNTHETIC0001';
+  const flows = unitAlertFlows(); await flows.init();
+  const { d } = await harness(sn, undefined, undefined, (device, caps) => {
+    caps.add('measure_battery'); device.homey.flow = flows.flow;
+    device.setUnavailable = async () => {};
+  });
+  const send = (quota, overrides = {}) => {
+    now += 1000;
+    const session = epoch;
+    return d.applyQuota(quota, {
+      receivedAt: now, source: 'mqtt', sourceSn: sn,
+      mqttDelivery: { receivedAt: now, retained: false, duplicate: false,
+        connectionEpoch: session, isCurrent: () => session === epoch, ...overrides.delivery },
+      ...overrides.context,
+    });
+  };
+  await send({ f32ShowSoc: 15 });
+  await send({ cmsBattSoc: 90 });
+  await send({ f32ShowSoc: 90 }, { context: { source: 'rest' } });
+  await send({ f32ShowSoc: 90 }, { context: { sourceSn: 'BK61DIFFERENTUNIT' } });
+  await send({ f32ShowSoc: 90 }, { delivery: { retained: true } });
+  await send({ f32ShowSoc: 90 }, { delivery: { duplicate: true } });
+  assert.equal(flows.events.length, 0);
+  await send({ f32ShowSoc: 20 });
+  const first = flows.events[0];
+  assert.equal(first.card, 'stream_unit_battery_level_crossed');
+  assert.deepEqual(first.tokens, { battery: 20 });
+  assert.equal(await flows.run(first, { direction: 'above', level: 20 }), true);
+  assert.equal(await flows.run(first, { direction: 'below', level: 20 }), false);
+  assert.equal(await flows.run(first, { direction: 'above', level: 21 }), false);
+  await send({ f32ShowSoc: 20 });
+  assert.equal(flows.events.length, 1);
+  assert.equal(await flows.run(first, { direction: 'above', level: 20 }), true);
+  epoch += 1;
+  assert.equal(await flows.run(first, { direction: 'above', level: 20 }), false);
+  await send({ f32ShowSoc: 30 }, { delivery: { connectionEpoch: 1, isCurrent: () => false } });
+  await send({ f32ShowSoc: 30 });
+  assert.equal(flows.events.length, 1);
+  await send({ f32ShowSoc: 20 });
+  assert.equal(await flows.run(flows.events[1], { direction: 'below', level: 20 }), true);
+  now += 180001;
+  assert.equal(await flows.run(flows.events[1], { direction: 'below', level: 20 }), false);
+  await send({ f32ShowSoc: 80 }, { delivery: { receivedAt: now - 180001 } });
+  await send({ f32ShowSoc: 80 });
+  assert.equal(flows.events.length, 2, 'expiry starts a new baseline');
+  await send({ gridConnectionPower: 120 }, { context: { accountingDiscontinuity: true } });
+  await send({ f32ShowSoc: 5 });
+  assert.equal(flows.events.length, 2, 'a dropped quota cannot be bridged by a sparse update');
+  await d.setOnlineState(false);
+  await send({ f32ShowSoc: 95 });
+  assert.equal(flows.events.length, 2, 'offline invalidates the last threshold baseline');
+  await d.onTeardown();
+});
+
+test('AC Pro charge/discharge alerts use only live own-unit BMS and reanchor after gaps', async t => {
+  let now = 1000000; let epoch = 1;
+  t.mock.method(Date, 'now', () => now);
+  const sn = 'BK31SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const flows = unitAlertFlows(); await flows.init();
+  const { d } = await harness(sn, 'BK61SYNTHETIC0001', app, device => { device.homey.flow = flows.flow; });
+  const property = `/app/device/property/${sn}`;
+  const send = async (charge, discharge, overrides = {}) => {
+    now += 1000;
+    const session = epoch;
+    handler(bmsFrame(charge, discharge, overrides.sn || sn), overrides.topic || property,
+      { receivedAt: now, retained: false, duplicate: false,
+        connectionEpoch: session, isCurrent: () => session === epoch, ...overrides.delivery });
+    await d.pvChain;
+  };
+  await send(0, 0);
+  await send(300, 0, { topic: `/app/test/${sn}/thing/property/get_reply` });
+  await send(300, 0, { sn: 'BK31OTHERUNIT' });
+  await send(300, 0, { delivery: { duplicate: true } });
+  await send(300, 0, { delivery: { retained: true } });
+  assert.equal(flows.events.length, 0);
+  await send(300, 0);
+  assert.equal(flows.events[0].card, 'stream_unit_charging_started');
+  assert.deepEqual(flows.events[0].tokens, { power: 300 });
+  assert.equal(await flows.run(flows.events[0]), true);
+  await send(305, 0);
+  assert.equal(flows.events.length, 1);
+  epoch += 1;
+  assert.equal(await flows.run(flows.events[0]), false);
+  await send(0, 150);
+  assert.equal(flows.events.length, 1, 'no direction edge on the first new-session reading');
+  await send(5, 0);
+  await send(0, 150);
+  assert.equal(flows.events[1].card, 'stream_unit_discharging_started');
+  assert.deepEqual(flows.events[1].tokens, { power: -150 });
+  assert.equal(await flows.run(flows.events[1]), true);
+  now += 180001;
+  assert.equal(await flows.run(flows.events[1]), false);
+  await send(200, 0, { delivery: { receivedAt: now - 180001 } });
+  await send(200, 0);
+  assert.equal(flows.events.length, 2);
+  await d.onTeardown();
+  assert.equal(await flows.run(flows.events[1]), false);
+});
+
+test('other physical STREAM models do not emit Ultra X or AC Pro alerts', async () => {
+  const sn = 'BK11SYNTHETIC0001'; let handler;
+  const app = { subscribeAppRealtime: async (_sn, fn) => { handler = fn; return true; }, unsubscribeAppRealtime() {} };
+  const flows = unitAlertFlows(); await flows.init();
+  const { d } = await harness(sn, sn, app, (device, caps) => {
+    caps.add('measure_battery'); device.homey.flow = flows.flow;
+  });
+  for (const [soc, watts] of [[15, 0], [25, 200]]) {
+    const receivedAt = Date.now();
+    const delivery = { receivedAt, retained: false, duplicate: false, connectionEpoch: 1, isCurrent: () => true };
+    await d.applyQuota({ f32ShowSoc: soc }, { receivedAt, source: 'mqtt', sourceSn: sn, mqttDelivery: delivery });
+    handler(bmsFrame(watts, 0, sn), `/app/device/property/${sn}`, delivery); await d.pvChain;
+  }
+  assert.deepEqual(flows.events, []);
+  await d.onTeardown();
 });

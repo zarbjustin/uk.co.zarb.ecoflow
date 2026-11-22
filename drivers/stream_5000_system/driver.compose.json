@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Home Battery (5000)",
-    "de": "STREAM-Hausbatterie (5000)",
-    "nl": "STREAM-thuisbatterij (5000)"
+    "en": "STREAM 5000 Home Battery",
+    "de": "STREAM 5000 Hausbatterie",
+    "nl": "STREAM 5000 Thuisbatterij"
   },
   "class": "battery",
   "platforms": [
@@ -115,6 +115,21 @@
   },
   "settings": [
     {
+      "id": "reserve_request_enabled",
+      "type": "checkbox",
+      "value": false,
+      "label": {
+        "en": "Allow experimental reserve requests",
+        "de": "Experimentelle Reserveanfragen erlauben",
+        "nl": "Experimentele reserveaanvragen toestaan"
+      },
+      "hint": {
+        "en": "Enabling verifies the current main unit using Developer API keys. Flow requests may affect the linked installation. If the main unit or Developer credentials change, review the installation and enable again. Reserve must already be on in Self-consumption mode. Flow success means API acceptance only.",
+        "de": "Beim Aktivieren wird das aktuelle Hauptgerät mit Developer-API-Schlüsseln geprüft. Flow-Anfragen können die verbundene Anlage betreffen. Nach einer Änderung des Hauptgeräts oder der Developer-Zugangsdaten die Anlage prüfen und erneut aktivieren. Die Reserve muss im Eigenverbrauch bereits aktiv sein. Flow-Erfolg bedeutet nur API-Annahme.",
+        "nl": "Bij inschakelen wordt de huidige hoofdeenheid gecontroleerd met Developer-API-sleutels. Flow-aanvragen kunnen de gekoppelde installatie beïnvloeden. Controleer de installatie en schakel opnieuw in als de hoofdeenheid of Developer-inloggegevens wijzigen. Reserve moet al aanstaan in Zelfverbruik-modus. Flow-succes betekent alleen API-acceptatie."
+      }
+    },
+    {
       "id": "installed_capacity_kwh",
       "type": "number",
       "label": {
@@ -125,9 +140,9 @@
       "min": 0.1,
       "max": 200,
       "hint": {
-        "en": "Optional total usable capacity of all batteries in this installation. Used only for stored-energy and runtime estimates.",
-        "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Wird nur für Energie- und Laufzeitschätzungen verwendet.",
-        "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen gebruikt voor energie- en looptijdschattingen."
+        "en": "Optional total usable capacity of all batteries in this installation. Used only for this app’s widget stored-energy and runtime estimates; does not configure the capacity shown by Homey Energy.",
+        "de": "Optionale nutzbare Gesamtkapazität aller Batterien dieser Anlage. Nur für die Speicherenergie- und Laufzeitschätzungen der App-Widgets; konfiguriert nicht die in Homey Energy angezeigte Kapazität.",
+        "nl": "Optionele totale bruikbare capaciteit van alle batterijen in deze installatie. Alleen voor schattingen van opgeslagen energie en looptijd in de app-widgets; stelt de capaciteit in Homey Energy niet in."
       }
     },
     {
@@ -235,7 +250,7 @@
             "de": "Status",
             "nl": "Status"
           },
-          "value": "Monitoring only · controls intentionally disabled",
+          "value": "Homey Energy monitoring · manage battery settings in EcoFlow",
           "hint": {
             "en": "This verified STREAM 5000 installation is not available through EcoFlow's supported public API. This Home Battery signs in through EcoFlow's app connection and only reads data. Controls remain disabled until a product-specific protocol is verified.",
             "de": "Diese verifizierte STREAM-5000-Anlage ist nicht über EcoFlows unterstützte öffentliche API verfügbar. Diese Hausbatterie meldet sich über die EcoFlow-App-Verbindung an und liest ausschließlich Daten. Steuerbefehle bleiben deaktiviert, bis ein produktspezifisches Protokoll verifiziert ist.",
@@ -247,7 +262,7 @@
   ],
   "pair": [
     {
-      "id": "beta_access"
+      "id": "energy_access"
     },
     {
       "id": "app_credentials"
@@ -262,6 +277,11 @@
     {
       "id": "add_devices",
       "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "app_account_repair"
     }
   ]
 }

@@ -1,0 +1,798 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+const fs = require('node:fs');
+const path = require('node:path');
+const { EventEmitter } = require('node:events');
+const { varint, packet, scalar } = require('./helpers/dualCtSynthetic');
+const { DualCtMonitor } = require('../.homeybuild/lib/dualCtMonitor');
+const { dualCtAccountBinding, dualCtPreviewDevices, registerDualCtPreviewPairing } = require('../.homeybuild/lib/dualCtPreviewPairing');
+const { hasOtherAppAuthDevices } = require('../.homeybuild/lib/appAuthConsumers');
+const auth = require('../.homeybuild/lib/appAuthPairing');
+const root = path.join(__dirname, '..');
+const manifest = require('../drivers/smartmeter_dual_ct_preview/driver.compose.json');
+const wording = require('../locales/en.json').dual_ct_preview;
+const text = key => wording[key] || key;
+const sessionInfo = { host: 'https://api-e.ecoflow.com', userId: 'SYNTHETIC-ACCOUNT' };
+const sn = 'DUALCTSYNTHETIC01';
+const deviceRow = { sn, shared: false, productName: '421', modelCodes: [{ field: 'productType', code: 421 }] };
+const msg = (field, data) => Buffer.concat([varint(field * 8 + 2), varint(data.length), data]);
+const int = (field, value) => Buffer.concat([varint(field * 8), varint(value)]);
+function frame(bytes = packet(1, [[1, -40], [2, 20], [3, 70], [4, 150], [6, 100], [7, 50]]), options = {}) {
+  return msg(1, Buffer.concat([msg(1, bytes), ...(options.omitted ? [] : [int(6, options.encoding || 0)]),
+    int(8, 254), int(9, 21), ...(options.sn ? [msg(25, Buffer.from(options.sn))] : [])]));
+}
+const topic = `/app/device/property/${sn}`;
+const scope = { account: 'synthetic-account', device: sn, session: 'synthetic-session' };
+
+test('continuous preview displays community-observed phase units but keeps totals/counters raw and accounting isolated', () => {
+  const monitor = new DualCtMonitor(scope);
+  assert.equal(monitor.observe(frame(), topic, 1000), true);
+  let view = monitor.snapshot(1000, text);
+  assert.equal(view.recent, true); assert.equal(view.values['dual_ct_preview_total.a'], 2);
+  assert.equal(view.values['dual_ct_preview_total.b'], 22);
+  assert.match(view.values['dual_ct_preview_fields.a_power'], /772: -1/);
+  assert.match(view.values['dual_ct_preview_fields.a_power'], /772: -1\.0 W/);
+  assert.match(view.values['dual_ct_preview_fields.b_voltage'], /985: 230\.0 V/);
+  assert.match(view.values['dual_ct_preview_fields.b_current'], /988: 0\.500 A/);
+  assert.match(view.values.dual_ct_preview_counters, /773.1: -40/);
+  assert.doesNotMatch(JSON.stringify(view), /kWh|"measure_power"|"meter_power"|CT1|SYNTHETIC/);
+  assert.equal(monitor.observe(frame(packet(2, [[1, -41], [4, 150]]), { omitted: true }), topic, 2000), true);
+  view = monitor.snapshot(2000, text);
+  assert.match(view.values.dual_ct_preview_trends, /1: decreased \(not a confirmed reset\)/);
+  assert.match(view.values.dual_ct_preview_trends, /4: unchanged/);
+  assert.equal(monitor.observe(frame(Buffer.concat([scalar(956, 0), scalar(957, 0)])), topic, 90000), true);
+  view = monitor.snapshot(92000, text);
+  assert.equal(view.values['dual_ct_preview_total.a'], null);
+  assert.match(view.values['dual_ct_preview_fields.a_voltage'], /956: 0/);
+  assert.match(view.values['dual_ct_preview_fields.a_power'], /stale/);
+  assert.match(view.values.dual_ct_preview_counters, /Not observed or stale/);
+  assert.equal(view.nextExpiryMs, 88000);
+  assert.equal(monitor.snapshot(180000, text).recent, false);
+});
+
+test('monitor accepts only owned-topic live bounded headers and never interprets record 997 as counters', () => {
+  const monitor = new DualCtMonitor(scope);
+  for (const [payload, route] of [[frame(), topic + '/get_reply'], [frame(), topic.replace(sn, 'OTHERDEVICE')],
+    [frame(packet(), { encoding: 1 }), topic], [frame(packet(), { sn: 'OTHERDEVICE' }), topic],
+    [Buffer.alloc(65537), topic], [Buffer.from('{}'), topic]]) assert.equal(monitor.observe(payload, route, 1000), false);
+  assert.equal(monitor.observe(frame(packet(), { omitted: true }), topic, 1000), true);
+  assert.equal(monitor.observe(frame(packet(9)), topic, 1000), false, 'equal-time receipt order is unknown');
+  const counter997 = msg(997, scalar(1, 123456));
+  assert.equal(monitor.observe(frame(Buffer.concat([packet(), counter997])), topic, 2000), true);
+  assert.doesNotMatch(JSON.stringify(monitor.snapshot(2000, text)), /123456/);
+  monitor.snapshot(1999, text);
+  assert.equal(monitor.snapshot(2001, text).values['dual_ct_preview_total.a'], null, 'clock rollback clears all caches');
+  monitor.observe(frame(), topic, 3000); monitor.clear();
+  assert.equal(monitor.snapshot(3001, text).recent, false);
+});
+
+test('preview discovery requires owned explicit metadata AND productType 421, with no serial-prefix or custom-name guessing', () => {
+  const rejected = [{ ...deviceRow, shared: true }, { ...deviceRow, sn: 'bad/topic' },
+    { ...deviceRow, modelCodes: [] }, { ...deviceRow, productName: 'Other product' },
+    { ...deviceRow, productName: 'Smart Meter', name: 'Dual CT' },
+    { ...deviceRow, modelCodes: [{ field: 'productType', code: 422 }] }];
+  assert.deepEqual(dualCtPreviewDevices(rejected), []);
+  assert.equal(dualCtPreviewDevices([deviceRow, deviceRow]).length, 1);
+  assert.equal(dualCtPreviewDevices([1, 2, 3].map(n => ({ ...deviceRow, sn: sn + n }))).length, 3);
+  assert.equal(dualCtAccountBinding(sessionInfo), dualCtAccountBinding({ ...sessionInfo }));
+  assert.notEqual(dualCtAccountBinding(sessionInfo), dualCtAccountBinding({ ...sessionInfo, userId: 'OTHER' }));
+  for (const bad of [{ host: 'https://untrusted.invalid', userId: 'x' }, { ...sessionInfo, userId: '' }]) {
+    assert.throws(() => dualCtAccountBinding(bad));
+  }
+});
+
+test('pairing is explicitly consented, filters duplicates and commits credentials only for an admitted Add', async () => {
+  const original = auth.registerAppAuthHandlers; const handlers = new Map(); let commits = 0; let lists = 0;
+  auth.registerAppAuthHandlers = () => ({ getClient: () => ({ getSession: async () => sessionInfo,
+    getDeviceList: async () => { lists++; return [deviceRow, { ...deviceRow, sn: sn + '2' }]; } }), commit: () => commits++ });
+  try {
+    registerDualCtPreviewPairing({ homey: { __: key => key }, getDevices: () => [{ getData: () => ({ sn }) }] },
+      { setHandler: (name, fn) => handlers.set(name, fn) });
+    await assert.rejects(handlers.get('list_devices')()); assert.equal(lists, 0);
+    await handlers.get('dual_ct_preview_consent')({ accepted: 'true' });
+    await assert.rejects(handlers.get('list_devices')());
+    await handlers.get('dual_ct_preview_consent')({ accepted: true });
+    const rows = await handlers.get('list_devices')();
+    assert.equal(rows.length, 1); assert.equal(rows[0].data.sn, sn + '2');
+    assert.equal(rows[0].store.dualCtPreviewConsent, 1); assert.equal(rows[0].settings.preview_enabled, true);
+    assert.doesNotMatch(JSON.stringify(rows), /SYNTHETIC-ACCOUNT|password|token/);
+    assert.equal(commits, 0);
+    await assert.rejects(handlers.get('add_device')({ data: { sn: 'FOREIGNDEVICE' } }));
+    await handlers.get('add_device')(rows[0]); assert.equal(commits, 1);
+    await handlers.get('dual_ct_preview_consent')({ accepted: false });
+    await assert.rejects(handlers.get('add_device')(rows[0])); assert.equal(commits, 1);
+  } finally { auth.registerAppAuthHandlers = original; }
+});
+
+test('late pairing lists and a changed account cannot save credentials or admit an old selection', async () => {
+  const original = auth.registerAppAuthHandlers; const handlers = new Map(); let release; let account = sessionInfo; let disposed = 0;
+  let pending = true;
+  auth.registerAppAuthHandlers = () => ({ getClient: () => ({ getSession: async () => account,
+    getDeviceList: async () => pending ? new Promise(resolve => { release = resolve; }) : [deviceRow] }),
+  commit: () => assert.fail('stale pairing cannot commit'), dispose: () => disposed++ });
+  try {
+    registerDualCtPreviewPairing({ homey: { __: key => key }, getDevices: () => [] }, { setHandler: (key, fn) => handlers.set(key, fn) });
+    await handlers.get('dual_ct_preview_consent')({ accepted: true });
+    const listing = handlers.get('list_devices')(); await new Promise(resolve => setImmediate(resolve));
+    await handlers.get('disconnect')(); release([deviceRow]); assert.deepEqual(await listing, []); assert.equal(disposed, 1);
+    pending = false; await handlers.get('dual_ct_preview_consent')({ accepted: true });
+    const rows = await handlers.get('list_devices')();
+    account = { ...sessionInfo, userId: 'OTHER' };
+    await assert.rejects(handlers.get('add_device')(rows[0]));
+  } finally { auth.registerAppAuthHandlers = original; }
+});
+
+let PreviewDevice;
+const originalLoad = Module._load;
+try {
+  Module._load = function (request, ...args) {
+    if (request === 'homey') return { Device: class {} };
+    return originalLoad.call(this, request, ...args);
+  };
+  PreviewDevice = require('../.homeybuild/drivers/smartmeter_dual_ct_preview/device');
+} finally { Module._load = originalLoad; }
+
+function harness(options = {}) {
+  const device = new PreviewDevice(); const settings = new EventEmitter();
+  const values = new Map(manifest.capabilities.map(id => [id, 99999])); const timers = new Map();
+  const handlers = new Set(); const writes = []; let timerId = 0;
+  const stored = { dualCtPreviewConsent: 1, dualCtAccountBinding: dualCtAccountBinding(sessionInfo), ...options.store };
+  const settingValues = { appAuthEmail: 'tester@example.invalid', appAuthPassword: 'fake', preview_enabled: options.enabled !== false };
+  settings.get = key => settingValues[key]; settings.unset = key => { delete settingValues[key]; settings.emit('unset', key); };
+  device.homey = { settings, __: key => key.split('.').reduce((o, part) => o?.[part], require('../locales/en.json')) || key,
+    setTimeout: (fn, ms) => { timers.set(++timerId, { fn, ms }); return timerId; }, clearTimeout: id => timers.delete(id),
+    setInterval: (fn, ms) => { timers.set(++timerId, { fn, ms, interval: true }); return timerId; }, clearInterval: id => timers.delete(id),
+    app: { subscribeAppRealtime: async (_sn, handler, active) => {
+      if (options.pending) await options.pending;
+      if (!active()) return false;
+      const delivered = (payload, topic, metadata = { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: false }) => handler(payload, topic, metadata);
+      handlers.add(delivered); return options.subscription !== false;
+    }, unsubscribeAppRealtime: () => handlers.clear() },
+    drivers: { getDriver: () => ({ getDevices: () => options.other ? [options.other] : [device] }) },
+  };
+  device.getData = () => ({ sn }); device.getSetting = key => settingValues[key];
+  device.getStoreValue = key => stored[key]; device.getCapabilities = () => [...values.keys()];
+  device.hasCapability = id => values.has(id);
+  device.addCapability = async id => { values.set(id, null); };
+  device.setCapabilityOptions = async () => {};
+  device.getCapabilityValue = id => values.get(id);
+  device.setCapabilityValue = async (id, value) => { writes.push([id, value]); values.set(id, value); };
+  device.setAvailable = async () => { device.available = true; };
+  device.setUnavailable = async message => { device.available = false; device.unavailable = message; };
+  device.setWarning = async message => { device.warning = message; };
+  return { device, values, timers, handlers, writes, settings, settingValues };
+}
+
+test('a healthy existing meter clears the persisted research banner without adopting Energy or changing consent', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  h.device.warning = wording.warning; // Homey persists warnings across app upgrades.
+  const before = [...h.values.keys()];
+  const settingsBefore = { ...h.settingValues };
+  h.device.setEnergy = async () => assert.fail('UI cleanup must not activate Energy');
+  h.device.setStoreValue = async () => assert.fail('UI cleanup must not rewrite source/consent');
+  try {
+    await h.device.onInit();
+    assert.equal(h.device.warning, null);
+    assert.deepEqual([...h.values.keys()], before);
+    assert.deepEqual(h.settingValues, settingsBefore);
+    assert.equal(h.handlers.size, 1);
+    const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    assert.equal(h.device.available, true);
+    await h.device.onUninit();
+    assert.equal(h.handlers.size, 0);
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('existing preview upgrades additively without re-pairing, lost identifiers or persisted numeric reuse', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness(); const added = []; const capabilityOptions = new Map();
+  h.device.setCapabilityOptions = async (id, options) => { capabilityOptions.set(id, options); };
+  for (const id of [...h.values.keys()]) if (/dual_ct_preview_(power|voltage|current|net|net_status)\./.test(id)) h.values.delete(id);
+  const oldIds = [...h.values.keys()];
+  h.device.addCapability = async id => { added.push(id); h.values.set(id, 99999); };
+  try {
+    await h.device.onInit(); await h.device.chain;
+    assert.equal(added.length, 22); assert.equal(h.handlers.size, 1);
+    assert.equal(capabilityOptions.size, manifest.capabilities.length);
+    assert.equal(capabilityOptions.get('dual_ct_preview_power.a_p1').title.en, 'CT1 phase 1 power');
+    assert.equal(capabilityOptions.get('dual_ct_preview_net.b').preventTag, true);
+    for (const id of [...oldIds, ...added]) assert.ok(h.values.has(id));
+    for (const id of added) assert.notEqual(h.values.get(id), 99999);
+    const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), 1);
+    await h.device.onUninit();
+    assert.ok(added.every(id => h.values.get(id) === null));
+    await h.device.onInit(); assert.equal(added.length, 22, 'upgrade is idempotent');
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('capability upgrade failure or teardown during a delayed upgrade cannot start monitoring', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => assert.fail('unfinished upgrade must not read account or subscribe');
+  try {
+    const failed = harness(); failed.values.delete('dual_ct_preview_power.a_p1');
+    failed.device.addCapability = async () => { throw new Error('synthetic failure'); };
+    await failed.device.onInit(); assert.equal(failed.handlers.size, 0); assert.equal(failed.timers.size, 0);
+    assert.equal(failed.device.getDualCtPreviewDiagnostics().status, 'display_failed');
+    await assert.rejects(failed.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: true } }), /display update failed/);
+    assert.equal(failed.handlers.size, 0, 'explicit enable cannot bypass a failed upgrade');
+    await failed.device.onUninit();
+    const h = harness(); h.values.delete('dual_ct_preview_power.a_p1'); let release;
+    const pending = new Promise(resolve => { release = resolve; });
+    h.device.addCapability = async id => { await pending; h.values.set(id, 99999); };
+    const init = h.device.onInit(); await new Promise(resolve => setImmediate(resolve));
+    const stop = h.device.onUninit(); release(); await Promise.all([init, stop]);
+    assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+  } finally { auth.appAuthClientFromSettings = original; }
+});
+
+test('circuit description settings change only text, keep existing subscription, and cannot revive disabled readings', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  try {
+    await h.device.onInit(); const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    const power = h.values.get('dual_ct_preview_power.b_p1');
+    const before = h.device.getDualCtPreviewDiagnostics();
+    await h.device.onSettings({ changedKeys: ['ct1_role', 'ct2_role'], newSettings: { ct1_role: 'grid', ct2_role: 'hybrid_inverter' } });
+    await h.device.chain;
+    assert.ok(h.values.get('dual_ct_preview_net_status.b').includes(text('role_hybrid_inverter')));
+    assert.equal(h.values.get('dual_ct_preview_power.b_p1'), power);
+    assert.deepEqual(h.device.getDualCtPreviewDiagnostics(), before);
+    assert.deepEqual([...h.handlers], [handler]);
+    await h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: false } });
+    await h.device.onSettings({ changedKeys: ['ct2_role'], newSettings: { ct1_role: 'grid', ct2_role: 'solar_inverter' } });
+    await h.device.chain;
+    assert.equal(h.handlers.size, 0); assert.equal(h.values.get('dual_ct_preview_net_status.b'), null);
+    assert.equal(h.values.get('dual_ct_preview_power.b_p1'), null);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('paired preview clears persisted values, renders telemetry, expires per field and detaches without commands or stores', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  try {
+    await h.device.onInit(); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+    assert.equal(h.handlers.size, 1); assert.equal(h.device.available, false);
+    const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_total.a'), 2); assert.equal(h.device.available, true);
+    t.mock.timers.tick(89000);
+    handler(frame(Buffer.concat([scalar(956, 240), scalar(957, 241)])), topic); await h.device.chain;
+    t.mock.timers.tick(1000);
+    const expiry = [...h.timers].find(([, timer]) => timer.ms === 1000); assert.ok(expiry);
+    h.timers.delete(expiry[0]); expiry[1].fn(); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+    assert.match(h.values.get('dual_ct_preview_fields.a_voltage'), /956: 240/);
+    h.settings.emit('set', 'appAuthEmail'); await h.device.chain;
+    assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+    assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+    handler(frame(packet(99)), topic); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_total.a'), null, 'late old-account frames cannot restore readings');
+    assert.match(h.device.unavailable, /sign-in changed/);
+    await h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: false } });
+    await h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: true } });
+    await h.device.chain;
+    assert.equal(h.handlers.size, 1); assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+    const resumed = [...h.handlers][0]; assert.notEqual(resumed, handler);
+    resumed(frame(packet(4)), topic); await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_total.a'), 5);
+    assert.equal(h.device.getDualCtPreviewDiagnostics().acceptedPackets, 1, 'explicit re-enable creates a fresh scope');
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('opt-out, missing consent, changed account and ambiguous model never subscribe', async () => {
+  const original = auth.appAuthClientFromSettings;
+  try {
+    for (const scenario of ['disabled', 'consent', 'account', 'model']) {
+      auth.appAuthClientFromSettings = () => ({ getSession: async () => scenario === 'account' ? { ...sessionInfo, userId: 'OTHER' } : sessionInfo,
+        getDeviceList: async () => scenario === 'model' ? [{ ...deviceRow, modelCodes: [] }] : [deviceRow] });
+      const h = harness({ enabled: scenario !== 'disabled', store: scenario === 'consent' ? { dualCtPreviewConsent: 0 } : {} });
+      await h.device.onInit(); await h.device.chain;
+      assert.equal(h.handlers.size, 0, scenario); assert.equal(h.timers.size, 0, scenario);
+      assert.equal(h.values.get('dual_ct_preview_total.a'), null, scenario);
+      if (['disabled', 'consent'].includes(scenario)) assert.equal(h.device.getDualCtPreviewDiagnostics().status, 'disabled');
+      await h.device.onUninit();
+    }
+  } finally { auth.appAuthClientFromSettings = original; }
+});
+
+test('stopping during slow subscription rejects late attachment; retry is bounded and cancelled on disable', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  try {
+    let release; const pending = new Promise(resolve => { release = resolve; }); const h = harness({ pending });
+    const init = h.device.onInit(); await new Promise(resolve => setImmediate(resolve));
+    await h.device.onUninit(); release(); await init;
+    assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+    const failed = harness({ subscription: false }); await failed.device.onInit();
+    assert.equal(failed.handlers.size, 0);
+    assert.ok([...failed.timers.values()].some(timer => timer.ms === 30000));
+    await failed.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: false } });
+    assert.equal(failed.timers.size, 0); await failed.device.onUninit();
+  } finally { auth.appAuthClientFromSettings = original; }
+});
+
+test('shared credentials survive deletion of either a battery or preview while another consumer exists', async () => {
+  const preview = { getData: () => ({ sn }) }; const battery = { getData: () => ({ sn: 'ES22SYNTHETIC01' }) };
+  assert.equal(hasOtherAppAuthDevices({ drivers: { getDriver: id => ({ getDevices: () => id === 'smartmeter_dual_ct_preview' ? [preview] : [battery] }) } }, battery), true);
+  assert.equal(hasOtherAppAuthDevices({ drivers: { getDriver: () => ({ getDevices: () => { throw new Error('unavailable'); } }) } }, battery), true);
+  assert.equal(hasOtherAppAuthDevices({ drivers: { getDriver: id => ({ getDevices: () => id === 'stream_unit' ? [battery] : [] }) } }, preview), true,
+    'original STREAM PV telemetry must retain the shared app credentials too');
+  const h = harness({ enabled: false, other: battery }); await h.device.onInit(); await h.device.onDeleted();
+  assert.equal(h.settingValues.appAuthPassword, 'fake');
+});
+
+test('uninit during initial capability clearing cannot resume monitoring after a late startup continuation', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => assert.fail('cancelled startup must not read the account');
+  const h = harness(); const write = h.device.setCapabilityValue; let release;
+  const pending = new Promise(resolve => { release = resolve; }); let first = true;
+  h.device.setCapabilityValue = async (...args) => { if (first) { first = false; await pending; } await write(...args); };
+  try {
+    const init = h.device.onInit(); await new Promise(resolve => setImmediate(resolve));
+    const uninit = h.device.onUninit(); release(); await Promise.all([init, uninit]);
+    assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+    assert.equal(h.settings.listenerCount('set'), 0);
+  } finally { auth.appAuthClientFromSettings = original; }
+});
+
+test('a delayed connection-failure display cannot schedule a retry after disable', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness({ subscription: false }); const unavailable = h.device.setUnavailable; let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  h.device.setUnavailable = async message => { if (message === text('connection_failed')) await pending; await unavailable(message); };
+  try {
+    const init = h.device.onInit(); await new Promise(resolve => setImmediate(resolve));
+    const disable = h.device.onSettings({ changedKeys: ['preview_enabled'], newSettings: { preview_enabled: false } });
+    release(); await Promise.all([init, disable]);
+    assert.equal(h.timers.size, 0); assert.equal(h.handlers.size, 0);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('burst telemetry coalesces pending display work and display failures remain unavailable until a successful render', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  try {
+    await h.device.onInit(); await h.device.chain; h.writes.length = 0;
+    const handler = [...h.handlers][0];
+    for (let n = 1; n <= 100; n++) { t.mock.timers.tick(1); handler(frame(packet(n)), topic); }
+    await h.device.chain;
+    assert.equal(h.values.get('dual_ct_preview_total.a'), 101);
+    assert.ok(h.writes.length <= manifest.capabilities.length, 'only the latest bounded projection is pending');
+    const write = h.device.setCapabilityValue; let fail = true;
+    h.device.setCapabilityValue = async (id, value) => { if (fail && id === 'dual_ct_preview_total.a') throw new Error('PRIVATE'); await write(id, value); };
+    t.mock.timers.tick(1); handler(frame(packet(101)), topic); await h.device.chain;
+    assert.equal(h.device.available, false); assert.match(h.device.unavailable, /display update failed/);
+    assert.equal(h.device.getDualCtPreviewDiagnostics().status, 'display_failed');
+    fail = false;
+    [...h.timers.values()].find(timer => timer.interval).fn(); await h.device.chain;
+    assert.equal(h.device.available, true); assert.equal(h.values.get('dual_ct_preview_total.a'), 102);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+test('expiry is fail-closed during blocked display IO and late completion cannot revive CT1 using fresh voltage or CT2', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit();
+  const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+  const available = []; const write = h.device.setCapabilityValue; let release; let block = true;
+  h.device.setAvailable = async () => { available.push([Date.now(), h.values.get('dual_ct_preview_total.a')]); h.device.available = true; };
+  h.device.setCapabilityValue = async (id, value) => {
+    if (block && id === 'dual_ct_preview_total.a' && value !== null) {
+      block = false; await new Promise(resolve => { release = resolve; });
+    }
+    await write(id, value);
+  };
+  t.mock.timers.tick(1); handler(frame(packet(5)), topic); await new Promise(setImmediate); assert.ok(release);
+  t.mock.timers.tick(90000);
+  const expiry = [...h.timers].find(([, row]) => !row.interval && row.ms >= 89999);
+  assert.ok(expiry); h.timers.delete(expiry[0]); expiry[1].fn();
+  await new Promise(setImmediate);
+  assert.equal(h.device.available, false, 'expiry availability must not wait for the display promise');
+  handler(frame(Buffer.concat([scalar(956, 240), scalar(985, 241), scalar(991, 12)])), topic);
+  release(); await settlePreview(h);
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+  assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+  assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), 240);
+  assert.equal(h.values.get('dual_ct_preview_power.b_p1'), 12);
+  assert.ok(available.every(([at, power]) => at < 190001 || power === null), 'every late availability transition has a current CT1 projection');
+  await h.device.onUninit();
+});
+
+async function settlePreview(h) { for (let n = 0; n < 5; n++) { await new Promise(setImmediate); await h.device.chain; } }
+
+test('retained, duplicate, unknown, expired and old-order deliveries cannot silently renew the preview', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit(); const handler = [...h.handlers][0];
+  handler(frame(), topic); await h.device.chain;
+  t.mock.timers.tick(90000);
+  for (const metadata of [null, { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: true, duplicate: false },
+    { receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: true },
+    { receivedAt: 100000, receivedMonoMs: 100000, retained: false, duplicate: false },
+    { receivedAt: Date.now() + 1, receivedMonoMs: Date.now(), retained: false, duplicate: false },
+    { receivedAt: Date.now() }]) handler(frame(packet(99)), topic, metadata);
+  h.device.render(h.device.generation); await h.device.chain;
+  assert.equal(h.device.available, false); assert.equal(h.device.getDualCtPreviewDiagnostics().acceptedPackets, 1);
+  t.mock.timers.tick(1); handler(frame(packet(4)), topic); await h.device.chain;
+  assert.equal(h.device.available, true);
+  handler(frame(packet(99)), topic, { receivedAt: Date.now() - 1, receivedMonoMs: Date.now() - 1, retained: false, duplicate: false });
+  await h.device.chain; assert.equal(h.values.get('dual_ct_preview_total.a'), 5);
+  await h.device.onUninit();
+});
+
+test('teardown finishes without a never-resolving display write and a late old-generation completion is corrected', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit(); const write = h.device.setCapabilityValue; let release;
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_total.a' && value !== null) await new Promise(resolve => { release = resolve; });
+    await write(id, value);
+  };
+  [...h.handlers][0](frame(), topic); await new Promise(setImmediate); assert.ok(release);
+  const stopped = h.device.onUninit();
+  const result = await Promise.race([stopped.then(() => true), new Promise(resolve => setImmediate(() => resolve(false)))]);
+  assert.equal(h.device.available, false); assert.equal(result, true);
+  assert.equal(h.handlers.size, 0); assert.equal(h.timers.size, 0);
+  release(); await settlePreview(h);
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+  assert.equal(h.device.available, false); assert.equal(h.timers.size, 0);
+});
+
+test('a timed-out SDK slot stays bounded during bursts and cannot block expiry of other displayed fields', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit();
+  const handler = [...h.handlers][0]; handler(frame(), topic); await h.device.chain;
+  const write = h.device.setCapabilityValue; let entered; let release; let calls = 0;
+  const started = new Promise(resolve => { entered = resolve; });
+  h.device.setCapabilityValue = async (id, value) => {
+    if (id === 'dual_ct_preview_total.a' && value !== null) { calls++; entered(); await new Promise(resolve => { release = resolve; }); }
+    await write(id, value);
+  };
+  t.mock.timers.tick(1); handler(frame(packet(5)), topic); await started;
+  t.mock.timers.tick(5000);
+  const budget = [...h.timers].find(([, row]) => !row.interval && row.ms === 5000);
+  h.timers.delete(budget[0]); budget[1].fn(); await h.device.chain;
+  for (let n = 0; n < 1000; n++) { t.mock.timers.tick(1); handler(frame(packet(n)), topic); }
+  await h.device.chain;
+  assert.equal(calls, 1); assert.equal(h.device.pendingWrites.size, 1);
+  t.mock.timers.tick(90000); h.device.render(h.device.generation); await h.device.chain;
+  assert.equal(h.device.available, false); assert.equal(h.values.get('dual_ct_preview_power.b_p1'), null);
+  assert.equal(h.device.pendingWrites.size, 1, 'timeouts do not cancel or replace an unresolved SDK operation');
+  await h.device.onUninit(); assert.equal(h.timers.size, 0);
+  release(); await settlePreview(h); assert.equal(h.device.pendingWrites.size, 0);
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+});
+
+test('transport epoch changes clear old fields and delayed receipt age is never replaced with redraw time', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+  const h = harness(); await h.device.onInit(); const handler = [...h.handlers][0];
+  const delivery = epoch => ({ receivedAt: Date.now(), receivedMonoMs: Date.now(), retained: false, duplicate: false, connectionEpoch: epoch });
+  handler(frame(), topic, delivery(1)); await h.device.chain;
+  t.mock.timers.tick(1); handler(frame(scalar(956, 240)), topic, delivery(2)); await h.device.chain;
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null); assert.equal(h.values.get('dual_ct_preview_voltage.a_p1'), 240);
+  t.mock.timers.tick(1); handler(frame(packet(99)), topic, delivery(1)); await h.device.chain;
+  assert.equal(h.device.getDualCtPreviewDiagnostics().acceptedPackets, 2);
+  t.mock.timers.tick(50000);
+  handler(frame(packet(4)), topic, { ...delivery(2), receivedAt: 100003, receivedMonoMs: 100003 }); await h.device.chain;
+  assert.equal(h.device.getDualCtPreviewDiagnostics().lastReceiptAgeSec, 49.999);
+  t.mock.timers.tick(40001); h.device.render(h.device.generation); await h.device.chain;
+  assert.equal(h.values.get('dual_ct_preview_total.a'), null); assert.equal(h.device.available, false);
+  await h.device.onUninit();
+});
+
+for (const [blocked, rejected] of [false, true].flatMap(blocked => (
+  ['unrelated', 'retained', 'duplicate', 'expired'].map(rejected => [blocked, rejected])
+))) {
+  test(`rejected first new-epoch preview frame invalidates before any ticker: ${rejected}, blocked SDK=${blocked}`, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+    t.mock.method(auth, 'appAuthClientFromSettings', () => ({
+      getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow],
+    }));
+    const h = harness(); await h.device.onInit();
+    const handler = [...h.handlers][0];
+    const delivery = (epoch, mono) => ({
+      receivedAt: Date.now(), receivedMonoMs: mono, retained: false, duplicate: false, connectionEpoch: epoch,
+    });
+    handler(frame(), topic, delivery(1, 1000)); await h.device.chain;
+    assert.equal(h.device.available, true);
+    let release;
+    try {
+      if (blocked) {
+        const write = h.device.setCapabilityValue; let entered;
+        const started = new Promise(resolve => { entered = resolve; });
+        h.device.setCapabilityValue = async (id, value) => {
+          if (id === 'dual_ct_preview_total.a' && value !== null) {
+            entered(); await new Promise(resolve => { release = resolve; });
+          }
+          await write(id, value);
+        };
+        t.mock.timers.tick(1); handler(frame(packet(5)), topic, delivery(1, 1001)); await started;
+      }
+      const accepted = h.device.acceptedPackets;
+      t.mock.timers.tick(1);
+      const metadata = delivery(2, 0);
+      if (rejected === 'retained') metadata.retained = true;
+      if (rejected === 'duplicate') metadata.duplicate = true;
+      if (rejected === 'expired') metadata.receivedAt -= 90000;
+      handler(rejected === 'unrelated' ? Buffer.from('{}') : frame(), topic, metadata);
+      assert.equal(h.device.available, false, 'request unavailability independently of render or periodic IO');
+      await h.device.chain;
+      assert.equal(h.device.acceptedPackets, accepted);
+      assert.equal(h.device.monitor.snapshot(Date.now(), text).recent, false);
+      assert.equal(h.values.get('dual_ct_preview_total.b'), null);
+    } finally {
+      await h.device.onUninit();
+      if (release) release();
+      await settlePreview(h);
+    }
+    assert.equal(h.values.get('dual_ct_preview_total.a'), null);
+    assert.equal(h.device.available, false); assert.equal(h.timers.size, 0);
+  });
+}
+
+for (const changed of [false, true]) {
+  test(`known preview monotonic rollback/equality cannot renew live fields, changed bytes=${changed}`, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+    t.mock.method(auth, 'appAuthClientFromSettings', () => ({
+      getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow],
+    }));
+    const h = harness(); await h.device.onInit();
+    const handler = [...h.handlers][0];
+    const delivery = (epoch, mono) => ({
+      receivedAt: Date.now(), receivedMonoMs: mono, retained: false, duplicate: false, connectionEpoch: epoch,
+    });
+    try {
+      handler(frame(), topic, delivery(1, 1000)); await h.device.chain;
+      for (const mono of [900, 1000]) {
+        t.mock.timers.tick(1); handler(changed ? frame(packet(99)) : frame(), topic, delivery(1, mono));
+        await h.device.chain;
+        assert.equal(h.device.acceptedPackets, 1);
+        assert.equal(h.device.lastAcceptedAt, 100000);
+        assert.equal(h.values.get('dual_ct_preview_total.a'), 2);
+      }
+      t.mock.timers.tick(1); handler(frame(), topic, delivery(undefined, 1001)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 1, 'known epoch cannot be downgraded to an unknown delivery scope');
+      t.mock.timers.tick(1); handler(frame(), topic, delivery(1, 1001)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 2, 'genuinely advancing receipt can renew identical bytes');
+      t.mock.timers.tick(1); handler(frame(), topic, delivery(2, 0)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 3, 'new epoch resets monotonic scope');
+      t.mock.timers.tick(1); handler(frame(packet(99)), topic, delivery(1, 5000)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 3);
+      await h.device.onUninit(); await h.device.onInit();
+      t.mock.timers.tick(1); [...h.handlers][0](frame(), topic, delivery(undefined, 0)); await h.device.chain;
+      assert.equal(h.device.acceptedPackets, 1, 'new device lifecycle admits a new legacy injected scope');
+    } finally {
+      await h.device.onUninit();
+    }
+  });
+}
+
+test('blocked status and availability SDK operations cannot hold logical expiry or teardown hostage', async t => {
+  for (const slot of ['status', 'available', 'unavailable']) await t.test(slot, async sub => {
+    sub.mock.timers.enable({ apis: ['Date'], now: 100000 });
+    sub.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] }));
+    const h = harness(); await h.device.onInit(); const handler = [...h.handlers][0];
+    if (slot === 'unavailable') { handler(frame(), topic); await h.device.chain; assert.equal(h.device.available, true); }
+    const method = slot === 'status' ? 'setCapabilityValue' : slot === 'available' ? 'setAvailable' : 'setUnavailable';
+    const original = h.device[method]; let release; let entered; let blocked = false;
+    const started = new Promise(resolve => { entered = resolve; });
+    h.device[method] = async (...args) => {
+      if (!blocked && (slot !== 'status' || args[0] === 'dual_ct_preview_status')) {
+        blocked = true; entered(); await new Promise(resolve => { release = resolve; });
+      }
+      await original.apply(h.device, args);
+    };
+    if (slot === 'unavailable') { sub.mock.timers.tick(90000); h.device.render(h.device.generation); }
+    else handler(frame(), topic);
+    await started;
+    if (slot !== 'unavailable') { sub.mock.timers.tick(90000); h.device.render(h.device.generation); }
+    await h.device.chain;
+    assert.equal(h.device.monitor.snapshot(Date.now(), key => key, h.device.displayRoles).recent, false);
+    assert.equal(h.values.get('dual_ct_preview_power.a_p1'), null);
+    await h.device.onUninit(); assert.equal(h.timers.size, 0);
+    release(); await settlePreview(h);
+    assert.equal(h.device.available, false); assert.match(h.values.get('dual_ct_preview_status'), /disabled/i);
+  });
+});
+
+test('ordinary support export contains preview health but never preview numbers, bindings, raw data or credentials', () => {
+  const { createSupportSnapshot } = require('../.homeybuild/lib/supportSnapshot');
+  const report = createSupportSnapshot({ manifest: { version: '1.10.51' }, drivers: { getDriver: id => {
+    if (id !== 'smartmeter_dual_ct_preview') throw new Error('absent');
+    return { getDevices: () => [{ getDualCtPreviewDiagnostics: () => ({ enabled: true, status: 'recent', acceptedPackets: 59,
+      lastReceiptAgeSec: 1, receivedFrames: 60, rejectedFrames: 1, lastFrameAgeSec: 0,
+      transport: { connected: true, listening: true, activeTopics: 2, receivedFrames: 60, topic: 'PRIVATE', payload: 'PRIVATE', error: 'PRIVATE' }, value: 1234567, account: 'PRIVATE', device: 'PRIVATE', raw: 'PRIVATE', contributesToEnergy: true }) }] };
+  } } });
+  assert.equal(report.schemaVersion, 20); assert.equal(report.dualCtPreviews[0].acceptedPackets, 59);
+  assert.equal(report.dualCtPreviews[0].receivedFrames, 60);
+  assert.equal(report.dualCtPreviews[0].transport.activeTopics, 2);
+  assert.equal(report.dualCtPreviews[0].transport.receivedFrames, 60);
+  assert.equal(report.dualCtPreviews[0].rejectedFrames, 1);
+  assert.equal(report.dualCtPreviews[0].lastFrameAgeSec, 0);
+  assert.equal(report.dualCtPreviews[0].valuesIncluded, false);
+  assert.equal(report.dualCtPreviews[0].contributesToEnergy, false);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE|1234567/);
+});
+
+test('rejected preview frames advance transport health but cannot renew accepted readings; teardown fences late frames', async () => {
+  const original = auth.appAuthClientFromSettings; const clock = Date.now; let now = 100000;
+  Date.now = () => now;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness();
+  try {
+    await h.device.onInit(); const handler = [...h.handlers][0];
+    handler(frame(), topic); await h.device.chain;
+    now += 95000; handler(Buffer.from('PRIVATE_PAYLOAD_SENTINEL'), topic); await h.device.chain;
+    h.device.render(h.device.generation); await h.device.chain;
+    const health = h.device.getDualCtPreviewDiagnostics();
+    assert.equal(h.device.available, false);
+    assert.ok(health.recentEvents.some(e => e.reason === 'packet_accepted' && e.ageSec === 95));
+    assert.equal(health.recentEvents.at(-1).reason, 'waiting_stale');
+    assert.equal(health.receivedFrames, 2); assert.equal(health.rejectedFrames, 1);
+    assert.equal(health.acceptedPackets, 1); assert.equal(health.lastFrameAgeSec, 0);
+    assert.equal(health.lastReceiptAgeSec, 95);
+    assert.doesNotMatch(JSON.stringify(health), /PRIVATE_PAYLOAD_SENTINEL|SYNTHETIC|account|payload/);
+    await h.device.onUninit(); handler(frame(), topic);
+    assert.equal(h.device.getDualCtPreviewDiagnostics().receivedFrames, 0);
+    assert.equal(h.device.getDualCtPreviewDiagnostics().lastFrameAgeSec, null);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; Date.now = clock; }
+});
+
+test('pairing consent screen is explicit and responsive on desktop/mobile, with no discovery before consent', async () => {
+  const { chromium } = require('playwright'); const { pathToFileURL } = require('node:url');
+  const browser = await chromium.launch();
+  try {
+    for (const width of [1280, 390]) {
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      await page.addInitScript(translations => {
+        window.calls = []; window.next = null;
+        window.Homey = { __: key => key.split('.').reduce((o, part) => o?.[part], translations) || key,
+          emit: (name, data, callback) => { window.calls.push({ name, data }); callback(null, name === 'check_app_credentials' || data?.accepted === true); },
+          showView: id => { window.next = id; } };
+      }, require('../locales/en.json'));
+      await page.goto(pathToFileURL(path.join(root, 'drivers/smartmeter_dual_ct_preview/pair/preview_consent.html')).href);
+      assert.equal(await page.locator('#continue').isDisabled(), true);
+      assert.equal(await page.evaluate(() => window.calls.length), 0);
+      assert.match(await page.locator('#privacy').innerText(), /Continuous monitoring uses the shared EcoFlow connection/);
+      assert.match(await page.locator('#warning').innerText(), /Homey Energy accounting is not enabled/);
+      assert.match(await page.locator('#warning').innerText(), /Do not use these readings for automation/);
+      assert.equal(await page.locator('#title').innerText(), 'Connect Smart Meter Dual CT');
+      await page.locator('#consent').check();
+      await page.screenshot({ path: `/tmp/ecoflow-dualct-preview-pair-${width}.png` });
+      await page.locator('#continue').click();
+      assert.deepEqual(await page.evaluate(() => window.calls.map(call => call.name)), ['dual_ct_preview_consent', 'check_app_credentials']);
+      assert.equal(await page.evaluate(() => window.next), 'list_devices');
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.close();
+    }
+  } finally { await browser.close(); }
+});
+
+test('preview manifest has no standard power, energy, control, tags, Insights or Flow declarations; original meter is unchanged', () => {
+  assert.equal(manifest.class, 'other'); assert.equal(manifest.energy, undefined); assert.equal(manifest.flow, undefined);
+  assert.ok(manifest.capabilities.every(id => id.startsWith('dual_ct_preview_')));
+  for (const id of manifest.capabilities) {
+    const definition = JSON.parse(fs.readFileSync(path.join(root, '.homeycompose/capabilities', id.split('.')[0] + '.json')));
+    assert.equal(definition.getable, true); assert.equal(definition.setable, false); assert.equal(definition.insights, false);
+    assert.equal(manifest.capabilitiesOptions[id].preventTag, true); assert.equal(manifest.capabilitiesOptions[id].preventInsights, true);
+    if (/dual_ct_preview_(power|net)\./.test(id)) assert.equal(definition.units, 'W');
+    else if (/dual_ct_preview_voltage\./.test(id)) assert.equal(definition.units, 'V');
+    else if (/dual_ct_preview_current\./.test(id)) assert.equal(definition.units, 'A');
+    else if (id !== 'dual_ct_preview_age') assert.equal(definition.units, undefined);
+  }
+  assert.equal(manifest.settings[0].value, false);
+  for (const size of ['small', 'large', 'xlarge']) {
+    assert.deepEqual(fs.readFileSync(path.join(root, manifest.images[size])),
+      fs.readFileSync(path.join(root, 'docs/assets/smart-meter-dual-ct/store-photo', size + '.png')));
+  }
+  assert.equal(require('../drivers/smartmeter/driver.compose.json').energy.cumulativeImportedCapability, 'meter_power.imported');
+  for (const language of ['en', 'de', 'nl']) {
+    const locale = require(`../locales/${language}.json`).dual_ct_preview;
+    for (const key of Object.keys(wording)) assert.equal(typeof locale[key], 'string', language + ':' + key);
+  }
+});
+
+test('monitor display selection preserves all existing capability identities and custom titles without reconnecting',async t=>{
+  t.mock.method(auth,'appAuthClientFromSettings',()=>({getSession:async()=>sessionInfo,getDeviceList:async()=>[deviceRow]}));
+  const h=harness();const options=new Map();
+  h.device.getCapabilityOptions=id=>options.get(id);
+  h.device.setCapabilityOptions=async(id,value)=>{options.set(id,value);};
+  await h.device.onInit();
+  options.set('dual_ct_preview_voltage.a_p1',{...options.get('dual_ct_preview_voltage.a_p1'),title:'Existing custom title'});
+  const before=[...h.values.keys()];
+  await h.device.onSettings({newSettings:{preview_enabled:true,display_ct1:'single_phase',display_ct2:'off',display_diagnostics:'hide'},changedKeys:['display_ct1','display_ct2','display_diagnostics']});
+  assert.equal(options.get('dual_ct_preview_voltage.a_p3').uiComponent,null);
+  assert.equal(options.get('dual_ct_preview_net.b').uiComponent,null);
+  assert.equal(options.get('dual_ct_preview_voltage.a_p1').title,'Existing custom title');
+  assert.deepEqual([...h.values.keys()],before);assert.equal(h.handlers.size,1);
+  await h.device.onSettings({newSettings:{preview_enabled:true,display_ct1:'three_phase',display_ct2:'single_phase',display_diagnostics:'show'},changedKeys:['display_ct1','display_ct2','display_diagnostics']});
+  assert.equal(options.get('dual_ct_preview_voltage.a_p3').uiComponent,'sensor');
+  assert.equal(options.get('dual_ct_preview_current.b_p1').uiComponent,'sensor');
+  assert.equal(options.get('dual_ct_preview_current.b_p2').uiComponent,null);
+  assert.equal(options.get('dual_ct_preview_counters').uiComponent,'sensor');
+  await h.device.onUninit();
+});
+
+test('same-account pairing keeps an existing Dual CT monitor live; changed credentials still stop it', async () => {
+  const original = auth.appAuthClientFromSettings;
+  auth.appAuthClientFromSettings = () => ({ getSession: async () => sessionInfo, getDeviceList: async () => [deviceRow] });
+  const h = harness(); h.settingValues.appAuthHost = sessionInfo.host;
+  h.settings.set = (key, value) => { h.settingValues[key] = value; h.settings.emit('set', key); };
+  const driver = { homey: h.device.homey, getDevices: () => [h.device], log() {} };
+  async function confirm(password) {
+    const handlers = new Map();
+    auth.registerAppAuthHandlers(driver, { setHandler: (key, handler) => handlers.set(key, handler) }, {
+      transport: async () => ({ status: 200, body: { code: '0', data: {
+        token: 'synthetic-token', user: { userId: sessionInfo.userId },
+      } } }),
+    });
+    await handlers.get('app_login')({ email: h.settingValues.appAuthEmail, password, host: sessionInfo.host });
+    await handlers.get('add_device')({});
+    await h.device.chain;
+  }
+  try {
+    await h.device.onInit(); const handler = [...h.handlers][0];
+    handler(frame(), topic); await h.device.chain; assert.equal(h.device.available, true);
+    await confirm(h.settingValues.appAuthPassword);
+    assert.equal(h.handlers.size, 1); assert.equal(h.device.available, true);
+    assert.equal(h.handlers.has(handler), true, 'original listener survives without a reconnect');
+    await confirm('different-synthetic-password');
+    assert.equal(h.handlers.size, 0); assert.equal(h.device.available, false);
+  } finally { await h.device.onUninit(); auth.appAuthClientFromSettings = original; }
+});
+
+
+test('detailed monitor distinguishes rejected encodings, malformed frames and unrelated replies without accepting them', () => {
+  const monitor = new DualCtMonitor(scope);
+  assert.equal(monitor.observe(frame(packet(), { encoding: 1 }), topic, 1000), false);
+  assert.equal(monitor.observe(Buffer.from('invalid'), topic, 2000), false);
+  assert.equal(monitor.observe(frame(), '/app/foreign/'+sn+'/thing/property/get_reply', 3000), false);
+  assert.deepEqual(monitor.getRejectionCounts(), { unsupported_encoding: 1, malformed_frame: 1, topic_get_reply: 1 });
+  assert.equal(monitor.snapshot(3000, text).recent, false);
+  assert.equal(monitor.observe(frame(), topic, 4000), true);
+  assert.equal(monitor.snapshot(4000, text).recent, true);
+});
+
+test('targeted diagnostics separate topic, payload and receipt failures without accepting them', () => {
+  const { DualCtDiagnosticEvents, DUAL_CT_MONITOR_EVENTS } = require('../.homeybuild/lib/dualCtDiagnosticEvents');
+  const events = new DualCtDiagnosticEvents(DUAL_CT_MONITOR_EVENTS);
+  const m = new DualCtMonitor(scope, events);
+  const rows = [
+    [frame(), `/app/private/${sn}/thing/property/get_reply`, 1000, 1000, 'topic_get_reply'],
+    [frame(), '/app/device/property/OTHER', 1000, 1000, 'topic_property_other_device'],
+    [frame(), '/private', 1000, 1000, 'topic_other'],
+    ['private', topic, 1000, 1000, 'payload_not_buffer'],
+    [Buffer.alloc(0), topic, 1000, 1000, 'payload_empty'],
+    [Buffer.alloc(65537), topic, 1000, 1000, 'payload_oversized'],
+    [frame(), topic, 1000, NaN, 'clock_invalid'],
+    [frame(), topic, NaN, 1000, 'receipt_invalid'],
+    [frame(), topic, 1001, 1000, 'receipt_future'],
+    [frame(), topic, 1000, 91001, 'receipt_expired'],
+  ];
+  for(const [payload,route,received,now,reason] of rows) {
+    assert.equal(m.observe(payload,route,received,now),false);
+    assert.equal(m.getRejectionCounts()[reason],1);
+  }
+  assert.equal(m.snapshot(92000,text).recent,false);
+  assert.equal(m.observe(frame(),topic,93000),true);
+  assert.equal(m.snapshot(93000,text).recent,true);
+  assert.equal(m.snapshot(183001,text).recent,false);
+  assert.doesNotMatch(JSON.stringify(events.snapshot(183001)),/private|DUALCTSYNTHETIC/);
+});

@@ -11,6 +11,7 @@ const MEMBER = 'BK61CONTROLMEMBER';
 const normal = { cmsMaxChgSoc: 80, cmsMinDsgSoc: 10, backupReverseSoc: 20, feedGridMode: 1,
   'energyStrategyOperateMode.operateSelfPoweredOpen': true };
 class FakeDevice {
+  log() {}
   constructor() {
     this.store = { mainSn: MAIN };
     this.values = {};
@@ -64,6 +65,54 @@ test('registered price condition cards use session freshness and propagate stale
   h.device.priceUpdatedAt = Date.now() - PRICE_MAX_AGE_MS - 1;
   assert.throws(() => listeners.electricity_price({ device: h.device, direction: 'above', price: 10 }), /price/i);
   assert.throws(() => listeners.electricity_price_negative({ device: h.device }), /price/i);
+  await h.device.onTeardown();
+});
+
+test('registered solar conditions reject missing values and trial-suppressed installation readings', async () => {
+  const listeners = {};
+  const driver = new StreamDriver();
+  const card = id => ({ registerRunListener: callback => { listeners[id] = callback; } });
+  driver.homey = { flow: { getConditionCard: card, getActionCard: card, getDeviceTriggerCard: card } };
+  await driver.onInit();
+  const h = await harness();
+  h.device.values['measure_power.pv'] = null;
+  assert.throws(() => listeners.solar_power_below({ device: h.device, watts: 100 }), /readings/i);
+  assert.throws(() => !listeners.solar_power_below({ device: h.device, watts: 100 }), /readings/i);
+  h.device.values['measure_power.pv'] = 0;
+  h.device.legacyFlowReadings.observe('measure_power.pv', 0, 0, Date.now());
+  assert.equal(listeners.solar_power_below({ device: h.device, watts: 100 }), true);
+  h.device.values['measure_power.pv'] = 500;
+  h.device.legacyFlowReadings.observe('measure_power.pv', 500, 500, Date.now());
+  assert.equal(listeners.solar_power_above({ device: h.device, watts: 100 }), true);
+  h.device.monitoringEnabled = true;
+  assert.throws(() => listeners.solar_power_above({ device: h.device, watts: 100 }), /conditions are unavailable/);
+  assert.throws(() => listeners.solar_power_below({ device: h.device, watts: 1000 }), /conditions are unavailable/);
+  await h.device.onTeardown();
+});
+
+test('registered battery conditions stop both normal and inverted Flows during unsafe trial transitions', async () => {
+  const listeners = {};
+  const driver = new StreamDriver();
+  const card = id => ({ registerRunListener: callback => { listeners[id] = callback; } });
+  driver.homey = { flow: { getConditionCard: card, getActionCard: card, getDeviceTriggerCard: card } };
+  await driver.onInit();
+  const h = await harness();
+  h.device.values.measure_battery = 53;
+  h.device.values.measure_power = -291;
+  h.device.legacyFlowReadings.observe('measure_battery', 53, 53, Date.now());
+  h.device.legacyFlowReadings.observe('measure_power', -291, -291, Date.now());
+  assert.equal(listeners.is_charging({ device: h.device }), false);
+  assert.equal(listeners.battery_soc({ device: h.device, direction: 'above', level: 50 }), true);
+  const args = { device: h.device, direction: 'above', level: 50, watts: 100, mode: 'self_powered' };
+  for (const guard of ['monitoringEnabled', 'monitoringRollbackPending', 'monitoringSettingsCount']) {
+    h.device[guard] = guard === 'monitoringSettingsCount' ? 1 : true;
+    for (const id of ['is_charging', 'battery_soc', 'is_exporting', 'solar_power_above',
+      'solar_power_below', 'charging_from_solar', 'operating_mode_is', 'feed_in_enabled']) {
+      assert.throws(() => listeners[id](args), /Monitoring reporter|conditions are unavailable/, `${guard}: ${id}`);
+      assert.throws(() => !listeners[id](args), /Monitoring reporter|conditions are unavailable/, `inverted ${guard}: ${id}`);
+    }
+    h.device[guard] = guard === 'monitoringSettingsCount' ? 0 : false;
+  }
   await h.device.onTeardown();
 });
 
@@ -130,6 +179,7 @@ async function harness() {
   };
   device.clientCredentialsKey = 'test-access:test-secret:';
   device.client = {
+    getMainSn: async () => MAIN,
     getQuotaAll: async (sn, options) => { reads.push({ sn, options }); return { ...state }; },
     setQuota: async (payload) => {
       writes.push(payload);
@@ -145,6 +195,7 @@ async function harness() {
     },
   };
   await device.onReady();
+  await device.beforeFirstPoll();
   return { device, reads, writes, state };
 }
 
@@ -213,7 +264,7 @@ test('shutdown cancels a readback wait, clears timers and prevents another comma
   h.device.autoWait = false;
   const action = h.device.flowPrepareCheapImport(90);
   const outcome = assert.rejects(action, StreamControlFailure);
-  for (let i = 0; i < 20 && !h.device.controlWaits.size; i += 1) await Promise.resolve();
+  for (let i = 0; i < 100 && !h.device.controlWaits.size; i += 1) await Promise.resolve();
   assert.equal(h.device.controlWaits.size, 1);
   await h.device.onUninit();
   await outcome;
@@ -270,4 +321,20 @@ test('price conditions fail closed after expiry/restart and reject invalid updat
   await h.device.onSettingsChanged({}, ['price_unit']);
   assert.throws(() => h.device.priceIsNegative(), /price missing/);
   await h.device.onTeardown();
+});
+
+test('relinked main is used for controls and a later membership change prevents any write', async () => {
+ const h=await harness();const next='BK61RELINKMAIN01';
+ h.device.client.getMainSn=async()=>next;await h.device.beforeFirstPoll();
+ await h.device.flowSetFeedIn(true);
+ assert.ok(h.writes.length>0);assert.ok(h.writes.every(w=>w.sn===next));assert.ok(h.reads.every(r=>r.sn===next));
+ h.writes.length=0;h.device.client.getMainSn=async()=>MAIN;
+ await assert.rejects(h.device.flowSetFeedIn(false),/unverified/);assert.equal(h.writes.length,0);
+ await h.device.onTeardown();
+});
+
+test('main change between command preflight and first write fails closed', async () => {
+ const h=await harness();let calls=0;
+ h.device.client.getMainSn=async()=> ++calls<3?MAIN:'BK61RELINKMAIN01';
+ await assert.rejects(h.device.flowSetFeedIn(true));assert.equal(h.writes.length,0);await h.device.onTeardown();
 });

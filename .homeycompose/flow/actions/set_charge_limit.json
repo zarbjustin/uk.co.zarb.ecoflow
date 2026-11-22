@@ -1,9 +1,9 @@
 {
   "id": "set_charge_limit",
   "title": {
-    "en": "Set charge limit",
-    "de": "Ladegrenze festlegen",
-    "nl": "Laadlimiet instellen"
+    "en": "Set charge limit (%)",
+    "de": "Ladegrenze festlegen (%)",
+    "nl": "Laadlimiet instellen (%)"
   },
   "titleFormatted": {
     "en": "Set charge limit to [[level]]%",
@@ -30,5 +30,10 @@
       "label": "%",
       "labelDecimals": 0
     }
-  ]
+  ],
+  "hint": {
+    "en": "Upper battery charge level, not a wattage limit or a start-charging command. Settings are read back; actual charging still depends on EcoFlow modes, schedules and limits.",
+    "de": "Oberer Batterieladestand, keine Wattgrenze oder Anweisung zum Ladestart. Einstellungen werden zurückgelesen; tatsächliches Laden hängt weiter von EcoFlow-Modi, Zeitplänen und Grenzen ab.",
+    "nl": "Bovenste batterijlading, geen wattlimiet of opdracht om te laden. Instellingen worden teruggelezen; werkelijk laden blijft afhankelijk van EcoFlow-modi, schema's en limieten."
+  }
 }

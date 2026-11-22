@@ -3,7 +3,7 @@
 import Homey from 'homey';
 import { registerCredentialHandlers, clientFromSettings } from '../../lib/pairing';
 import { collectStreamUnits, groupByMainSn, householdBatteryName } from '../../lib/streamPairing';
-import { aboveBelow } from '../../lib/thresholds';
+import { observedAggregateSerials } from '../../lib/stream5000Pairing';
 
 module.exports = class StreamDriver extends Homey.Driver {
   async onInit(): Promise<void> {
@@ -16,27 +16,46 @@ module.exports = class StreamDriver extends Homey.Driver {
 
     // Conditions
     flow.getConditionCard('operating_mode_is').registerRunListener(
-      (args: any) => args.device.getCapabilityValue('operating_mode') === args.mode,
+      (args: any) => {
+        return args.device.reportedOperatingModeIs(args.mode);
+      },
     );
     flow.getConditionCard('feed_in_enabled').registerRunListener(
-      (args: any) => args.device.getCapabilityValue('feed_in_control') === true,
+      (args: any) => {
+        return args.device.reportedFeedInEnabled();
+      },
     );
-    flow.getConditionCard('is_charging').registerRunListener((args: any) => args.device.isCharging());
-    flow.getConditionCard('is_exporting').registerRunListener((args: any) => args.device.isExporting());
+    flow.getConditionCard('is_charging').registerRunListener((args: any) => {
+      args.device.assertFlowReadings('core', ['measure_power']);
+      return args.device.isCharging();
+    });
+    flow.getConditionCard('is_exporting').registerRunListener((args: any) => {
+      args.device.assertFlowReadings('installation', ['measure_power.grid']);
+      return args.device.isExporting();
+    });
     flow.getConditionCard('solar_power_above').registerRunListener(
-      (args: any) => (args.device.getCapabilityValue('measure_power.pv') as number) > args.watts,
+      (args: any) => {
+        args.device.assertFlowReadings('installation', ['measure_power.pv']);
+        return args.device.solarPowerIs('above', args.watts);
+      },
     );
     flow.getConditionCard('solar_power_below').registerRunListener(
-      (args: any) => (args.device.getCapabilityValue('measure_power.pv') as number) < args.watts,
+      (args: any) => {
+        args.device.assertFlowReadings('installation', ['measure_power.pv']);
+        return args.device.solarPowerIs('below', args.watts);
+      },
     );
     flow.getConditionCard('charging_from_solar').registerRunListener(
-      (args: any) => args.device.isChargingFromSolar(),
+      (args: any) => {
+        args.device.assertFlowReadings('installation', ['measure_power', 'measure_power.pv', 'measure_power.load'], true);
+        return args.device.isChargingFromSolar();
+      },
     );
     flow.getConditionCard('solar_forecast_today').registerRunListener(
-      (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_today'), args.direction, args.kwh),
+      (args: any) => args.device.solarForecastIs('today', args.direction, args.kwh),
     );
     flow.getConditionCard('solar_forecast_tomorrow').registerRunListener(
-      (args: any) => aboveBelow(args.device.getCapabilityValue('solar_forecast_tomorrow'), args.direction, args.kwh),
+      (args: any) => args.device.solarForecastIs('tomorrow', args.direction, args.kwh),
     );
     flow.getConditionCard('electricity_price').registerRunListener(
       (args: any) => args.device.priceIs(args.direction, args.price),
@@ -45,7 +64,10 @@ module.exports = class StreamDriver extends Homey.Driver {
       (args: any) => args.device.priceIsNegative(),
     );
     flow.getConditionCard('battery_soc').registerRunListener(
-      (args: any) => args.device.batterySocIs(args.direction, args.level),
+      (args: any) => {
+        args.device.assertFlowReadings('core', ['measure_battery']);
+        return args.device.batterySocIs(args.direction, args.level);
+      },
     );
 
     // Actions
@@ -100,12 +122,14 @@ module.exports = class StreamDriver extends Homey.Driver {
     session.setHandler('list_devices', async () => {
       const client = clientFromSettings(this);
       const units = await collectStreamUnits(client);
+      const paired = observedAggregateSerials(this, 'Home Battery inventory could not be checked. Reopen pairing; existing devices are unchanged.');
       // A multi-unit STREAM installation is one household battery addressed by
       // its main SN. Only add the physical main-unit name when multiple systems
       // need to be distinguished from each other.
       const results: any[] = [];
       const groups = groupByMainSn(units);
       for (const [mainSn, groupUnits] of groups) {
+        if (paired.has(mainSn.toUpperCase()) || groupUnits.some((unit) => paired.has(unit.device.sn.toUpperCase()))) continue;
         results.push({
           name: householdBatteryName(groupUnits, mainSn, groups.size > 1),
           data: { sn: mainSn },

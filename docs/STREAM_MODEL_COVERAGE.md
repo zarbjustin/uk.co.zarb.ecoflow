@@ -1,5 +1,42 @@
 # STREAM model coverage and admission evidence
 
+## Current monitoring candidate — 25 October 2026
+
+The **owner-installed diagnostic pairing cleanup** separates supported unit monitoring
+(no opt-in) from Home Battery (5000) aggregate Energy pairing (new, default-off
+explicit opt-in). The retired Beta flag cannot grant aggregate consent, and no
+existing paired device is changed. Exact-commit CI and direct installation passed;
+store Test/Live remain unchanged. Desktop entry/blocked-consent checks passed,
+but full pairing and model/role hardware acceptance remain distinct and open.
+
+The [monitoring release candidate](STREAM_5000_MONITORING_RC.md) supersedes the
+historical version/build/local-state statements below for current acceptance.
+Owner ES21 discharge/configuration has now been compared read-only with EcoFlow
+on the earlier installed Development 1.10.56 runtime. It is partial evidence, not a pass for the newer
+candidate, ES22, charging/idle, PV/socket, recovery or aggregate accounting.
+The model/role ledger is machine-checked separately from software tests.
+No controls, Energy role, product admission or release channel is changed by this
+preparation. Dual CT now has an opt-in preview, superseding the
+historical combined Gateway/Dual CT catalogue-only row below.
+
+## Historical diagnostic scope — 17 October 2026
+
+This summary supersedes the historical development states below. Original BK
+models retain their existing monitoring/guarded-control paths. ES21 and ES22
+have opt-in monitoring Home Battery and physical-unit drivers; their model and
+linked-installation hardware acceptance remains separate. Mixed-generation
+monitoring can use the explicitly selected reporter trial, not automatic merging
+or control migration. Dual CT productType 421 has a separate opt-in display-only
+preview with per-phase/circuit views, no Energy, tags, Insights or automation.
+Expansion/3000/Gateway model admission and capacity inheritance remain gated.
+
+The selected-source coordination workspace and six observation WHEN/AND cards
+are independent opt-ins. Dual CT candidates cannot feed those Flow cards. They
+do not add a charging writer. Read the [current acceptance checklist](RELEASE_CANDIDATE_CHECKLIST.md),
+[source audit](COORDINATION_SOURCE_AUDIT.md) and [fresh control-contract review](STREAM_CONTROL_CONTRACT_AUDIT.md).
+The local hardening changes are unpublished; STATUS.md identifies the last Test
+archive. Product general availability is not integration hardware verification.
+
 **6 October development follow-up:** the unpublished [ecosystem candidate](STREAM_5000_ECOSYSTEM_WAVE.md)
 adds observed, serial-attributed physical MPPT/socket tiles for the already admitted
 ES21/ES22 adapters, freshness and read-only configuration. The historical offline-PV
@@ -20,7 +57,7 @@ or the local Sprint 1–4 follow-ups. No live installation, control write or Git
 | STREAM 3000 | No corroborated prefix/telemetry contract found | Not admitted | Identity, captures, units and scope |
 | STREAM Expansion Battery 5000 | Product exists; nested versus independent identity unresolved | No separate pairing or automatic capacity mapping | Host-plus-expansion inclusion rules |
 | STREAM Expansion Battery 3000 | Official support FAQ identifies AC 5000 stacking compatibility; distinct from the standalone 3000 host | Discovery hint only; no prefix admission or separate Energy battery | Verified pack identity, host inclusion and explicit capacity units |
-| STREAM Gateway / Smart Meter Dual CT | Catalogue is not a cloud identity/role contract | No new adapter; existing meter support is not proof of support for a new meter | Exact identity, protocol and Energy role |
+| STREAM Gateway / Smart Meter Dual CT | Catalogue is not a cloud identity/role contract | No new adapter; existing meter support is not proof of support for a new meter. Dual CT assets and [integration plan](SMART_METER_DUAL_CT_PLAN.md) staged; explicit Dual CT metadata cannot inherit the old meter driver | Exact identity, protocol and Energy role |
 
 ES21 adds system percentage, signed battery power/state, house/grid readings and
 local BMS temperature/health when present. Direct MPPT charging enters the
@@ -35,6 +72,12 @@ combined installation. Peer observations are not a stable membership/authority
 contract: do not auto-merge BK/ES systems or pair an aggregate for every member.
 
 ## Sources and confidence
+
+- [Official STREAM 5000 Series API](https://developer-eu.ecoflow.com/us/document/PP3?id=2115695633708867585)
+  was reviewed on 31 October 2026. It documents a public HTTP/Open-MQTT path for
+  the 5000 family; see [current API review](STREAM_5000_API_REVIEW.md). This
+  supersedes earlier absence-of-documentation conclusions, not app-protocol or
+  mixed-generation hardware acceptance boundaries.
 
 - [Official STREAM API documentation](https://developer-eu.ecoflow.com/us/document/PP3?id=2058828605315256321)
   was read in the browser during this review. It documents BK examples/main-SN

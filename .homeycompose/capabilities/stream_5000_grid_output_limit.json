@@ -1,7 +1,9 @@
 {
   "type": "number",
   "title": {
-    "en": "Reported grid output limit"
+    "en": "Max grid-tied output power",
+    "de": "Max. netzgekoppelte Ausgangsleistung",
+    "nl": "Max. netgekoppeld uitgangsvermogen"
   },
   "units": {
     "en": "W"

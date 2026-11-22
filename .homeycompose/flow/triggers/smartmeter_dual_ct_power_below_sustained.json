@@ -1,0 +1,161 @@
+{
+  "id": "smartmeter_dual_ct_power_below_sustained",
+  "title": {
+    "en": "Dual CT import/export stays below a threshold",
+    "de": "Dual CT Bezug/Einspeisung bleibt unter einer Schwelle",
+    "nl": "Dual CT afname/teruglevering blijft onder een drempel"
+  },
+  "titleFormatted": {
+    "en": "[[channel]] [[direction]] below [[watts]] W for [[seconds]] s, hysteresis [[hysteresis]] W, cooldown [[cooldown]] s",
+    "de": "[[channel]] [[direction]] unter [[watts]] W für [[seconds]] s, Hysterese [[hysteresis]] W, Pause [[cooldown]] s",
+    "nl": "[[channel]] [[direction]] onder [[watts]] W gedurende [[seconds]] s, hysterese [[hysteresis]] W, pauze [[cooldown]] s"
+  },
+  "hint": {
+    "en": "Fresh readings must stay strictly below the threshold. Gaps restart the wait. A live reading flowing in the opposite direction counts as zero for the selected direction. CT2 requires a confirmed phase layout and import direction in device settings. Use for notifications.",
+    "de": "Aktuelle Messwerte müssen unter der Schwelle bleiben. Lücken starten die Wartezeit neu. Ein aktueller Wert in Gegenrichtung zählt in der gewählten Richtung als null. Für CT2 Phasen und Bezugsrichtung in den Geräteeinstellungen bestätigen. Für Benachrichtigungen verwenden.",
+    "nl": "Actuele metingen moeten onder de drempel blijven. Hiaten starten de wachttijd opnieuw. Een actuele meting in de tegengestelde richting telt als nul voor de gekozen richting. Bevestig voor CT2 de fasen en afnamerichting in de apparaatinstellingen. Gebruik voor meldingen."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=smartmeter_dual_ct_energy"
+    },
+    {
+      "type": "dropdown",
+      "name": "channel",
+      "title": {
+        "en": "Channel",
+        "de": "Kanal",
+        "nl": "Kanaal"
+      },
+      "values": [
+        {
+          "id": "ct1",
+          "title": {
+            "en": "CT1",
+            "de": "CT1",
+            "nl": "CT1"
+          }
+        },
+        {
+          "id": "ct2",
+          "title": {
+            "en": "CT2",
+            "de": "CT2",
+            "nl": "CT2"
+          }
+        }
+      ]
+    },
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": {
+        "en": "Direction",
+        "de": "Richtung",
+        "nl": "Richting"
+      },
+      "values": [
+        {
+          "id": "import",
+          "title": {
+            "en": "import",
+            "de": "Bezug",
+            "nl": "afname"
+          }
+        },
+        {
+          "id": "export",
+          "title": {
+            "en": "export",
+            "de": "Einspeisung",
+            "nl": "teruglevering"
+          }
+        }
+      ]
+    },
+    {
+      "type": "number",
+      "name": "watts",
+      "min": 1,
+      "max": 100000,
+      "title": {
+        "en": "Threshold W",
+        "de": "Schwelle W",
+        "nl": "Drempel W"
+      }
+    },
+    {
+      "type": "number",
+      "name": "seconds",
+      "min": 1,
+      "max": 1800,
+      "title": {
+        "en": "Dwell seconds",
+        "de": "Dauer Sekunden",
+        "nl": "Duur seconden"
+      }
+    },
+    {
+      "type": "number",
+      "name": "hysteresis",
+      "min": 0,
+      "max": 100000,
+      "title": {
+        "en": "Hysteresis W",
+        "de": "Hysterese W",
+        "nl": "Hysterese W"
+      }
+    },
+    {
+      "type": "number",
+      "name": "cooldown",
+      "min": 0,
+      "max": 86400,
+      "title": {
+        "en": "Cooldown seconds",
+        "de": "Pause Sekunden",
+        "nl": "Pauze seconden"
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "name": "channel",
+      "type": "string",
+      "title": {
+        "en": "Channel",
+        "de": "Kanal",
+        "nl": "Kanaal"
+      }
+    },
+    {
+      "name": "direction",
+      "type": "string",
+      "title": {
+        "en": "Direction",
+        "de": "Richtung",
+        "nl": "Richting"
+      }
+    },
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Import/export W",
+        "de": "Bezug/Einspeisung W",
+        "nl": "Afname/teruglevering W"
+      }
+    },
+    {
+      "name": "grid_power",
+      "type": "number",
+      "title": {
+        "en": "Signed channel W",
+        "de": "Kanalleistung mit Vorzeichen W",
+        "nl": "Kanaalvermogen met teken W"
+      }
+    }
+  ]
+}

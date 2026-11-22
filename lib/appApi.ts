@@ -1,17 +1,25 @@
 'use strict';
 
+import type Homey from 'homey';
+import type { Stream5000OfficialSocSample } from './stream5000OfficialSoc';
+
 import { QuotaHandler, StatusHandler } from './EcoFlowMqtt';
 import { AppFrameHandler } from './EcoFlowAppMqtt';
 
 /** The realtime API surface the app exposes to devices (see app.ts). */
 export interface EcoFlowAppApi {
+  /** Revoke pending local reserve work; cannot cancel an already submitted vendor request. */
+  cancelStream5000ReserveRequests?(): void;
+  configureStream5000ReserveMain?(device: Homey.Device, enabled: boolean): Promise<void>;
+  /** Optional public-API SOC fallback. Receipt time is not device measurement time. */
+  readStream5000SystemSoc?(sn: string, signal: AbortSignal): Promise<Stream5000OfficialSocSample | null>;
   subscribeRealtime(sn: string, onQuota: QuotaHandler, onStatus?: StatusHandler): Promise<boolean>;
   unsubscribeRealtime(sn: string, onQuota?: QuotaHandler, onStatus?: StatusHandler): void;
   /**
    * App-auth (WSS) realtime feed for admitted STREAM monitoring adapters and
    * optional BK PV diagnostics. Separate from the supported `/open` surface.
    */
-  subscribeAppRealtime(sn: string, onFrame: AppFrameHandler): Promise<boolean>;
+  subscribeAppRealtime(sn: string, onFrame: AppFrameHandler, active?: () => boolean): Promise<boolean>;
   unsubscribeAppRealtime(sn: string, onFrame?: AppFrameHandler): void;
 }
 

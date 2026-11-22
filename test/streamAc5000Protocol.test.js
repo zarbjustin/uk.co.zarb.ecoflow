@@ -62,9 +62,15 @@ test('socket battery outflow contributes once to discharge, not grid export, inc
   assert.strictEqual(combined.battDischargePowerW, 0);
   assert.strictEqual(combined.gridImportPowerW, 57);
   assert.strictEqual(combined.gridExportPowerW, 5);
+  assert.deepStrictEqual(combined.batteryFlowEdges, {
+    mpptToBatteryW: 100, solarToBatteryW: 10, gridToBatteryW: 50,
+    batteryToHomeW: 20, batteryToGridW: 5, batteryToSocketW: 45,
+    gridToHomeW: 0, gridToSocketW: 7, solarToGridW: 0,
+  });
   assert.strictEqual(parseStreamAc5000Frame(flow({})).battW, 0, 'present empty flow clears socket outflow');
   const absent = parseStreamAc5000Frame(frame([{ cmdFunc: 254, cmdId: 39, sn: SN, pdata: lField(11, vField(5, 50)) }]));
   assert.strictEqual(absent.battW, undefined, 'absent flow cannot invent an idle sample');
+  assert.strictEqual(absent.batteryFlowEdges, undefined, 'absent flow does not refresh edge diagnostics');
 });
 
 // --- header decoding ---------------------------------------------------------
@@ -492,4 +498,13 @@ test('aggregate power supports larger installations without relaxing unit sanity
   for (const value of [NaN, Infinity, -Infinity, 100001, -100001]) {
     assert.equal(mapStreamAc5000({ battW: value }).measure_power, undefined);
   }
+});
+
+test('system SOC singleton fallback clears on peer discovery until explicit system SOC arrives', () => {
+  const mapper = createStreamAc5000Mapper(SN, 'system');
+  assert.strictEqual(mapper({ unitRecordCount: 1, singleUnitSn: SN, singleUnitSocPct: 0 }).measure_battery, 0);
+  assert.strictEqual(mapper({ unitRecordCount: 2, unitsBySn: { [SN]: { socPct: 0 }, ES22TESTPEERAAAA: { socPct: 80 } } }).measure_battery, null);
+  assert.strictEqual(mapper({ unitRecordCount: 1, singleUnitSn: SN, singleUnitSocPct: 90 }).measure_battery, undefined, 'a later singleton delta cannot undo observed linkage');
+  assert.strictEqual(mapper({ socPct: 40 }).measure_battery, 40);
+  assert.strictEqual(mapper({ unitRecordCount: 2 }).measure_battery, undefined, 'peer delta cannot clear an explicit system SOC');
 });

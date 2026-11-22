@@ -43,11 +43,9 @@ function perPvSum(q: Quota): number | undefined {
   return any ? total : undefined;
 }
 
-/** Sum of available PV watts, preferring the firmware's system total. */
+/** Only the firmware total establishes whole-system solar generation. */
 function pvSum(q: Quota): number | undefined {
-  const direct = num(q, ['powGetPvSum']);
-  if (direct !== undefined) return direct;
-  return perPvSum(q);
+  return num(q, ['powGetPvSum']);
 }
 
 /** Total solar generation in Watts (for the dedicated solar device). */
@@ -105,7 +103,7 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   set('measure_power.pv', scope === 'unit' ? perPvSum(q) : pvSum(q));
   set('measure_power.grid', scope === 'unit'
     ? num(q, ['gridConnectionPower'])
-    : num(q, ['powGetSysGrid', 'sysGridConnectionPower', 'gridConnectionPower']));
+    : num(q, ['powGetSysGrid'])); // Only the house meter: port/installation AC power is a different scope.
   set('measure_power.load', num(q, ['powGetSysLoad']));
 
   // Cumulative energy (Wh -> kWh)
@@ -134,8 +132,13 @@ export function mapStreamQuota(q: Quota, scope: 'system' | 'unit' = 'system'): R
   set('measure_power.from_pv', num(q, ['powGetSysLoadFromPv']));
   set('measure_power.from_battery', num(q, ['powGetSysLoadFromBp']));
   set('measure_power.from_grid', num(q, ['powGetSysLoadFromGrid']));
-  set('charge_remaining', num(q, ['bmsChgRemTime', 'cmsChgRemTime', 'chgRemainTime']));
-  set('discharge_remaining', num(q, ['bmsDsgRemTime', 'cmsDsgRemTime', 'dsgRemainTime']));
+  const remaining = (key: string) => {
+    const value = num(q, [key]);
+    return value !== undefined && value >= 0 ? value : undefined;
+  };
+  // Never borrow a pack estimate for the combined installation (or vice versa).
+  set('charge_remaining', remaining(scope === 'unit' ? 'bmsChgRemTime' : 'cmsChgRemTime'));
+  set('discharge_remaining', remaining(scope === 'unit' ? 'bmsDsgRemTime' : 'cmsDsgRemTime'));
   set('battery_cycles', num(q, ['cycles']));
 
   // Battery self-heating status (cold-weather). Field name is unconfirmed across

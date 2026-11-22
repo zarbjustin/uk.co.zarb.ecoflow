@@ -2,12 +2,27 @@
 
 import { Es22Telemetry } from './streamAc5000Protocol';
 import { knownDeveloperApiRole } from './deviceIdentity';
+import { StreamPowerHistory, copyPowerHistory } from './streamPowerHistory';
+
+const PEER_FIELDS = ['socPct', 'socPrecisePct', 'batteryPowerRawW', 'pvTotalW',
+  'pv1W', 'pv2W', 'pv3W', 'pv4W'] as const;
+type PeerField = typeof PEER_FIELDS[number];
+type PeerReadings = Partial<Record<PeerField, { value: number; receivedAt: number }>>;
+const PEER_FIELD_STALE_MS = 180000;
+
+/** Raw power is diagnostic protocol data, not a validated sign/scale or accounting input. */
+function validPeerValue(key: PeerField, value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+    && (key === 'socPct' || key === 'socPrecisePct' ? value >= 0 && value <= 100
+      : Math.abs(value) <= 100000 && (key === 'batteryPowerRawW' || value >= 0));
+}
 
 /** Private, session-only evidence. Never serialize this object into a support report. */
 export interface StreamTopologyEvidence {
   source: 'bk_main_address' | 'es22_peer_records' | 'es21_peer_records';
   addressSn: string;
-  peers: Array<{ sn: string; seenAt: number; socObserved?: boolean; rawBatteryPowerObserved?: boolean; pvObserved?: boolean }>;
+  peers: Array<{ sn: string; seenAt: number; socObserved?: boolean; rawBatteryPowerObserved?: boolean;
+    pvObserved?: boolean; readings?: PeerReadings; history?: unknown }>;
   maxReportedRecordCount: number;
   lastPeerRecordAt: number | null;
   systemSocObserved: boolean;
@@ -27,6 +42,14 @@ function timestamp(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+function copyPeerReadings(input: any): PeerReadings {
+  return Object.fromEntries(PEER_FIELDS.flatMap((key) => {
+    const field = input?.[key];
+    return validPeerValue(key, field?.value) && timestamp(field?.receivedAt) !== null
+      ? [[key, { value: field.value, receivedAt: field.receivedAt }]] : [];
+  }));
+}
+
 export function streamTopologyFamily(value: string): string {
   if (knownDeveloperApiRole(value) === 'stream_unit') return 'original_stream';
   if (value.startsWith('ES22')) return 'ac_5000';
@@ -39,6 +62,8 @@ export class Es22TopologyTracker {
   private readonly addressSn: string;
   private readonly peers = new Map<string, number>();
   private readonly visibility = new Map<string, { socObserved: boolean; rawBatteryPowerObserved: boolean; pvObserved: boolean }>();
+  private readonly readings = new Map<string, PeerReadings>();
+  private readonly histories = new Map<string, StreamPowerHistory>();
   private maxReportedRecordCount = 0;
   private lastPeerRecordAt: number | null = null;
   private systemSocObserved = false;
@@ -48,11 +73,24 @@ export class Es22TopologyTracker {
     this.addressSn = addressSn;
   }
 
-  observe(telemetry: Es22Telemetry, receivedAt: number): void {
+  observe(telemetry: Es22Telemetry, receivedAt: number, now = Date.now()): void {
     const address = serial(this.addressSn);
     const at = timestamp(receivedAt);
-    if (!address || at === null) return;
+    if (!address || at === null || !Number.isFinite(now) || now < 0) return;
     if (telemetry.sourceSn && serial(telemetry.sourceSn) !== address) return;
+    // A wall-clock rollback invalidates prior future receipts. Fail closed and rebuild
+    // from new observations rather than letting their maxima suppress valid updates.
+    if ((this.lastPeerRecordAt ?? 0) > now) {
+      this.peers.clear();
+      this.visibility.clear();
+      this.readings.clear();
+      this.histories.clear();
+      this.lastPeerRecordAt = null;
+      this.maxReportedRecordCount = 0;
+      this.systemSocObserved = false;
+      this.truncated = false;
+    }
+    if (at > now) return;
     if (typeof telemetry.socPct === 'number' && Number.isFinite(telemetry.socPct)
       && telemetry.socPct >= 0 && telemetry.socPct <= 100) this.systemSocObserved = true;
     const count = telemetry.unitRecordCount;
@@ -78,6 +116,29 @@ export class Es22TopologyTracker {
         return typeof value === 'number' && Number.isFinite(value) && value >= 0;
       });
       this.visibility.set(sn, fields);
+      const readings = this.readings.get(sn) || {};
+      const values = {
+        socPct: unit?.socPct,
+        socPrecisePct: unit?.socPrecisePct,
+        batteryPowerRawW: unit?.batteryPowerRawW,
+        pvTotalW: unit?.pv?.totalW,
+        pv1W: unit?.pv?.string1W,
+        pv2W: unit?.pv?.string2W,
+        pv3W: unit?.pv?.string3W,
+        pv4W: unit?.pv?.string4W,
+      };
+      for (const key of PEER_FIELDS) {
+        const value = values[key];
+        if (validPeerValue(key, value) && at >= (readings[key]?.receivedAt ?? 0)) {
+          readings[key] = { value, receivedAt: at };
+          if (key === 'batteryPowerRawW') {
+            const history = this.histories.get(sn) || new StreamPowerHistory();
+            history.observe('peerRawW', value, at, now);
+            this.histories.set(sn, history);
+          }
+        }
+      }
+      this.readings.set(sn, readings);
       this.lastPeerRecordAt = Math.max(this.lastPeerRecordAt ?? 0, at);
     }
   }
@@ -86,7 +147,13 @@ export class Es22TopologyTracker {
     return {
       source: /^ES21/i.test(this.addressSn) ? 'es21_peer_records' : 'es22_peer_records',
       addressSn: this.addressSn,
-      peers: [...this.peers].map(([sn, seenAt]) => ({ sn, seenAt, ...this.visibility.get(sn) })),
+      peers: [...this.peers].map(([sn, seenAt]) => ({
+        sn,
+        seenAt,
+        ...this.visibility.get(sn),
+        readings: copyPeerReadings(this.readings.get(sn)),
+        history: this.histories.get(sn)?.evidence(),
+      })),
       maxReportedRecordCount: this.maxReportedRecordCount,
       lastPeerRecordAt: this.lastPeerRecordAt,
       systemSocObserved: this.systemSocObserved,
@@ -110,12 +177,19 @@ export function readStreamTopologyEvidence(device: any): StreamTopologyEvidence 
         const at = timestamp(peer?.seenAt);
         if (sn && sn !== addressSn && at !== null) {
           const prior = peers.get(sn);
+          const readings = copyPeerReadings(prior?.readings);
+          for (const [key, field] of Object.entries(copyPeerReadings(peer.readings))) {
+            const k = key as PeerField;
+            if (field.receivedAt >= (readings[k]?.receivedAt ?? 0)) readings[k] = field;
+          }
           peers.set(sn, {
             sn,
             seenAt: Math.max(prior?.seenAt ?? 0, at),
             socObserved: prior?.socObserved === true || peer.socObserved === true,
             rawBatteryPowerObserved: prior?.rawBatteryPowerObserved === true || peer.rawBatteryPowerObserved === true,
             pvObserved: prior?.pvObserved === true || peer.pvObserved === true,
+            readings,
+            history: copyPowerHistory(peer.history),
           });
         }
       }
@@ -162,6 +236,15 @@ export function streamTopologySnapshot(evidence: StreamTopologyEvidence | null, 
         rawBatteryPower: peer.rawBatteryPowerObserved === true,
         pv: peer.pvObserved === true,
       },
+      readings: Object.fromEntries(Object.entries(copyPeerReadings(peer.readings))
+        .filter(([, field]) => field.receivedAt <= now).map(([key, field]) => [key, {
+          value: field.value,
+          ageSec: Math.floor((now - field.receivedAt) / 1000),
+          stale: now - field.receivedAt > PEER_FIELD_STALE_MS,
+        }])),
+      readingScope: 'peer_record_not_verified_physical_unit',
+      rawBatteryPowerSignAndScaleVerified: false,
+      accountingUsed: false,
     })),
     expansionPackCount: null,
     installedCapacityKWh: null,

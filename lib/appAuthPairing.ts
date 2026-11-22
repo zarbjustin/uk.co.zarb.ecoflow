@@ -1,9 +1,12 @@
 'use strict';
 
-import { AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
+import { createHash } from 'crypto';
+import { hasOtherAppAuthDevices } from './appAuthConsumers';
+import { AppAuthSession, AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
 
 /**
- * App-auth account handling for verified STREAM 5000-family drivers.
+ * App-auth account handling for STREAM 5000-family drivers and the explicit
+ * read-only Dual CT preview. Device admission remains each driver's responsibility.
  *
  * Mirrors `lib/pairing.ts` (the supported Developer-API flow) but keeps its
  * credentials under separate settings keys so the two paths never mix and the
@@ -12,12 +15,12 @@ import { AppAuthTransport, EcoFlowAppAuthClient } from './EcoFlowAppAuthClient';
  * Credential handling rules enforced here:
  *  - the password is only ever written to Homey app settings (encrypted at rest
  *    on the Homey) and read back to build a client;
- *  - it is only written once a device is actually being added, so a cancelled
+ *  - it is only written for an actual device Add or explicit confirmed repair, so a cancelled
  *    pairing, an empty device list or a later failure never leaves an EcoFlow
  *    account behind on the Homey;
  *  - it is never copied into device data/store, never logged and never included
  *    in an error message;
- *  - devices themselves store only the serial number they read.
+ *  - device stores never contain account secrets.
  */
 
 export const APP_AUTH_EMAIL_SETTING = 'appAuthEmail';
@@ -52,8 +55,11 @@ export function hasSavedAppAuthCreds(homey: any): boolean {
   return Boolean(email && password);
 }
 
+const savedClients = new WeakMap<object, { key: string; client: EcoFlowAppAuthClient }>();
+
 /** Remove the stored EcoFlow account. Called when the last family device goes. */
 export function clearSavedAppAuthCreds(homey: any): void {
+  savedClients.delete(homey);
   homey.settings.unset(APP_AUTH_EMAIL_SETTING);
   homey.settings.unset(APP_AUTH_PASSWORD_SETTING);
   homey.settings.unset(APP_AUTH_HOST_SETTING);
@@ -65,23 +71,35 @@ export function appAuthClientFromSettings(
   log?: (...args: any[]) => void,
 ): EcoFlowAppAuthClient | null {
   const { email, password, host } = getSavedAppAuthCreds(homey);
-  if (!email || !password) return null;
-  return new EcoFlowAppAuthClient({
+  if (!email || !password) {
+    savedClients.delete(homey);
+    return null;
+  }
+  // One saved-account session per Homey: periodic inventory checks must not
+  // create independent login streams alongside the shared MQTT connection.
+  const key = createHash('sha256').update(JSON.stringify([email, password, host])).digest('hex');
+  const cached = savedClients.get(homey);
+  if (cached?.key === key) return cached.client;
+  const client = new EcoFlowAppAuthClient({
     email, password, host, log,
   });
+  savedClients.set(homey, { key, client });
+  return client;
 }
 
 /** Handle on the credentials of one pairing session. */
 export interface AppAuthPairingSession {
   /** Client for discovery: this session's sign-in, else the saved account. */
   getClient(): EcoFlowAppAuthClient | null;
-  /** Persist this session's account. Called when a device is really added. */
+  /** Persist this session's account for an actual Add or separately confirmed repair. */
   commit(): void;
   /** Drop anything uncommitted and clean up an account that gained no device. */
   dispose(): void;
 }
 
 export interface RegisterAppAuthOptions {
+  /** Role-specific admission check before committing credentials for a new device. */
+  beforeAdd?: (candidate?: any) => void;
   /** Injectable transport, so the pairing flow can be tested without a network. */
   transport?: AppAuthTransport;
   /** Delay before the orphaned-account safety net runs. */
@@ -132,33 +150,43 @@ export function registerAppAuthHandlers(
   let pending: { creds: SavedAppAuthCreds; client: EcoFlowAppAuthClient } | null = null;
   let committed = false;
   let disposed = false;
+  let loginGeneration = 0;
 
   const controller: AppAuthPairingSession = {
     getClient() {
+      if (disposed) return null;
       if (pending) return pending.client;
       return appAuthClientFromSettings(driver.homey, log);
     },
 
     commit() {
-      if (committed || !pending) return;
+      if (disposed || committed || !pending) return;
       const { email, password, host } = pending.creds;
-      driver.homey.settings.set(APP_AUTH_EMAIL_SETTING, email);
-      driver.homey.settings.set(APP_AUTH_PASSWORD_SETTING, password);
-      driver.homey.settings.set(APP_AUTH_HOST_SETTING, host);
+      // Homey emits settings events even for unchanged values. Existing
+      // telemetry consumers stop on account changes, so a same-account pairing
+      // must not interrupt their shared subscription.
+      for (const [key, value] of [
+        [APP_AUTH_EMAIL_SETTING, email],
+        [APP_AUTH_PASSWORD_SETTING, password],
+        [APP_AUTH_HOST_SETTING, host],
+      ]) {
+        if (driver.homey.settings.get(key) !== value) driver.homey.settings.set(key, value);
+      }
       committed = true;
-      log('EcoFlow account stored for the STREAM 5000-family device being added');
+      log('EcoFlow app account stored after confirmed pairing or repair');
     },
 
     dispose() {
       if (disposed) return;
       disposed = true;
+      loginGeneration++;
       // Never persisted: dropping the in-memory copy is the whole cleanup.
       pending = null;
       // An account that was already there belongs to an earlier pairing.
       if (!committed || hadSavedCreds) return;
       // Stored for a device that then failed to be created: take it back out.
       scheduleOn(driver.homey, () => {
-        if (pairedDeviceCount(driver) !== 0) return;
+        if (pairedDeviceCount(driver) !== 0 || hasOtherAppAuthDevices(driver.homey, null)) return;
         if (!hasSavedAppAuthCreds(driver.homey)) return;
         clearSavedAppAuthCreds(driver.homey);
         log('Pairing ended without a device — stored EcoFlow account removed');
@@ -172,6 +200,8 @@ export function registerAppAuthHandlers(
   );
 
   session.setHandler('app_login', async (data: AppAuthCredsInput) => {
+    if (disposed) throw new Error('Sign-in session closed.');
+    const operation = ++loginGeneration; pending = null;
     const email = (data?.email || '').trim();
     const password = data?.password || '';
     if (!email || !password) throw new Error('Email address and password are required.');
@@ -180,12 +210,14 @@ export function registerAppAuthHandlers(
     });
     // Throws if EcoFlow rejects the account; the message never echoes the input.
     const sessionInfo = await client.getSession(true);
-    // Held in memory only — nothing is written until a device is actually added.
+    if (disposed || operation !== loginGeneration) throw new Error('Sign-in session changed.');
+    // Held in memory only — nothing is written until an actual Add or confirmed repair.
     pending = { creds: { email, password, host: sessionInfo.host }, client };
     return true;
   });
 
-  session.setHandler('add_device', async () => {
+  session.setHandler('add_device', async (candidate: any) => {
+    options.beforeAdd?.(candidate);
     controller.commit();
   });
 
@@ -194,4 +226,17 @@ export function registerAppAuthHandlers(
   });
 
   return controller;
+}
+
+/** Private revision only; never include credentials or this digest in support exports. */
+export function appAuthCredentialsRevision(homey: any): string {
+  return createHash('sha256').update(JSON.stringify([APP_AUTH_EMAIL_SETTING, APP_AUTH_PASSWORD_SETTING, APP_AUTH_HOST_SETTING]
+    .map((key) => homey.settings.get(key)))).digest('hex');
+}
+
+/** Local binding only. Never include account identity or this digest in reports. */
+export function appAccountBinding(session: Pick<AppAuthSession, 'host' | 'userId'>): string {
+  if (!session || !['https://api.ecoflow.com', 'https://api-e.ecoflow.com'].includes(session.host)
+    || typeof session.userId !== 'string' || !session.userId.trim()) throw new Error('EcoFlow account unavailable.');
+  return createHash('sha256').update(JSON.stringify([session.host, session.userId])).digest('hex');
 }

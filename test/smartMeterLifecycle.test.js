@@ -1,0 +1,335 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+const originalLoad = Module._load;
+let Meter;
+try {
+  Module._load = function load(request, ...args) {
+    if (request === 'homey') return { Device: class {} };
+    return originalLoad.call(this, request, ...args);
+  };
+  Meter = require('../.homeybuild/drivers/smartmeter/device');
+} finally { Module._load = originalLoad; }
+
+class TestMeter extends Meter {
+  constructor(source = 'grid') {
+    super(); this.values = new Map(); this.store = { sourceSn: 'BK61HOST' };
+    this.source = source; this.available = false; this.subscriptions = []; this.removed = [];
+    this.timers = new Map(); let next = 0;
+    this.homey = {
+      settings: { get: key => ({ accessKey: 'test-key', secretKey: 'test-secret' })[key] },
+      setInterval: callback => { this.timers.set(++next, callback); return next; },
+      clearInterval: id => this.timers.delete(id),
+      setTimeout: () => ++next, clearTimeout() {},
+      app: {
+        subscribeRealtime: async (sn, callback) => { this.subscriptions.push(sn); this.emit = callback; return true; },
+        unsubscribeRealtime: sn => this.removed.push(sn),
+      },
+    };
+  }
+  getData() { return { sn: 'BK21METER' }; }
+  getStoreValue(key) { return this.store[key]; }
+  async setStoreValue(key, value) { this.store[key] = value; }
+  getSetting(key) { return key === 'meter_source' ? this.source : 15; }
+  hasCapability(key) { return this.values.has(key); }
+  async addCapability(key) { this.values.set(key, null); }
+  getCapabilityValue(key) { return this.values.get(key); }
+  async setCapabilityValue(key, value) { this.values.set(key, value); }
+  async setCapabilityOptions() {}
+  getAvailable() { return this.available; }
+  async setAvailable() { this.available = true; }
+  async setUnavailable() { this.available = false; }
+  log() {}
+  error(...args) { throw new Error(args.join(' ')); }
+  async onReady() { await super.onReady(); this.client = { getMainSn: async () => this.getReadSn(), getQuotaAll: async () => ({ powGetSysGrid: 10 }) }; }
+}
+
+test('meter preserves unrecoverable and unknown counter history while live power remains usable', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  for (const key of ['importWh', 'exportWh']) {
+    for (const broken of [{ corrupt: true }, { version: 2, Wh: 1000 }, NaN, -1]) {
+      const d = new TestMeter();
+      d.store[key] = broken;
+      const original = structuredClone(d.store);
+      await d.onInit();
+      await d.applyQuota({ powGetSysGrid: 3600 }, { source: 'mqtt', receivedAt: now });
+      now += 1000;
+      await d.applyQuota({ powGetSysGrid: -3600 }, { source: 'mqtt', receivedAt: now });
+      await d.onUninit();
+      assert.deepEqual(d.store, original, 'unrecoverable evidence must not be overwritten with zero or new intervals');
+      assert.equal(d.values.get('meter_power.imported'), undefined);
+      assert.equal(d.values.get('meter_power.exported'), undefined);
+      assert.equal(d.values.get('measure_power'), -3600);
+    }
+  }
+});
+
+test('meter keeps custom capability titles/options and title-read failure cannot overwrite them', async () => {
+  for (const unreadable of [false, true]) {
+    const d = new TestMeter();
+    const options = { title: { en: 'My boundary', de: 'Meine Grenze' }, decimals: 1, preventInsights: true };
+    const applied = [];
+    d.getCapabilityOptions = () => { if (unreadable) throw Error('synthetic SDK options failure'); return options; };
+    d.setCapabilityOptions = async (cap, value) => applied.push([cap, value]);
+    await d.onInit();
+    for (const [, value] of applied) {
+      assert.equal(value.title.en, 'My boundary');
+      assert.equal(value.title.de, 'Meine Grenze');
+      assert.equal(value.decimals, 1);
+      assert.equal(value.preventInsights, true);
+    }
+    if (unreadable) assert.equal(applied.length, 0);
+    await d.onUninit();
+  }
+});
+
+test('meter preserves precise fractional floors through rounded projections and repeated restarts', async () => {
+  const d = new TestMeter();
+  Object.assign(d.store, { importWh: 1000.6, exportWh: 2000.4 });
+  d.values.set('meter_power.imported', 1.001);
+  d.values.set('meter_power.exported', 2);
+  for (let restart = 0; restart < 3; restart++) {
+    await d.onInit(); await d.onUninit();
+    assert.equal(d.store.importWh, 1000.6);
+    assert.equal(d.store.exportWh, 2000.4);
+  }
+});
+
+test('meter preserves both rounded capability floors at startup and through sub-bin increments and restart', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter();
+  Object.assign(d.store, { importWh: 1000.6, exportWh: 2000.6 });
+  const floors = { 'meter_power.imported': 1.001, 'meter_power.exported': 2.001 };
+  for (const [cap, value] of Object.entries(floors)) d.values.set(cap, value);
+  const writes = []; const write = d.setCapabilityValue.bind(d);
+  d.setCapabilityValue = async (cap, value) => {
+    if (cap in floors && typeof value === 'number') writes.push([cap, value]);
+    await write(cap, value);
+  };
+  for (let restart = 0; restart < 3; restart++) {
+    await d.onInit();
+    for (const power of [360, 360, -360]) {
+      now += 1000;
+      await d.applyQuota({ powGetSysGrid: power }, { source: 'mqtt', receivedAt: now });
+    }
+    await d.onUninit();
+  }
+  for (const [cap, value] of writes) {
+    assert.ok(value >= floors[cap], `${cap} decreased from ${floors[cap]} to ${value}`);
+    floors[cap] = value;
+  }
+  assert.ok(Math.abs(d.store.importWh - 1000.9) < 1e-8);
+  assert.ok(Math.abs(d.store.exportWh - 2000.9) < 1e-8);
+});
+
+test('Live v1.10.3 meter upgrade/restart retains device identity, settings and totals without adopting Dual CT candidates', async t => {
+  let now=100000; t.mock.method(Date,'now',()=>now);
+  const baseline=require('./fixtures/live-v1.10.3-contract.json').drivers.find(d=>d.id==='smartmeter');
+  const identity=Object.freeze({sn:'BK21SYNTHETICUPGRADE'});
+  const first=new TestMeter('load');first.getData=()=>identity;
+  for(const cap of baseline.capabilities)first.values.set(cap,null);
+  Object.assign(first.store,{importWh:123456,exportWh:654321,sourceSn:'BK61SYNTHETICHOST',ownerMarker:'preserve'});
+  const settings=()=>({meter_source:first.source,poll_interval:15});const savedSettings=settings();
+  await first.onInit();
+  assert.equal(first.getData(),identity);assert.deepEqual(first.subscriptions,[identity.sn]);
+  assert.equal(first.values.get('meter_power.imported'),123.456);assert.equal(first.values.get('meter_power.exported'),654.321);
+  await first.applyQuota({powGetSysGrid:3600,powGetSysLoad:9999},{source:'mqtt',receivedAt:now});
+  now+=1000;
+  await first.applyQuota({powGetSysGrid:3600},{source:'mqtt',receivedAt:now});
+  assert.equal(first.values.get('meter_power.imported'),123.457);
+  const before=first.values.get('meter_power.imported');
+  await first.applyQuota({productType:421,515:1e6,773:{4:1e12}},{source:'mqtt',receivedAt:now});
+  assert.equal(first.values.get('meter_power.imported'),before,'candidate record must never enter original accounting');
+  assert.equal(first.getData(),identity);assert.deepEqual(settings(),savedSettings);
+  await first.onUninit();assert.equal(first.timers.size,0);
+  assert.equal(first.store.ownerMarker,'preserve');assert.equal(first.store.importWh,123457);
+  now+=3600000;
+  const restarted=new TestMeter('load');restarted.getData=()=>identity;restarted.store=structuredClone(first.store);
+  for(const cap of baseline.capabilities)restarted.values.set(cap,first.values.get(cap));
+  await restarted.onInit();
+  await restarted.applyQuota({powGetSysGrid:7200},{source:'mqtt',receivedAt:now});
+  assert.equal(restarted.values.get('meter_power.imported'),before,'no integration across app downtime');
+  assert.equal(restarted.values.get('meter_power.exported'),654.321);
+  assert.equal(restarted.getData(),identity);assert.equal(restarted.getReadSn(),'BK61SYNTHETICHOST');
+  for(const cap of baseline.capabilities)assert.equal(restarted.hasCapability(cap),true,cap);
+  await restarted.onUninit();assert.equal(restarted.timers.size,0);
+});
+
+test('meter subscribes to its own MQTT identity, keeps host REST, and releases timers/handler', async () => {
+  const d = new TestMeter(); await d.onInit();
+  assert.deepEqual(d.subscriptions, ['BK21METER']);
+  assert.equal(d.getReadSn(), 'BK61HOST');
+  d.emit({ gridConnectionVolL1: 240 }); await d.applyChain;
+  assert.equal(d.getCapabilityValue('measure_voltage.l1'), 240);
+  await d.onUninit();
+  assert.deepEqual(d.removed, ['BK21METER']);
+  assert.equal(d.timers.size, 0);
+  d.emit({ gridConnectionVolL1: 111 }); await d.applyChain;
+  assert.equal(d.getCapabilityValue('measure_voltage.l1'), 240);
+});
+
+test('original meter failed teardown closes its checkpoint without scheduling a retired retry', async () => {
+  const d = new TestMeter();
+  let next = 0;
+  d.homey.setTimeout = fn => { d.timers.set(++next + 1000, fn); return next + 1000; };
+  d.homey.clearTimeout = id => d.timers.delete(id);
+  await d.onInit();
+  d.energyCheckpoint.mark();
+  d.setStoreValue = async () => { throw Error('synthetic terminal store failure'); };
+  await assert.rejects(d.onUninit(), /terminal store failure/);
+  assert.equal(d.timers.size, 0);
+  assert.equal(d.energyCheckpoint.diagnostics().pending, true);
+});
+
+test('home-load setting never replaces native grid power or import/export direction', async () => {
+  const d = new TestMeter('load'); await d.onInit();
+  await d.applyQuota({ powGetSysGrid: -100, powGetSysLoad: 500 });
+  assert.equal(d.getCapabilityValue('measure_power'), -100);
+  assert.equal(d.getCapabilityValue('smartmeter_power_grid'), -100);
+  assert.equal(d.getCapabilityValue('smartmeter_power_export'), 100);
+  assert.equal(d.getCapabilityValue('measure_power.home_load'), 500);
+  await d.onUninit();
+});
+
+test('direct power wins over REST and source changes anchor without adding historical energy', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter(); await d.onInit();
+  await d.applyQuota({ powGetSysGrid: 3600 }, { source: 'mqtt', receivedAt: now });
+  now += 1000;
+  await d.applyQuota({ powGetSysGrid: 3600 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(d.getCapabilityValue('meter_power.imported'), 0.001);
+  await d.applyQuota({ powGetSysGrid: 9999 }, { source: 'rest', receivedAt: now });
+  assert.equal(d.getCapabilityValue('measure_power'), 3600);
+  now += 91000;
+  await d.applyQuota({ powGetSysGrid: 100 }, { source: 'rest', receivedAt: now });
+  assert.equal(d.getCapabilityValue('meter_power.imported'), 0.001);
+  await d.onUninit();
+  assert.equal(d.store.importWh, 1);
+});
+
+test('stale phase values become unknown and a fresh frame restores them', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter(); await d.onInit();
+  await d.applyQuota({ gridConnectionVolL1: 240 }, { source: 'mqtt', receivedAt: now });
+  now += 181000;
+  [...d.timers.values()][0](); await d.applyChain;
+  assert.equal(d.getCapabilityValue('measure_voltage.l1'), null);
+  await d.applyQuota({ gridConnectionVolL1: 241 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(d.getCapabilityValue('measure_voltage.l1'), 241);
+  await d.onUninit();
+});
+
+test('grid threshold uses fresh signed readings and stale values throw even for inverted conditions', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter(); await d.onInit();
+  await d.applyQuota({ powGetSysGrid: -300 }, { source: 'mqtt', receivedAt: now });
+  assert.equal(d.gridPowerAbove('export', 200), true);
+  assert.equal(d.gridPowerAbove('import', 0), false);
+  assert.throws(() => d.gridPowerAbove('invalid', 1), /Invalid/);
+  now += 91000;
+  assert.throws(() => d.gridPowerAbove('export', 200), /Fresh grid power unavailable/);
+  await d.onUninit();
+});
+
+test('counter records do not migrate totals or add historical energy', async t => {
+  const now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter(); d.store.importWh = 200; d.store.exportWh = 50;
+  await d.onInit();
+  await d.applyQuota({ gridConnectionDataRecord: { todayActive: 1000000, totalReactiveEnergy: 10000, totalActiveEnergy: 990000 } },
+    { source: 'mqtt', receivedAt: now });
+  assert.equal(d.getCapabilityValue('meter_power.imported'), 0.2);
+  assert.equal(d.getCapabilityValue('meter_power.exported'), 0.05);
+  assert.equal(d.getMeterDiagnostics().nativeCounterMigrationEnabled, false);
+  await d.onUninit();
+});
+
+test('same-source outage does not integrate unobserved time and stale home load expires', async t => {
+  let now = 100000; t.mock.method(Date, 'now', () => now);
+  const d = new TestMeter('load'); await d.onInit();
+  await d.applyQuota({ powGetSysGrid: 3600, powGetSysLoad: 500 }, { source: 'rest', receivedAt: now });
+  now += 181000;
+  await d.applyQuota({ powGetSysGrid: 3600 }, { source: 'rest', receivedAt: now });
+  [...d.timers.values()][0](); await d.applyChain;
+  assert.equal(d.getCapabilityValue('meter_power.imported'), 0);
+  assert.equal(d.getCapabilityValue('measure_power.home_load'), null);
+  await d.onUninit();
+});
+
+test('meter upgrade retains a projected counter above the last checkpoint, including a one Wh tail', async () => {
+  const meter = new TestMeter();
+  Object.assign(meter.store, { importWh: 999, exportWh: 498 });
+  meter.values.set('meter_power.imported', 1);
+  meter.values.set('meter_power.exported', 0.5);
+  await meter.onReady();
+  assert.equal(meter.getCapabilityValue('meter_power.imported'), 1);
+  assert.equal(meter.getCapabilityValue('meter_power.exported'), 0.5);
+  await meter.onUninit();
+  assert.equal(meter.store.importWh, 1000);
+  assert.equal(meter.store.exportWh, 500);
+});
+
+test('linked meter rejects a relink during REST and reanchors when its stored host returns', async t => {
+  let now = 1000000;
+  t.mock.method(Date, 'now', () => now);
+  const meter = new TestMeter();
+  await meter.onInit();
+  meter.error = () => {};
+  let main = meter.getReadSn();
+  let relink = false;
+  let reads = 0;
+  meter.client = {
+    getMainSn: async () => main,
+    getQuotaAll: async () => { reads++; if (relink) main = 'BK61OTHER'; return { powGetSysGrid: 3600 }; },
+  };
+  now += 1000;
+  await meter.poll();
+  const initial = meter.importWh;
+  now += 1000;
+  relink = true;
+  await meter.poll();
+  assert.equal(meter.importWh, initial);
+  await meter.poll();
+  assert.equal(reads, 2);
+  assert.throws(() => meter.gridPowerAbove('import', 1), /unavailable/);
+  now += 5000;
+  main = meter.getReadSn();
+  relink = false;
+  await meter.poll();
+  assert.equal(meter.importWh, initial);
+  now += 1000;
+  await meter.poll();
+  assert.equal(meter.importWh, initial + 1);
+  main = 'BK61OTHER';
+  await meter.poll();
+  meter.emit({ powGetSysGrid: 0 });
+  await meter.applyChain;
+  assert.equal(meter.getAvailable(), true);
+  assert.equal(meter.values.get('measure_power'), 0);
+  assert.equal(meter.importWh, initial + 1);
+  await meter.onUninit();
+});
+
+test('original meter retries the failed total projection during fresh idle without incrementing it', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const meter = new TestMeter();
+  await meter.onInit();
+  const set = meter.setCapabilityValue.bind(meter);
+  let failed = false;
+  meter.setCapabilityValue = async (cap, value) => {
+    if (!failed && cap === 'meter_power.imported' && value > 0) { failed = true; throw Error('SDK busy'); }
+    return set(cap, value);
+  };
+  const send = power => meter.applyQuota({ powGetSysGrid: power }, { source: 'mqtt', receivedAt: now });
+  await send(3600);
+  now += 1000;
+  await send(3600);
+  assert.equal(meter.getCapabilityValue('meter_power.imported'), 0);
+  now += 1000;
+  await send(0);
+  assert.equal(meter.getCapabilityValue('meter_power.imported'), 0.001);
+  assert.equal(meter.importWh, 1);
+  await meter.onUninit();
+});

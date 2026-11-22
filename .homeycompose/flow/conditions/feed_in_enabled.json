@@ -1,9 +1,9 @@
 {
   "id": "feed_in_enabled",
   "title": {
-    "en": "Grid feed-in !{{is|is not}} enabled",
-    "de": "Netzeinspeisung !{{is|is not}} aktiviert",
-    "nl": "Teruglevering aan net !{{is|is not}} ingeschakeld"
+    "en": "Reported grid feed-in permission !{{is|is not}} enabled",
+    "de": "Gemeldete Netzeinspeisefreigabe !{{ist|ist nicht}} aktiviert",
+    "nl": "Gemelde toestemming voor netexport !{{is|is niet}} ingeschakeld"
   },
   "args": [
     {
@@ -11,5 +11,10 @@
       "name": "device",
       "filter": "driver_id=stream"
     }
-  ]
+  ],
+  "hint": {
+    "en": "Reported permission only; use grid-power readings to check actual export. Unknown or expired settings stop evaluation, including inversion.",
+    "de": "Nur gemeldete Freigabe; tatsächliche Einspeisung anhand der Netzleistung prüfen. Unbekannte oder veraltete Einstellungen stoppen auch die umgekehrte Bedingung.",
+    "nl": "Alleen gemelde toestemming; controleer werkelijke export met netvermogen. Onbekende of verlopen instellingen stoppen ook de omgekeerde voorwaarde."
+  }
 }

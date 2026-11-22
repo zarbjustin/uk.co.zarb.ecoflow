@@ -1,11 +1,16 @@
 'use strict';
 
+import { streamCircuitCoordination } from './streamCircuitCoordination';
+
 /** Advisory only: no transport, device lookup, persistence or control permission.
  * Positive battery watts mean charging. The caller must provide explicit,
  * timestamped readings and confirm controller ownership; no BYD integration is
  * inferred from account inventory. Defaults are research policy, not ratings.
  */
 export function streamCoordinationPreview(input: any, previous: any = {}, options: any = {}): Record<string, unknown> {
+  // New circuit-aware callers must satisfy the full path; incomplete v2 input cannot fall back to SOC-only advice.
+  if (input?.schemaVersion !== undefined || input?.circuits !== undefined || input?.externalBattery !== undefined
+    || input?.streamBattery !== undefined) return streamCircuitCoordination(input, previous, options);
   const config = {
     startSoc: 98,
     stopSoc: 97,
@@ -24,6 +29,9 @@ export function streamCoordinationPreview(input: any, previous: any = {}, option
     advisoryOnly: true,
     controlsEnabled: false,
     commandWrites: 0,
+    contributesToEnergy: false,
+    surplusAssessed: false,
+    solarOriginVerified: false,
     state,
     reason,
     candidateSince,
