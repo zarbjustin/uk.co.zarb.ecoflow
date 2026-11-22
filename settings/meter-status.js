@@ -25,7 +25,10 @@
     };
     if (!report) { append(translate('refresh')); return; }
     const meters = Array.isArray(report.smartMeters) ? report.smartMeters : [];
-    if (!meters.length) { append(translate('none')); return; }
+    const recovery = Array.isArray(report.dualCtEnergyRecovery) ? report.dualCtEnergyRecovery : [];
+    const linked = recovery.filter(row => row?.mode === 'single_phase' && /^[a-z_]{1,48}$/.test(row.linkedPowerStatus || ''));
+    linked.forEach(row => append(translate('linked_title') + ' · ' + translate('linked_' + row.linkedPowerStatus)));
+    if (!meters.length && !linked.length) { append(translate('none')); return; }
     meters.forEach((meter, index) => {
       const status = describe(meter?.evidence);
       append(`${translate('meter')} ${index + 1}: ${translate(status.state)}`);

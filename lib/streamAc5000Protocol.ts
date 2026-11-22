@@ -574,6 +574,92 @@ function readUnitRecords(payload: Buffer, solarTotals?: Map<string, number | nul
   };
 }
 
+export interface Es21MeterPhaseOne {
+  meter: string;
+  power: number;
+  voltage?: number;
+  current?: number;
+}
+export interface Es21MeterReading {
+  watts: number;
+  phaseOne?: Es21MeterPhaseOne;
+}
+
+// Field 3 names the physical meter inside the reporting ES21's block 16.
+// Accept only explicit single-phase measurements from this same block.
+function meterPhaseOne(block: Buffer, net: number): Es21MeterPhaseOne | undefined {
+  let meter: string | undefined;
+  const values = new Map<number, number>();
+  for (let at = 0; at < block.length;) {
+    const tag = readVarint(block, at);
+    const id = Number(tag.value >> 3n);
+    const wire = Number(tag.value & 7n);
+    const field = readField(block, tag.next, wire); at = field.next;
+    if (id === 3) {
+      if (meter !== undefined || wire !== 2) return undefined;
+      meter = field.bytes.toString('utf8');
+    }
+    if ([4, 5, 6, 7, 10].includes(id)) {
+      if (values.has(id) || wire !== 5) return undefined;
+      const value = field.bytes.readFloatLE();
+      if (!Number.isFinite(value)) return undefined;
+      values.set(id, value);
+    }
+  }
+  const power = values.get(4);
+  if (!meter || !/^ES81[A-Z0-9]{4,60}$/.test(meter) || power === undefined || Math.abs(power - net) > 1
+    || (values.get(5) ?? 0) !== 0 || (values.get(6) ?? 0) !== 0) return undefined;
+  const voltage = values.get(7);
+  const current = values.get(10);
+  return {
+    meter,
+    power,
+    voltage: voltage !== undefined && voltage >= 0 && voltage <= 500 ? voltage : undefined,
+    current: current !== undefined && Math.abs(current) <= 1000 ? current : undefined,
+  };
+}
+
+/** Only one plain display upload and one explicit signed meter field can supply the linked meter display. */
+export function es21MeterReading(frame: Buffer, reporter: string): Es21MeterReading | null {
+  if (!/^ES21[A-Z0-9]{4,60}$/.test(reporter) || !frame.length || frame.length > 65536) return null;
+  try {
+    const headers = decodeFrameHeaders(frame);
+    const [h] = headers;
+    if (headers.length !== 1 || !h.pdata || h.candidateHeaderValid === false || (h.encType ?? 0) !== 0
+      || (h.deviceSn !== undefined && h.deviceSn !== reporter) || h.cmdFunc !== 254 || h.cmdId !== 39) return null;
+    let watts: number | null = null;
+    let meterBlocks = 0;
+    let phaseBlock: Buffer | undefined;
+    for (let at = 0; at < h.pdata.length;) {
+      const tag = readVarint(h.pdata, at);
+      if (tag.value < 8n || tag.value > 0xffffffffn) return null;
+      const field = readField(h.pdata, tag.next, Number(tag.value & 7n)); at = field.next;
+      const block = Number(tag.value >> 3n);
+      if (block !== 15 && block !== 16) continue;
+      if ((tag.value & 7n) !== 2n) return null;
+      meterBlocks++;
+      if (block === 16 && h.deviceSn === reporter) phaseBlock = field.bytes;
+      for (let inner = 0; inner < field.bytes.length;) {
+        const key = readVarint(field.bytes, inner);
+        if (key.value < 8n || key.value > 0xffffffffn) return null;
+        const wire = Number(key.value & 7n);
+        const value = readField(field.bytes, key.next, wire); inner = value.next;
+        if (Number(key.value >> 3n) !== (block === 15 ? 3 : 16)) continue;
+        if (watts !== null || wire !== 5) return null;
+        watts = value.bytes.readFloatLE();
+      }
+    }
+    if (watts === null || !Number.isFinite(watts) || Math.abs(watts) > 100000) return null;
+    return { watts, phaseOne: meterBlocks === 1 && phaseBlock ? meterPhaseOne(phaseBlock, watts) : undefined };
+  } catch {
+    return null;
+  }
+}
+
+export function es21MeterBlockWatts(frame: Buffer, reporter: string): number | null {
+  return es21MeterReading(frame, reporter)?.watts ?? null;
+}
+
 /** Read only serial-labelled ES21 direct PV totals from an owned live property frame. */
 export function es21SolarTotals(frame: Buffer, reporter: string): Map<string, number | null> {
   const totals = new Map<string, number | null>();

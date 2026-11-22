@@ -21,6 +21,7 @@ test('default legacy monitor layout remains visible; Energy defaults follow pair
  for(const id of monitorManifest.capabilities)assert.equal(visible(id,{},false),true,id);
  assert.equal(visible('dual_ct_preview_voltage.a_p1',{},true),true);
  assert.equal(visible('dual_ct_preview_power.a_p1',{},true),false,'single-phase total is already the standard Energy power');
+ assert.equal(visible('dual_ct_preview_power.a_p1',{display_ct1:'single_phase'},true),true,'explicit phase details include measured power');
  assert.equal(visible('dual_ct_preview_voltage.a_p2',{},true),false);
  assert.equal(visible('dual_ct_preview_current.a_p3',{},true,true),true);
  assert.equal(visible('dual_ct_preview_net.b',{},true,true),false);

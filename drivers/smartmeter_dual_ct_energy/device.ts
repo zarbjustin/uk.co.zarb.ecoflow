@@ -1,6 +1,8 @@
 import Homey from 'homey';
 import { randomUUID } from 'crypto';
-import { dualCtEnergyRecoverySnapshot } from '../../lib/dualCtRecoveryDiagnostics';
+import energyManifest from './driver.compose.json';
+import type { Stream5000PhysicalUnitDevice } from '../../lib/Stream5000UnitDevice';
+import { dualCtContextFailureSnapshot, dualCtEnergyRecoverySnapshot, DualCtSinglePhaseFeed } from '../../lib/dualCtRecoveryDiagnostics';
 import { DualCtMessageEvidence } from '../../lib/dualCtMessageEvidence';
 import { DualCtEnergyDetails } from '../../lib/dualCtEnergyDetails';
 import { DUAL_CT_DISPLAY_SETTINGS } from '../../lib/dualCtDisplaySettings';
@@ -14,6 +16,10 @@ import { DualCtEnergyAuthority } from '../../lib/dualCtEnergyAdoption';
 import { dualCtEnergyHomeyStorage, readDualCtEnergyCheckpoint, dualCtHomeyEnergyKwh } from '../../lib/dualCtEnergyCheckpoint';
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED, dualCtGridBinding, resolveDualCtGridEnergyContract } from '../../lib/dualCtGridEnergySource';
 import { AppFrameDelivery } from '../../lib/EcoFlowAppMqtt';
+import {
+  DualCtLinkedEs21, LINKED_GRID_CAPABILITY, type LinkedPowerStatus, resolveLinkedEs21,
+} from '../../lib/dualCtLinkedEs21';
+import { clientFromSettings, hasSavedCreds } from '../../lib/pairing';
 import { DualCtLiveDelivery } from '../../lib/dualCtLiveDelivery';
 import { DualCtCt2FlowInput } from '../../lib/dualCtCt2FlowInput';
 import {
@@ -26,9 +32,13 @@ type FlowChannel = 'ct1' | 'ct2';
 
 module.exports = class DualCtEnergyDevice extends Homey.Device {
   private startupFailure: { startupStage: string; context: unknown; admission: string | null } = { startupStage: 'idle', context: null, admission: null };
-  private readonly messageEvidence = new DualCtMessageEvidence();
+  private singlePhaseFeed = new DualCtSinglePhaseFeed();
+  private messageEvidence = new DualCtMessageEvidence();
   private readonly communityFeedback = new DualCtCommunityFeedback();
-  private readonly details = new DualCtEnergyDetails(this);
+  private readonly details = new DualCtEnergyDetails(this, () => Date.now(), () => this.adapter?.currentLinkedPhaseOne(this.getData().sn) ?? null);
+  private readonly linkedGrid = new DualCtLinkedEs21();
+  private linkedProtection = { ready: false, pending: false, retryAt: 0 };
+  private linkedReadStatus: LinkedPowerStatus = 'link_unverified';
   private generation = 0;
   private context: DualCtHomeyEnergyContext | null = null;
   private adapter: DualCtGridEnergyDeviceAdapter | null = null;
@@ -55,7 +65,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
 
   private readonly ct2FlowInput = new DualCtCt2FlowInput();
   private ct1BelowDelivery?: Readonly<AppFrameDelivery>;
-  private ct2SourceCurrent: (() => boolean) | null = null;
+  private meterSourceCurrent: (() => boolean) | null = null;
   private belowNotificationCard: any = null;
   private readonly belowNotifications = { ct1: this.makeBelowNotifications('ct1'), ct2: this.makeBelowNotifications('ct2') };
   private readonly reloadBelowNotifications = () => Object.values(this.belowNotifications).forEach((observer) => observer.reload());
@@ -91,7 +101,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     }
     try {
       const configuration = this.ct2FlowConfiguration();
-      return configuration && this.ct2SourceCurrent?.() ? this.ct2FlowInput.current(configuration, now) : null;
+      return configuration && this.meterSourceCurrent?.() ? this.ct2FlowInput.current(configuration, now) : null;
     } catch {
       return null;
     }
@@ -104,7 +114,12 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   }
 
   private readonly accountChanged = (key: string) => {
-    if (['appAuthEmail', 'appAuthPassword', 'appAuthHost'].includes(key)) this.stop().catch(() => {});
+    if (['accessKey', 'secretKey', 'host'].includes(key)) this.linkedGrid.reset();
+    if (['appAuthEmail', 'appAuthPassword', 'appAuthHost'].includes(key)) {
+      this.singlePhaseFeed = new DualCtSinglePhaseFeed();
+      this.messageEvidence = new DualCtMessageEvidence();
+      this.stop().catch(() => {});
+    }
   };
 
   /** Internal seams for synthetic lifecycle tests. No runtime setting can qualify a source or enable accounting. */
@@ -120,6 +135,88 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         communityThreePhase: this.getStoreValue('dualCtEnergyMode') === 'three_phase_community',
       }),
     };
+  }
+
+  protected async resolveLinkedHost(meter: string, context: DualCtHomeyEnergyContext) {
+    if (!hasSavedCreds(this.homey) || !this.homey.drivers.getDriver('stream_5000_unit').getDevices()
+      .some((device) => /^ES21/.test(device.getData().sn))) return null;
+    return resolveLinkedEs21(clientFromSettings(this), meter, context.linkedDeviceInventory());
+  }
+
+  private linkedOptionsConfirmed(): boolean {
+    try {
+      const options = this.getCapabilityOptions(LINKED_GRID_CAPABILITY);
+      return options?.preventTag === true && options?.preventInsights === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Reconcile an already-paired tile even when its link is silent or direct CT1 is healthy.
+   * Reapply once on startup: manifest defaults alone do not prove existing per-device options were updated. */
+  private async protectLinkedTile(): Promise<void> {
+    const state = this.linkedProtection;
+    if (state.ready || state.pending || Date.now() < state.retryAt || !this.hasCapability(LINKED_GRID_CAPABILITY)) return;
+    state.pending = true;
+    try {
+      const existing = this.getCapabilityOptions(LINKED_GRID_CAPABILITY);
+      await this.setCapabilityOptions(LINKED_GRID_CAPABILITY, {
+        ...existing, ...energyManifest.capabilitiesOptions[LINKED_GRID_CAPABILITY],
+      });
+      state.ready = this.linkedOptionsConfirmed();
+    } catch {
+      state.ready = false;
+    } finally {
+      state.pending = false;
+      state.retryAt = state.ready ? 0 : Date.now() + 60000;
+    }
+  }
+
+  private refreshLinkedHost(meter: string, context: DualCtHomeyEnergyContext, generation: number) {
+    this.linkedGrid.refresh(() => this.resolveLinkedHost(meter, context)).then(async () => {
+      if (generation !== this.generation || !this.linkedGrid.host(Date.now())) return;
+      if (!this.hasCapability(LINKED_GRID_CAPABILITY)) await this.addCapability(LINKED_GRID_CAPABILITY);
+      if (generation === this.generation) await this.protectLinkedTile();
+    }).catch(() => {});
+  }
+
+  private readonly withholdLinked = (reason: LinkedPowerStatus): null => {
+    this.linkedReadStatus = reason;
+    return null;
+  };
+
+  private readLinkedGrid(now: number) {
+    try {
+      if (!this.meterSourceCurrent?.()) return this.withholdLinked('meter_scope_unverified');
+      if (!this.linkedGrid.host(now)) return this.withholdLinked('link_unverified');
+      if (!this.hasCapability(LINKED_GRID_CAPABILITY)) return this.withholdLinked('tile_unavailable');
+      if (!this.linkedProtection.ready || !this.linkedOptionsConfirmed()) {
+        this.linkedProtection.ready = false;
+        return this.withholdLinked('tag_protection_unconfirmed');
+      }
+      const sample = this.linkedGrid.sample(now, (host) => {
+        const units = this.homey.drivers.getDriver('stream_5000_unit').getDevices().filter((d) => d.getData().sn === host);
+        if (units.length !== 1) return this.withholdLinked('unit_monitor_not_unique');
+        this.linkedReadStatus = 'waiting_for_meter_field';
+        return (units[0] as Stream5000PhysicalUnitDevice).getLinkedGridObservation(host, now, this.withholdLinked);
+      }, this.withholdLinked);
+      if (sample?.phaseOne && sample.phaseOne.meter !== this.getData().sn) return this.withholdLinked('sample_invalid');
+      if (sample) this.linkedReadStatus = 'eligible_awaiting_display';
+      return sample;
+    } catch {
+      return this.withholdLinked('unit_read_failed');
+    }
+  }
+
+  private linkedPowerStatus(): LinkedPowerStatus {
+    const projection = this.adapter?.diagnostics();
+    if (!projection?.active) return 'source_inactive';
+    if (projection.status === 'recent') return 'direct_ct1_active';
+    if (projection.status === 'linked_display_write_failed') return 'display_write_failed';
+    if (projection.status === 'linked_grid_display' && this.linkedReadStatus === 'eligible_awaiting_display') {
+      return this.adapter?.currentLinkedPhaseOne(this.getData().sn) ? 'phase_relay_available' : 'displaying_linked_watts';
+    }
+    return this.linkedReadStatus;
   }
 
   gridPowerAbove(direction: string, watts: number): boolean {
@@ -166,6 +263,8 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    this.messageEvidence = new DualCtMessageEvidence();
+    this.singlePhaseFeed = new DualCtSinglePhaseFeed();
     this.homey.settings.on('set', this.accountChanged);
     this.homey.settings.on('unset', this.accountChanged);
     if (!this.gridNotificationCard) {
@@ -186,6 +285,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   private async connect(): Promise<void> {
     const clearing = this.stop();
     const { generation } = this;
+    this.protectLinkedTile().catch(() => {});
     await clearing;
     if (generation !== this.generation) return;
     const dependencies = this.energyDependencies();
@@ -223,6 +323,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         }
         return saved;
       };
+      const community = this.getStoreValue('dualCtEnergyMode') === 'three_phase_community';
       const session = new DualCtGridEnergySession({
         scope,
         identity: source.identity,
@@ -230,8 +331,11 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         storage,
         authority,
         resolveContract: resolve,
-        observeEvidence: this.getStoreValue('dualCtEnergyMode') === 'three_phase_community'
-          ? (status, ms) => this.communityFeedback.record(status, ms) : undefined,
+        observeEvidence: (status, ms, receivedAt) => {
+          if (generation !== this.generation) return;
+          if (community) this.communityFeedback.record(status, ms);
+          else this.singlePhaseFeed.outcome(status, receivedAt);
+        },
         review: () => ({
           explicitConsent: generation === this.generation && this.getStoreValue('dualCtEnergyConsent') === 1
           && this.credentialRevision === dualCtCredentialsRevision(this.homey),
@@ -251,7 +355,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
         this.tickGridNotifications(observation && gridNotificationObservationMatches(
           observation, this.currentGridNotificationObservation(now), now,
         ) ? observation : null, now);
-      });
+      }, community ? undefined : (now) => this.readLinkedGrid(now));
       this.adapter = adapter;
       await adapter.start();
       if (generation !== this.generation) {
@@ -259,7 +363,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       }
       if (!adapter.diagnostics().active) throw new Error('blocked');
       this.details.start(scope);
-      this.ct2SourceCurrent = () => {
+      this.meterSourceCurrent = () => {
         if (generation !== this.generation || !this.handler || !dependencies.enabled() || !adapter.diagnostics().active
           || this.getStoreValue('dualCtEnergyConsent') !== 1
           || this.getStoreValue('dualCtEnergySourceBinding') !== binding
@@ -274,9 +378,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       const handler = (payload: Buffer, topic: string, delivery?: Readonly<AppFrameDelivery>) => {
         if (generation === this.generation && this.handler === handler) {
           const now = Date.now();
+          if (!community) this.singlePhaseFeed.packet(now);
           try {
             const configuration = this.ct2FlowConfiguration();
-            if (configuration && this.ct2SourceCurrent?.()) {
+            if (configuration && this.meterSourceCurrent?.()) {
               this.ct2FlowInput.observe(source.device, contract.encoding, configuration, payload, topic, delivery, now);
               this.tickBelowNotifications('ct2', this.ct2FlowInput.current(configuration, now), now);
             } else if (configuration) {
@@ -294,8 +399,10 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
           else if (topic.endsWith(`/${source.device}/thing/property/get_reply`)) topicKind = 'get_reply';
           this.messageEvidence.record(payload, topicKind,
             result.accepted ? 'delivery_eligible' : result.status);
-          if (this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' && !result.accepted) {
-            this.communityFeedback.record('delivery_rejected'); this.communityFeedback.record(result.status);
+          if (!result.accepted) {
+            if (community) {
+              this.communityFeedback.record('delivery_rejected'); this.communityFeedback.record(result.status);
+            } else this.singlePhaseFeed.outcome(result.status, now);
           }
           if (result.restartAnchor) {
             this.ct1BelowDelivery = undefined;
@@ -322,21 +429,36 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       }
       if (!subscribed) throw new Error('subscription');
       this.retryDelay = 30000;
+      let nextLinkCheck = 0;
+      const checkLinkedHost = () => {
+        const now = Date.now();
+        const { status } = adapter.diagnostics();
+        if (community || generation !== this.generation || now < nextLinkCheck
+          || !['waiting_for_fresh_power', 'linked_grid_display', 'linked_display_write_failed'].includes(status)) return;
+        nextLinkCheck = now + 60000;
+        this.refreshLinkedHost(source.device, context, generation);
+      };
+      checkLinkedHost();
       this.lastRefresh = Date.now();
       this.startupFailure = { startupStage: 'ready', context: null, admission: null };
       this.ticker = this.homey.setInterval(() => {
         if (generation !== this.generation || this.adapter !== adapter) return;
         const now = Date.now();
+        if (!this.linkedProtection.ready) this.protectLinkedTile().catch(() => {});
         this.tickGridNotifications(this.currentGridNotificationObservation(now), now);
         this.tickBelowNotifications('ct2', this.currentBelowObservation('ct2', now), now);
         this.details.render().catch(() => {});
         adapter.refresh().then(() => {
+          checkLinkedHost();
           if (generation === this.generation && !adapter.diagnostics().active) this.recover(generation, dependencies.enabled).catch(() => {});
         }).catch(() => this.recover(generation, dependencies.enabled).catch(() => {}));
         // Local expiry never waits for a network inventory/identity refresh.
         if (Date.now() - this.lastRefresh >= 60000 && !this.identityRefresh) {
           this.lastRefresh = Date.now();
-          const refresh = context.refresh().then(() => (generation === this.generation ? adapter.refresh() : undefined)).catch(() => {
+          const refresh = context.refresh().then(() => {
+            if (generation !== this.generation) return undefined;
+            return adapter.refresh();
+          }).catch(() => {
             if (generation === this.generation) {
               this.startupFailure = { startupStage: 'source', context: context.diagnostics?.() || null, admission: adapter.diagnostics().status };
               this.communityFeedback.record('identity_refresh_failed');
@@ -364,7 +486,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     const clearing = this.stop(); const stoppedGeneration = this.generation;
     await clearing;
     if (stoppedGeneration !== this.generation || !enabled() || this.getStoreValue('dualCtEnergyConsent') !== 1) return;
-    if (this.getDualCtEnergyDiagnostics()?.context?.reason === 'energy_role_review_required') {
+    if (dualCtContextFailureSnapshot(this.startupFailure.context)?.reason === 'energy_role_review_required') {
       await this.setUnavailable(this.homey.__('dual_ct_energy.reviewRoleRequired')).catch(() => {});
       if (stoppedGeneration !== this.generation) return;
     }
@@ -376,11 +498,14 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
 
   private async stop(): Promise<void> {
     const generation = ++this.generation;
+    this.linkedProtection = { ready: false, pending: false, retryAt: 0 };
+    this.linkedReadStatus = 'link_unverified';
+    this.linkedGrid.reset();
     ++this.gridNotificationAnchorRevision;
     this.gridNotificationAnchorPending = false;
     this.tickGridNotifications(null, Date.now());
     this.ct1BelowDelivery = undefined;
-    this.ct2SourceCurrent = null;
+    this.meterSourceCurrent = null;
     this.ct2FlowInput.reset();
     this.tickBelowNotifications('ct2', null, Date.now());
     if (this.retry) this.homey.clearTimeout(this.retry);
@@ -395,6 +520,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (generation !== this.generation) return;
     // The adapter owns bounded availability/power invalidation when present.
     // Optional rendering and SDK shutdown writes do not own counter authority.
+    if (this.hasCapability(LINKED_GRID_CAPABILITY)) await this.setCapabilityValue(LINKED_GRID_CAPABILITY, null).catch(() => {});
     if (adapter) return;
     await this.setUnavailable(this.homey.__(this.getStoreValue('dualCtEnergyConsent') === 1
       ? 'dual_ct_energy.recovering' : 'dual_ct_energy.unavailable')).catch(() => {});
@@ -422,9 +548,16 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
   }
 
   getDualCtEnergyDiagnostics() {
+    const singlePhase = this.getStoreValue('dualCtEnergyMode') !== 'three_phase_community';
     return dualCtEnergyRecoverySnapshot({
       ...this.startupFailure,
-      mode: this.getStoreValue('dualCtEnergyMode') === 'three_phase_community' ? 'three_phase_community' : 'single_phase',
+      ...(singlePhase ? {
+        feed: this.singlePhaseFeed.snapshot(),
+        linkedPowerStatus: this.linkedPowerStatus(),
+        transport: (this.homey.app as any).getAppRealtimeDiagnostics?.(this.getData().sn),
+        messageEvidence: this.messageEvidence.snapshot(),
+      } : {}),
+      mode: singlePhase ? 'single_phase' : 'three_phase_community',
       retryScheduled: this.retry !== null,
       active: this.adapter?.diagnostics().active === true,
     });

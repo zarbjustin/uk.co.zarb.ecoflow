@@ -2,9 +2,11 @@
 
 import Homey from 'homey';
 import { StreamReporterObservations, StreamOwnUnitObservations } from './streamReporterEvidence';
-import type { Es22Telemetry } from './streamAc5000Protocol';
+import type { WithholdLinkedPower } from './dualCtLinkedEs21';
+import { DUAL_CT_LIVE_INTERVAL_MS } from './dualCtLiveDelivery';
+import { es21MeterReading, type Es21MeterReading, type Es22Telemetry } from './streamAc5000Protocol';
 import { EcoFlowAppApi, getApp } from './appApi';
-import { AppFrameHandler } from './EcoFlowAppMqtt';
+import { type AppFrameDelivery, AppFrameHandler } from './EcoFlowAppMqtt';
 import { clearSavedAppAuthCreds, hasSavedAppAuthCreds } from './appAuthPairing';
 import {
   Stream5000CapabilityValues,
@@ -79,6 +81,21 @@ export class Stream5000UnitDevice extends Homey.Device {
   private frameHandler?: AppFrameHandler;
   private subscribedSn?: string;
   private realtimeApp?: EcoFlowAppApi;
+  private linkedGrid: { reading: Es21MeterReading; delivery: Readonly<AppFrameDelivery>; host: string } | null = null;
+
+  getLinkedGridObservation(host: string, now: number, withhold: WithholdLinkedPower = () => null) {
+    const sample = this.linkedGrid;
+    if (!sample) return withhold('waiting_for_meter_field');
+    const monoAge = performance.now() - sample.delivery.receivedMonoMs;
+    if (sample.host !== host || this.subscribedSn !== host || this.isStopped()
+      || !sample.delivery.isCurrent?.()) return withhold('unit_connection_changed');
+    if (monoAge < 0 || now < sample.delivery.receivedAt) return withhold('sample_invalid');
+    if (monoAge >= DUAL_CT_LIVE_INTERVAL_MS || now >= sample.delivery.receivedAt + DUAL_CT_LIVE_INTERVAL_MS) return withhold('sample_expired');
+    return {
+      host, ...sample.reading, receivedAt: sample.delivery.receivedAt, until: sample.delivery.receivedAt + DUAL_CT_LIVE_INTERVAL_MS,
+    };
+  }
+
   private lastFrameAt = 0;
   private lastTelemetryAt = 0;
   private startedAt = 0;
@@ -145,6 +162,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   async onInit(): Promise<void> {
+    this.linkedGrid = null;
     this.reporterObservations = new StreamReporterObservations();
     this.ownUnitObservations = new StreamOwnUnitObservations();
     this.subscriptionState = 'starting';
@@ -283,6 +301,12 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.configurationTracker?.observe(payload, this.lastFrameAt);
       this.applyChain = this.queueConfiguration();
       const telemetry = this.telemetryAdapter.parse(payload, sn);
+      if (!this.isEnergyAggregate() && model.telemetryAdapter === 'es21' && telemetry && (telemetry as Es22Telemetry).gridW !== undefined
+        && topic === `/app/device/property/${sn}` && delivery.isCurrent?.()
+        && (!this.linkedGrid || receivedAt > this.linkedGrid.delivery.receivedAt)) {
+        const reading = es21MeterReading(payload, sn);
+        this.linkedGrid = reading && { host: sn, reading, delivery };
+      }
       const diagnostic = this.telemetryAdapter.describe(payload, sn, telemetry ? 0 : undefined);
       if (!telemetry) {
         this.unparsedFrames += 1;
@@ -1082,6 +1106,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private resetDeliverySession(): Promise<void> {
+    this.linkedGrid = null;
     this.deliveryGeneration += 1;
     this.pendingWork.clear();
     this.pendingReadings.clear();
@@ -1183,6 +1208,7 @@ export class Stream5000UnitDevice extends Homey.Device {
   }
 
   private async teardown(): Promise<void> {
+    this.linkedGrid = null;
     getApp(this.homey)?.cancelStream5000ReserveRequests?.();
     this.subscriptionState = 'stopped';
     this.deliveryGeneration += 1;

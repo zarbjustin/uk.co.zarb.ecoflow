@@ -1,3 +1,4 @@
+import type { Es21MeterPhaseOne } from './streamAc5000Protocol';
 /** Optional display cache on the existing owned Energy subscription. No accounting or network port. */
 import { DualCtMonitor } from './dualCtMonitor';
 import { AppFrameDelivery } from './EcoFlowAppMqtt';
@@ -5,6 +6,12 @@ import {
   DUAL_CT_ENERGY_DETAIL_CAPABILITIES, DualCtDisplaySettings, dualCtDisplayOptions, dualCtDisplayVisible,
 } from './dualCtDisplaySettings';
 import energyManifest from '../drivers/smartmeter_dual_ct_energy/driver.compose.json';
+
+const PHASE_ONE_DETAILS = new Map<string, 'power' | 'voltage' | 'current'>([
+  ['dual_ct_preview_power.a_p1', 'power'],
+  ['dual_ct_preview_voltage.a_p1', 'voltage'],
+  ['dual_ct_preview_current.a_p1', 'current'],
+]);
 
 type DetailSlot = {
   write: Promise<void> | null;
@@ -22,7 +29,8 @@ export class DualCtEnergyDetails {
   private readonly port: any;
   private readonly now: () => number;
 
-  constructor(port: any, now: () => number = () => Date.now()) {
+  constructor(port: any, now: () => number = () => Date.now(),
+    private readonly linkedPhase: () => Es21MeterPhaseOne | null = () => null) {
     this.port = port; this.now = now;
   }
 
@@ -73,7 +81,18 @@ export class DualCtEnergyDetails {
   }
 
   private value(id: string): number | string | null {
-    return this.monitor?.snapshot(this.now(), (key) => key).values[id] ?? null;
+    if (!this.monitor) return null;
+    const direct = this.monitor.snapshot(this.now(), (key) => key).values[id];
+    if (direct !== null && direct !== undefined) return direct;
+    const quantity = PHASE_ONE_DETAILS.get(id);
+    if (!quantity) return null;
+    try {
+      const options = this.port.getCapabilityOptions(id);
+      if (options?.preventTag !== true || options?.preventInsights !== true) return null;
+      return this.linkedPhase()?.[quantity] ?? null;
+    } catch {
+      return null;
+    }
   }
 
   private reconcile(): void {

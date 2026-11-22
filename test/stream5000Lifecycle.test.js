@@ -2282,3 +2282,37 @@ test('physical-power delivery guard rejects queued and old completions until the
     await h.device.onUninit();
   }
 });
+
+test('physical ES21 fallback uses a new live meter field on the owned socket; sparse packets and replay never renew it', async t => {
+  const sn = 'ES21HOUSE0001'; let now = 100000; let connected = true;
+  t.mock.method(Date, 'now', () => now);
+  const h = await harness(classes.Stream5000PhysicalUnitDevice, {}, sn);
+  t.after(() => h.device.onUninit());
+  const { scalar } = require('./helpers/dualCtSynthetic');
+  const grid = watts => frame(group(15, scalar(3, watts)));
+  const meta = (extra = {}) => ({ retained: false, duplicate: false, receivedAt: now, receivedMonoMs: performance.now(),
+    connectionEpoch: 1, isCurrent: () => connected, ...extra });
+  let reason;
+  const read = () => h.device.getLinkedGridObservation(sn, now, why => { reason = why; return null; });
+  assert.equal(read(), null); assert.equal(reason, 'waiting_for_meter_field');
+  await h.emit(grid(-75), meta()); assert.equal(read().watts, -75);
+  assert.equal(h.device.getLinkedGridObservation('ES21OFFICE001', now), null);
+  now += 4999;
+  await h.emit(frame(group(11, scalar(1, 800))), meta()); assert.equal(read().watts, -75);
+  now++;
+  await h.emit(grid(123), meta({ retained: true })); await h.emit(grid(123), meta({ duplicate: true }));
+  assert.equal(read(), null); assert.equal(reason, 'sample_expired');
+  h.device.frameHandler(grid(999), '/app/device/property/' + sn + '/get_reply', meta()); assert.equal(read(), null);
+  await h.emit(grid(0), meta()); assert.equal(read().watts, 0);
+  connected = false; assert.equal(read(), null); assert.equal(reason, 'unit_connection_changed');
+  now++; connected = true;
+  await h.emit(frame(group(11, scalar(1, 100))), meta({ connectionEpoch: 2 })); assert.equal(read(), null);
+  await h.emit(grid(24), meta({ connectionEpoch: 2 })); assert.equal(read().watts, 24);
+  const meter = 'ES81HOUSE0001';
+  const data = group(16, Buffer.concat([group(3, Buffer.from(meter)), scalar(4, 15200), scalar(7, 234), scalar(10, 65), scalar(16, 15200)]));
+  const labelled = group(1, Buffer.concat([group(1, data), varint(64), varint(254), varint(72), varint(39), group(25, Buffer.from(sn))]));
+  now++; await h.emit(labelled, meta({ connectionEpoch: 2 }));
+  assert.deepEqual(read().phaseOne, { meter, power: 15200, voltage: 234, current: 65 });
+  now++; await h.emit(grid(100), meta({ connectionEpoch: 2 }));
+  assert.equal(read().phaseOne, undefined, 'an unlabelled net-only update cannot carry old amps forward');
+});

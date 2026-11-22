@@ -533,12 +533,23 @@ test('support includes anonymous single-phase recovery and owned SDK scan diagno
   const instance = homey();
   instance.drivers.getDriver = id => ({ getDevices: () => id === 'smartmeter_dual_ct_energy' ? [{
     getDualCtEnergyDiagnostics: () => ({ mode: 'single_phase', startupStage: 'source', retryScheduled: true, active: false,
+      transport: { connected: true, listening: true, activeTopics: 2, receivedFrames: 0, socketReceivedFrames: 19, topic: 'PRIVATE' },
+      linkedPowerStatus: 'PRIVATE_INTERNAL', messageEvidence: { raw: 'PRIVATE', groups: [] },
+      feed: { lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 120, lastRejectionAgeSec: -3,
+        lastRejectionReason: 'PRIVATE_error', raw: 'PRIVATE' },
       context: { stage: 'inventory', reason: 'owned_inventory_read_failed', inventoryStage: 'settings', driver: 'smartmeter' }, private: 'PRIVATE' }),
     getData: () => ({ sn: 'PRIVATE' }), getEnergy: () => ({ cumulative: true }), getCapabilities: () => ['measure_power'], getSettings: () => ({}),
   }] : [] });
   const report = createSupportSnapshot(instance);
   assert.equal(report.dualCtEnergyRecovery[0].mode, 'single_phase');
   assert.equal(report.dualCtEnergyRecovery[0].context.inventoryStage, 'settings');
+  assert.deepEqual(report.dualCtEnergyRecovery[0].feed, { lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 120,
+    lastRejectionAgeSec: null, lastRejectionReason: 'other_rejection' });
+  assert.equal(report.dualCtEnergyRecovery[0].linkedPowerStatus, null);
+  assert.equal(report.dualCtEnergyRecovery[0].transport.activeTopics, 2);
+  assert.equal(report.dualCtEnergyRecovery[0].transport.receivedFrames, 0);
+  assert.equal(report.dualCtEnergyRecovery[0].transport.socketReceivedFrames, 19);
+  assert.deepEqual(report.dualCtEnergyRecovery[0].messageEvidence.groups, []);
   assert.equal(report.dualCtCommunityTrials.length, 0);
   assert.doesNotMatch(JSON.stringify(report.dualCtEnergyRecovery), /PRIVATE/);
   assert.equal(report.dualCtOwnedInventory.readOnly, true);

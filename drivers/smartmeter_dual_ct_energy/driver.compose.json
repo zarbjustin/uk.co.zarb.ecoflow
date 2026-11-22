@@ -36,6 +36,10 @@
     "dual_ct_preview_net.b"
   ],
   "capabilitiesOptions": {
+    "dual_ct_linked_grid_power": {
+      "preventTag": true,
+      "preventInsights": true
+    },
     "measure_power": {
       "approximation": true
     },

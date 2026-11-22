@@ -25,7 +25,7 @@ export function dualCtDisplayVisible(id: string, settings: DualCtDisplaySettings
   const row = DUAL_CT_PHASE_DISPLAYS.find((item) => item.capability === id);
   if (row) {
     return row.phase! <= (row.bank === 'A' ? policy.ct1 : policy.ct2)
-    && !(energy && row.bank === 'A' && policy.ct1 === 1 && row.quantity === 'power');
+    && !(energy && settings.display_ct1 !== 'single_phase' && row.bank === 'A' && policy.ct1 === 1 && row.quantity === 'power');
   }
   if (id === 'dual_ct_preview_net.b') return policy.ct2 > 0;
   if (id === 'dual_ct_preview_net.a' || id === 'dual_ct_preview_status') return true;

@@ -3,7 +3,11 @@ import { DualCtGridEnergySession } from './dualCtGridEnergySession';
 import { dualCtHomeyEnergyKwh } from './dualCtEnergyCheckpoint';
 import { DUAL_CT_ENERGY_RUNTIME_ENABLED } from './dualCtGridEnergySource';
 
+import { LINKED_GRID_CAPABILITY, type LinkedGridSample } from './dualCtLinkedEs21';
+
 interface DevicePort {
+  hasCapability?: (id: string) => boolean;
+  getCapabilityValue?: (id: string) => unknown;
   setCapabilityValue: (id: string, value: number | null) => Promise<unknown>;
   setCapabilityOptions: (id: string, options: { approximation: boolean }) => Promise<unknown>;
   setEnergy: (energy: { cumulative: boolean; cumulativeImportedCapability: string; cumulativeExportedCapability: string }) => Promise<unknown>;
@@ -30,19 +34,23 @@ export class DualCtGridEnergyDeviceAdapter {
   private nullPowerWrite: Promise<void> | null = null;
   private clearGoal: { generation: number; reason: string; unavailable: boolean; power: boolean } | null = null;
   private powerClearRevision = 0;
-  private publishedPower: { at: number; until: number; value: number; receivedAt: number | null } | null = null;
+  private publishedPower: { host: string | null; relayQualified: boolean; at: number; until: number; value: number; receivedAt: number | null } | null = null;
 
   private readonly session: DualCtGridEnergySession;
   private readonly port: DevicePort;
   private readonly runtimeEnabled: () => boolean;
   private readonly onPowerObservation: (observation: QualifiedCt1PowerObservation | null) => void;
 
+  private readonly readLinked?: (now: number) => LinkedGridSample | null;
+
   constructor(session: DualCtGridEnergySession, port: DevicePort,
     /** Code-owned injection for synthetic lifecycle verification; never a setting/request parameter. */
     runtimeEnabled: () => boolean = () => DUAL_CT_ENERGY_RUNTIME_ENABLED,
-    onPowerObservation: (observation: QualifiedCt1PowerObservation | null) => void = () => {}) {
+    onPowerObservation: (observation: QualifiedCt1PowerObservation | null) => void = () => {},
+    readLinked?: (now: number) => LinkedGridSample | null) {
     this.session = session; this.port = port; this.runtimeEnabled = runtimeEnabled;
     this.onPowerObservation = onPowerObservation;
+    this.readLinked = readLinked;
   }
 
   private notifyPowerObservation(observation: QualifiedCt1PowerObservation | null): void {
@@ -73,11 +81,55 @@ export class DualCtGridEnergyDeviceAdapter {
     return false;
   }
 
+  /** Only a meter-labelled single-phase relay may supply standard watts during a direct gap. */
+  private presentation() {
+    const view = this.session.view();
+    let linked: LinkedGridSample | null = null;
+    if (view.candidateCapabilities.measure_power === null && view.candidateCapabilities['meter_power.imported'] !== null) {
+      try {
+        linked = this.readLinked?.(view.projectionNow) ?? null;
+      } catch { /* Optional unit unavailable. */ }
+    }
+    const relayQualified = this.session.acceptsRelayedPowerFrom(linked?.phaseOne?.meter);
+    return {
+      ...view,
+      host: linked?.host ?? null,
+      // The driver verifies the paired meter serial. Unlabelled system watts remain a separate reading.
+      relayQualified,
+      standardPower: relayQualified && linked ? linked.watts : view.candidateCapabilities.measure_power,
+      powerFreshUntil: linked?.until ?? view.powerFreshUntil,
+      powerReceivedAt: linked?.receivedAt ?? view.powerReceivedAt,
+      candidateCapabilities: { ...view.candidateCapabilities, measure_power: linked?.watts ?? view.candidateCapabilities.measure_power },
+    };
+  }
+
+  /** Presentation only. Check the live binding and meter identity again on every render. */
+  currentLinkedPhaseOne(meter: string) {
+    if (!this.current(this.generation) || this.status !== 'linked_grid_display') return null;
+    const view = this.session.view();
+    if (view.candidateCapabilities.measure_power !== null || view.candidateCapabilities['meter_power.imported'] === null) return null;
+    const sample = this.readLinked?.(view.projectionNow);
+    return sample?.phaseOne?.meter === meter && sample.host === this.publishedPower?.host ? sample.phaseOne : null;
+  }
+
+  private powerSourceStillCurrent(generation: number, previous: { host: string | null; relayQualified: boolean }): boolean {
+    if (!this.current(generation)) return false;
+    const view = this.presentation();
+    return view.host === previous.host && view.relayQualified === previous.relayQualified && view.candidateCapabilities.measure_power !== null;
+  }
+
+  private async clearLinkedPower(): Promise<void> {
+    if (this.port.hasCapability?.(LINKED_GRID_CAPABILITY) && this.port.getCapabilityValue?.(LINKED_GRID_CAPABILITY) !== null) {
+      await this.port.setCapabilityValue(LINKED_GRID_CAPABILITY, null);
+    }
+  }
+
   /** A slow SDK write must not keep an old projected power available past its own receipt deadline. */
   private checkPublishedPower(generation: number): void {
     if (!this.current(generation)) return;
-    const view = this.session.view();
+    const view = this.presentation();
     if (this.clearPending || (this.publishedPower && (view.candidateCapabilities.measure_power === null
+      || view.host !== this.publishedPower.host || view.relayQualified !== this.publishedPower.relayQualified
       || view.projectionNow < this.publishedPower.at || view.projectionNow >= this.publishedPower.until))) {
       this.requestPowerClear(generation).catch(() => {});
     }
@@ -117,7 +169,7 @@ export class DualCtGridEnergyDeviceAdapter {
           // eslint-disable-next-line no-await-in-loop
           if (action === 'unavailable') await this.port.setUnavailable(goal.reason);
           // eslint-disable-next-line no-await-in-loop
-          else await this.port.setCapabilityValue('measure_power', null);
+          else await Promise.all([this.port.setCapabilityValue('measure_power', null), this.clearLinkedPower().catch(() => {})]);
         } catch {
           return;
         }
@@ -219,7 +271,7 @@ export class DualCtGridEnergyDeviceAdapter {
       if (!await this.guard(generation)) return;
       await this.powerClear;
       if (!await this.guard(generation)) return;
-      const view = this.session.view();
+      const view = this.presentation();
       const values = view.candidateCapabilities;
       if (values['meter_power.imported'] === null || values['meter_power.exported'] === null) {
         await this.fail(view.status); return;
@@ -234,18 +286,38 @@ export class DualCtGridEnergyDeviceAdapter {
         if (!await this.guard(generation)) return;
         this.checkPublishedPower(generation); await this.powerClear;
         if (!await this.guard(generation) || this.clearPending) return;
-        const fresh = this.session.view();
-        if (JSON.stringify(fresh.candidateCapabilities) !== JSON.stringify(values)) {
+        const fresh = this.presentation();
+        if (fresh.host !== view.host || fresh.relayQualified !== view.relayQualified || JSON.stringify(fresh.candidateCapabilities) !== JSON.stringify(values)) {
           superseded = true; break;
         }
         // Null/stale power was already cleared with an unavailable status above.
         if (id === 'measure_power' && values[id] === null) continue;
         if (id === 'measure_power') powerWriteClearRevision = this.powerClearRevision;
         try {
-          await this.port.setCapabilityValue(id, id === 'measure_power' ? values[id] : dualCtHomeyEnergyKwh(values[id]! * 1000));
+          if (id !== 'measure_power') {
+            await this.port.setCapabilityValue(id, dualCtHomeyEnergyKwh(values[id]! * 1000));
+          } else if (view.host) {
+            try {
+              await this.port.setCapabilityValue(LINKED_GRID_CAPABILITY, values[id]);
+            } catch {
+              await this.requestPowerClear(generation);
+              if (this.current(generation)) this.status = 'linked_display_write_failed';
+              return;
+            }
+            const latest = this.presentation();
+            if (!this.current(generation) || latest.host !== view.host || latest.standardPower !== view.standardPower) {
+              superseded = true; break;
+            }
+            if (this.port.getCapabilityValue?.(id) !== view.standardPower) {
+              await this.port.setCapabilityValue(id, view.standardPower);
+            }
+          } else {
+            if (this.readLinked) await this.clearLinkedPower().catch(() => {});
+            if (!this.current(generation)) return;
+            await this.port.setCapabilityValue(id, values[id]);
+          }
         } finally {
-          if (id === 'measure_power' && (!this.current(generation)
-            || this.session.view().candidateCapabilities.measure_power === null)) {
+          if (id === 'measure_power' && !this.powerSourceStillCurrent(generation, view)) {
             if (this.clearGoal) this.clearGoal.power = false;
             this.requestPowerClear(this.generation, this.active ? 'Waiting for fresh CT1 power' : this.status).catch(() => {});
           }
@@ -254,26 +326,28 @@ export class DualCtGridEnergyDeviceAdapter {
       if (!await this.guard(generation)) return;
       this.checkPublishedPower(generation); await this.powerClear;
       if (!await this.guard(generation) || this.clearPending) return;
-      const after = this.session.view();
-      if (superseded || JSON.stringify(after.candidateCapabilities) !== JSON.stringify(values)) continue;
+      const after = this.presentation();
+      if (superseded || after.host !== view.host || after.relayQualified !== view.relayQualified || JSON.stringify(after.candidateCapabilities) !== JSON.stringify(values)) continue;
       // An urgent clear may have landed after a slow power write. Republish before availability.
       if (values.measure_power !== null && powerWriteClearRevision !== this.powerClearRevision) continue;
       if (values.measure_power === null || after.powerFreshUntil === null) {
         this.status = 'waiting_for_fresh_power'; return;
       }
       this.publishedPower = {
+        host: after.host,
+        relayQualified: after.relayQualified,
         at: after.projectionNow,
         until: after.powerFreshUntil,
         value: values.measure_power,
         receivedAt: after.powerReceivedAt,
       };
-      this.status = 'recent';
+      this.status = after.host ? 'linked_grid_display' : 'recent';
       // Deliver this concrete matched projection before another SDK/source update can overwrite it.
       this.notifyPowerObservation(this.currentPowerObservation());
       try {
         await this.port.setAvailable();
       } finally {
-        if (!this.current(generation) || this.session.view().candidateCapabilities.measure_power === null) {
+        if (!this.powerSourceStillCurrent(generation, view)) {
           if (this.clearGoal) this.clearGoal.unavailable = false;
           this.requestPowerClear(this.generation, this.active ? 'Waiting for fresh CT1 power' : this.status).catch(() => {});
         }
@@ -281,7 +355,7 @@ export class DualCtGridEnergyDeviceAdapter {
       if (!await this.guard(generation)) return;
       this.checkPublishedPower(generation); await this.powerClear;
       if (!await this.guard(generation) || this.clearPending) return;
-      if (this.session.view().candidateCapabilities.measure_power === null || !this.publishedPower) {
+      if (this.presentation().candidateCapabilities.measure_power === null || !this.publishedPower) {
         await this.requestPowerClear(generation);
         this.status = 'waiting_for_fresh_power'; return;
       }

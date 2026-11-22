@@ -46,6 +46,8 @@ test('meter summary empty and failed report states and translations are complete
   const failure = element(); render(failure, null, key => key);
   assert.equal(failure.children[0].textContent, 'refresh');
   const english = require('../locales/en.json').settings.meter;
+  const { LINKED_POWER_STATUSES } = require('../.homeybuild/lib/dualCtLinkedEs21');
+  for (const reason of LINKED_POWER_STATUSES) assert.ok(english['linked_' + reason]);
   for (const locale of ['de', 'nl']) {
     const entries = require(`../locales/${locale}.json`).settings.meter;
     assert.deepEqual(Object.keys(entries).sort(), Object.keys(english).sort());

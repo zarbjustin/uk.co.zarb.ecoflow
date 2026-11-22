@@ -54,8 +54,8 @@ try { Module._load = function (name, ...args) { return name === 'homey' ? { Devi
   Driver = require('../.homeybuild/drivers/smartmeter_dual_ct_energy/device');
 } finally { Module._load = originalLoad; }
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(setImmediate); };
-function enabled(device) {
-  device.energyDependencies = () => ({ enabled: () => true, resolve: () => contract,
+function enabled(device, selectedContract = contract) {
+  device.energyDependencies = () => ({ enabled: () => true, resolve: () => selectedContract,
     context: () => new DualCtHomeyEnergyContext({ homey: device.homey, sn, now: Date.now,
       client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }] }),
       readFirmware: async () => identity.firmware, reader: async () => ({ list: async () => ({}), close() {} }) }) });
@@ -855,6 +855,7 @@ test('synthetic sparse three-frame feed reproduces accepted packets, gap, unrela
     now = 8000; emit(nested(1, Buffer.concat([nested(1, scalar(962, 900000)), int(8, 254), int(9, 22), int(14, ++sequence)]))); await settle();
     now = 258600; await d.context.refresh(); await d.adapter.refresh();
     assert.equal(accepted, 2);
+    assert.equal(Object.hasOwn(d.getDualCtEnergyDiagnostics(), 'feed'), false, 'single-phase feed is omitted in three-phase mode');
     assert.deepEqual(monitor.getRejectionCounts(), { unrelated_message: 1 });
     assert.equal(monitor.snapshot(now, key => key).values.dual_ct_preview_status, 'stale');
     const feedback = d.getDualCtCommunityFeedback();
@@ -1015,4 +1016,219 @@ test('real SDK-only startup respects an explicitly reviewed excluded Office mete
   assert.equal(d.getDualCtEnergyDiagnostics().active, false);
   assert.equal(d.values.get('meter_power.imported'), 25); assert.equal(d.values.get('meter_power.exported'), 1);
   await d.onUninit();
+});
+
+test('single-phase support distinguishes traffic, qualified zero power and stale CT1 without bridging gaps', async t => {
+  let now = 1000;
+  t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  const topic = `/app/device/property/${sn}`;
+  const feed = () => d.getDualCtEnergyDiagnostics().feed;
+  const unseen = { lastPacketAgeSec: null, lastAcceptedCt1AgeSec: null, lastRejectionAgeSec: null, lastRejectionReason: null };
+  await d.onInit();
+  try {
+    const deliver = d.subscriptions[0];
+    assert.deepEqual(feed(), unseen);
+    deliver(payload(0), topic, { receivedAt: 950, receivedMonoMs: 950, retained: false, duplicate: false });
+    await settle();
+    assert.deepEqual(feed(), { ...unseen, lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 0.05 });
+    const checkpoint = d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY);
+
+    now = 2000;
+    deliver(payload(300), topic, { receivedAt: now, receivedMonoMs: now, retained: true, duplicate: false });
+    await settle();
+    assert.deepEqual(feed(), { lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 1.05,
+      lastRejectionAgeSec: 0, lastRejectionReason: 'delivery_not_live' });
+
+    now = 3000;
+    deliver(payload(500, false), topic);
+    await settle();
+    assert.ok(d.getDualCtEnergyDiagnostics().messageEvidence.groups.some(row => row.cmdId === 21 && row.outcome === 'delivery_eligible'),
+      'a packet can pass the transport guard and still fail semantic qualification');
+    assert.equal(feed().lastRejectionReason, 'encoding_contract_conflict');
+    assert.equal(feed().lastAcceptedCt1AgeSec, 2.05);
+
+    now = 61000;
+    for (const timer of d.timers.values()) if (timer.interval) timer.fn();
+    await settle();
+    now = 100000;
+    await d.adapter.refresh();
+    assert.deepEqual(feed(), { lastPacketAgeSec: 97, lastAcceptedCt1AgeSec: 99.05,
+      lastRejectionAgeSec: 97, lastRejectionReason: 'encoding_contract_conflict' });
+    assert.equal(d.values.get('measure_power'), null);
+    deliver(payload(0), topic); await settle();
+    assert.equal(feed().lastRejectionReason, 'delivery_gap');
+    now += 1000;
+    deliver(payload(0), topic); await settle();
+    assert.deepEqual(feed(), { lastPacketAgeSec: 0, lastAcceptedCt1AgeSec: 0,
+      lastRejectionAgeSec: 1, lastRejectionReason: 'delivery_gap' });
+    assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), checkpoint);
+    d.homey.settings.emit('set', 'appAuthEmail');
+    await settle();
+    deliver(payload(1000), topic);
+    assert.deepEqual(feed(), unseen, 'old account handlers cannot repopulate the new report');
+    assert.deepEqual(d.getDualCtEnergyDiagnostics().messageEvidence.groups, []);
+  } finally { await d.onUninit(); }
+});
+
+test('failed single-phase checkpoint does not advance the last accepted CT1 receipt', async t => {
+  let now = 1000;
+  t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  await d.onInit();
+  try {
+    const topic = `/app/device/property/${sn}`;
+    d.subscriptions[0](payload(3600), topic); await settle();
+    const checkpoint = d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY);
+    const pending = deferredSdk();
+    d.setStoreValue = async () => { await pending.promise; throw Error('synthetic write failure'); };
+    now = 2000;
+    d.subscriptions[0](payload(3600), topic); await settle();
+    const feed = () => d.getDualCtEnergyDiagnostics().feed;
+    assert.equal(feed().lastAcceptedCt1AgeSec, 1);
+    now = 3000;
+    pending.resolve(); await settle();
+    assert.deepEqual(feed(), { lastPacketAgeSec: 1, lastAcceptedCt1AgeSec: 2,
+      lastRejectionAgeSec: 0, lastRejectionReason: 'storage_failed' });
+    assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), checkpoint);
+  } finally { await d.onUninit(); }
+});
+
+test('paired single-phase driver selects only the verified ES21, forgets it on account edit, and starts the new link with an empty reading', async t => {
+  const cap = 'dual_ct_linked_grid_power'; const house = 'ES21HOUSE0001'; const office = 'ES21OFFICE001';
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const d = new Driver(); enabled(d);
+  let host = house;
+  const units = [house, office].map((sn, i) => ({ getData: () => ({ sn }), receipt: 0,
+    getLinkedGridObservation() { return { watts: i ? -347 : 850, receivedAt: this.receipt, until: this.receipt + 5000, host: sn }; } }));
+  d.resolveLinkedHost = async () => host;
+  await d.onInit(); await settle(); t.after(() => d.onUninit());
+  d.homey.drivers = { getDriver: id => { assert.equal(id, 'stream_5000_unit'); return { getDevices: () => units }; } };
+  const tick = async () => { [...d.timers.values()].find(x => x.interval).fn(); await settle(); };
+  assert.equal(d.getCapabilityOptions(cap).preventTag, true);
+  now++; units[1].receipt = now; await tick(); assert.equal(d.getCapabilityValue(cap), null);
+  now++; units[0].receipt = now; await tick(); assert.equal(d.getCapabilityValue(cap), 850);
+  assert.equal(d.available, true); assert.equal(d.getCapabilityValue('measure_power'), null);
+  assert.throws(() => d.gridPowerAbove('import', 100));
+  d.homey.settings.emit('set', 'accessKey'); await tick(); assert.equal(d.getCapabilityValue(cap), null);
+  host = office; now = 61000; units[1].receipt = now;
+  await tick(); now++; await tick(); assert.equal(d.getCapabilityValue(cap), null);
+  units[1].receipt = now; await tick(); assert.equal(d.getCapabilityValue(cap), -347);
+  units.push(units[1]); await tick(); assert.equal(d.getCapabilityValue(cap), null);
+});
+test('community three-phase driver never resolves or exposes the single-phase fallback', async t => {
+  const d = new Driver(); enabledCommunity(d); let calls = 0;
+  d.resolveLinkedHost = async () => { calls++; return 'ES21HOUSE0001'; };
+  await d.onInit(); await settle(); t.after(() => d.onUninit());
+  assert.equal(calls, 0); assert.equal(d.hasCapability('dual_ct_linked_grid_power'), false);
+  assert.equal(d.getDualCtEnergyDiagnostics().linkedPowerStatus, undefined);
+});
+
+test('upgrade re-applies declared protection in place to an already-paired linked tile before exposing watts', async t => {
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const cap = 'dual_ct_linked_grid_power'; const house = 'ES21HOUSE0001';
+  const composed = require('../drivers/smartmeter_dual_ct_energy/driver.compose.json');
+  const packaged = require('../app.json').drivers.find(driver => driver.id === 'smartmeter_dual_ct_energy');
+  const required = { preventTag: true, preventInsights: true };
+  for (const manifest of [composed, packaged]) {
+    assert.deepEqual(manifest.capabilitiesOptions[cap], required);
+    assert.equal(manifest.capabilities.includes(cap), false, 'remains optional for other installations');
+  }
+  const d = new Driver(); enabled(d);
+  d.values.set(cap, 90);
+  const title = { en: 'House reading' }; d.capOptions.set(cap, { title });
+  d.resolveLinkedHost = async () => house;
+  const added = d.addCapability.bind(d); d.addCapability = id => { assert.notEqual(id, cap); return added(id); };
+  let generatedTag = true; let writes = 0; let reads = 0; let acceptOptions = false;
+  const inherited = d.setCapabilityOptions.bind(d);
+  d.setCapabilityOptions = async (id, options) => {
+    if (id === cap) {
+      writes++;
+      assert.deepEqual(options, { title, ...required });
+      if (!acceptOptions) return; // SDK accepted the call but did not retain the options.
+      generatedTag = false;
+    }
+    return inherited(id, options);
+  };
+  let receipt;
+  d.homey.drivers = { getDriver: () => ({ getDevices: () => [{ getData: () => ({ sn: house }),
+    getLinkedGridObservation() { reads++; return { host: house, watts: 0, receivedAt: receipt, until: receipt + 5000 }; } }] }) };
+  await d.onInit(); await settle(); t.after(() => d.onUninit());
+  const tick = async () => { [...d.timers.values()].find(row => row.interval).fn(); await settle(); };
+  const reason = () => d.getDualCtEnergyDiagnostics().linkedPowerStatus;
+  const checkpoint = structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+  now++; receipt = now; await tick();
+  assert.equal(writes, 1); assert.equal(generatedTag, true); assert.equal(reads, 0);
+  assert.equal(d.getCapabilityValue(cap), null); assert.equal(reason(), 'tag_protection_unconfirmed');
+  acceptOptions = true; now += 60000; await tick();
+  now++; receipt = now; await tick();
+  assert.equal(writes, 2); assert.equal(generatedTag, false);
+  assert.equal(d.getCapabilityValue(cap), 0); assert.equal(reason(), 'displaying_linked_watts');
+  assert.equal(d.getCapabilityValue('measure_power'), null); assert.throws(() => d.gridPowerAbove('import', 100));
+  now += 5000; await tick(); assert.equal(d.getCapabilityValue(cap), null); assert.equal(reason(), 'sample_expired');
+  assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), checkpoint);
+});
+
+
+test('existing tile reapplies protection once even with manifest defaults visible and no resolved link', async t => {
+  const cap = 'dual_ct_linked_grid_power';
+  const d = new Driver(); enabled(d);
+  d.values.set(cap, null);
+  d.capOptions.set(cap, { preventTag: true, preventInsights: true });
+  d.resolveLinkedHost = async () => null;
+  const set = d.setCapabilityOptions.bind(d);
+  let protectionWrites = 0;
+  d.setCapabilityOptions = async (id, options) => {
+    if (id === cap) protectionWrites++;
+    return set(id, options);
+  };
+  await d.onInit(); await settle(); t.after(() => d.onUninit());
+  await d.adapter.refresh();
+  assert.equal(d.getDualCtEnergyDiagnostics().linkedPowerStatus, 'link_unverified');
+  assert.equal(protectionWrites, 1);
+  assert.equal(d.getCapabilityValue(cap), null);
+});
+
+
+test('already-paired single-phase meter uses labelled relay for standard Power and preserves direct-only threshold cards and counters', async t => {
+  const d = new Driver();
+  const single = { ...contract, singlePhaseOnly: true };
+  enabled(d, single);
+  d.store.set('dualCtEnergySourceBinding', dualCtGridBinding({ account: dualCtAccountBinding(account), device: sn, grid: 'homey_property_grid', session: 'one' }, single));
+  let now = 1000; t.mock.method(Date, 'now', () => now);
+  const host = 'ES21HOUSE0001';
+  const power = 'dual_ct_preview_power.a_p1', amps = 'dual_ct_preview_current.a_p1', volts = 'dual_ct_preview_voltage.a_p1';
+  let sample;
+  d.resolveLinkedHost = async () => host;
+  d.homey.drivers = { getDriver: () => ({ getDevices: () => [{ getData: () => ({ sn: host }), getLinkedGridObservation: () => sample }] }) };
+  await d.onInit(); await settle(); t.after(() => d.onUninit());
+  const checkpoint = structuredClone(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY));
+  const render = async () => { await d.adapter.refresh(); await d.details.render(); await settle(); };
+  const relay = meter => ({ host, watts: 15000, receivedAt: now, until: now + 5000, phaseOne: { meter, power: 15000, voltage: 234, current: 64 } });
+  now++; sample = relay(sn); await render();
+  assert.equal(d.getCapabilityValue(power), 15000); assert.equal(d.getCapabilityValue(amps), 64); assert.equal(d.getCapabilityValue(volts), 234);
+  assert.equal(d.getDualCtEnergyDiagnostics().linkedPowerStatus, 'phase_relay_available');
+  assert.equal(d.getCapabilityValue('dual_ct_preview_current.b_p1'), null);
+  assert.equal(d.getCapabilityValue('measure_power'), 15000);
+  assert.throws(() => d.gridPowerAbove('import', 100));
+  const opts = d.getCapabilityOptions(amps);
+  d.capOptions.set(amps, { ...opts, preventTag: false }); await render(); assert.equal(d.getCapabilityValue(amps), null);
+  d.capOptions.set(amps, opts); await render(); assert.equal(d.getCapabilityValue(amps), 64);
+  for (const watts of [-425, 0]) {
+    now++; sample = relay(sn); sample.watts = watts; sample.phaseOne.power = watts; await render();
+    assert.equal(d.getCapabilityValue('measure_power'), watts);
+    assert.throws(() => d.gridPowerAbove('import', 0));
+  }
+  now++; sample = { ...relay(sn), phaseOne: undefined }; await render();
+  assert.equal(d.getCapabilityValue('measure_power'), null);
+  assert.equal(d.getCapabilityValue('dual_ct_linked_grid_power'), 15000);
+  now++; sample = relay('ES81OFFICE001'); await render();
+  for (const k of [power, amps, volts, 'measure_power', 'dual_ct_linked_grid_power']) assert.equal(d.getCapabilityValue(k), null);
+  now++; sample = relay(sn); await render(); now += 5000; await render();
+  for (const k of [power, amps, volts, 'measure_power']) assert.equal(d.getCapabilityValue(k), null);
+  assert.deepEqual(d.store.get(DUAL_CT_ENERGY_CHECKPOINT_KEY), checkpoint);
+  now++; sample = relay(sn); await render();
+  now++; d.subscriptions[0](payload(50), '/app/device/property/'+sn); await settle(); await render();
+  assert.equal(d.getCapabilityValue('measure_power'), 50); assert.equal(d.getCapabilityValue(power), 50);
+  assert.equal(d.getCapabilityValue(amps), null); assert.equal(d.getCapabilityValue('dual_ct_linked_grid_power'), null);
 });

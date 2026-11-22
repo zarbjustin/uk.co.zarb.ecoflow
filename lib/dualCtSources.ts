@@ -5,7 +5,7 @@ import { isSupportedStream5000Sn } from './stream5000Models';
 import { dualCtModelCodes } from './dualCtMetadata';
 
 /** Field-observed app productType only; not an official model/measurement contract. */
-export function dualCtDiscoveryIdentity(device: AppDevice): 'explicit_name' | 'observed_app_product_type_421' | null {
+export function dualCtDiscoveryIdentity(device: Partial<Pick<AppDevice, 'productName' | 'modelCodes'>>): 'explicit_name' | 'observed_app_product_type_421' | null {
   const name = typeof device?.productName === 'string'
     ? device.productName.trim().replace(/[-_\s]+/g, ' ').toUpperCase() : '';
   if (/^(?:ECOFLOW )?SMART METER DUAL CT$/.test(name)) return 'explicit_name';

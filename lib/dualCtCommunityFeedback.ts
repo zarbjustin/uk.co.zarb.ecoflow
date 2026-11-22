@@ -2,15 +2,12 @@ import { messageEvidenceSnapshot } from './dualCtMessageEvidence';
 import { DualCtDiagnosticEvents, dualCtEventSnapshot } from './dualCtDiagnosticEvents';
 import { appMqttDiagnosticsSnapshot } from './appMqttDiagnostics';
 
+import { CT1_PACKET_REJECTIONS } from './dualCtRecoveryDiagnostics';
+
 /** Local, bounded classifications only. No powers, energy totals, IDs, timestamps or uploads. */
 const statuses = ['startup_source_failed', 'startup_contract_failed', 'startup_binding_failed', 'startup_admission_failed', 'startup_subscription_failed',
-  'identity_refresh_failed', 'delivery_gap', 'connection_changed', 'sequence_required', 'sequence_duplicate', 'sequence_reset',
-  'clock_discontinuity', 'delivery_not_live', 'delivery_scope', 'not_ct1_property_upload',
-  'invalid_grid_payload', 'invalid_header', 'anchor', 'gap', 'eligible_interval', 'out_of_order', 'delivery_rejected', 'recovery',
-  'unrelated_grid_packet', 'contract_blocked', 'source_qualification_mismatch', 'transport_rejected',
-  'receipt_expired', 'measurement_time_required', 'timing_basis_conflict', 'header_rejected', 'ambiguous_packet',
-  'encoding_contract_conflict', 'decode_rejected', 'incomplete_grid_phases', 'wiring_outside_qualification',
-  'complete_grid_total_required', 'grid_total_mismatch', 'power_rejected'];
+  'identity_refresh_failed', 'anchor', 'gap', 'eligible_interval', 'delivery_rejected', 'recovery', ...CT1_PACKET_REJECTIONS];
+
 const count = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= Number.MAX_SAFE_INTEGER ? v : 0);
 export function dualCtCommunityFeedbackSnapshot(input: any) {
   if (input?.scope !== 'three_phase_community_trial') return null;

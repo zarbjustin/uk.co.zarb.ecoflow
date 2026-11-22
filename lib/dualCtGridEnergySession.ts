@@ -24,7 +24,7 @@ interface Options {
   /** Code-owned dependency injection for tests/future validated contracts, never a customer setting. */
   resolveContract?: DualCtGridContractResolver;
   now?: () => number;
-  observeEvidence?: (status: string, durationMs: number) => void;
+  observeEvidence?: (status: string, durationMs: number, receivedAt: number) => void;
 }
 
 export class DualCtGridEnergySession {
@@ -49,12 +49,6 @@ export class DualCtGridEnergySession {
     const pending = this.chain.catch(() => {}).then(work);
     this.chain = pending;
     return pending;
-  }
-
-  private evidence(status: string, durationMs = 0): void {
-    try {
-      this.options.observeEvidence?.(status, durationMs);
-    } catch { /* Feedback cannot affect accounting. */ }
   }
 
   private now(): number {
@@ -179,8 +173,16 @@ export class DualCtGridEnergySession {
 
   /** Recheck source authority for EVERY packet and after async storage before exposing a committed projection. */
   observe(payload: Buffer, topic: string, receivedAt: number, measuredAt: number | null = null): Promise<void> {
-    if (!this.enabled) return Promise.resolve();
+    const record = (status: string, durationMs = 0) => {
+      try {
+        this.options.observeEvidence?.(status, durationMs, receivedAt);
+      } catch { /* Feedback cannot affect accounting. */ }
+    };
+    if (!this.enabled) {
+      record('inactive_session'); return Promise.resolve();
+    }
     if (this.pendingPackets >= 8) {
+      record('backpressure');
       ++this.generation; this.enabled = false; this.baseline = null; this.lastNow = null; this.status = 'backpressure';
       return this.enqueue(async () => {
         this.options.authority.release(this.options.scope.grid, this.owner);
@@ -188,13 +190,18 @@ export class DualCtGridEnergySession {
     }
     this.pendingPackets += 1;
     const { generation } = this;
+    const current = () => {
+      const active = this.current(generation);
+      if (!active && generation === this.generation) record(this.status);
+      return active;
+    };
     // Own bounded bytes while queued; caller mutation must not change a later decoded measurement.
     const owned = Buffer.isBuffer(payload) && payload.length <= 65536 ? Buffer.from(payload) : Buffer.alloc(0);
     return this.enqueue(async () => {
-      if (!this.current(generation) || !this.checkpoint) return;
+      if (!current() || !this.checkpoint) return;
       const now = this.now();
       if (!Number.isFinite(now) || now <= 0 || (this.lastNow !== null && now < this.lastNow)) {
-        this.baseline = null; this.lastNow = Number.isFinite(now) && now > 0 ? now : null; this.status = 'clock_reset'; return;
+        this.baseline = null; this.lastNow = Number.isFinite(now) && now > 0 ? now : null; this.status = 'clock_reset'; record(this.status); return;
       }
       this.lastNow = now;
       const result = adaptDualCtGridEnergyPacket(this.options.scope, this.options.identity, this.contract,
@@ -203,53 +210,55 @@ export class DualCtGridEnergySession {
       // Non-power traffic is neither a new power measurement nor evidence that
       // an otherwise valid power interval was lost. Do not renew its timestamp.
       if (!sample && result.status === 'unrelated_grid_packet') {
-        this.evidence('unrelated_grid_packet'); return;
+        record('unrelated_grid_packet'); return;
       }
       if (!sample || sample.binding !== this.binding || sample.session !== this.options.scope.session) {
-        this.evidence(result.status); this.baseline = null; this.status = result.status; return;
+        record(result.status); this.baseline = null; this.status = result.status; return;
       }
       const previous = this.baseline;
       if (!previous) {
-        this.evidence('anchor'); this.baseline = sample; this.status = 'anchored'; return;
+        record('anchor'); this.baseline = sample; this.status = 'anchored'; return;
       }
       const at = sample.timing === 'device_measurement' ? sample.measuredAt! : sample.receivedAt;
       const before = previous.timing === 'device_measurement' ? previous.measuredAt! : previous.receivedAt;
       if (at <= before || sample.receivedAt <= previous.receivedAt) {
-        this.evidence('out_of_order'); this.status = 'out_of_order'; return;
+        record('out_of_order'); this.status = 'out_of_order'; return;
       }
       const interval = dualCtPowerIntervalWh(previous.signedImportW, sample.signedImportW, at - before);
       if (!interval || !dualCtFreshAge(sample.receivedAt - previous.receivedAt) || at - before >= (this.contract!.freshnessMs ?? 90000)) {
-        this.evidence('gap', at - before); this.baseline = sample; this.status = 'gap_anchor'; return;
+        record('gap', at - before); this.baseline = sample; this.status = 'gap_anchor'; return;
       }
       const next = makeDualCtEnergyCheckpoint(this.binding!, this.contract!.timing, this.checkpoint.revision + 1,
         this.checkpoint.importedWh + interval.importedWh, this.checkpoint.exportedWh + interval.exportedWh);
       if (!next) {
-        this.baseline = null; this.status = 'accounting_overflow'; return;
+        this.baseline = null; this.status = 'accounting_overflow'; record(this.status); return;
       }
       if (next.importedWh === this.checkpoint.importedWh && next.exportedWh === this.checkpoint.exportedWh) {
-        this.evidence('eligible_interval', at - before); this.baseline = sample; this.status = 'unchanged'; return;
+        record('eligible_interval', at - before); this.baseline = sample; this.status = 'unchanged'; return;
       }
       try {
         // The process-local authority enforces one writer. Readback also catches external/stale storage writes.
         const beforeWrite = readDualCtEnergyCheckpoint(await this.options.storage.read(), this.binding!, this.contract!.timing);
         if (generation !== this.generation) return;
         if (!beforeWrite || beforeWrite.checksum !== this.checkpoint.checksum) {
-          this.deactivate('checkpoint_conflict'); return;
+          record('checkpoint_conflict'); this.deactivate('checkpoint_conflict'); return;
         }
-        if (!this.current(generation)) return;
+        if (!current()) return;
         await this.options.storage.write({ ...next });
         if (generation !== this.generation) return;
         const readback = readDualCtEnergyCheckpoint(await this.options.storage.read(), this.binding!, this.contract!.timing);
         if (generation !== this.generation) return;
         if (!readback || readback.checksum !== next.checksum) {
-          this.deactivate('checkpoint_readback_failed'); return;
+          record('checkpoint_readback_failed'); this.deactivate('checkpoint_readback_failed'); return;
         }
         // Persist first. Late/failed/revoked operations never publish speculative totals or power.
         this.checkpoint = next;
-        if (!this.current(generation)) return;
-        this.evidence('eligible_interval', at - before); this.baseline = sample; this.status = 'advanced';
+        if (!current()) return;
+        record('eligible_interval', at - before); this.baseline = sample; this.status = 'advanced';
       } catch {
-        if (generation === this.generation) this.deactivate('storage_failed');
+        if (generation === this.generation) {
+          record('storage_failed'); this.deactivate('storage_failed');
+        }
       }
     }).finally(() => {
       this.pendingPackets -= 1;
@@ -262,6 +271,11 @@ export class DualCtGridEnergySession {
     return this.enqueue(async () => {
       this.options.authority.release(this.options.scope.grid, this.owner);
     });
+  }
+
+  acceptsRelayedPowerFrom(meter: string | undefined): boolean {
+    return this.enabled && this.contract?.singlePhaseOnly === true && this.contract.importSign === 'positive'
+      && meter === this.options.scope.device;
   }
 
   /** A proposed capability projection, NEVER applied to a Homey device by this module. */

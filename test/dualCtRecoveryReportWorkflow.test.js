@@ -22,13 +22,19 @@ test('desktop/mobile Dual CT summary copies single-phase recovery and owned scan
             cb(null, { schemaVersion: 20, appVersion: '1.11.23', homeyVersion: '12.10.0',
               dualCtPreviews: [], dualCtCommunityTrials: [], unrelated: 'PRIVATE_NOT_FOR_SUMMARY',
               dualCtOwnedInventory: { status: 'read_failed', stage: 'settings', driver: 'smartmeter', complete: false, readOnly: true },
-              dualCtEnergyRecovery: [{ mode: 'single_phase', startupStage: 'source', active: false, retryScheduled: true,
+              dualCtEnergyRecovery: [{ mode: 'single_phase', linkedPowerStatus: 'tag_protection_unconfirmed', startupStage: 'source', active: false, retryScheduled: true,
+                feed: { lastPacketAgeSec: 1, lastAcceptedCt1AgeSec: 96, lastRejectionAgeSec: 1,
+                  lastRejectionReason: 'unrelated_grid_packet' },
                 context: { stage: 'inventory', reason: 'owned_inventory_read_failed', inventoryStage: 'settings', driver: 'smartmeter' } }] });
           } });
       }, require('../locales/en.json'));
       await page.locator('#dualCtSupportSummary').click();
       const report = JSON.parse(await page.locator('#supportSnapshotResult').textContent());
+      assert.match(await page.locator('#meterStatus').textContent(), /until Homey confirms the Flow tag/);
+      assert.equal(report.dualCtEnergyRecovery[0].linkedPowerStatus, 'tag_protection_unconfirmed');
       assert.equal(report.dualCtEnergyRecovery[0].mode, 'single_phase');
+      assert.equal(report.dualCtEnergyRecovery[0].feed.lastAcceptedCt1AgeSec, 96);
+      assert.equal(report.dualCtEnergyRecovery[0].feed.lastRejectionReason, 'unrelated_grid_packet');
       assert.equal(report.dualCtOwnedInventory.stage, 'settings');
       assert.equal(report.scope, 'dual_ct_support_summary');
       assert.doesNotMatch(JSON.stringify(report), /PRIVATE/);

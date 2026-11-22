@@ -16,8 +16,8 @@ const payload = watts => msg(1, Buffer.concat([msg(1, Buffer.concat([[962, watts
   [991, 900000], [992, 900000], [993, 900000]].map(([f, n]) => scalar(f, n)))), int(6, 0), int(8, 254), int(9, 21)]));
 const topic = `/app/device/property/${scope.device}`;
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
-function harness(defaultGate = false, freshnessMs) {
-  const selectedContract = freshnessMs ? { ...contract, freshnessMs } : contract;
+function harness(defaultGate = false, freshnessMs, readLinked, baseContract = contract) {
+  const selectedContract = freshnessMs ? { ...baseContract, freshnessMs } : baseContract;
   let now = 1000; let consent = true; let enabled = true; let saved = null; let storeWrites = 0;
   const events = []; const caps = new Map(); let available = false;
   const session = new DualCtGridEnergySession({ scope, identity, readIdentity: () => identity,
@@ -30,7 +30,11 @@ function harness(defaultGate = false, freshnessMs) {
     setEnergy: async config => { events.push(['energy', config]); },
     setUnavailable: async status => { available = false; events.push(['unavailable', status]); },
     setAvailable: async () => { available = true; events.push(['available']); } };
-  const adapter = defaultGate ? new DualCtGridEnergyDeviceAdapter(session, port, () => false) : new DualCtGridEnergyDeviceAdapter(session, port, () => enabled);
+  if (readLinked) {
+    port.hasCapability = id => id === 'dual_ct_linked_grid_power';
+    port.getCapabilityValue = id => caps.get(id) ?? null;
+  }
+  const adapter = defaultGate ? new DualCtGridEnergyDeviceAdapter(session, port, () => false) : new DualCtGridEnergyDeviceAdapter(session, port, () => enabled, undefined, readLinked);
   return { adapter, session, port, events, caps, available: () => available, now: x => { now = x; }, revoke: () => { consent = false; },
     disable: () => { enabled = false; }, saved: () => saved, storeWrites: () => storeWrites,
     async sample(at, watts) { now = at; await adapter.observe(payload(watts), topic, at); } };
@@ -385,4 +389,105 @@ test('a failed urgent power clear is retried during stalled SDK IO without touch
   const first=h.adapter.refresh();await new Promise(setImmediate);assert.equal(h.available(),false);
   const retry=h.adapter.refresh();await new Promise(setImmediate);assert.equal(h.caps.get('measure_power'),null);assert.deepEqual(h.saved(),saved);
   release.resolve();await Promise.all([pending,first,retry]);assert.equal(h.available(),false);assert.deepEqual(h.saved(),saved);await h.adapter.close();
+});
+
+test('direct loss, linked export and zero, stale expiry and direct return preserve counters and direct-only Flow inputs', async t => {
+  const id = 'dual_ct_linked_grid_power';
+  let sample = null;
+  const h = harness(false, 5000, now => sample && now < sample.until ? sample : null);
+  t.after(() => h.adapter.close());
+  await h.adapter.start();
+  await h.sample(1000, 3600); await h.sample(2000, 3600);
+  const checkpoint = { ...h.saved() }; const writes = h.storeWrites();
+  sample = { host: 'ES21HOUSE0001', watts: -400, receivedAt: 6999, until: 11999 };
+  h.now(6999); await h.adapter.refresh(); assert.equal(h.adapter.currentPower(), 3600);
+  h.now(7000); await h.adapter.refresh();
+  assert.equal(h.available(), true); assert.equal(h.caps.get(id), -400); assert.equal(h.caps.get('measure_power'), null);
+  assert.throws(() => h.adapter.currentPower()); assert.equal(h.adapter.currentPowerObservation(7000), null);
+  h.now(11999); await h.adapter.refresh(); assert.equal(h.available(), false); assert.equal(h.caps.get(id), null);
+  sample = { host: 'ES21HOUSE0001', watts: 0, receivedAt: 12000, until: 17000 };
+  h.now(12000); await h.adapter.refresh(); assert.equal(h.caps.get(id), 0); assert.equal(h.available(), true);
+  assert.deepEqual(h.saved(), checkpoint); assert.equal(h.storeWrites(), writes);
+  await h.sample(13000, 0);
+  assert.equal(h.caps.get(id), null); assert.equal(h.adapter.currentPower(), 0);
+  assert.equal(h.saved().importedWh, checkpoint.importedWh); assert.equal(h.saved().exportedWh, checkpoint.exportedWh);
+  await h.sample(14000, 3600); await h.sample(15000, 3600); assert(h.saved().importedWh > checkpoint.importedWh);
+});
+
+test('a delayed linked watt write is cleared if its binding is withdrawn in flight', async t => {
+  const id = 'dual_ct_linked_grid_power';
+  let sample = { host: 'ES21HOUSE0001', watts: 641, receivedAt: 1000, until: 6000 };
+  const h = harness(false, 5000, () => sample);
+  const entered = deferred(); const release = deferred();
+  const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (key, value) => {
+    if (key === id && value === 641) { entered.resolve(); await release.promise; }
+    return write(key, value);
+  };
+  t.after(() => h.adapter.close());
+  const start = h.adapter.start();
+  try {
+    await entered.promise; sample = null;
+  } finally { release.resolve(); await start; }
+  await h.adapter.refresh();
+  assert.equal(h.available(), false); assert.equal(h.caps.get(id), null);
+  assert.equal(h.caps.get('measure_power'), null); assert.equal(h.adapter.currentPowerObservation(1000), null);
+});
+
+
+test('failed optional display write has its own status and can recover on the next fresh observation', async t => {
+  const id = 'dual_ct_linked_grid_power';
+  const h = harness(false, 5000, now => ({ host: 'ES21HOUSE0001', watts: 125, receivedAt: now, until: now + 5000 }));
+  const write = h.port.setCapabilityValue;
+  let failing = true;
+  h.port.setCapabilityValue = async (key, value) => {
+    if (key === id && value !== null && failing) throw Error('synthetic display error');
+    return write(key, value);
+  };
+  t.after(() => h.adapter.close());
+  await h.adapter.start();
+  assert.equal(h.adapter.diagnostics().status, 'linked_display_write_failed');
+  assert.equal(h.available(), false);
+  const saved = structuredClone(h.saved());
+  failing = false;
+  await h.adapter.refresh();
+  assert.equal(h.caps.get(id), 125);
+  assert.equal(h.caps.get('measure_power'), null);
+  assert.deepEqual(h.saved(), saved);
+});
+
+
+test('a delayed standard watt write loses authority when the same ES21 stops identifying the meter', async t => {
+  let sample = { host: 'ES21HOUSE0001', watts: 300, receivedAt: 1000, until: 6000, phaseOne: { meter: scope.device, power: 300 } };
+  const h = harness(false, 5000, () => sample, { ...contract, singlePhaseOnly: true });
+  const entered = deferred(); const release = deferred();
+  const write = h.port.setCapabilityValue;
+  h.port.setCapabilityValue = async (id, value) => {
+    if (id === 'measure_power' && value === 300) { entered.resolve(); await release.promise; }
+    return write(id, value);
+  };
+  t.after(() => h.adapter.close());
+  const start = h.adapter.start();
+  try {
+    await entered.promise;
+    sample = { ...sample, phaseOne: undefined };
+  } finally { release.resolve(); await start; }
+  await h.adapter.refresh();
+  assert.equal(h.caps.get('measure_power'), null);
+  assert.equal(h.caps.get('dual_ct_linked_grid_power'), 300);
+  assert.equal(h.adapter.currentPowerObservation(1000), null);
+});
+
+test('the standard tile requires the paired meter and a single-phase positive-import contract', async t => {
+  for (const [meter, profile] of [
+    ['OTHER_METER', { ...contract, singlePhaseOnly: true }],
+    [scope.device, contract],
+    [scope.device, { ...contract, singlePhaseOnly: true, importSign: 'negative' }],
+  ]) {
+    const sample = { host: 'ES21HOUSE0001', watts: 300, receivedAt: 1000, until: 6000, phaseOne: { meter, power: 300 } };
+    const h = harness(false, 5000, () => sample, profile);
+    t.after(() => h.adapter.close());
+    await h.adapter.start();
+    assert.equal(h.caps.get('measure_power'), null);
+  }
 });

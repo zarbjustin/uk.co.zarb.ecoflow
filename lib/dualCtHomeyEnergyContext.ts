@@ -199,6 +199,12 @@ interface Options {
 }
 
 export class DualCtHomeyEnergyContext {
+  private accountDevices: AppDevice[] = [];
+
+  linkedDeviceInventory(): AppDevice[] {
+    return this.snapshot() ? this.accountDevices : [];
+  }
+
   private lastFailure: ReturnType<typeof dualCtContextFailureSnapshot> = null;
 
   diagnostics() {
@@ -233,7 +239,8 @@ export class DualCtHomeyEnergyContext {
     const client = this.options.client();
     if (!client) throw new Error('account_required');
     const account = dualCtAccountBinding(await client.getSession());
-    const owned = dualCtPreviewDevices(await client.getDeviceList()).find((d) => d.sn === this.options.sn);
+    const devices = await client.getDeviceList();
+    const owned = dualCtPreviewDevices(devices).find((d) => d.sn === this.options.sn);
     if (!owned) throw new Error('owned_source_required');
     // Read current-package metadata, never a prospective OTA version. Its receipt
     // age qualifies this API lookup only; it is not a hardware measurement time.
@@ -252,6 +259,7 @@ export class DualCtHomeyEnergyContext {
       identity: { productType: 421, firmware },
       identityObservedAt: this.now(),
     };
+    this.accountDevices = devices;
     this.source = source;
     if (this.options.communityThreePhase === true) this.trial.refresh(source);
     return { ...source, identity: { ...source.identity } };

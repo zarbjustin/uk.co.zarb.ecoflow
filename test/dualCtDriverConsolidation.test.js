@@ -31,7 +31,13 @@ test('cleanup preserves the installed driver capability, repair and Energy contr
     const prior = baseline[id];
     const current = read(id);
     assert.deepEqual(current.capabilities, prior.capabilities);
-    assert.equal(require('node:crypto').createHash('sha256').update(JSON.stringify(current.capabilitiesOptions)).digest('hex'), prior.capabilitiesOptionsSha256);
+    const options = { ...current.capabilitiesOptions };
+    if (id === 'smartmeter_dual_ct_energy') {
+      // The optional display tile adds one options entry. All published options retain their original fingerprint.
+      assert.deepEqual(options.dual_ct_linked_grid_power, { preventTag: true, preventInsights: true });
+      delete options.dual_ct_linked_grid_power;
+    }
+    assert.equal(require('node:crypto').createHash('sha256').update(JSON.stringify(options)).digest('hex'), prior.capabilitiesOptionsSha256);
     assert.deepEqual(current.energy, prior.energy);
     assert.deepEqual(current.repair, prior.repair);
     for (const id of prior.settingIds) assert.ok(current.settings.some(row => row.id === id));

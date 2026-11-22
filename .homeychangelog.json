@@ -1,4 +1,9 @@
 {
+  "1.11.31": {
+    "en": "Single-phase Dual CT meters can show live grid power in Homey Energy during a direct CT1 gap when a linked STREAM 5000 reports fresh readings for the same meter. Import and export kWh counters still use direct CT1 readings.",
+    "de": "Bei einem einphasigen Dual CT kann Homey Energy die aktuelle Netzleistung auch bei einer Lücke im direkten CT1-Signal anzeigen, wenn ein verknüpfter STREAM 5000 frische Werte desselben Zählers meldet. Die kWh-Zähler für Bezug und Einspeisung nutzen weiterhin direkte CT1-Messwerte.",
+    "nl": "Bij een eenfasige Dual CT kan Homey Energy het actuele netvermogen blijven tonen als directe CT1-metingen uitblijven en een gekoppelde STREAM 5000 verse metingen van dezelfde meter doorgeeft. De kWh-tellers voor afname en teruglevering gebruiken nog steeds directe CT1-metingen."
+  },
   "1.11.30": {
     "en": "Improves original battery and meter recovery, protects energy totals across missing readings and relinks, and fixes simultaneous Dual CT Flow alerts. Includes clearer pairing and linked ES21 solar monitoring.",
     "de": "Verbessert die Wiederherstellung von Batterie- und Zählerdaten, schützt Energiezähler bei Datenlücken und korrigiert gleichzeitige Dual-CT-Flow-Meldungen. Mit klarerer Kopplung und Solarüberwachung für gekoppelte ES21.",
