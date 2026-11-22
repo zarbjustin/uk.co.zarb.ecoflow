@@ -214,7 +214,9 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (projection.status === 'recent') return 'direct_ct1_active';
     if (projection.status === 'linked_display_write_failed') return 'display_write_failed';
     if (projection.status === 'linked_grid_display' && this.linkedReadStatus === 'eligible_awaiting_display') {
-      return this.adapter?.currentLinkedPhaseOne(this.getData().sn) ? 'phase_relay_available' : 'displaying_linked_watts';
+      if (this.adapter?.currentLinkedPhaseOne(this.getData().sn)) return 'phase_relay_available';
+      // The fresh read above can replace eligibility with an expiry or link failure.
+      return this.linkedReadStatus === 'eligible_awaiting_display' ? 'displaying_linked_watts' : this.linkedReadStatus;
     }
     return this.linkedReadStatus;
   }

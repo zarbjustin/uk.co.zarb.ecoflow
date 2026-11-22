@@ -45,3 +45,28 @@ test('desktop/mobile Dual CT summary copies single-phase recovery and owned scan
     }
   } finally { await browser.close(); }
 });
+
+for(const [width,height] of [[390,844],[1280,900]]) {
+ test('support can resume a pending Dual CT summary after pagehide/pageshow at width '+width,async()=>{
+   const browser=await chromium.launch();
+   try {
+    const page=await browser.newPage({viewport:{width,height}});
+    await page.goto(pathToFileURL(path.join(__dirname,'..','settings','index.html')).href);
+    await page.locator('#supportTitle').click();
+    await page.evaluate(strings=>{
+      window.calls=[];window.onHomeyReady({ready(){},get(k,cb){cb(null,null);},set(){throw Error('unexpected write')},
+        __(key){return key.split('.').reduce((o,k)=>o?.[k],strings)||key;},api(method,url,body,cb){window.calls.push({method,url});window.pendingReport=cb;}});
+    },require('../locales/en.json'));
+    await page.locator('#dualCtSupportSummary').click();
+    const result=await page.evaluate(()=>{
+      dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+      dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+      window.pendingReport(null,{appVersion:'STALE_CALLBACK'});
+      return {summary:document.querySelector('#dualCtSupportSummary').disabled,comparison:document.querySelector('#dualCtComparisonStep').disabled,
+        general:document.querySelector('#supportSnapshot').disabled,output:document.querySelector('#supportSnapshotResult').textContent,calls:window.calls};
+    });
+    assert.equal(result.output,'');assert.deepEqual(result.calls,[{method:'GET',url:'/support-snapshot'}]);assert.equal(result.general,false);
+    assert.equal(result.summary,false);assert.equal(result.comparison,false);
+   } finally {await browser.close();}
+ });
+}
