@@ -1,5 +1,38 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
+## 22 November 2026 - Store Test 1.11.30 candidate
+
+The combined candidate includes the member-only solar relay and pairing guidance, original STREAM startup and energy recovery, original meter host verification and projection retry, and isolated Dual CT Flow thresholds. Five new driver/Flow regression cases failed before the fixes. The candidate passed 1,853 local tests. Full release also requires model/role hardware evidence and a separately qualified three-phase profile. The public feature summary and open hardware checks are in [the Test release notes](TEST_1_11_30.md).
+
+## 22 November 2026 - Sprint 2 pairing guidance ready for review
+
+The six original STREAM and STREAM 5000 pairing paths describe Home Battery,
+Solar and Unit Monitor in English, German and Dutch. Returning original STREAM
+users see their role before choosing devices and skip the credential fields.
+The 5000 Home Battery still requires the existing Energy opt-in and installation
+confirmation. The generated manifest differs from diagnostic HEAD 156768c only
+in the two localized Unit Monitor display names. Device data, capabilities, Energy
+definitions and Flow cards retain their contracts. See [the pairing guide](../README.md#which-device-should-i-add).
+
+The isolated Sprint 1 + Sprint 2 source passed all 1,847 tests and Homey CLI
+4.5.3 verified validation. Browser tests cover all six roles in three languages,
+saved credentials, keyboard navigation and the Energy consent path. Lint
+reported four existing timer warnings. Release structure checks passed.
+Isolated runtime fingerprint: `7cf85daac8973ac1d5a956d5dbda369b9ca676740aa6d15a20a27c4a7c291fa5`. No commit, deployment,
+pairing or store publication. Hardware validation remains open.
+
+## 22 November 2026 - member-only STREAM 5000 Solar relay correction
+
+Local source based on diagnostic commit 156768c adds automatic relay subscription
+for a paired ES21 Solar member. Ownership, connection freshness and physical-unit
+attribution protect the generated-energy counter through reconnect and relinking.
+Five new regression cases passed. The isolated solar change passed all 1,846
+tests, Homey verified validation, lint (four existing warnings) and release
+structure checks. Its isolated runtime fingerprint is
+`dc2fb2bf413c1fc0f0ff464651c099792501534f7f16cf1a5fb6701c01a28ad5`.
+The existing 1.11.29 archive predates the fix. Daylight and other solar hardware
+gates remain open. [Source behaviour and validation](STREAM_5000_SOLAR_ENERGY.md).
+
 ## 21 November 2026 - 1.11.29 STREAM 5000 Solar daylight candidate
 
 One Solar device per panel-equipped ES21 contributes direct PV watts and

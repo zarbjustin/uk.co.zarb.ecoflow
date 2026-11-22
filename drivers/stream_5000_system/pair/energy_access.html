@@ -4,20 +4,17 @@
   .energy-access button { margin-top: 16px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1aa3e8; color: white; font-size: 15px; cursor: pointer; }
 </style>
 <div class="energy-access">
-  <h2>STREAM 5000 Home Battery</h2>
-  <div class="warning"><strong>Installation Energy pairing opt-in</strong>
-    <p>Pair only one Home Battery for an already combined EcoFlow installation.
-      Check for overlap with existing Home Batteries to avoid double counting.</p>
+  <h2 data-i18n="pair.stream_5000_system.title">STREAM 5000 Home Battery</h2>
+  <p data-i18n="pair.stream_5000_system.intro">Add the linked battery system to Homey Energy to track charging and discharging. Choose one Home Battery per independent installation, including a system with a single unit.</p>
+  <p data-i18n="pair.stream_5000_system.other">For panel generation, choose STREAM 5000 Solar. For individual battery readings, choose STREAM 5000 Unit Monitor.</p>
+  <div class="warning"><strong data-i18n="pair.access_title">Home Battery pairing access</strong>
     <p data-i18n="stream_5000_pairing.catalogue">Known overlapping representatives are omitted. Other candidates have unverified installation scope.
       Add one Home Battery per distinct installation. Keep existing history and Flows; physical monitors can coexist.</p>
-    <p>This connection supplies battery readings to Homey Energy; installation-level accounting is still being validated.
-      Charged/discharged totals are calculated from observed power, not EcoFlow historical totals.
-      Manage battery settings in EcoFlow. No battery control commands are sent.</p>
+    <p data-i18n="pair.accounting">Homey estimates charged and discharged kWh from observed battery power. Manage battery settings in EcoFlow. Pairing this device sends no battery commands.</p>
   </div>
-  <p id="energy-status" role="status">Checking Energy pairing access&hellip;</p>
+  <p id="energy-status" role="status">Checking Home Battery pairing access…</p>
   <button id="energy-continue" type="button" style="display:none;" data-i18n="stream_5000_pairing.confirm">Each selected Home Battery represents a separate installation; continue</button>
-  <button id="energy-recheck" type="button" style="display:none;">Check again</button>
-  <p>Unit monitoring does not require this opt-in. Existing paired devices keep working if access is disabled.</p>
+  <button id="energy-recheck" type="button" style="display:none;" data-i18n="pair.recheck">Check again</button>
 </div>
 <script type="text/javascript">
   var energyStatus = document.getElementById('energy-status');
@@ -25,12 +22,12 @@
   var energyRecheck = document.getElementById('energy-recheck');
   function checkEnergyAccess() {
     energyNext.style.display = 'none'; energyRecheck.style.display = 'none';
-    energyStatus.textContent = 'Checking Energy pairing access\u2026';
+    energyStatus.textContent = Homey.__('pair.checking');
     Homey.emit('check_stream_5000_aggregate_access', null, function (err, enabled) {
       if (!err && enabled === true) {
-        energyStatus.textContent = 'Home Battery Energy pairing is enabled.'; energyNext.style.display = 'block'; return;
+        energyStatus.textContent = Homey.__('pair.enabled'); energyNext.style.display = 'block'; return;
       }
-      energyStatus.textContent = 'In the Homey EcoFlow integration settings, enable the separate Home Battery (5000) Energy pairing opt-in, then check again. Unit monitoring needs no opt-in.';
+      energyStatus.textContent = Homey.__('pair.disabled');
       energyRecheck.style.display = 'block';
     });
   }

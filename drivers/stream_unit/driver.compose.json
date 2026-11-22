@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM Unit",
-    "de": "STREAM-Einheit",
-    "nl": "STREAM-unit"
+    "en": "STREAM Unit Monitor",
+    "de": "STREAM-Gerätemonitor",
+    "nl": "STREAM-apparaatmonitor"
   },
   "class": "battery",
   "platforms": [

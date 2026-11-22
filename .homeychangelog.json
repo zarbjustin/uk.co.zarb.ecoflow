@@ -1,4 +1,9 @@
 {
+  "1.11.30": {
+    "en": "Improves original battery and meter recovery, protects energy totals across missing readings and relinks, and fixes simultaneous Dual CT Flow alerts. Includes clearer pairing and linked ES21 solar monitoring.",
+    "de": "Verbessert die Wiederherstellung von Batterie- und Zählerdaten, schützt Energiezähler bei Datenlücken und korrigiert gleichzeitige Dual-CT-Flow-Meldungen. Mit klarerer Kopplung und Solarüberwachung für gekoppelte ES21.",
+    "nl": "Verbetert het herstel van batterij- en metergegevens, beschermt energietellers bij ontbrekende metingen en herstelt gelijktijdige Dual CT-meldingen. Met duidelijkere koppeling en zonnemetingen voor gekoppelde ES21-units."
+  },
   "1.11.29": {
     "en": "Adds STREAM 5000 Solar for directly connected ES21 panels, with live watts and estimated generated kWh per physical unit in Homey Energy.",
     "de": "STREAM 5000 Solar zeigt in Homey Energy die aktuelle Leistung und die geschätzte erzeugte Energie für direkt angeschlossene Solarmodule pro ES21 an.",

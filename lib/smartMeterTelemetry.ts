@@ -71,6 +71,10 @@ export class SmartMeterTelemetry {
       .map(([key]) => key);
   }
 
+  invalidateRestGrid(): void {
+    if (this.grid?.source === 'rest') this.grid = null;
+  }
+
   freshGrid(now = Date.now()): number | null {
     return this.grid && this.grid.at <= now && now - this.grid.at <= METER_FRESH_MS ? this.grid.value : null;
   }

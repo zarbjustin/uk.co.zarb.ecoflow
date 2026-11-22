@@ -1,8 +1,8 @@
 {
   "name": {
-    "en": "STREAM 5000 Series Unit",
-    "de": "STREAM-5000-Serieneinheit",
-    "nl": "STREAM 5000-serie-unit"
+    "en": "STREAM 5000 Unit Monitor",
+    "de": "STREAM 5000 Gerätemonitor",
+    "nl": "STREAM 5000 Apparaatmonitor"
   },
   "class": "battery",
   "platforms": [

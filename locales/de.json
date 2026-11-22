@@ -1,6 +1,5 @@
 {
   "solar5000": {
-    "setup": "Füge für jeden STREAM 5000 mit direkt angeschlossenen Solarmodulen ein Solargerät hinzu. Homey Energy summiert die Erzeugung. Bereits durch ein anderes Solargerät erfasste Quellen überspringen.",
     "continue": "Weiter",
     "selection": "Auswahl abgelaufen. Öffne die Geräteliste erneut.",
     "waiting": "Warten auf eine aktuelle Messung der direkten Solarleistung.",
@@ -249,7 +248,7 @@
       "energyAvailability": "Dual-CT-Überwachung ist verfügbar; der CT1-Beitrag zu Homey Energy für das gesamte Grundstück wird noch validiert. STREAM-5000-Batterieüberwachung ist verfügbar; die Anlagenbilanzierung in Homey Energy wird noch validiert. Batterieeinstellungen werden in EcoFlow verwaltet.",
       "aggregatePairingLabel": "Energy-Kopplung für Home Battery (5000) zulassen",
       "aggregatePairingHelp": "Während der Validierung der Anlagen-Energiebilanz standardmäßig deaktiviert. Erlaubt nur das Hinzufügen einer neuen Hausbatterie auf Anlagenebene. Das Deaktivieren entfernt keine vorhandenen Geräte und beendet deren Bilanzierung nicht. Prüfen Sie vor dem Hinzufügen mögliche Überschneidungen.",
-      "stream5000PairingHelp": "Wählen Sie unter Gerät hinzufügen STREAM 5000 Series Unit zur Überwachung oder STREAM 5000 Home Battery für eine separat geprüfte Anlage. Behalten Sie Geräte anderer Anlagen; das Löschen kann Flows und Verlauf beeinträchtigen.",
+      "stream5000PairingHelp": "Wähle STREAM 5000 Hausbatterie einmal pro eigenständiger Anlage, STREAM 5000 Solar für jeden ES21 mit direkt angeschlossenen Modulen oder STREAM 5000 Gerätemonitor für einzelne Messwerte.",
       "supportTitle": "Support und erweiterte Diagnose",
       "supportIntro": "Öffnen Sie bei Problemen einen lokalen Supportbericht oder verwenden Sie ein optionales Diagnosewerkzeug. Berichte werden nie automatisch versendet. Prüfen Sie exportierte Informationen vor dem Teilen.",
       "connectionDetailsTitle": "Verbindungsdetails und unterstützte Geräte",
@@ -565,7 +564,7 @@
     }
   },
   "errors": {
-    "es22_wrong_driver": "Dieses Gerät der STREAM-5000-Serie wurde an der falschen Stelle hinzugefügt. Verwende die STREAM-5000-Serieneinheit zur Überwachung über die App-Verbindung. Die Energy-Kopplung der STREAM-Hausbatterie (5000) muss in den Homey-Integrationseinstellungen separat freigegeben werden. Prüfe bestehende Flows und den Verlauf vor einem Gerätewechsel.",
+    "es22_wrong_driver": "Dieses Gerät der STREAM-5000-Serie wurde an der falschen Stelle hinzugefügt. Verwende den STREAM 5000 Gerätemonitor zur Überwachung über die App-Verbindung. Die Energy-Kopplung der STREAM-Hausbatterie (5000) muss in den Homey-Integrationseinstellungen separat freigegeben werden. Prüfe bestehende Flows und den Verlauf vor einem Gerätewechsel.",
     "developer_api_unsupported_device": "Dieses EcoFlow-Gerät wird von der Developer API nicht unterstützt. Lösche es und füge es erneut mit dem passenden EcoFlow-Gerätetyp hinzu."
   },
   "device": {
@@ -584,14 +583,46 @@
     }
   },
   "pair": {
+    "account": "Melde dich mit E-Mail-Adresse und Passwort aus der EcoFlow-App an. Homey speichert beides in den Einstellungen dieser Integration und sendet es zur Anmeldung an EcoFlow.",
+    "access_title": "Freigabe für die Hausbatterie",
+    "accounting": "Homey schätzt die geladenen und entladenen kWh anhand der gemessenen Batterieleistung. Die Batterieeinstellungen verwaltest du in EcoFlow. Beim Koppeln werden keine Batteriebefehle gesendet.",
+    "checking": "Kopplungsfreigabe wird geprüft…",
+    "enabled": "Die Kopplung der Hausbatterie ist freigegeben.",
+    "disabled": "Aktiviere in den Einstellungen der EcoFlow-Integration die Energy-Kopplung der Hausbatterie (5000) und prüfe die Freigabe erneut. Für den Gerätemonitor brauchst du diese Freigabe nicht.",
+    "recheck": "Erneut prüfen",
     "stream_home_battery": {
-      "title": "STREAM-Hausbatterie koppeln",
-      "intro": "Sie steht für eine vollständige STREAM-Anlage und liefert Gesamtdaten für Homey Energy und Widgets. Kopple eine pro Hauptsystem-Seriennummer."
+      "title": "STREAM-Hausbatterie",
+      "intro": "Füge das Batteriesystem zu Homey Energy hinzu, um Ladung und Entladung zu verfolgen. Wähle eine Hausbatterie pro ursprünglicher STREAM-Anlage, auch wenn mehrere Batterien gekoppelt sind.",
+      "other": "Für die Solarerzeugung wähle STREAM Solar. Für einzelne Batteriemesswerte wähle STREAM-Gerätemonitor."
+    },
+    "stream_solar": {
+      "title": "STREAM Solar",
+      "intro": "Erfasse die Solarerzeugung in Homey Energy. Wähle ein Solargerät pro ursprünglicher STREAM-Anlage mit direkt angeschlossenen Modulen. Überspringe Module, die ein anderes Solargerät bereits erfasst.",
+      "other": "Für den Batteriespeicher wähle STREAM-Hausbatterie. Für einzelne Batteriemesswerte wähle STREAM-Gerätemonitor."
     },
     "stream_unit": {
-      "title": "STREAM-Einheit koppeln",
-      "intro": "Dies fügt einen einzelnen Wechselrichter oder Akku als physisches Gerät hinzu. Er liefert keine Gesamtwerte der Anlage und wird weder von Homey Energy noch von STREAM-Widgets verwendet. Koppeln Sie STREAM Home Battery für die kombinierten Energiedaten der Anlage."
-    }
+      "title": "STREAM-Gerätemonitor",
+      "intro": "Wähle ein einzelnes Gerät der ursprünglichen STREAM-Serie, etwa Ultra X oder AC Pro, um seine Messwerte zu sehen. Der Monitor ist optional und fügt Homey Energy keine Batterie hinzu.",
+      "other": "Für den Batteriespeicher in Homey Energy wähle STREAM-Hausbatterie. Für die Solarerzeugung wähle STREAM Solar."
+    },
+    "stream_5000_system": {
+      "title": "STREAM 5000 Hausbatterie",
+      "intro": "Erfasse Ladung und Entladung des Batteriesystems in Homey Energy. Wähle eine Hausbatterie pro eigenständiger Anlage, auch bei nur einem Gerät.",
+      "other": "Für die Solarerzeugung wähle STREAM 5000 Solar. Für einzelne Batteriemesswerte wähle STREAM 5000 Gerätemonitor."
+    },
+    "stream_5000_solar": {
+      "title": "STREAM 5000 Solar",
+      "intro": "Für Solarleistung und geschätzte kWh in Homey Energy wähle jeden STREAM 5000 (ES21) mit Modulen an seinen PV-Eingängen. Hat nur das gekoppelte Nebengerät Module, wähle nur dieses. Überspringe Module, die Homey Energy bereits erfasst.",
+      "other": "Für den Batteriespeicher wähle STREAM 5000 Hausbatterie. Für einzelne Batteriemesswerte wähle STREAM 5000 Gerätemonitor."
+    },
+    "stream_5000_unit": {
+      "title": "STREAM 5000 Gerätemonitor",
+      "intro": "Wähle einen einzelnen STREAM 5000 (ES21) oder STREAM AC 5000 (ES22), um seine Messwerte zu sehen. Der Monitor ist optional und fügt Homey Energy keine Batterie hinzu.",
+      "other": "Für den Batteriespeicher in Homey Energy wähle STREAM 5000 Hausbatterie. Für die Solarerzeugung wähle STREAM 5000 Solar."
+    },
+    "choose": "Geräte auswählen",
+    "developer_keys": "Erstelle einen Access Key und einen Secret Key im EcoFlow-Entwicklerportal (developer.ecoflow.com → IoT Background). Homey verwendet diese Schlüssel für Geräte der ursprünglichen STREAM-Serie.",
+    "monitor_connection": "Melde dich mit deinem EcoFlow-App-Konto an. Die Batterieeinstellungen verwaltest du in EcoFlow."
   },
   "widgets": {
     "common": {

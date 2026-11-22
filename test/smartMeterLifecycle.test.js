@@ -43,7 +43,7 @@ class TestMeter extends Meter {
   async setUnavailable() { this.available = false; }
   log() {}
   error(...args) { throw new Error(args.join(' ')); }
-  async onReady() { await super.onReady(); this.client = { getQuotaAll: async () => ({ powGetSysGrid: 10 }) }; }
+  async onReady() { await super.onReady(); this.client = { getMainSn: async () => this.getReadSn(), getQuotaAll: async () => ({ powGetSysGrid: 10 }) }; }
 }
 
 test('meter preserves unrecoverable and unknown counter history while live power remains usable', async t => {
@@ -268,4 +268,68 @@ test('meter upgrade retains a projected counter above the last checkpoint, inclu
   await meter.onUninit();
   assert.equal(meter.store.importWh, 1000);
   assert.equal(meter.store.exportWh, 500);
+});
+
+test('linked meter rejects a relink during REST and reanchors when its stored host returns', async t => {
+  let now = 1000000;
+  t.mock.method(Date, 'now', () => now);
+  const meter = new TestMeter();
+  await meter.onInit();
+  meter.error = () => {};
+  let main = meter.getReadSn();
+  let relink = false;
+  let reads = 0;
+  meter.client = {
+    getMainSn: async () => main,
+    getQuotaAll: async () => { reads++; if (relink) main = 'BK61OTHER'; return { powGetSysGrid: 3600 }; },
+  };
+  now += 1000;
+  await meter.poll();
+  const initial = meter.importWh;
+  now += 1000;
+  relink = true;
+  await meter.poll();
+  assert.equal(meter.importWh, initial);
+  await meter.poll();
+  assert.equal(reads, 2);
+  assert.throws(() => meter.gridPowerAbove('import', 1), /unavailable/);
+  now += 5000;
+  main = meter.getReadSn();
+  relink = false;
+  await meter.poll();
+  assert.equal(meter.importWh, initial);
+  now += 1000;
+  await meter.poll();
+  assert.equal(meter.importWh, initial + 1);
+  main = 'BK61OTHER';
+  await meter.poll();
+  meter.emit({ powGetSysGrid: 0 });
+  await meter.applyChain;
+  assert.equal(meter.getAvailable(), true);
+  assert.equal(meter.values.get('measure_power'), 0);
+  assert.equal(meter.importWh, initial + 1);
+  await meter.onUninit();
+});
+
+test('original meter retries the failed total projection during fresh idle without incrementing it', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const meter = new TestMeter();
+  await meter.onInit();
+  const set = meter.setCapabilityValue.bind(meter);
+  let failed = false;
+  meter.setCapabilityValue = async (cap, value) => {
+    if (!failed && cap === 'meter_power.imported' && value > 0) { failed = true; throw Error('SDK busy'); }
+    return set(cap, value);
+  };
+  const send = power => meter.applyQuota({ powGetSysGrid: power }, { source: 'mqtt', receivedAt: now });
+  await send(3600);
+  now += 1000;
+  await send(3600);
+  assert.equal(meter.getCapabilityValue('meter_power.imported'), 0);
+  now += 1000;
+  await send(0);
+  assert.equal(meter.getCapabilityValue('meter_power.imported'), 0.001);
+  assert.equal(meter.importWh, 1);
+  await meter.onUninit();
 });

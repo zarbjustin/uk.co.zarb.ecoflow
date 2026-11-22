@@ -1,6 +1,5 @@
 {
   "solar5000": {
-    "setup": "Choose one Solar device for each STREAM 5000 with panels connected directly to its PV inputs. Homey Energy combines their generation. Skip any source already represented by another solar device.",
     "continue": "Continue",
     "selection": "Solar selection expired. Reopen the device list.",
     "waiting": "Waiting for a fresh direct solar power reading.",
@@ -249,7 +248,7 @@
       "energyAvailability": "Dual CT monitoring is available; its CT1 property Energy contribution is still being validated. STREAM 5000 battery monitoring is available; installation-level Homey Energy accounting is still being validated. Battery settings are managed in EcoFlow.",
       "aggregatePairingLabel": "Allow Home Battery (5000) Energy pairing",
       "aggregatePairingHelp": "Off by default while installation Energy validation is in progress. This permits adding a new installation-level Home Battery only. Turning it off does not remove existing devices or stop their accounting. Check for overlap before adding a battery.",
-      "stream5000PairingHelp": "In Add device, choose STREAM 5000 Series Unit for monitoring or STREAM 5000 Home Battery for a separately reviewed installation. Keep existing devices that represent other installations; deleting a device can affect its Flows and history.",
+      "stream5000PairingHelp": "Choose STREAM 5000 Home Battery once per independent battery system, STREAM 5000 Solar for each ES21 with directly connected panels, or STREAM 5000 Unit Monitor for individual readings.",
       "supportTitle": "Support and advanced diagnostics",
       "supportIntro": "Open a local support report or use an optional diagnostic tool when investigating a problem. Reports are never sent automatically. Review exported information before sharing.",
       "connectionDetailsTitle": "Connection details and supported devices",
@@ -566,7 +565,7 @@
     }
   },
   "errors": {
-    "es22_wrong_driver": "This STREAM 5000-series device was added in the wrong place. Use STREAM 5000 Series Unit for app-connected monitoring. Home Battery (5000) Energy pairing has a separate opt-in in the Homey integration settings. Check existing Flows and history before replacing a device.",
+    "es22_wrong_driver": "This STREAM 5000-series device was added in the wrong place. Use STREAM 5000 Unit Monitor for app-connected monitoring. Home Battery (5000) Energy pairing has a separate opt-in in the Homey integration settings. Check existing Flows and history before replacing a device.",
     "developer_api_unsupported_device": "This EcoFlow device is not supported through the Developer API. Delete it and add it again using its dedicated EcoFlow device type."
   },
   "device": {
@@ -585,14 +584,46 @@
     }
   },
   "pair": {
+    "account": "Use the email address and password you use in the EcoFlow app. Homey stores them in this integration’s settings and sends them to EcoFlow to sign in.",
+    "access_title": "Home Battery pairing access",
+    "accounting": "Homey estimates charged and discharged kWh from observed battery power. Manage battery settings in EcoFlow. Pairing this device sends no battery commands.",
+    "checking": "Checking Home Battery pairing access…",
+    "enabled": "Home Battery pairing is enabled.",
+    "disabled": "In the EcoFlow integration settings, enable “Allow Home Battery (5000) Energy pairing”, then check again. You can add a Unit Monitor without this opt-in.",
+    "recheck": "Check again",
     "stream_home_battery": {
-      "title": "Pair a STREAM Home Battery",
-      "intro": "This represents one complete STREAM installation and provides whole-system totals for Homey Energy and widgets. Pair one per main system serial."
+      "title": "STREAM Home Battery",
+      "intro": "Add the battery system to Homey Energy to track charging and discharging. Choose one Home Battery per original STREAM installation, even if several batteries are linked.",
+      "other": "For panel generation, choose STREAM Solar. For individual battery readings, choose STREAM Unit Monitor."
+    },
+    "stream_solar": {
+      "title": "STREAM Solar",
+      "intro": "Add solar generation to Homey Energy. Choose one Solar device per original STREAM system with direct panel input. If another solar device already counts those panels, skip this one.",
+      "other": "For stored energy, choose STREAM Home Battery. For individual battery readings, choose STREAM Unit Monitor."
     },
     "stream_unit": {
-      "title": "Pair a STREAM Unit",
-      "intro": "This adds one inverter or battery as physical hardware. It does not provide whole-installation totals and is not used by Homey Energy or STREAM widgets. Pair STREAM Home Battery for the installation's combined energy data."
-    }
+      "title": "STREAM Unit Monitor",
+      "intro": "Choose an individual original STREAM unit, such as an Ultra X or AC Pro, to see its own readings. This monitor is optional and adds no battery to Homey Energy.",
+      "other": "For battery storage in Homey Energy, choose STREAM Home Battery. For panel generation, choose STREAM Solar."
+    },
+    "stream_5000_system": {
+      "title": "STREAM 5000 Home Battery",
+      "intro": "Add the linked battery system to Homey Energy to track charging and discharging. Choose one Home Battery per independent installation, including a system with a single unit.",
+      "other": "For panel generation, choose STREAM 5000 Solar. For individual battery readings, choose STREAM 5000 Unit Monitor."
+    },
+    "stream_5000_solar": {
+      "title": "STREAM 5000 Solar",
+      "intro": "For solar watts and estimated kWh in Homey Energy, select each STREAM 5000 (ES21) with panels plugged into its PV inputs. If only the linked member has panels, choose only that member. Skip panels already counted in Homey Energy.",
+      "other": "For stored energy, choose STREAM 5000 Home Battery. For individual battery readings, choose STREAM 5000 Unit Monitor."
+    },
+    "stream_5000_unit": {
+      "title": "STREAM 5000 Unit Monitor",
+      "intro": "Choose an individual STREAM 5000 (ES21) or STREAM AC 5000 (ES22) to see its own readings. This monitor is optional and adds no battery to Homey Energy.",
+      "other": "For battery storage in Homey Energy, choose STREAM 5000 Home Battery. For panel generation, choose STREAM 5000 Solar."
+    },
+    "choose": "Choose devices",
+    "developer_keys": "Create an Access Key and Secret Key in the EcoFlow developer portal (developer.ecoflow.com → IoT Background). Homey reuses these keys for original STREAM devices.",
+    "monitor_connection": "Sign in with your EcoFlow app account. Manage battery settings in EcoFlow."
   },
   "widgets": {
     "common": {

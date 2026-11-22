@@ -35,6 +35,7 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
   private powerSource: 'mqtt' | 'rest' | null = null;
   private lastLoadAt = 0;
   private accountingReadOnly = false;
+  private projectionFailures = 0;
 
   private static readonly LIVE_POWER_CAPS = [
     'measure_power',
@@ -54,12 +55,46 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     return (this.getStoreValue('sourceSn') as string) || this.getData().sn;
   }
 
+  protected async readPollQuota(sourceSn: string, active: () => boolean): Promise<Record<string, any>> {
+    const meter = this.getRealtimeSn();
+    if (sourceSn === meter) return super.readPollQuota(sourceSn, active);
+    const verify = async () => {
+      if (!active()) throw Error('Meter poll stopped');
+      const main = await this.client.getMainSn(meter, { fresh: true, signal: AbortSignal.timeout(10000) });
+      if (!active() || main.toUpperCase() !== sourceSn.toUpperCase()) throw Error('Linked meter source unverified');
+    };
+    try {
+      await verify();
+      const quota = await super.readPollQuota(sourceSn, active);
+      await verify();
+      return quota;
+    } catch (error) {
+      if (active()) {
+        await this.queueDeviceWork(async () => {
+          if (!active()) return;
+          if (this.powerSource === 'rest') {
+            this.lastTs = 0;
+            this.telemetry.invalidateRestGrid();
+            for (const cap of SmartMeterDevice.LIVE_POWER_CAPS) {
+              if (this.hasCapability(cap)) await this.setCapabilityValue(cap, null).catch(() => {});
+            }
+          }
+          if (this.lastLoadAt > 0 && this.hasCapability('measure_power.home_load')) {
+            this.lastLoadAt = 0;
+            await this.setCapabilityValue('measure_power.home_load', null).catch(() => {});
+          }
+        });
+      }
+      throw error;
+    }
+  }
+
   protected getRealtimeSn(): string {
     return this.getData().sn;
   }
 
   getMeterDiagnostics(): Record<string, unknown> {
-    return { ...this.telemetry.snapshot(), accountingStatus: this.accountingReadOnly ? 'read_only_unrecoverable_history' : 'active' };
+    return { ...this.telemetry.snapshot(), projectionFailures: this.projectionFailures, accountingStatus: this.accountingReadOnly ? 'read_only_unrecoverable_history' : 'active' };
   }
 
   gridPowerAbove(direction: string, watts: number): boolean {
@@ -181,9 +216,9 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
           this.importWh = next.importWh;
           this.exportWh = next.exportWh;
           this.energyCheckpoint.mark();
-          await this.projectEnergyCapabilities();
         }
       }
+      if (!this.accountingReadOnly) await this.projectEnergyCapabilities();
     }
 
     for (const [cap, value] of Object.entries(values)) {
@@ -197,7 +232,9 @@ module.exports = class SmartMeterDevice extends BaseEcoFlowDevice {
     for (const [cap, wh] of [['meter_power.imported', this.importWh], ['meter_power.exported', this.exportWh]] as const) {
       const current = this.getCapabilityValue(cap);
       if (typeof current === 'number' && Number.isFinite(current) && current >= wh / 1000) continue;
-      await this.setCapabilityValue(cap, wh / 1000).catch(() => {});
+      await this.setCapabilityValue(cap, wh / 1000).catch(() => {
+        this.projectionFailures = Math.min(65535, this.projectionFailures + 1);
+      });
     }
   }
 

@@ -5,8 +5,9 @@ import { reconcileStreamQuota } from '../../lib/streamQuotaReconciliation';
 import { mapStreamQuota } from '../../lib/streamMapping';
 import {
   integrateTimedSignedPower, followResettableCounter, batteryEnergyMode,
-  EnergyAccountingDiagnostic, MAX_GAP_MS,
+  EnergyAccountingDiagnostic,
 } from '../../lib/energyIntegration';
+import { STREAM_LIVE_TTL_MS } from '../../lib/StreamLiveReadings';
 import { toFiniteNumber } from '../../lib/quota';
 import { OperatingMode } from '../../lib/streamProtocol';
 import {
@@ -47,6 +48,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
   private mainSn = '';
   private aggregateBound = false;
   private aggregateVerifiedMain = '';
+  private recoveredStartupReadOnly = false;
   private aggregateIdentityConflict = false;
   private aggregateVerificationRevision = 0;
   private aggregateVerificationFailures = 0;
@@ -511,7 +513,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
   private async requireAggregateMain(purpose: 'poll' | 'history' | 'control' = 'control'): Promise<string> {
     // A recovered read route does not restore write authority after a main change.
-    if (purpose === 'control' && this.aggregateIdentityConflict) {
+    if (purpose === 'control' && (this.aggregateIdentityConflict || this.recoveredStartupReadOnly)) {
       throw Error('Aggregate main unverified for controls after an identity change');
     }
     const generation = this.controlGeneration;
@@ -524,13 +526,25 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
         this.aggregateIdentityConflict = true;
         throw Error('Aggregate main changed');
       }
-      if (!this.aggregateBound && purpose === 'poll' && this.aggregateVerifiedMain === main) {
+      const storedOwner = this.getStoreValue(BATTERY_ENERGY_STORE)?.energySourceSn ?? this.getStoreValue('energySourceSn');
+      const noHistory = !this.chargedWh && !this.dischargedWh && !this.countersAvailable;
+      const startupRecovery = !this.aggregateVerifiedMain && !this.aggregateIdentityConflict
+        && this.energyRecovery === 'ready' && this.energySourceSn.toUpperCase() === main
+        && (noHistory || (typeof storedOwner === 'string' && storedOwner.toUpperCase() === main));
+      if (!this.aggregateBound && purpose === 'poll' && (this.aggregateVerifiedMain === main || startupRecovery)) {
         // Drain old device work while the source is blocked. Only the same
         // session-verified reporter may resume, with a new accounting anchor.
         await this.queueDeviceWork(async () => {
           if (!current() || revision !== this.aggregateVerificationRevision) return;
           this.lastEnergyTs = 0;
+          if (startupRecovery) {
+            await this.persistBatteryStore();
+            if (!current() || revision !== this.aggregateVerificationRevision) return;
+            this.aggregateVerifiedMain = main;
+            this.recoveredStartupReadOnly = true;
+          }
           this.aggregateBound = true;
+          if (startupRecovery && this.getSetting('enable_history') !== false) this.startHistory();
           this.aggregateRecoveries = Math.min(65535, this.aggregateRecoveries + 1);
           this.log('Original STREAM telemetry source reverified');
         });
@@ -668,6 +682,7 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
     this.controlGeneration += 1;
     this.aggregateBound = false;
     this.aggregateVerifiedMain = '';
+    this.recoveredStartupReadOnly = false;
     this.aggregateIdentityConflict = false;
     this.aggregateVerificationFailures = 0;
     this.aggregateRecoveries = 0;
@@ -1267,7 +1282,13 @@ module.exports = class StreamDevice extends BaseEcoFlowDevice {
 
     // mode === 'integrate' — counters have never been seen; integrate power.
     if (typeof batteryPowerW !== 'number' || !Number.isFinite(batteryPowerW)) return;
-    if (this.lastEnergyTs > 0 && receivedAt - this.lastEnergyTs > MAX_GAP_MS) this.ignoredEnergyGaps += 1;
+    const now = Date.now();
+    if (!Number.isFinite(receivedAt) || receivedAt <= 0 || receivedAt > now
+      || now - receivedAt > STREAM_LIVE_TTL_MS || receivedAt <= this.lastEnergyTs) return;
+    if (this.lastEnergyTs > 0 && receivedAt - this.lastEnergyTs > STREAM_LIVE_TTL_MS) {
+      this.ignoredEnergyGaps += 1;
+      this.lastEnergyTs = 0;
+    }
     const next = integrateTimedSignedPower(
       { posWh: this.chargedWh, negWh: this.dischargedWh, lastSampleAt: this.lastEnergyTs },
       batteryPowerW,

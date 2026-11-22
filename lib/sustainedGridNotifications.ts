@@ -146,7 +146,7 @@ export class QualifiedGridNotifications {
   private revision = 0;
   private loading = false;
   private dirty = false;
-  private emitting = false;
+  private readonly emitting = new Set<string>();
   private rules = new Map<string, { rule: GridRule; observer: SustainedGridRule }>();
 
   private readonly ports: NotificationPorts;
@@ -182,13 +182,21 @@ export class QualifiedGridNotifications {
       if (!this.active || revision !== this.revision) return;
       if (!Array.isArray(args) || args.length > 256) throw new Error('Too many grid notification rules');
       const next = new Map<string, { rule: GridRule; observer: SustainedGridRule }>();
+      let invalid = false;
       for (const value of args) {
-        const rule = gridNotificationRule(value);
+        let rule: GridRule;
+        try {
+          rule = gridNotificationRule(value);
+        } catch {
+          invalid = true;
+          continue;
+        }
         const key = gridNotificationKey(rule);
         next.set(key, this.rules.get(key) || { rule, observer: new SustainedGridRule(rule, this.below) });
         if (next.size > 64) throw new Error('Too many grid notification rules');
       }
       this.rules = next;
+      if (invalid) this.ports.onError();
     }).catch(() => {
       if (!this.active || revision !== this.revision) return;
       this.rules.clear();
@@ -203,8 +211,8 @@ export class QualifiedGridNotifications {
   tick(observation: SustainedGridObservation | null, now: number): void {
     if (!this.active || this.loading || this.dirty) return;
     for (const [ruleKey, entry] of this.rules) {
-      if (!entry.observer.observe(observation, now, !this.emitting, false)) continue;
-      this.emitting = true;
+      if (!entry.observer.observe(observation, now, !this.emitting.has(ruleKey) && this.emitting.size < 64, false)) continue;
+      this.emitting.add(ruleKey);
       const { revision } = this;
       const eventObservation = { ...observation! };
       const directed = observation!.powerW * (entry.rule.direction === 'export' ? -1 : 1);
@@ -223,7 +231,7 @@ export class QualifiedGridNotifications {
         this.tick(current.observation, current.now);
         return undefined;
       }).catch(() => this.ports.onError()).finally(() => {
-        this.emitting = false;
+        this.emitting.delete(ruleKey);
       });
     }
   }

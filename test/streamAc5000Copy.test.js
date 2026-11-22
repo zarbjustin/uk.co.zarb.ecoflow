@@ -31,9 +31,9 @@ test('the public STREAM AC 5000 driver name has no experimental qualifier', () =
 
 test('the replacement driver represents the STREAM 5000 unit family', () => {
   assert.deepStrictEqual(familyCompose.name, {
-    en: 'STREAM 5000 Series Unit',
-    de: 'STREAM-5000-Serieneinheit',
-    nl: 'STREAM 5000-serie-unit',
+    en: 'STREAM 5000 Unit Monitor',
+    de: 'STREAM 5000 Gerätemonitor',
+    nl: 'STREAM 5000 Apparaatmonitor',
   });
   assert.strictEqual(familyCompose.deprecated, undefined);
   assert.strictEqual(familyCompose.class, 'battery');
@@ -167,18 +167,16 @@ test('pairing clearly explains the monitoring-only app connection', () => {
     path.join(root, 'drivers', 'stream_5000_unit', 'pair', 'app_credentials.html'),
     'utf8',
   );
-  assert.match(familyHtml, /STREAM 5000 Series/);
-  assert.match(familyHtml, /verified serial prefixes and telemetry/i);
-  assert.match(familyHtml, /Monitoring only/i);
-  assert.match(familyHtml, /does not contribute to Homey Energy/i);
-  assert.match(familyHtml, /STREAM 5000 Home Battery/i);
+  assert.match(familyHtml, /STREAM 5000 Unit Monitor/);
+  assert.match(familyHtml, /EcoFlow app/);
+  assert.doesNotMatch(familyHtml, /not available through EcoFlow.s/);
 
   const systemHtml = fs.readFileSync(
     path.join(root, 'drivers', 'stream_5000_system', 'pair', 'app_credentials.html'),
     'utf8',
   );
   assert.match(systemHtml, /STREAM 5000 Home Battery/);
-  assert.match(systemHtml, /Homey Energy Home Battery/);
+  assert.match(systemHtml, /EcoFlow app/);
 
   for (const driverId of ['stream_5000_unit', 'stream_5000_system']) {
     const driverCompose = require(`../drivers/${driverId}/driver.compose.json`);

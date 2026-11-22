@@ -28,7 +28,7 @@ function loadWithHomeyMock(modulePath) {
 
 const { BaseEcoFlowDevice } = loadWithHomeyMock('../.homeybuild/lib/BaseEcoFlowDevice.js');
 const StreamDevice = loadWithHomeyMock('../.homeybuild/drivers/stream/device.js');
-const LOCALIZED_ES22_MESSAGE = 'Use STREAM 5000 Series Unit for monitoring; Home Battery Energy pairing has a separate opt-in.';
+const LOCALIZED_ES22_MESSAGE = 'Use STREAM 5000 Unit Monitor for monitoring; Home Battery Energy pairing has a separate opt-in.';
 const LOCALIZED_UNSUPPORTED_MESSAGE = 'Delete this unsupported device and add its dedicated type.';
 
 class TestDevice extends BaseEcoFlowDevice {
@@ -188,7 +188,7 @@ test('an already-paired ES22 stops before lifecycle setup and stays stopped', as
   assert.strictEqual(device.timerCalls, 0);
   assert.strictEqual(device.subscribeCalls, 0);
   assert.ok(device.logs.some((message) => message.includes('STREAM Home Battery (5000)')));
-  assert.ok(!device.logs.some((message) => message.includes('add it again as STREAM 5000 Series Unit')));
+  assert.ok(!device.logs.some((message) => message.includes('add it again as STREAM 5000 Unit Monitor')));
 
   await device.onSettings({ newSettings: { poll_interval: 10 }, changedKeys: ['poll_interval'] });
   await assert.rejects(device.manualPoll(), {
@@ -316,7 +316,7 @@ test('legacy ES22 upgrade preserves both actual driver identities, history and c
       device[method] = forbidden;
     }
     await device.onInit();
-    assert.match(message, /STREAM 5000 Series Unit/);
+    assert.match(message, /STREAM 5000 Unit Monitor/);
     assert.deepStrictEqual(saved, before);
     await device.onSettings({ newSettings: { poll_interval: 10 }, changedKeys: ['poll_interval'] });
     assert.deepStrictEqual(saved, before);

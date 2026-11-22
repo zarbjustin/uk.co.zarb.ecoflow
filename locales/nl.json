@@ -1,6 +1,5 @@
 {
   "solar5000": {
-    "setup": "Kies één zonneapparaat per STREAM 5000 met panelen direct op de PV-ingangen. Homey Energy telt de opwekking bij elkaar op. Sla een bron over als een ander zonneapparaat deze al meet.",
     "continue": "Verder",
     "selection": "De selectie is verlopen. Open de apparatenlijst opnieuw.",
     "waiting": "Wachten op een actuele meting van direct zonnevermogen.",
@@ -249,7 +248,7 @@
       "energyAvailability": "Dual CT-monitoring is beschikbaar; de CT1-bijdrage aan Homey Energy voor het hele terrein wordt nog gevalideerd. STREAM 5000-batterijmonitoring is beschikbaar; de energiebalans op installatieniveau in Homey Energy wordt nog gevalideerd. Beheer batterijinstellingen in EcoFlow.",
       "aggregatePairingLabel": "Energy-koppeling voor Home Battery (5000) toestaan",
       "aggregatePairingHelp": "Standaard uit tijdens de validatie van de installatie-energiebalans. Staat alleen het toevoegen van een nieuwe thuisbatterij op installatieniveau toe. Uitschakelen verwijdert geen bestaande apparaten en stopt hun energiebalans niet. Controleer op overlap voordat je een batterij toevoegt.",
-      "stream5000PairingHelp": "Kies bij Apparaat toevoegen STREAM 5000 Series Unit voor monitoring of STREAM 5000 Home Battery voor een afzonderlijk beoordeelde installatie. Behoud apparaten van andere installaties; verwijderen kan Flows en historie beïnvloeden.",
+      "stream5000PairingHelp": "Kies één STREAM 5000 Thuisbatterij per zelfstandig batterijsysteem, STREAM 5000 Solar voor elke ES21 met direct aangesloten panelen of STREAM 5000 Apparaatmonitor voor afzonderlijke meetwaarden.",
       "supportTitle": "Ondersteuning en geavanceerde diagnostiek",
       "supportIntro": "Open bij problemen een lokaal ondersteuningsrapport of gebruik een optioneel diagnosehulpmiddel. Rapporten worden nooit automatisch verzonden. Controleer geëxporteerde informatie voordat je deze deelt.",
       "connectionDetailsTitle": "Verbindingsdetails en ondersteunde apparaten",
@@ -565,7 +564,7 @@
     }
   },
   "errors": {
-    "es22_wrong_driver": "Dit apparaat uit de STREAM 5000-serie is op de verkeerde plaats toegevoegd. Gebruik STREAM 5000-serie-unit voor monitoring via de appverbinding. Energy-koppeling van STREAM-thuisbatterij (5000) vereist aparte toestemming in de Homey-integratie-instellingen. Controleer bestaande Flows en geschiedenis voordat je een apparaat vervangt.",
+    "es22_wrong_driver": "Dit apparaat uit de STREAM 5000-serie is op de verkeerde plaats toegevoegd. Gebruik STREAM 5000 Apparaatmonitor voor monitoring via de appverbinding. Energy-koppeling van STREAM-thuisbatterij (5000) vereist aparte toestemming in de Homey-integratie-instellingen. Controleer bestaande Flows en geschiedenis voordat je een apparaat vervangt.",
     "developer_api_unsupported_device": "Dit EcoFlow-apparaat wordt niet ondersteund via de Developer API. Verwijder het en voeg het opnieuw toe met het bijbehorende EcoFlow-apparaattype."
   },
   "device": {
@@ -584,14 +583,46 @@
     }
   },
   "pair": {
+    "account": "Meld je aan met het e-mailadres en wachtwoord van de EcoFlow-app. Homey bewaart deze in de instellingen van deze integratie en stuurt ze naar EcoFlow om in te loggen.",
+    "access_title": "Toestemming voor de thuisbatterij",
+    "accounting": "Homey schat het aantal geladen en ontladen kWh op basis van het gemeten batterijvermogen. Je beheert de batterij-instellingen in EcoFlow. Koppelen stuurt geen opdrachten naar de batterij.",
+    "checking": "Toestemming voor koppelen wordt gecontroleerd…",
+    "enabled": "Koppelen van de thuisbatterij is ingeschakeld.",
+    "disabled": "Schakel in de instellingen van de EcoFlow-integratie de Energy-koppeling voor de thuisbatterij (5000) in en controleer opnieuw. Voor de apparaatmonitor is deze toestemming niet nodig.",
+    "recheck": "Opnieuw controleren",
     "stream_home_battery": {
-      "title": "Koppel een STREAM-thuisbatterij",
-      "intro": "Deze vertegenwoordigt één volledige STREAM-installatie en levert systeemtotalen voor Homey Energy en widgets. Koppel er één per serienummer van het hoofdsysteem."
+      "title": "STREAM-thuisbatterij",
+      "intro": "Voeg het batterijsysteem toe aan Homey Energy om laden en ontladen te volgen. Kies één thuisbatterij per oorspronkelijke STREAM-installatie, ook als er meerdere batterijen gekoppeld zijn.",
+      "other": "Kies STREAM Solar voor zonneproductie. Kies STREAM-apparaatmonitor voor meetwaarden per batterij."
+    },
+    "stream_solar": {
+      "title": "STREAM Solar",
+      "intro": "Volg de zonneproductie in Homey Energy. Kies één zonneapparaat per oorspronkelijk STREAM-systeem met direct aangesloten panelen. Sla panelen over die een ander zonneapparaat al meet.",
+      "other": "Kies STREAM-thuisbatterij voor batterijopslag. Kies STREAM-apparaatmonitor voor meetwaarden per batterij."
     },
     "stream_unit": {
-      "title": "Koppel een STREAM-unit",
-      "intro": "Dit voegt één omvormer of batterij toe als fysiek apparaat. Deze levert geen totalen voor de hele installatie en wordt niet gebruikt door Homey Energy of STREAM-widgets. Koppel STREAM Home Battery voor de gecombineerde energiegegevens van de installatie."
-    }
+      "title": "STREAM-apparaatmonitor",
+      "intro": "Kies één apparaat uit de oorspronkelijke STREAM-serie, zoals de Ultra X of AC Pro, om de eigen meetwaarden te bekijken. Deze monitor is optioneel en voegt geen batterij toe aan Homey Energy.",
+      "other": "Kies STREAM-thuisbatterij voor batterijopslag in Homey Energy. Kies STREAM Solar voor zonneproductie."
+    },
+    "stream_5000_system": {
+      "title": "STREAM 5000 Thuisbatterij",
+      "intro": "Volg het laden en ontladen van het gekoppelde batterijsysteem in Homey Energy. Kies één thuisbatterij per zelfstandige installatie, ook als die uit één apparaat bestaat.",
+      "other": "Kies STREAM 5000 Solar voor zonneproductie. Kies STREAM 5000 Apparaatmonitor voor meetwaarden per batterij."
+    },
+    "stream_5000_solar": {
+      "title": "STREAM 5000 Solar",
+      "intro": "Kies voor zonnevermogen en geschatte kWh in Homey Energy elke STREAM 5000 (ES21) met panelen op de eigen PV-ingangen. Heeft alleen de gekoppelde nevenunit panelen, kies dan alleen die unit. Sla panelen over die Homey Energy al meet.",
+      "other": "Kies STREAM 5000 Thuisbatterij voor batterijopslag. Kies STREAM 5000 Apparaatmonitor voor meetwaarden per batterij."
+    },
+    "stream_5000_unit": {
+      "title": "STREAM 5000 Apparaatmonitor",
+      "intro": "Kies één STREAM 5000 (ES21) of STREAM AC 5000 (ES22) om de eigen meetwaarden te bekijken. Deze monitor is optioneel en voegt geen batterij toe aan Homey Energy.",
+      "other": "Kies STREAM 5000 Thuisbatterij voor batterijopslag in Homey Energy. Kies STREAM 5000 Solar voor zonneproductie."
+    },
+    "choose": "Apparaten kiezen",
+    "developer_keys": "Maak een Access Key en een Secret Key aan in het EcoFlow-ontwikkelaarsportaal (developer.ecoflow.com → IoT Background). Homey gebruikt deze sleutels voor apparaten uit de oorspronkelijke STREAM-serie.",
+    "monitor_connection": "Meld je aan met je EcoFlow-appaccount. Je beheert de batterij-instellingen in EcoFlow."
   },
   "widgets": {
     "common": {

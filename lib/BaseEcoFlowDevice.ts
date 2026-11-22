@@ -467,6 +467,10 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
     }
   }
 
+  protected readPollQuota(sourceSn: string, _active: () => boolean): Promise<Record<string, any>> {
+    return this.client.getQuotaAll(sourceSn, { fresh: true });
+  }
+
   private async performPoll(generation: number): Promise<void> {
     const active = () => !this.stopping && generation === this.lifecycleGeneration;
     const requestedRevision = this.realtimeRevision;
@@ -477,7 +481,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
       this.refreshClientCredentials();
       // Cached/shared in-flight replies can predate MQTT received before this
       // poll's revision guard started, falsely rolling a counter back.
-      const quota = await this.client.getQuotaAll(sourceSn, { fresh: true });
+      const quota = await this.readPollQuota(sourceSn, active);
       if (!active()) return;
       this.consecutiveUnsupportedApiFailures = 0;
       // A revision detects newer MQTT even within the same millisecond. Check
@@ -563,7 +567,7 @@ export abstract class BaseEcoFlowDevice extends Homey.Device {
           this.quotaApplyFailed = true;
           throw error;
         }
-        if (generation === this.lifecycleGeneration && !this.stopping && sourceSn === this.getReadSn()
+        if (generation === this.lifecycleGeneration && !this.stopping && sourceSn === this.getRealtimeSn()
           && source === 'mqtt' && !this.mqttOffline) await this.setOnlineState(true);
         return true;
       });

@@ -1,8 +1,23 @@
+import type { AppDevice } from './appDevices';
 import type { AppFrameDelivery } from './EcoFlowAppMqtt';
 import { es21SolarTotals } from './streamAc5000Protocol';
 import { STREAM_5000_POWER_FRESH_MS as TTL } from './stream5000Readings';
 
 export const isSolarUnit = (sn: unknown): sn is string => typeof sn === 'string' && /^ES21[A-Z0-9]{4,60}$/.test(sn);
+// Without an official main lookup, probe at most one owned peer. Only the
+// paired unit's serial-labelled PV record can ever supply its reading.
+export async function resolveSolarRelay(
+  unit: string, inventory: AppDevice[], readMain?: () => Promise<string>,
+): Promise<string | undefined> {
+  const owned = new Set(inventory.filter((d) => !d.shared && isSolarUnit(d.sn)).map((d) => d.sn));
+  if (!owned.delete(unit) || owned.size === 0) return undefined;
+  if (readMain) {
+    const main = await readMain();
+    return owned.has(main) ? main : undefined;
+  }
+  return owned.size === 1 ? [...owned][0] : undefined;
+}
+
 type Delivery = Readonly<AppFrameDelivery>;
 type Listener = (reporter: string, watts: number | null, receipt: Delivery) => void;
 const listeners = new WeakMap<object, Map<string, Listener>>();
@@ -42,8 +57,8 @@ export class SolarGeneration {
     this.wh = restoredWh;
   }
 
-  invalidate(): void {
-    this.previous = undefined;
+  invalidate(reporter?: string): void {
+    if (!reporter || this.previous?.reporter === reporter) this.previous = undefined;
   }
 
   power(now: number): number | null {

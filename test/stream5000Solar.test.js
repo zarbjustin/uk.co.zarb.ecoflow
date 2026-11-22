@@ -151,8 +151,9 @@ test('pairing separates original/AC/shared devices and binds add to a listed phy
 test('real solar device projects native W/kWh, expires live power and preserves totals across restart', async t => {
   const Device = loadDriver('device'); let now = 100000;
   t.mock.method(Date, 'now', () => now);
-  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => session }));
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({ getSession: async () => session, getDeviceList: async () => [{ sn: A, shared: false }] }));
   const settings = new EventEmitter(); const intervals = new Set(); const subscribed = new Set();
+  settings.get = () => undefined;
   const homey = { settings, __: key => key, setInterval: fn => { intervals.add(fn); return fn; },
     clearInterval: fn => intervals.delete(fn), setTimeout: () => 1, clearTimeout: () => {},
     app: { subscribeAppRealtime: async (_, fn) => { subscribed.add(fn); return true; },
@@ -184,4 +185,135 @@ test('real solar device projects native W/kWh, expires live power and preserves 
   send(homey.app, A, snapshot, now + 1000); await flush();
   assert.equal(values.measure_power, null); assert.equal(subscribed.size, 0);
   await d.onUninit(); assert.equal(settings.listenerCount('set'), 0);
+});
+
+const C = 'ES21TESTNEWMAIN';
+
+async function solarRig(t, { keys = true, peers = [A, B, C] } = {}) {
+  const { EcoFlowAppMqtt } = require('../.homeybuild/lib/EcoFlowAppMqtt');
+  const pairing = require('../.homeybuild/lib/pairing');
+  const Device = loadDriver('device');
+  let now = 100000;
+  const rig = { main: B, lookups: 0, warnings: [], inventory: peers.map(sn => ({ sn, shared: false })) };
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(auth, 'appAuthClientFromSettings', () => ({
+    getSession: async () => session, getDeviceList: async () => rig.inventory,
+  }));
+  t.mock.method(pairing, 'clientFromSettings', () => ({
+    getMainSn: async (sn, options) => {
+      assert.equal(sn, A); assert.equal(options.fresh, true);
+      rig.lookups++;
+      if (rig.pending) return rig.pending;
+      if (rig.failure) throw Error('test lookup unavailable');
+      return rig.main;
+    },
+  }));
+  const settings = new EventEmitter();
+  settings.get = key => keys && ['accessKey', 'secretKey'].includes(key) ? 'synthetic' : undefined;
+  const mqtt = new EcoFlowAppMqtt({ client: {}, observeSolar: (data, address, r) =>
+    offerSolarFrame(app, data, address, { ...r, receivedMonoMs: now }) });
+  mqtt.connectionEpoch = 1; mqtt.client = { connected: true };
+  // Keep the actual broker router and its per-consumer handler sets, skip network I/O.
+  mqtt.subscribeTopics = () => {};
+  mqtt.subscribeTopic = () => {};
+  const app = {
+    subscribeAppRealtime: async (sn, owner, active) => {
+      if (!active()) return false;
+      mqtt.subscribe(sn, owner);
+      return true;
+    },
+    unsubscribeAppRealtime: (sn, owner) => mqtt.unsubscribe(sn, owner),
+  };
+  const timers = new Set();
+  const homey = { app, settings, __: key => key, setInterval: fn => { timers.add(fn); return fn; },
+    clearInterval: fn => timers.delete(fn), setTimeout: () => 1, clearTimeout: () => {} };
+  const device = new Device(); const values = {};
+  const store = { solarAccountBinding: auth.appAccountBinding(session) };
+  Object.assign(device, { homey, getData: () => ({ sn: A }), getStoreValue: k => store[k],
+    setStoreValue: async (k,v) => { store[k] = v; }, getCapabilityValue: k => values[k],
+    setCapabilityValue: async (k,v) => { values[k] = v; }, getAvailable: () => device.available,
+    setAvailable: async () => { device.available = true; }, setUnavailable: async () => { device.available = false; },
+    error: msg => rig.warnings.push(msg) });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  await device.onInit();
+  t.after(() => device.onUninit());
+  return Object.assign(rig, { mqtt, values, store, device, settings,
+    advance: ms => { now += ms; },
+    tick: async () => { for (const fn of timers) fn(); await flush(); },
+    send: async (reporter, unit = A, watts = 240) => {
+      mqtt.onMessage(topic(reporter), report(reporter, entry(unit, float(3, watts))), { retain:false, dup:false });
+      await flush();
+    } });
+}
+
+test('a member Solar tile alone subscribes to its verified main and counts repeated direct and relay reports once across reconnect', async t => {
+  const r = await solarRig(t);
+  assert.deepEqual([...r.mqtt.handlers.keys()].sort(), [A,B].sort());
+  await r.send(B, B, 990); assert.equal(r.values.measure_power, null);
+  await r.send(B);
+  r.advance(5000); await r.send(A);
+  r.advance(55000); await r.tick(); await r.send(B);
+  r.advance(1000); await r.send(A);
+  assert.equal(r.values.measure_power, 240); assert.equal(r.values.meter_power, 0.004);
+  r.mqtt.client.connected = false; await r.tick(); assert.equal(r.device.available, false);
+  r.mqtt.client = { connected:true }; r.mqtt.connectionEpoch++;
+  r.advance(30000); await r.send(B); assert.equal(r.values.meter_power, 0.004);
+  r.advance(60000); await r.tick(); await r.send(B); assert.equal(r.values.meter_power, 0.008);
+  assert.equal(r.device.available, true);
+});
+
+test('relink drops old relay even when another consumer keeps it subscribed, and restarts the interval', async t => {
+  const r = await solarRig(t);
+  const other = () => {}; r.mqtt.subscribe(B, other);
+  await r.send(B); r.advance(30000); await r.send(B);
+  assert.equal(r.values.meter_power, 0.002);
+  r.main = C; r.advance(30000); await r.tick();
+  assert.deepEqual([...r.mqtt.handlers.get(B)], [other]);
+  assert.equal(r.values.measure_power, null);
+  await r.send(B, A, 1000); assert.equal(r.values.measure_power, null);
+  await r.send(C); assert.equal(r.values.meter_power, 0.002);
+  r.advance(60000); await r.tick(); await r.send(C); assert.equal(r.values.meter_power, 0.006);
+  r.failure = true; r.advance(60000); await r.tick();
+  assert.equal(r.mqtt.handlers.has(C), false);
+  await r.send(B); assert.equal(r.values.measure_power, null);
+  await r.send(A); assert.equal(r.values.meter_power, 0.006);
+  await r.device.onUninit(); assert.deepEqual([...r.mqtt.handlers.keys()], [B]);
+});
+
+test('app-sign-in-only member can receive its sole owned peer; ambiguous or shared peers cannot supply it', async t => {
+  const r = await solarRig(t, { keys:false, peers:[A,B] });
+  await r.send(B, B); assert.equal(r.values.measure_power, null);
+  await r.send(B); assert.equal(r.values.measure_power, 240);
+  r.inventory.push({ sn:C, shared:false }); r.advance(60000); await r.tick();
+  assert.equal(r.mqtt.handlers.has(B), false); assert.equal(r.mqtt.handlers.has(C), false);
+  r.inventory = [{ sn:A,shared:false },{ sn:C,shared:true }];
+  r.advance(60000); await r.tick(); assert.deepEqual([...r.mqtt.handlers.keys()], [A]);
+  assert.equal(r.lookups, 0);
+});
+
+test('expired or cancelled main lookup cannot keep or recreate an old relay', async t => {
+  const r = await solarRig(t); let finish;
+  await r.send(B);
+  r.pending = new Promise(resolve => { finish = resolve; });
+  r.advance(60000); await r.tick();
+  r.advance(60000); await r.tick();
+  assert.equal(r.mqtt.handlers.has(B), false); assert.equal(r.values.measure_power, null);
+  r.settings.emit('unset', 'appAuthEmail');
+  finish(C); await r.tick();
+  assert.equal(r.mqtt.handlers.size, 0);
+});
+
+test('official lookup cannot attach a shared or unrelated main and resumes on the next verified mapping', async t => {
+  const r = await solarRig(t);
+  await r.send(B);
+  r.inventory = [{ sn: A, shared: false }, { sn: B, shared: true }, { sn: C, shared: false }];
+  r.advance(60000); await r.tick();
+  assert.deepEqual([...r.mqtt.handlers.keys()], [A]);
+  r.main = 'ES21OUTSIDEACCOUNT'; r.advance(60000); await r.tick();
+  assert.deepEqual([...r.mqtt.handlers.keys()], [A]);
+  r.main = C; r.advance(60000); await r.tick();
+  await r.send(C); assert.equal(r.values.measure_power, 240); assert.equal(r.values.meter_power, 0);
+  r.main = A; r.advance(60000); await r.tick();
+  assert.deepEqual([...r.mqtt.handlers.keys()], [A]);
+  await r.send(A); assert.equal(r.values.meter_power, 0);
 });

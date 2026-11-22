@@ -867,13 +867,17 @@ test('BK observed counter decreases hold their watermark and report ambiguity, n
 });
 
 test('BK power accounting uses receipt time, not delayed capability-write completion', async (t) => {
-  t.mock.method(Date, 'now', () => 900000);
+  let now = 200000;
+  t.mock.method(Date, 'now', () => now);
   const device = await harness();
   await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 100000, source: 'mqtt' });
   await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 160000, source: 'rest' });
   assert.equal(device.values['meter_power.charged'], 0.01);
   await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 160000, source: 'mqtt' });
   assert.equal(device.values['meter_power.charged'], 0.01);
+  await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 1, source: 'mqtt' });
+  assert.equal(device.lastEnergyTs, 160000, 'expired writes cannot rewind the anchor');
+  now = 8000000;
   await device.applyQuota({ powGetBpCms: 600 }, { receivedAt: 8000000, source: 'mqtt' });
   assert.equal(device.values['meter_power.charged'], 0.01);
   assert.equal(device.getEnergyDiagnostics().ignoredGaps, 1);
@@ -1221,4 +1225,49 @@ test('startup floor keeps native counters authoritative when resetting the only 
   await device.applyQuota({ accuChgEnergy: 10004 }, { source: 'mqtt', receivedAt: now });
   assert.equal(device.values['meter_power.charged'], 1.004);
   await device.onTeardown();
+});
+
+test('fallback respects the live power deadline, ignores older receipts and resumes at a fresh anchor', async t => {
+  let now = 1000000;
+  t.mock.method(Date, 'now', () => now);
+  for (const watts of [600, -600]) {
+    const device = await harness({});
+    const send = (quota, at = now) => device.applyQuota(quota, { source: 'mqtt', receivedAt: at });
+    const totals = () => device.chargedWh + device.dischargedWh;
+    await send({ powGetBpCms: 0 });
+    now += 120000;
+    await send({ cmsBattSoc: 50 });
+    now += 480000;
+    await send({ powGetBpCms: watts });
+    assert.equal(totals(), 0);
+    await send({ powGetBpCms: watts }, now - 10000);
+    await send({ powGetBpCms: watts }, now + 10000);
+    now += 180000;
+    await send({ powGetBpCms: watts });
+    assert.equal(totals(), 30);
+    now += 180001;
+    await send({ powGetBpCms: watts });
+    assert.equal(totals(), 30);
+    await device.onTeardown();
+  }
+});
+
+test('an interrupted initial main lookup recovers reads only for the stored accounting owner', async () => {
+  const main = 'BK61TEST00000001';
+  for (const owner of [main, 'BK61OTHER0000001']) {
+    const device = await harness({ energySourceSn: owner, chargedWh: 1000 });
+    preparePolling(device);
+    let calls = 0;
+    let reads = 0;
+    device.client = {
+      getMainSn: async () => { if (++calls === 1) throw Error('initial lookup failed'); return main; },
+      getQuotaAll: async () => { reads++; return { cmsBattSoc: 20 }; },
+    };
+    await device.beforeFirstPoll();
+    await Promise.all([device.poll(), device.poll()]);
+    assert.equal(reads, owner === main ? 1 : 0);
+    assert.equal(device.energySourceSn, owner);
+    assert.equal(device.chargedWh, 1000);
+    await device.onTeardown();
+  }
 });

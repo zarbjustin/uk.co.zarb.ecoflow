@@ -2,6 +2,16 @@
 
 Development candidate 1.11.29 is scoped to the ES21 solar changes on the diagnostic branch. Its runtime-source fingerprint is `6f9810d575b3644cb9325aed7ddc863663d06d9af720ebbd912063df11b66cb4`. The separate ES22 task-comparison changes in the shared checkout are outside this candidate. Installation, pairing and daylight measurements require a separate session.
 
+## Sprint 1 member-only solar correction, 22 November
+
+The working-tree correction lets a Solar tile receive its own ES21’s direct PV through a linked ES21 reporter without pairing a second Homey device. The packaged 1.11.29 archive above predates this correction.
+
+The tile keeps its own topic open. Once per minute it checks the bound EcoFlow account’s inventory. With saved Developer API keys it resolves the unit’s current main and subscribes to that reporter only if it is another owned ES21. With only app sign-in and exactly one other owned ES21, it listens for a live record explicitly labelled with the paired unit’s serial. Inventory proximity alone never supplies watts or establishes a main-unit role. With multiple possible peers, app sign-in alone cannot select a relay. Direct reporting still works.
+
+The shared broker keeps one subscription per serial across consumers. The Solar tile releases only its own interest on relink or teardown. A failed or ambiguous lookup retires the relay. A pending lookup cannot retain it past two minutes from its last successful check. A new relay or MQTT connection starts a fresh integration interval. No unobserved interval is added to the saved counter.
+
+Offline tests exercise the driver and the MQTT router with one Solar tile, including delayed duplicate reports, reconnect, relinking to a third ES21, lookup failure, account change and shared-topic cleanup. The daylight hardware gates below remain open.
+
 ## What the owner sees
 
 Add **STREAM 5000 Solar** once for each owned ES21 with panels wired to its PV inputs. If only one unit has panels, choose that one. Two panel-equipped ES21s can contribute separately to Homey Energy. Keep the existing STREAM Home Battery for charging and discharging. Original STREAM Solar and the microinverter remain separate sources. Check that another integration is not already counting the same panels.
@@ -12,7 +22,7 @@ The tile reports live W and estimated generated kWh accumulated since pairing. A
 
 - Each tile binds its EcoFlow account and physical ES21 identity at pairing. Each unit has one accounting owner. The source field is the serial-labelled direct PV total in a live 254/39 property message, field 50, entry 1, value 3.
 - A linked ES21 can report its peer. The driver routes each record by the unit that produced the power and uses one reporting topic while fresh. The four PV string readings, system solar node, battery discharge and grid export cannot create a second contribution.
-- Each paired Solar tile subscribes to its own unit. If a member's reading appears only on the main unit's topic, the app must already be listening to that topic through a paired device. Validate the member-only panel arrangement independently. A missing source stays unavailable.
+- In the original 1.11.29 archive, a member-only reading on the main unit’s topic requires another paired device to keep that topic open. The Sprint 1 correction above removes this dependency for a resolved reporter. Validate the member-only panel arrangement independently.
 - Receipt time bounds the estimate. Two continuous samples on the same reporter and connection epoch contribute the mean of their powers multiplied by elapsed monotonic time. A restart, change of source, stale interval of three minutes or longer, or an invalid attributed total breaks continuity. A fresh sample starts the next interval. Retained and broker-marked duplicate deliveries and snapshot replies cannot accrue energy.
 - Counters are stored in Wh per physical unit, flushed using the existing checkpoint helper and restored against the surviving kWh capability. Removing a Solar device and pairing afresh is not a history-preservation procedure.
 

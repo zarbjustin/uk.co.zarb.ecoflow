@@ -236,3 +236,31 @@ test('unknown source observed during queued dispatch breaks continuity even with
   tick(sample(5000), 5000); await flush(); assert.equal(events, 0);
   tick(sample(8000), 8000); await flush(); assert.equal(events, 1); monitor.stop();
 });
+
+test('each eligible saved threshold dispatches independently of a slow sibling and a malformed rule', async () => {
+  for (const below of [false, true]) {
+    const events = [];
+    let errors = 0;
+    let current;
+    let finish;
+    const slow = new Promise(resolve => { finish = resolve; });
+    const monitor = new QualifiedGridNotifications({
+      loadRules: async () => [args, { ...args, watts: 50 }, { ...args, watts: 400 }],
+      readCurrent: () => current,
+      onError: () => { errors++; },
+      trigger: async (_tokens, state) => { events.push(state.ruleKey); await slow; },
+    }, below);
+    monitor.start();
+    await flush();
+    for (const at of [1000, 4000]) {
+      current = { observation: sample(at, below ? -100 : -600), now: at };
+      monitor.tick(current.observation, at);
+    }
+    await flush();
+    assert.equal(new Set(events).size, 2);
+    assert.equal(errors, 1);
+    monitor.stop();
+    finish();
+    await flush();
+  }
+});

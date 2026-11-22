@@ -22,3 +22,5 @@ jobs:
       - run: npm audit
       # Equivalent to Athom's wrapper, without a Docker Hub image pull.
       - run: npx --yes homey@4.5.3 app validate --level verified
+      - name: Verify bundled upstream notice
+        run: cmp THIRD_PARTY_NOTICES.txt .homeybuild/THIRD_PARTY_NOTICES.txt
