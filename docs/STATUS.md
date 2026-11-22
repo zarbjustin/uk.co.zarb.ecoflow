@@ -1,6 +1,8 @@
 # Project Status & Handoff — EcoFlow STREAM Series
 
-## 22 November 2026 - Store Test 1.11.30 candidate
+## 22 November 2026 - Store Test 1.11.30/build 92 published
+
+The public Test page and Store API confirmed build 92. Live remained 1.10.3/build 18. Published source 7125851 passed exact-commit CI. No household installation was performed.
 
 The combined candidate includes the member-only solar relay and pairing guidance, original STREAM startup and energy recovery, original meter host verification and projection retry, and isolated Dual CT Flow thresholds. Five new driver/Flow regression cases failed before the fixes. The candidate passed 1,853 local tests. Full release also requires model/role hardware evidence and a separately qualified three-phase profile. The public feature summary and open hardware checks are in [the Test release notes](TEST_1_11_30.md).
 
