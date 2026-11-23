@@ -39,3 +39,21 @@ test('shared socket evidence is bounded and explicitly separate from per-device 
  assert.equal(bad.socketReceivedFrames,0);assert.equal(bad.socketRouteRejectedFrames,0);assert.equal(bad.socketPingResponses,0);
  assert.equal(bad.socketLastPingAgeSec,null);assert.equal(bad.socketConnectionAgeSec,null);
 });
+
+test('matched ES21 relay reports only bounded transport and monitor evidence, scoped to single phase', () => {
+  const { dualCtEnergyRecoverySnapshot } = require('../.homeybuild/lib/dualCtRecoveryDiagnostics');
+  const linkedRelay = {
+    transport: { propertyState: 'waiting_for_transport', replyState: 'active', propertyFrames: 0,
+      replyFrames: 3, serial: 'PRIVATE' },
+    monitor: { eligiblePropertyCallbacks: -1, gridFrames: 7, rejectedMeterFrames: 1, labelledFrames: 6,
+      cache: 'same_meter', cacheAgeSec: 6.2, raw: 'PRIVATE' },
+    host: 'PRIVATE',
+  };
+  const report = dualCtEnergyRecoverySnapshot({ mode: 'single_phase', linkedRelay });
+  assert.equal(report.linkedRelay.transport.propertyState, 'waiting_for_transport');
+  assert.equal(report.linkedRelay.transport.replyFrames, 3);
+  assert.equal(report.linkedRelay.monitor.eligiblePropertyCallbacks, null);
+  assert.equal(report.linkedRelay.monitor.cacheAgeSec, 6.2);
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE/);
+  assert.equal(dualCtEnergyRecoverySnapshot({ mode: 'three_phase_community', linkedRelay }).linkedRelay, undefined);
+});

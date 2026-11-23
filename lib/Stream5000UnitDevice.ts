@@ -73,6 +73,12 @@ type ReadingBatch = {
   powerInterrupted: boolean;
 };
 
+function newRelayTrace() {
+  return {
+    eligiblePropertyCallbacks: 0, gridFrames: 0, rejectedMeterFrames: 0, labelledFrames: 0,
+  };
+}
+
 export class Stream5000UnitDevice extends Homey.Device {
   private telemetryAdapter!: Stream5000TelemetryAdapter;
   private mapTelemetry!: ReturnType<Stream5000TelemetryAdapter['createMapper']>;
@@ -82,6 +88,22 @@ export class Stream5000UnitDevice extends Homey.Device {
   private subscribedSn?: string;
   private realtimeApp?: EcoFlowAppApi;
   private linkedGrid: { reading: Es21MeterReading; delivery: Readonly<AppFrameDelivery>; host: string } | null = null;
+
+  private relayTrace = newRelayTrace();
+
+  getLinkedRelayDiagnostics(meter: string) {
+    const cached = this.linkedGrid;
+    let cache = 'empty';
+    if (cached) {
+      cache = 'net_only';
+      if (cached.reading.phaseOne) cache = cached.reading.phaseOne.meter === meter ? 'same_meter' : 'other_meter';
+    }
+    return {
+      ...this.relayTrace,
+      cache,
+      cacheAgeSec: cached ? (performance.now() - cached.delivery.receivedMonoMs) / 1000 : null,
+    };
+  }
 
   getLinkedGridObservation(host: string, now: number, withhold: WithholdLinkedPower = () => null) {
     const sample = this.linkedGrid;
@@ -163,6 +185,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   async onInit(): Promise<void> {
     this.linkedGrid = null;
+    this.relayTrace = newRelayTrace();
     this.reporterObservations = new StreamReporterObservations();
     this.ownUnitObservations = new StreamOwnUnitObservations();
     this.subscriptionState = 'starting';
@@ -292,6 +315,9 @@ export class Stream5000UnitDevice extends Homey.Device {
           this.deliveryEpoch = epoch;
         }
       }
+      const relayProperty = !this.isEnergyAggregate() && model.telemetryAdapter === 'es21'
+        && topic === `/app/device/property/${sn}` && delivery.isCurrent?.();
+      if (relayProperty) this.relayTrace.eligiblePropertyCallbacks = Math.min(65535, this.relayTrace.eligiblePropertyCallbacks + 1);
       this.framesReceived += 1;
       this.bytesReceived += payload.length;
       this.lastFrameAt = receivedAt;
@@ -301,10 +327,13 @@ export class Stream5000UnitDevice extends Homey.Device {
       this.configurationTracker?.observe(payload, this.lastFrameAt);
       this.applyChain = this.queueConfiguration();
       const telemetry = this.telemetryAdapter.parse(payload, sn);
-      if (!this.isEnergyAggregate() && model.telemetryAdapter === 'es21' && telemetry && (telemetry as Es22Telemetry).gridW !== undefined
-        && topic === `/app/device/property/${sn}` && delivery.isCurrent?.()
+      if (relayProperty && telemetry && (telemetry as Es22Telemetry).gridW !== undefined
         && (!this.linkedGrid || receivedAt > this.linkedGrid.delivery.receivedAt)) {
+        const trace = this.relayTrace;
+        trace.gridFrames = Math.min(65535, trace.gridFrames + 1);
         const reading = es21MeterReading(payload, sn);
+        if (!reading) trace.rejectedMeterFrames = Math.min(65535, trace.rejectedMeterFrames + 1);
+        if (reading?.phaseOne) trace.labelledFrames = Math.min(65535, trace.labelledFrames + 1);
         this.linkedGrid = reading && { host: sn, reading, delivery };
       }
       const diagnostic = this.telemetryAdapter.describe(payload, sn, telemetry ? 0 : undefined);
@@ -1107,6 +1136,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private resetDeliverySession(): Promise<void> {
     this.linkedGrid = null;
+    this.relayTrace = newRelayTrace();
     this.deliveryGeneration += 1;
     this.pendingWork.clear();
     this.pendingReadings.clear();
@@ -1209,6 +1239,7 @@ export class Stream5000UnitDevice extends Homey.Device {
 
   private async teardown(): Promise<void> {
     this.linkedGrid = null;
+    this.relayTrace = newRelayTrace();
     getApp(this.homey)?.cancelStream5000ReserveRequests?.();
     this.subscriptionState = 'stopped';
     this.deliveryGeneration += 1;

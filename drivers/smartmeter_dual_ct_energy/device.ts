@@ -549,6 +549,20 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
     if (changedKeys.some((key) => DUAL_CT_DISPLAY_SETTINGS.includes(key))) await this.configureDetails(newSettings);
   }
 
+  private linkedRelayDiagnostics() {
+    const host = this.linkedGrid.host(Date.now());
+    if (!host) return null;
+    try {
+      const units = this.homey.drivers.getDriver('stream_5000_unit').getDevices().filter((d) => d.getData().sn === host);
+      return {
+        transport: (this.homey.app as any).getAppRealtimeDiagnostics?.(host),
+        monitor: units.length === 1 ? (units[0] as Stream5000PhysicalUnitDevice).getLinkedRelayDiagnostics?.(this.getData().sn) : null,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   getDualCtEnergyDiagnostics() {
     const singlePhase = this.getStoreValue('dualCtEnergyMode') !== 'three_phase_community';
     return dualCtEnergyRecoverySnapshot({
@@ -556,6 +570,7 @@ module.exports = class DualCtEnergyDevice extends Homey.Device {
       ...(singlePhase ? {
         feed: this.singlePhaseFeed.snapshot(),
         linkedPowerStatus: this.linkedPowerStatus(),
+        linkedRelay: this.linkedRelayDiagnostics(),
         transport: (this.homey.app as any).getAppRealtimeDiagnostics?.(this.getData().sn),
         messageEvidence: this.messageEvidence.snapshot(),
       } : {}),

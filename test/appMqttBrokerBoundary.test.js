@@ -36,7 +36,7 @@ const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resol
 test('locked MQTT.js v5 broker denial triggers an actual wire retry and resumes both listeners', async t => {
   const realTimeout = global.setTimeout, realClear = global.clearTimeout; const owned = new Set();
   t.mock.method(global, 'setTimeout', (fn, ms, ...args) => {
-    if (ms !== 5000 && ms !== 10000) return realTimeout(fn, ms, ...args);
+    if (![100, 200, 400, 800, 1600, 3200, 5000, 10000].includes(ms)) return realTimeout(fn, ms, ...args);
     const timer = { fn, ms }; owned.add(timer); return timer;
   });
   t.mock.method(global, 'clearTimeout', timer => { if (!owned.delete(timer)) realClear(timer); });

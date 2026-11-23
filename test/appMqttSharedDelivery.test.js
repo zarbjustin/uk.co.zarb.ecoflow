@@ -701,7 +701,7 @@ test('native F4 late callbacks from detached and replaced clients cannot settle 
     await h.app.reconnect(); await nativeSettle();
     const next = h.fixture.clients.at(-1);
     const waiting = h.app.subscriptions.get(topic);
-    if (waiting.state === 'timed_out') {
+    if (waiting.state === 'waiting_for_transport' || waiting.state === 'timed_out') {
       h.clock.timers.delete(waiting.timer); waiting.timer.fn(); await nativeSettle();
     }
     old(null, [{ topic, qos: 0 }]);
@@ -763,4 +763,47 @@ test('Developer quota receipts cannot keep a per-unit alert current across socke
     assert.equal(readings[1].delivery.isCurrent(), true);
   } finally { await mqtt.end(); }
   assert.equal(readings[1].delivery.isCurrent(), false);
+});
+
+test('cold start submits the linked House property route promptly after local write pressure clears', async t => {
+  const h = await nativeHarness(t);
+  const host = 'ES21SYNTHOUSE';
+  const member = 'ES21SYNTHMEMBER';
+  const meter = 'ES81SYNTHMETER';
+  const property = '/app/device/property/' + host;
+  const hostFrames = [];
+  try {
+    // One normal subscription is writing as the other devices start registering.
+    h.fixture.blockWrites = true;
+    h.app.subscribe(member, () => {});
+    h.app.subscribe(meter, () => {});
+    h.app.subscribe(host, (bytes, route, delivery) => hostFrames.push({ route, watts: bytes[0], current: delivery.isCurrent() }));
+    assert.ok(h.client.stream.writableLength > 0);
+    const sent = () => h.fixture.packets.filter(p => p.cmd === 'subscribe' && p.subscriptions[0].topic === property);
+    assert.equal(sent().length, 0);
+    assert.equal(h.app.getDeliveryDiagnostics(host).propertyState, 'waiting_for_transport');
+    assert.equal(h.app.getDeliveryDiagnostics(host).timedOutTopics, 0);
+    await nativeSettle();
+    h.fixture.blockWrites = false;
+    h.fixture.releaseWrite();
+    await nativeSettle();
+
+    // Model a broker that only delivers after it received the property's SUBSCRIBE.
+    // Keep the real MQTT.js encoder/allocator and advance only sub-second local timers.
+    for (let turn = 0; turn < 10 && h.app.getDeliveryDiagnostics(host).activeTopics !== 2; turn++) {
+      const due = [...h.clock.timers].filter(timer => timer.ms < 1000);
+      if (!due.length) break;
+      for (const timer of due) {
+        if (h.clock.timers.delete(timer)) timer.fn();
+        await nativeSettle();
+      }
+    }
+    assert.equal(sent().length, 1, 'brief local write pressure must not start the broker-failure backoff');
+    assert.equal(h.app.getDeliveryDiagnostics(host).activeTopics, 2);
+    const meta = { retain: false, dup: false };
+    h.client.emit('message', '/app/device/property/' + member, Buffer.from([99]), meta);
+    h.client.emit('message', property, Buffer.from([42]), meta);
+    assert.deepEqual(hostFrames, [{ route: property, watts: 42, current: true }]);
+    assert.equal(h.app.getDeliveryDiagnostics(meter).receivedFrames, 0);
+  } finally { await h.clean(); }
 });
