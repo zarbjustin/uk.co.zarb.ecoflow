@@ -1232,3 +1232,59 @@ test('already-paired single-phase meter uses labelled relay for standard Power a
   assert.equal(d.getCapabilityValue('measure_power'), 50); assert.equal(d.getCapabilityValue(power), 50);
   assert.equal(d.getCapabilityValue(amps), null); assert.equal(d.getCapabilityValue('dual_ct_linked_grid_power'), null);
 });
+
+test('relay: exact expiry queried by support before the next refresh reports the real withdrawal reason', async t => {
+  let now=1000;t.mock.method(Date,'now',()=>now);
+  const d=new Driver(), host='ES21HOUSE0001';
+  const single={...contract,singlePhaseOnly:true};
+  enabled(d,single);
+  d.store.set('dualCtEnergySourceBinding',dualCtGridBinding({account:dualCtAccountBinding(account),device:sn,grid:'homey_property_grid',session:'one'},single));
+  let sample=null;
+  d.resolveLinkedHost=async()=>host;
+  d.homey.drivers={getDriver:()=>({getDevices:()=>[{getData:()=>({sn:host}), getLinkedGridObservation:()=>sample}]})};
+  await d.onInit();await settle();t.after(()=>d.onUninit());
+  now++;sample={host,watts:350,receivedAt:now,until:now+5000,phaseOne:{meter:sn,power:350,current:2,voltage:235}};
+  await d.adapter.refresh();
+  assert.equal(d.getCapabilityValue('measure_power'),350);
+  assert.equal(d.getDualCtEnergyDiagnostics().linkedPowerStatus,'phase_relay_available');
+  now+=5000;
+  const first=d.getDualCtEnergyDiagnostics().linkedPowerStatus;
+  const second=d.getDualCtEnergyDiagnostics().linkedPowerStatus;
+  await d.adapter.refresh();
+  assert.equal(d.getCapabilityValue('measure_power'),null);
+  assert.equal(first,'sample_expired');assert.equal(second,'sample_expired');
+});
+
+test('240 alternating relay source and timing transitions preserve the accounting checkpoint and direct-only Flow inputs', async t => {
+  let now=1000;t.mock.method(Date,'now',()=>now);
+  const d=new Driver(), host='ES21HOUSE0001';
+  const single={...contract,singlePhaseOnly:true};
+  enabled(d,single);
+  d.store.set('dualCtEnergySourceBinding',dualCtGridBinding({account:dualCtAccountBinding(account),device:sn,grid:'homey_property_grid',session:'one'},single));
+  let sample=null;
+  d.resolveLinkedHost=async()=>host;
+  d.homey.drivers={getDriver:()=>({getDevices:()=>[{getData:()=>({sn:host}), getLinkedGridObservation:()=>sample}]})};
+  await d.onInit();await settle();t.after(()=>d.onUninit());
+  const checkpoint = structuredClone([...d.store.entries()]);
+  const powers = [0, -1, 1, -470, 880, 14999];
+  const modes = ['labelled','expired','other_meter','unlabelled','no_packet','future'];
+  let seed=49312;
+  function random(n) { seed=(Math.imul(seed,1664525)+1013904223)>>>0; return Math.floor(seed/4294967296*n); }
+  const counts={};
+  for(let i=0;i<240;i++) {
+    now+=100;
+    const mode=modes[random(modes.length)], watts=powers[random(powers.length)];
+    counts[mode]=(counts[mode]||0)+1;
+    const time=now+(mode==='expired'?-5000:mode==='future'?1:0);
+    sample={host,watts,receivedAt:time,until:time+5000,
+      phaseOne:{meter:mode==='other_meter'?'ES81SYNTHOFFICE':sn,power:watts,current:1,voltage:235}};
+    if(mode==='unlabelled')delete sample.phaseOne;
+    if(mode==='no_packet')sample=null;
+    await d.adapter.refresh();
+    assert.equal(d.getCapabilityValue('measure_power'),mode==='labelled'?watts:null,'standard '+mode+' '+i);
+    assert.equal(d.getCapabilityValue('dual_ct_linked_grid_power'),['labelled','unlabelled'].includes(mode)?watts:null,'linked '+mode+' '+i);
+    assert.throws(()=>d.gridPowerAbove('import',0));
+    assert.deepEqual([...d.store.entries()],checkpoint);
+  }
+  assert.equal(Object.keys(counts).length,modes.length);
+});

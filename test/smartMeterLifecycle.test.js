@@ -333,3 +333,35 @@ test('original meter retries the failed total projection during fresh idle witho
   assert.equal(meter.importWh, 1);
   await meter.onUninit();
 });
+
+test('legacy meter: split import/export persistence failure followed by two fresh driver instances', async t => {
+  let now = 100000;
+  t.mock.method(Date,'now',()=>now);
+  const live = require('./fixtures/live-v1.10.3-contract.json').drivers.find(x=>x.id==='smartmeter');
+  const settings = {meter_source:'grid',poll_interval:45};
+  const custom = {title:{en:'My incomer',de:'Hausanschluss'},decimals:1};
+  const identity = {sn:'BK21METERSYNTHETIC'};
+  const saved = {sourceSn:'BK61HOST',importWh:1400.6,exportWh:2500.4};
+  const values = new Map(live.capabilities.map(k=>[k,null]));
+  values.set('meter_power.imported',1.401);values.set('meter_power.exported',2.5);
+  function fresh() {
+    const d = new TestMeter();d.store=saved;d.values=values;d.getData=()=>identity;
+    d.getSetting=k=>settings[k];d.getCapabilityOptions=()=>structuredClone(custom);
+    d.setCapabilityOptions=async (_k,v)=>{assert.deepEqual(v.title,custom.title);};
+    return d;
+  }
+  const d=fresh();await d.onInit();
+  for(const w of [3600,3600,-3600,-3600]) {now+=1000;await d.applyQuota({powGetSysGrid:w},{source:'mqtt',receivedAt:now});}
+  const before = ['meter_power.imported','meter_power.exported'].map(k=>values.get(k));
+  const save = d.setStoreValue.bind(d);
+  d.setStoreValue=async(k,v)=>{if(k==='exportWh') throw Error('synthetic interrupted second write');await save(k,v);};
+  await assert.rejects(d.onUninit(),/interrupted second write/);
+  for(let i=0;i<2;i++) {
+    now+=3600000;const recovered=fresh();await recovered.onInit();
+    await recovered.applyQuota({powGetSysGrid:3600},{source:'mqtt',receivedAt:now});
+    assert.deepEqual(['meter_power.imported','meter_power.exported'].map(k=>values.get(k)),before);
+    assert.ok(live.capabilities.every(k=>recovered.hasCapability(k)));
+    assert.deepEqual(recovered.getData(),identity);
+    await recovered.onUninit();assert.equal(recovered.timers.size,0);
+  }
+});

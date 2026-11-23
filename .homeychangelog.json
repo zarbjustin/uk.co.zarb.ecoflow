@@ -1,4 +1,9 @@
 {
+  "1.11.32": {
+    "en": "Dual CT diagnostics now show when a linked power reading expires. You can also run another support report after returning to the app settings.",
+    "de": "Die Dual-CT-Diagnose zeigt jetzt an, wenn ein verknüpfter Leistungswert abgelaufen ist. Nach der Rückkehr zu den App-Einstellungen lässt sich erneut ein Supportbericht erstellen.",
+    "nl": "De Dual CT-diagnose geeft nu aan wanneer een gekoppelde vermogensmeting is verlopen. Na terugkeer naar de app-instellingen kun je opnieuw een supportrapport maken."
+  },
   "1.11.31": {
     "en": "Single-phase Dual CT meters can show live grid power in Homey Energy during a direct CT1 gap when a linked STREAM 5000 reports fresh readings for the same meter. Import and export kWh counters still use direct CT1 readings.",
     "de": "Bei einem einphasigen Dual CT kann Homey Energy die aktuelle Netzleistung auch bei einer Lücke im direkten CT1-Signal anzeigen, wenn ein verknüpfter STREAM 5000 frische Werte desselben Zählers meldet. Die kWh-Zähler für Bezug und Einspeisung nutzen weiterhin direkte CT1-Messwerte.",
