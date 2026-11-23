@@ -1,4 +1,9 @@
 {
+  "2.0.0": {
+    "en": "Adds Dual CT grid metering and STREAM 5000 battery and solar monitoring in Homey Energy. Solar generation in kWh is estimated for panels connected directly to a STREAM 5000. New Flows cover sustained grid import or export and individual battery alerts. Improves recovery of readings and energy counters after data gaps. The optional STREAM 5000 reserve action sends a request to EcoFlow and is off by default.",
+    "de": "Neu in Homey Energy sind Dual-CT-Netzmessung sowie Batterie- und Solarüberwachung für STREAM 5000. Für direkt am STREAM 5000 angeschlossene Solarmodule wird der Ertrag in kWh geschätzt. Neue Flows melden anhaltenden Netzbezug oder anhaltende Einspeisung sowie Änderungen an einzelnen Batterien. Messwerte und Energiezähler erholen sich zuverlässiger nach Datenlücken. Die optionale Reserve-Aktion für STREAM 5000 sendet eine Anfrage an EcoFlow und ist standardmäßig deaktiviert.",
+    "nl": "Voegt Dual CT-netmeting en batterij- en zonnemonitoring voor STREAM 5000 toe aan Homey Energy. Voor panelen die rechtstreeks op een STREAM 5000 zijn aangesloten wordt de opbrengst in kWh geschat. Nieuwe Flows melden aanhoudende netafname of teruglevering en veranderingen bij afzonderlijke batterijen. Meetwaarden en energietellers herstellen beter na onderbrekingen. De optionele reserveactie voor STREAM 5000 stuurt een verzoek naar EcoFlow en staat standaard uit."
+  },
   "1.11.32": {
     "en": "Dual CT diagnostics now show when a linked power reading expires. You can also run another support report after returning to the app settings.",
     "de": "Die Dual-CT-Diagnose zeigt jetzt an, wenn ein verknüpfter Leistungswert abgelaufen ist. Nach der Rückkehr zu den App-Einstellungen lässt sich erneut ein Supportbericht erstellen.",
