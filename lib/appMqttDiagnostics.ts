@@ -5,7 +5,14 @@ export function appMqttDiagnosticsSnapshot(input: any) {
   if (!input || typeof input !== 'object') return null;
   const count = (key: string, max: number) => (Number.isSafeInteger(input[key]) && input[key] >= 0 && input[key] <= max ? input[key] : 0);
   const age = (key: string) => (typeof input[key] === 'number' && Number.isFinite(input[key]) && input[key] >= 0 ? input[key] : null);
+  const states = ['absent', 'waiting_for_transport', 'pending', 'active', 'timed_out', 'rejected'];
   return {
+    ...(states.includes(input.propertyState) && states.includes(input.replyState) ? {
+      propertyState: input.propertyState as string,
+      replyState: input.replyState as string,
+      propertyFrames: count('propertyFrames', 65535),
+      replyFrames: count('replyFrames', 65535),
+    } : {}),
     socketEvidenceScope: input.socketEvidenceScope === 'shared_current_connection' ? 'shared_current_connection' : 'unknown',
     socketReceivedFrames: count('socketReceivedFrames', 65535),
     socketRouteRejectedFrames: count('socketRouteRejectedFrames', 65535),

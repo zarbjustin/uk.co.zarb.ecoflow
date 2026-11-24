@@ -50,11 +50,14 @@ class Device {
 }
 const originalLoad = Module._load;
 let Driver;
+let PhysicalUnit;
 try { Module._load = function (name, ...args) { return name === 'homey' ? { Device } : originalLoad.call(this, name, ...args); };
+  PhysicalUnit = require('../.homeybuild/lib/Stream5000UnitDevice').Stream5000PhysicalUnitDevice;
   Driver = require('../.homeybuild/drivers/smartmeter_dual_ct_energy/device');
 } finally { Module._load = originalLoad; }
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(setImmediate); };
 function enabled(device, selectedContract = contract) {
+  const { sn } = device.getData();
   device.energyDependencies = () => ({ enabled: () => true, resolve: () => selectedContract,
     context: () => new DualCtHomeyEnergyContext({ homey: device.homey, sn, now: Date.now,
       client: () => ({ getSession: async () => account, getDeviceList: async () => [{ sn, shared: false, modelCodes: [{ field: 'productType', code: 421 }] }] }),
@@ -1287,4 +1290,93 @@ test('240 alternating relay source and timing transitions preserve the accountin
     assert.deepEqual([...d.store.entries()],checkpoint);
   }
   assert.equal(Object.keys(counts).length,modes.length);
+});
+
+test('cold House relay crosses the shared router, physical monitor and paired Energy tile without direct CT1', async t => {
+  let now = 100000;
+  t.mock.method(Date, 'now', () => now);
+  const meter = 'ES81HOUSE0001';
+  const host = 'ES21HOUSE0001';
+  const member = 'ES21MEMBER001';
+  const { EcoFlowAppMqtt } = require('../.homeybuild/lib/EcoFlowAppMqtt');
+  const router = new EcoFlowAppMqtt({ client: {} });
+  // Network and Homey SDK boundaries only. Real routing, delivery metadata, parser and tile projection.
+  router.client = { connected: true };
+  router.connectionEpoch = 1;
+  router.userId = 'synthetic';
+  router.transport = {
+    owner: () => ({}), ready: () => true, release() {}, unsubscribe() {},
+    subscribe: (topic, _owner, ack) => ack(null, [{ topic, qos: 0 }]),
+  };
+  const api = {
+    subscribeAppRealtime: async (address, handler) => { router.subscribe(address, handler); return true; },
+    unsubscribeAppRealtime: (address, handler) => router.unsubscribe(address, handler),
+    getAppRealtimeDiagnostics: address => router.getDeliveryDiagnostics(address),
+  };
+  const makeUnit = address => {
+    const unit = new PhysicalUnit();
+    unit.getData = () => ({ sn: address });
+    unit.homey.app = api;
+    unit.getAvailable = () => unit.available;
+    unit.removeCapability = async key => { unit.values.delete(key); };
+    unit.log = () => {};
+    unit.error = () => {};
+    unit.setWarning = async () => {};
+    return unit;
+  };
+  const main = makeUnit(host);
+  const peer = makeUnit(member);
+  const d = new Driver();
+  d.homey.app = api;
+  d.getData = () => ({ sn: meter });
+  d.homey.drivers = { getDriver: () => ({ getDevices: () => [peer, main] }) };
+  d.resolveLinkedHost = async () => host;
+  const single = { ...contract, singlePhaseOnly: true };
+  enabled(d, single);
+  d.store.set('dualCtEnergySourceBinding', dualCtGridBinding({
+    account: dualCtAccountBinding(account), device: meter, grid: 'homey_property_grid', session: 'one',
+  }, single));
+  const meta = { retain: false, dup: false };
+  const property = address => '/app/device/property/' + address;
+  const packet = (address, watts) => nested(1, Buffer.concat([
+    nested(1, nested(16, Buffer.concat([nested(3, Buffer.from(meter)), scalar(4, watts), scalar(16, watts)]))),
+    int(8, 254), int(9, 39), nested(25, Buffer.from(address)),
+  ]));
+  await peer.onInit(); await d.onInit(); await settle();
+  t.after(async () => { await d.onUninit(); await main.onUninit(); await peer.onUninit(); });
+  const checkpoint = structuredClone([...d.store.entries()]);
+  now++;
+  router.onMessage(property(host), packet(host, 200), meta); // Main monitor registers later.
+  await main.onInit();
+  router.onMessage('/app/synthetic/' + host + '/thing/property/get_reply', packet(host, 17), meta);
+  router.onMessage(property(member), packet(member, 91), meta);
+  await d.adapter.refresh();
+  assert.equal(d.getCapabilityValue('measure_power'), null);
+  now++;
+  router.onMessage(property(host), packet(host, -73), meta);
+  await d.adapter.refresh();
+  assert.equal(d.getCapabilityValue('measure_power'), -73);
+  assert.equal(d.available, true);
+  const diag = d.getDualCtEnergyDiagnostics();
+  assert.equal(diag.linkedPowerStatus, 'phase_relay_available');
+  assert.equal(diag.linkedRelay.transport.propertyFrames, 1);
+  assert.equal(diag.linkedRelay.transport.replyFrames, 1);
+  assert.equal(diag.linkedRelay.monitor.eligiblePropertyCallbacks, 1);
+  assert.equal(diag.linkedRelay.monitor.labelledFrames, 1);
+  assert.equal(diag.linkedRelay.monitor.cache, 'same_meter');
+  assert.throws(() => d.gridPowerAbove('export', 0));
+  now += 5000;
+  await d.adapter.refresh();
+  assert.equal(d.available, false);
+  assert.equal(d.getCapabilityValue('measure_power'), null);
+  assert.deepEqual([...d.store.entries()], checkpoint);
+  now++;
+  router.onMessage(property(host), packet(host, 0), meta);
+  await d.adapter.refresh();
+  assert.equal(d.getCapabilityValue('measure_power'), 0);
+  now++;
+  router.onMessage(property(meter), payload(50), meta);
+  await settle(); await d.adapter.refresh();
+  assert.equal(d.getCapabilityValue('measure_power'), 50);
+  assert.equal(d.getDualCtEnergyDiagnostics().linkedPowerStatus, 'direct_ct1_active');
 });

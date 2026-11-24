@@ -45,7 +45,7 @@ const MAX_SUBSCRIBE_ATTEMPTS = 3;
 const SUBSCRIBE_RECOVERY_MS = 30000;
 const END_GRACE_MS = 1000;
 type TopicSubscription = {
-  sn: string; state: 'pending' | 'active' | 'rejected' | 'timed_out';
+  sn: string; state: 'waiting_for_transport' | 'pending' | 'active' | 'rejected' | 'timed_out';
   timer: ReturnType<typeof setTimeout> | null;
 };
 
@@ -251,7 +251,7 @@ export class EcoFlowAppMqtt {
   private backoffMs = 0;
   private readonly handlers = new Map<string, Set<AppFrameHandler>>();
   private readonly subscriptions = new Map<string, TopicSubscription>();
-  private readonly receipts = new Map<string, { count: number; at: number }>();
+  private readonly receipts = new Map<string, { count: number; at: number; property: number; reply: number }>();
   private readonly log: (...args: any[]) => void;
   private auth: EcoFlowAppAuthClient;
   private readonly observeSolar?: AppFrameHandler;
@@ -382,6 +382,7 @@ export class EcoFlowAppMqtt {
         }
         if (this.cancelHandshake === cancel) this.cancelHandshake = null;
         ++this.connectionEpoch;
+        this.receipts.clear();
         this.socketReceivedFrames = 0; this.socketRouteRejectedFrames = 0; this.socketPingResponses = 0;
         this.socketLastFrameAt = null; this.socketLastPingAt = null; this.socketConnectedAt = Date.now();
         settled = true;
@@ -512,7 +513,7 @@ export class EcoFlowAppMqtt {
     for (const topic of this.topics(sn)) this.subscribeTopic(sn, topic);
   }
 
-  private subscribeTopic(sn: string, topic: string, attempt = 1, recoveryMs = SUBSCRIBE_RECOVERY_MS): void {
+  private subscribeTopic(sn: string, topic: string, attempt = 1, recoveryMs = SUBSCRIBE_RECOVERY_MS, localWaitMs = 100): void {
     const { client } = this;
     if (!client?.connected || this.ended || !this.handlers.has(sn)) return;
     const item: TopicSubscription = {
@@ -550,7 +551,15 @@ export class EcoFlowAppMqtt {
     };
     // Never append native deferred work or buffered retransmission bytes.
     if (!transport.ready()) {
-      failed('timed_out'); return;
+      // The socket has not sent a SUBSCRIBE. Keep the broker's retry budget for
+      // real attempts and recheck locally with one cancellable timer per route.
+      item.state = 'waiting_for_transport';
+      // eslint-disable-next-line homey-app/global-timers -- cancelled by clearSubscriptions on detach/end.
+      item.timer = setTimeout(() => {
+        item.timer = null;
+        if (current()) this.subscribeTopic(sn, topic, attempt, recoveryMs, Math.min(localWaitMs * 2, MIN_BACKOFF_MS));
+      }, localWaitMs);
+      return;
     }
     // A connected socket is not proof the broker accepted its subscription.
     // eslint-disable-next-line homey-app/global-timers -- owned acknowledgement deadline, cancelled on detach/end.
@@ -586,6 +595,10 @@ export class EcoFlowAppMqtt {
       socketConnectionAgeSec: ageSec(this.socketConnectedAt),
       connected: this.connected,
       listening: this.handlers.has(sn),
+      propertyState: this.subscriptions.get(`/app/device/property/${sn}`)?.state ?? 'absent',
+      replyState: this.subscriptions.get(`/app/${this.userId}/${sn}/thing/property/get_reply`)?.state ?? 'absent',
+      propertyFrames: receipt?.property ?? 0,
+      replyFrames: receipt?.reply ?? 0,
       pendingTopics: items.filter((item) => item.state === 'pending').length,
       activeTopics: items.filter((item) => item.state === 'active').length,
       rejectedTopics: items.filter((item) => item.state === 'rejected').length,
@@ -607,7 +620,13 @@ export class EcoFlowAppMqtt {
       return;
     }
     const prior = this.receipts.get(sn);
-    this.receipts.set(sn, { count: Math.min(65535, (prior?.count || 0) + 1), at: Date.now() });
+    const property = parts[2] === 'device';
+    this.receipts.set(sn, {
+      count: Math.min(65535, (prior?.count ?? 0) + 1),
+      at: Date.now(),
+      property: Math.min(65535, (prior?.property ?? 0) + Number(property)),
+      reply: Math.min(65535, (prior?.reply ?? 0) + Number(!property)),
+    });
     // Optional third argument preserves existing consumers. Missing transport
     // metadata stays unknown; a future Energy consumer must not assume live.
     const epoch = this.connectionEpoch;

@@ -81,6 +81,23 @@ export function dualCtContextFailureSnapshot(input: any) {
     return null;
   }
 }
+function linkedRelaySnapshot(input: any) {
+  if (!input || typeof input !== 'object') return null;
+  const m = input.monitor;
+  const count = (v: unknown) => (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && v <= 65535 ? v : null);
+  return {
+    transport: appMqttDiagnosticsSnapshot(input.transport),
+    monitor: m ? {
+      eligiblePropertyCallbacks: count(m.eligiblePropertyCallbacks),
+      gridFrames: count(m.gridFrames),
+      rejectedMeterFrames: count(m.rejectedMeterFrames),
+      labelledFrames: count(m.labelledFrames),
+      cache: ['empty', 'net_only', 'same_meter', 'other_meter'].includes(m.cache) ? m.cache as string : null,
+      cacheAgeSec: typeof m.cacheAgeSec === 'number' && Number.isFinite(m.cacheAgeSec) && m.cacheAgeSec >= 0 ? m.cacheAgeSec : null,
+    } : null,
+  };
+}
+
 export function dualCtEnergyRecoverySnapshot(input: any) {
   try {
     if (!input || !['single_phase', 'three_phase_community'].includes(input.mode)) return null;
@@ -90,6 +107,7 @@ export function dualCtEnergyRecoverySnapshot(input: any) {
     return {
       mode: input.mode as string,
       ...(input.mode === 'single_phase' ? {
+        ...(input.linkedRelay ? { linkedRelay: linkedRelaySnapshot(input.linkedRelay) } : {}),
         feed: singlePhaseFeedSnapshot(input.feed),
         linkedPowerStatus: LINKED_POWER_STATUSES.includes(input.linkedPowerStatus) ? input.linkedPowerStatus as string : null,
         transport: appMqttDiagnosticsSnapshot(input.transport),
